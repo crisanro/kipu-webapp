@@ -17,6 +17,7 @@ interface Producto {
   tipo_iva:    string;
   unidad:      string;
   activo:      boolean;
+  stock:       number;
 }
 
 const EMPTY_FORM = {
@@ -25,6 +26,7 @@ const EMPTY_FORM = {
   precio:      "",
   tipo_iva:    "15",
   unidad:      "UNIDAD",
+  stock:       "-1", // -1 = sin control de stock
 };
 
 const UNIDADES = ["UNIDAD", "SERVICIO", "KG", "LB", "LT", "MT", "CM", "CAJA", "PAQUETE", "HORA"];
@@ -32,14 +34,14 @@ const UNIDADES = ["UNIDAD", "SERVICIO", "KG", "LB", "LT", "MT", "CM", "CAJA", "P
 const fmt = (n: number) => n?.toFixed(2) ?? "0.00";
 
 export default function ProductosPage() {
-  const [productos,  setProductos]  = useState<Producto[]>([]);
-  const [loading,    setLoading]    = useState(true);
-  const [query,      setQuery]      = useState("");
-  const [showModal,  setShowModal]  = useState(false);
-  const [editando,   setEditando]   = useState<Producto | null>(null);
-  const [form,       setForm]       = useState(EMPTY_FORM);
-  const [saving,     setSaving]     = useState(false);
-  const [error,      setError]      = useState("");
+  const [productos,    setProductos]    = useState<Producto[]>([]);
+  const [loading,      setLoading]      = useState(true);
+  const [query,        setQuery]        = useState("");
+  const [showModal,    setShowModal]    = useState(false);
+  const [editando,     setEditando]     = useState<Producto | null>(null);
+  const [form,         setForm]         = useState(EMPTY_FORM);
+  const [saving,       setSaving]       = useState(false);
+  const [error,        setError]        = useState("");
   const [verInactivos, setVerInactivos] = useState(false);
 
   const cargar = useCallback(async () => {
@@ -72,11 +74,12 @@ export default function ProductosPage() {
   const abrirEditar = (p: Producto) => {
     setEditando(p);
     setForm({
-      codigo:      p.codigo  ?? "",
+      codigo:      p.codigo   ?? "",
       descripcion: p.descripcion,
       precio:      String(p.precio),
       tipo_iva:    p.tipo_iva,
       unidad:      p.unidad,
+      stock:       String(p.stock ?? -1),
     });
     setError("");
     setShowModal(true);
@@ -94,17 +97,19 @@ export default function ProductosPage() {
     }
     setSaving(true);
     try {
+      const payload = {
+        ...form,
+        precio: parseFloat(form.precio),
+        stock:  parseInt(form.stock) || -1,
+      };
+
       if (editando) {
-        await api.patch(`/api/v1/app/productos/${editando.id}`, {
-          ...form,
-          precio: parseFloat(form.precio),
-        });
+        await api.patch(`/api/v1/app/productos/${editando.id}`, payload);
       } else {
-        await api.post("/api/v1/app/productos", {
-          ...form,
-          precio: parseFloat(form.precio),
-        });
+        await api.post("/api/v1/app/productos", payload);
       }
+      await new Promise(r => setTimeout(r, 300)); // espera invalidación
+
       await cargar();
       setShowModal(false);
     } catch (err: any) {
@@ -190,11 +195,11 @@ export default function ProductosPage() {
         <div className="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
           {/* Header tabla */}
           <div className="hidden md:grid grid-cols-12 gap-3 px-4 py-2.5 border-b border-gray-800 text-xs text-gray-500">
-            <span className="col-span-1">Código</span>
-            <span className="col-span-5">Descripción</span>
+            <span className="col-span-2">Código</span>
+            <span className="col-span-4">Descripción</span>
             <span className="col-span-2 text-center">Precio</span>
             <span className="col-span-1 text-center">IVA</span>
-            <span className="col-span-1 text-center">Unidad</span>
+            <span className="col-span-1 text-center">Stock</span>
             <span className="col-span-2 text-right">Acciones</span>
           </div>
 
@@ -207,13 +212,14 @@ export default function ProductosPage() {
                   !p.activo && "opacity-50"
                 )}
               >
-                <span className="hidden md:block col-span-1 text-xs text-gray-500 font-mono truncate">
+                <span className="hidden md:block col-span-2 text-xs text-gray-500 font-mono truncate">
                   {p.codigo || "—"}
                 </span>
-                <div className="flex-1 md:col-span-5 min-w-0">
+                <div className="flex-1 md:col-span-4 min-w-0">
                   <p className="text-sm text-white truncate">{p.descripcion}</p>
                   <p className="text-xs text-gray-500 md:hidden">
                     {p.codigo || "Sin código"} · IVA {p.tipo_iva}% · {p.unidad}
+                    {p.stock !== -1 && ` · Stock: ${p.stock}`}
                   </p>
                 </div>
                 <span className="hidden md:block col-span-2 text-sm font-semibold text-white text-center">
@@ -222,9 +228,23 @@ export default function ProductosPage() {
                 <span className="hidden md:block col-span-1 text-xs text-gray-400 text-center">
                   {p.tipo_iva}%
                 </span>
-                <span className="hidden md:block col-span-1 text-xs text-gray-400 text-center">
-                  {p.unidad}
+
+                {/* Columna Stock */}
+                <span className="hidden md:block col-span-1 text-xs text-center font-medium">
+                  {p.stock === -1 ? (
+                    <span className="text-gray-600">—</span>
+                  ) : p.stock === 0 ? (
+                    <span className="text-red-400 bg-red-400/10 px-2 py-0.5 rounded-full">Sin stock</span>
+                  ) : (
+                    <span className={clsx(
+                      "px-2 py-0.5 rounded-full",
+                      p.stock <= 5 ? "text-amber-400 bg-amber-400/10" : "text-emerald-400 bg-emerald-400/10"
+                    )}>
+                      {p.stock}
+                    </span>
+                  )}
                 </span>
+
                 <div className="md:col-span-2 flex items-center justify-end gap-2 shrink-0">
                   <span className="text-sm font-semibold text-white md:hidden">${fmt(p.precio)}</span>
                   <button
@@ -321,6 +341,21 @@ export default function ProductosPage() {
                     {UNIDADES.map(u => <option key={u} value={u}>{u}</option>)}
                   </select>
                 </div>
+              </div>
+
+              {/* Campo Stock */}
+              <div>
+                <label className="block text-xs text-gray-500 mb-1.5">Stock inicial</label>
+                <input
+                  type="number"
+                  value={form.stock}
+                  onChange={(e) => setForm({ ...form, stock: e.target.value })}
+                  placeholder="-1"
+                  min={-1}
+                  step={1}
+                  className="w-full px-3 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 text-sm"
+                />
+                <p className="text-[11px] text-gray-600 mt-1">-1 = sin control de stock</p>
               </div>
 
               {error && (

@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import api from "@/lib/api";
 import {
   Search, Plus, User, Loader2, X,
@@ -10,7 +11,7 @@ import {
 import { clsx } from "clsx";
 
 interface Cliente {
-  id:                      string;
+  uid:                      string;
   razon_social:            string;
   identificacion:          string;
   tipo_identificacion_sri: string;
@@ -23,6 +24,7 @@ const TIPO_ID = [
   { value: "04", label: "RUC" },
   { value: "05", label: "Cédula" },
   { value: "06", label: "Pasaporte" },
+  { value: "08", label: "Exterior" },
 ];
 
 const EMPTY_FORM = {
@@ -136,7 +138,11 @@ export default function ClientesPage() {
         <div className="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
           <div className="divide-y divide-gray-800">
             {filtrados.map((c) => (
-              <div key={c.id} className="flex items-center gap-3 px-4 py-3 hover:bg-gray-800/50 transition-colors">
+              <Link
+                key={c.uid}
+                href={`/clientes/${c.uid}`}
+                className="flex items-center gap-3 px-4 py-3 hover:bg-gray-800/50 transition-colors"
+              >
                 <div className="w-9 h-9 rounded-full bg-indigo-600/20 flex items-center justify-center shrink-0">
                   <span className="text-sm font-bold text-indigo-400">
                     {c.razon_social?.[0] ?? "?"}
@@ -152,7 +158,7 @@ export default function ClientesPage() {
                 {c.telefono && (
                   <span className="text-xs text-gray-500 hidden md:block">{c.telefono}</span>
                 )}
-              </div>
+              </Link>
             ))}
           </div>
         </div>
