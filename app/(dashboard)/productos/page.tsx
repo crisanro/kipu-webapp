@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback } from "react";
 import api from "@/lib/api";
 import {
   Search, Plus, Package, Loader2, X,
-  Save, Pencil, PowerOff
+  Save, Pencil, PowerOff, Power
 } from "lucide-react";
 import { clsx } from "clsx";
 
@@ -87,20 +87,23 @@ export default function ProductosPage() {
 
   const handleSave = async () => {
     setError("");
-    if (!form.descripcion || !form.precio) {
+    if (!form.descripcion || form.precio === "") {
       setError("Descripción y precio son obligatorios.");
       return;
     }
-    if (parseFloat(form.precio) <= 0) {
-      setError("El precio debe ser mayor a 0.");
+    const precioNum = parseFloat(form.precio);
+    if (isNaN(precioNum) || precioNum < 0) {
+      setError("El precio debe ser un número mayor o igual a 0.");
       return;
     }
     setSaving(true);
     try {
+      const stockNum = form.stock === "" ? -1 : (parseInt(form.stock, 10) ?? -1);
+
       const payload = {
         ...form,
-        precio: parseFloat(form.precio),
-        stock:  parseInt(form.stock) || -1,
+        precio: precioNum,
+        stock:  isNaN(stockNum) ? -1 : stockNum,
       };
 
       if (editando) {
@@ -123,6 +126,15 @@ export default function ProductosPage() {
     if (!confirm("¿Desactivar este producto?")) return;
     try {
       await api.delete(`/api/v1/app/productos/${id}`);
+      await cargar();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const reactivar = async (id: string) => {
+    try {
+      await api.patch(`/api/v1/app/productos/${id}`, { activo: true });
       await cargar();
     } catch (e) {
       console.error(e);
@@ -254,13 +266,21 @@ export default function ProductosPage() {
                   >
                     <Pencil size={14} />
                   </button>
-                  {p.activo && (
+                  {p.activo ? (
                     <button
                       onClick={() => desactivar(p.id)}
                       className="p-1.5 rounded text-gray-500 hover:text-red-400 hover:bg-gray-700 transition-colors"
                       title="Desactivar"
                     >
                       <PowerOff size={14} />
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => reactivar(p.id)}
+                      className="p-1.5 rounded text-emerald-500 hover:text-emerald-300 hover:bg-gray-700 transition-colors"
+                      title="Reactivar"
+                    >
+                      <Power size={14} />
                     </button>
                   )}
                 </div>
@@ -345,7 +365,9 @@ export default function ProductosPage() {
 
               {/* Campo Stock */}
               <div>
-                <label className="block text-xs text-gray-500 mb-1.5">Stock inicial</label>
+                <label className="block text-xs text-gray-500 mb-1.5">
+                  {editando ? "Stock actual" : "Stock inicial"}
+                </label>
                 <input
                   type="number"
                   value={form.stock}
