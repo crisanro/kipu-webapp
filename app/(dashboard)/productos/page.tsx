@@ -1,6 +1,5 @@
 // app/(dashboard)/productos/page.tsx
 "use client";
-
 import { useState, useEffect, useCallback } from "react";
 import api from "@/lib/api";
 import {
@@ -26,11 +25,10 @@ const EMPTY_FORM = {
   precio:      "",
   tipo_iva:    "15",
   unidad:      "UNIDAD",
-  stock:       "-1", // -1 = sin control de stock
+  stock:       "-1",
 };
 
 const UNIDADES = ["UNIDAD", "SERVICIO", "KG", "LB", "LT", "MT", "CM", "CAJA", "PAQUETE", "HORA"];
-
 const fmt = (n: number) => n?.toFixed(2) ?? "0.00";
 
 export default function ProductosPage() {
@@ -85,34 +83,38 @@ export default function ProductosPage() {
     setShowModal(true);
   };
 
+  const stockValue = () => form.stock === "" ? -1 : parseInt(form.stock);
+
   const handleSave = async () => {
     setError("");
+
     if (!form.descripcion || form.precio === "") {
       setError("Descripción y precio son obligatorios.");
       return;
     }
-    const precioNum = parseFloat(form.precio);
-    if (isNaN(precioNum) || precioNum < 0) {
-      setError("El precio debe ser un número mayor o igual a 0.");
+    if (parseFloat(form.precio) < 0) {
+      setError("El precio no puede ser negativo.");
       return;
     }
+    // Fix #5: código obligatorio si maneja stock
+    if (stockValue() !== -1 && !form.codigo.trim()) {
+      setError("El código es obligatorio cuando el producto maneja stock.");
+      return;
+    }
+
     setSaving(true);
     try {
-      const stockNum = form.stock === "" ? -1 : (parseInt(form.stock, 10) ?? -1);
-
       const payload = {
         ...form,
-        precio: precioNum,
-        stock:  isNaN(stockNum) ? -1 : stockNum,
+        precio: parseFloat(form.precio),
+        stock:  stockValue(), // Fix #1: stock 0 ya no se convierte a -1
       };
-
       if (editando) {
         await api.patch(`/api/v1/app/productos/${editando.id}`, payload);
       } else {
         await api.post("/api/v1/app/productos", payload);
       }
-      await new Promise(r => setTimeout(r, 300)); // espera invalidación
-
+      await new Promise(r => setTimeout(r, 300));
       await cargar();
       setShowModal(false);
     } catch (err: any) {
@@ -132,7 +134,9 @@ export default function ProductosPage() {
     }
   };
 
+  // Fix #4: reactivar producto
   const reactivar = async (id: string) => {
+    if (!confirm("¿Reactivar este producto?")) return;
     try {
       await api.patch(`/api/v1/app/productos/${id}`, { activo: true });
       await cargar();
@@ -143,7 +147,6 @@ export default function ProductosPage() {
 
   return (
     <div className="p-4 md:p-6">
-
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -214,7 +217,6 @@ export default function ProductosPage() {
             <span className="col-span-1 text-center">Stock</span>
             <span className="col-span-2 text-right">Acciones</span>
           </div>
-
           <div className="divide-y divide-gray-800">
             {filtrados.map((p) => (
               <div
@@ -240,7 +242,6 @@ export default function ProductosPage() {
                 <span className="hidden md:block col-span-1 text-xs text-gray-400 text-center">
                   {p.tipo_iva}%
                 </span>
-
                 {/* Columna Stock */}
                 <span className="hidden md:block col-span-1 text-xs text-center font-medium">
                   {p.stock === -1 ? (
@@ -256,7 +257,6 @@ export default function ProductosPage() {
                     </span>
                   )}
                 </span>
-
                 <div className="md:col-span-2 flex items-center justify-end gap-2 shrink-0">
                   <span className="text-sm font-semibold text-white md:hidden">${fmt(p.precio)}</span>
                   <button
@@ -266,6 +266,7 @@ export default function ProductosPage() {
                   >
                     <Pencil size={14} />
                   </button>
+                  {/* Fix #4: botón reactivar/desactivar */}
                   {p.activo ? (
                     <button
                       onClick={() => desactivar(p.id)}
@@ -277,7 +278,7 @@ export default function ProductosPage() {
                   ) : (
                     <button
                       onClick={() => reactivar(p.id)}
-                      className="p-1.5 rounded text-emerald-500 hover:text-emerald-300 hover:bg-gray-700 transition-colors"
+                      className="p-1.5 rounded text-gray-500 hover:text-emerald-400 hover:bg-gray-700 transition-colors"
                       title="Reactivar"
                     >
                       <Power size={14} />
@@ -302,11 +303,13 @@ export default function ProductosPage() {
                 <X size={18} />
               </button>
             </div>
-
             <div className="p-5 space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1.5">Código (opcional)</label>
+                  {/* Fix #5: asterisco si maneja stock */}
+                  <label className="block text-xs text-gray-500 mb-1.5">
+                    Código {stockValue() !== -1 ? <span className="text-red-400">*</span> : "(opcional)"}
+                  </label>
                   <input
                     value={form.codigo}
                     onChange={(e) => setForm({ ...form, codigo: e.target.value })}
@@ -327,7 +330,6 @@ export default function ProductosPage() {
                   />
                 </div>
               </div>
-
               <div>
                 <label className="block text-xs text-gray-500 mb-1.5">Descripción *</label>
                 <input
@@ -337,7 +339,6 @@ export default function ProductosPage() {
                   className="w-full px-3 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 text-sm"
                 />
               </div>
-
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs text-gray-500 mb-1.5">IVA</label>
@@ -362,9 +363,9 @@ export default function ProductosPage() {
                   </select>
                 </div>
               </div>
-
               {/* Campo Stock */}
               <div>
+                {/* Fix #3: label dinámico */}
                 <label className="block text-xs text-gray-500 mb-1.5">
                   {editando ? "Stock actual" : "Stock inicial"}
                 </label>
@@ -379,11 +380,9 @@ export default function ProductosPage() {
                 />
                 <p className="text-[11px] text-gray-600 mt-1">-1 = sin control de stock</p>
               </div>
-
               {error && (
                 <p className="text-xs text-red-400 bg-red-400/10 px-3 py-2 rounded-lg">{error}</p>
               )}
-
               <div className="flex gap-3 pt-1">
                 <button
                   onClick={() => setShowModal(false)}
