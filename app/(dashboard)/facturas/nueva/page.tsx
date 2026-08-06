@@ -31,6 +31,7 @@ interface Cliente {
 
 interface Item {
   _id:            string;
+  codigo:         string;
   descripcion:    string;
   cantidad:       number;
   precio:         number;
@@ -135,7 +136,7 @@ export default function NuevaFacturaPage() {
 
   // Items de la factura
   const [items, setItems] = useState<Item[]>([
-    { _id: genId(), descripcion: "", cantidad: 1, precio: 0, descuento: 0, tipo_descuento: "$", tipo_iva: "15", unidad: "UNIDAD" }
+    { _id: genId(), codigo: "", descripcion: "", cantidad: 1, precio: 0, descuento: 0, tipo_descuento: "$", tipo_iva: "15", unidad: "UNIDAD" }
   ]);
 
   // Pago
@@ -173,6 +174,7 @@ export default function NuevaFacturaPage() {
         if (data.items && Array.isArray(data.items)) {
           setItems(data.items.map((i: any) => ({
             _id:            genId(),
+            codigo:         String(i.codigo ?? ""),
             descripcion:    String(i.descripcion ?? ""),
             cantidad:       parseFloat(i.cantidad)       || 1,
             precio:         parseFloat(i.precio)         || 0,
@@ -302,6 +304,7 @@ export default function NuevaFacturaPage() {
   const seleccionarProducto = (p: Producto) => {
     setItems(prev => [...prev, {
       _id:            genId(),
+      codigo:         p.codigo,
       descripcion:    p.descripcion,
       cantidad:       1,
       precio:         p.precio,
@@ -328,7 +331,7 @@ export default function NuevaFacturaPage() {
 
   const addItem = () => {
     setItems(prev => [...prev, {
-      _id: genId(), descripcion: "", cantidad: 1,
+      _id: genId(), codigo: "", descripcion: "", cantidad: 1,
       precio: 0, descuento: 0, tipo_descuento: "$", tipo_iva: "15", unidad: "UNIDAD"
     }]);
   };
@@ -391,6 +394,7 @@ export default function NuevaFacturaPage() {
       items: items.map(i => {
         const c = calcItem(i);
         return {
+          codigo:          i.codigo || undefined,
           descripcion:     i.descripcion,
           cantidad:        i.cantidad,
           precio_unitario: i.precio,
@@ -505,7 +509,7 @@ export default function NuevaFacturaPage() {
                 setClienteQuery("");
                 setEsConsumidorFinal(false);
                 setClienteNuevo(null);
-                setItems([{ _id: genId(), descripcion: "", cantidad: 1, precio: 0, descuento: 0, tipo_descuento: "$", tipo_iva: "15", unidad: "UNIDAD" }]);
+                setItems([{ _id: genId(), codigo: "", descripcion: "", cantidad: 1, precio: 0, descuento: 0, tipo_descuento: "$", tipo_iva: "15", unidad: "UNIDAD" }]);
                 setCamposAdicionales([]);
                 setPropina(false);
               }}
