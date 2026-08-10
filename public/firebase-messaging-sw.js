@@ -15,23 +15,38 @@ const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage((payload) => {
   console.log("[SW] Notificación background:", payload);
-  const { title, body, icon } = payload.notification ?? {};
+  const { title, body } = payload.notification ?? {};
   self.registration.showNotification(title ?? "Kipu", {
-    body:  body  ?? "",
-    icon:  icon  ?? "/icon-192.png",
-    badge: "/icon-192.png",
-    data:  payload.data ?? {},
+    body:    body ?? "",
+    icon:    "/icons/icon-192.png",
+    badge:   "/icons/icon-192.png",
+    image:   "/icons/icon-512.png",
+    data:    payload.data ?? {},
+    vibrate: [200, 100, 200],
+    actions: [
+      { action: "open", title: "Ver en Kipu" },
+      { action: "close", title: "Cerrar" },
+    ],
   });
 });
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
+
+  if (event.action === "close") return;
+
   const url = event.notification.data?.url ?? "/dashboard";
   event.waitUntil(
-    clients.matchAll({ type: "window" }).then((clientList) => {
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
+      // Si ya hay una pestaña de Kipu abierta — enfocarla
       for (const client of clientList) {
-        if (client.url.includes(url) && "focus" in client) return client.focus();
+        if (client.url.includes("kipu.ec") && "focus" in client) {
+          client.focus();
+          client.navigate(url);
+          return;
+        }
       }
+      // Si no hay pestaña abierta — abrir una nueva
       if (clients.openWindow) return clients.openWindow(url);
     })
   );

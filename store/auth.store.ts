@@ -18,14 +18,15 @@ interface AuthState {
   uid:          string | null;
   email:        string | null;
   profile_id:   string | null;
+  role:         string | null;        // ← nuevo
   empresa:      Empresa | null;
   empresas:     Empresa[];
-  setUser:      (uid: string, email: string, profile_id: string) => void;
+  setUser:      (uid: string, email: string, profile_id: string, role?: string) => void; // ← nuevo
   setEmpresa:   (empresa: Empresa) => void;
   setEmpresas:  (empresas: Empresa[]) => void;
   updateBalance:(balance_emision: number, balance_recepcion: number) => void;
-  addEmpresa:   (empresa: Empresa) => void;        // ← nueva
-  updateEmpresa:(empresa: Empresa) => void;        // ← nueva
+  addEmpresa:   (empresa: Empresa) => void;
+  updateEmpresa:(empresa: Empresa) => void;
   logout:       () => void;
 }
 
@@ -35,26 +36,22 @@ export const useAuthStore = create<AuthState>()(
       uid:        null,
       email:      null,
       profile_id: null,
+      role:       null,              // ← nuevo
       empresa:    null,
       empresas:   [],
 
-      setUser: (uid, email, profile_id) =>
-        set({ uid, email, profile_id }),
+      setUser: (uid, email, profile_id, role) =>
+        set({ uid, email, profile_id, role: role ?? null }),
 
-      setEmpresa: (empresa) =>
-        set({ empresa }),
+      setEmpresa: (empresa) => set({ empresa }),
+      setEmpresas: (empresas) => set({ empresas }),
 
-      setEmpresas: (empresas) =>
-        set({ empresas }),
-
-      // Agrega una empresa nueva a la lista y la activa
       addEmpresa: (empresa) =>
         set((state) => ({
           empresas: [...state.empresas, empresa],
           empresa,
         })),
 
-      // Actualiza una empresa en la lista (ej: después de cambiar balance)
       updateEmpresa: (empresa) =>
         set((state) => ({
           empresas: state.empresas.map(e => e.id === empresa.id ? empresa : e),
@@ -74,7 +71,7 @@ export const useAuthStore = create<AuthState>()(
         })),
 
       logout: () =>
-        set({ uid: null, email: null, profile_id: null, empresa: null, empresas: [] }),
+        set({ uid: null, email: null, profile_id: null, role: null, empresa: null, empresas: [] }),
     }),
     {
       name: "kipu-auth",
@@ -82,8 +79,9 @@ export const useAuthStore = create<AuthState>()(
         uid:        state.uid,
         email:      state.email,
         profile_id: state.profile_id,
+        role:       state.role,       // ← persistir
         empresa:    state.empresa,
-        empresas:   state.empresas,  // ← agregar
+        empresas:   state.empresas,
       }),
     }
   )

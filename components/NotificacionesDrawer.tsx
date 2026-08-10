@@ -58,51 +58,44 @@ export function useNotificaciones(authLoading: boolean = false) {
   const [loading,        setLoading]        = useState(false);
 
   const cargar = useCallback(async () => {
-    // No cargar si aún está autenticando
-    if (authLoading) return;
+    if (authLoading) return; // ← no cargar hasta que termine el auth
+    setLoading(true);
     try {
       const res = await api.get("/api/v1/app/notificaciones");
       setNotificaciones(res.data.notificaciones ?? []);
       setNoLeidas(res.data.no_leidas ?? 0);
     } catch (e: any) {
-      // Ignorar 401 — significa que el token aún no está listo
       if (e?.response?.status === 401) return;
       console.error(e);
+    } finally {
+      setLoading(false);
     }
   }, [authLoading]);
 
   useEffect(() => {
-    if (authLoading) return; // esperar a que termine el auth
+    if (authLoading) return;
     cargar();
-    // Polling cada 60 segundos
-    const interval = setInterval(cargar, 60000);
-    return () => clearInterval(interval);
   }, [authLoading, cargar]);
 
-  const marcarLeida = async (id: number) => {
+  const marcarLeida = useCallback(async (id: number) => {
     try {
       await api.patch(`/api/v1/app/notificaciones/${id}/leer`);
       setNotificaciones(prev =>
         prev.map(n => n.id === id ? { ...n, is_read: true } : n)
       );
       setNoLeidas(prev => Math.max(0, prev - 1));
-    } catch (e) {
-      console.error(e);
-    }
-  };
+    } catch (e) { console.error(e); }
+  }, []);
 
-  const marcarTodasLeidas = async () => {
+  const marcarTodasLeidas = useCallback(async () => {
     setLoading(true);
     try {
       await api.patch("/api/v1/app/notificaciones/leer-todas");
       setNotificaciones(prev => prev.map(n => ({ ...n, is_read: true })));
       setNoLeidas(0);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  };
+    } catch (e) { console.error(e); }
+    finally { setLoading(false); }
+  }, []);
 
   return { notificaciones, noLeidas, loading, cargar, marcarLeida, marcarTodasLeidas };
 }

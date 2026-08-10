@@ -1,6 +1,5 @@
 // app/(dashboard)/layout.tsx
 "use client";
-
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
@@ -8,12 +7,13 @@ import { auth } from "@/lib/firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { useAuthStore } from "@/store/auth.store";
 import api from "@/lib/api";
+import PWAInstallBanner from "@/components/PWAInstallBanner";
 import { registrarNotificaciones } from "@/lib/notifications";
 import {
   LayoutDashboard, FileText, Users, Package, Settings,
   LogOut, Zap, ChevronRight, ChevronDown, Menu, X,
   AlertTriangle, FileInput, Building2, CreditCard, UserCog,
-  CheckCircle2, Plus, ChevronUp,
+  CheckCircle2, Plus, ChevronUp, Shield,
 } from "lucide-react";
 import { clsx } from "clsx";
 import {
@@ -127,7 +127,6 @@ function SelectorEmpresa({ onClose }: { onClose: () => void }) {
             <X size={16} />
           </button>
         </div>
-
         <div className="divide-y divide-gray-800 max-h-64 overflow-y-auto">
           {empresas.map((e) => {
             const activa = e.id === empresa?.id;
@@ -171,8 +170,6 @@ function SelectorEmpresa({ onClose }: { onClose: () => void }) {
             );
           })}
         </div>
-
-        {/* Crear nueva empresa */}
         <div className="p-3 border-t border-gray-800">
           <button
             onClick={() => { onClose(); router.push("/nueva-empresa"); }}
@@ -191,17 +188,16 @@ function SelectorEmpresa({ onClose }: { onClose: () => void }) {
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router   = useRouter();
   const pathname = usePathname();
-  const { empresa, empresas, setUser, setEmpresa, setEmpresas, logout } = useAuthStore();
+  const { empresa, empresas, role, setUser, setEmpresa, setEmpresas, logout } = useAuthStore();
 
-  const [inicializando,    setInicializando]    = useState(true);
-  const [loading,          setLoading]          = useState(true);
-  const [sidebarOpen,      setSidebarOpen]       = useState(false);
-  const [documentosOpen,   setDocumentosOpen]    = useState(pathname.startsWith("/facturas"));
-  const [showLogoutModal,  setShowLogoutModal]   = useState(false);
-  const [showSelectorEmp,  setShowSelectorEmp]   = useState(false);
+  const [inicializando,   setInicializando]   = useState(true);
+  const [loading,         setLoading]         = useState(true);
+  const [sidebarOpen,     setSidebarOpen]      = useState(false);
+  const [documentosOpen,  setDocumentosOpen]   = useState(pathname.startsWith("/facturas"));
+  const [showLogoutModal, setShowLogoutModal]  = useState(false);
+  const [showSelectorEmp, setShowSelectorEmp]  = useState(false);
+  const [drawerOpen,      setDrawerOpen]       = useState(false);
 
-  // Estados y hook para Notificaciones (bloqueado hasta que termine el loading de auth)
-  const [drawerOpen, setDrawerOpen] = useState(false);
   const {
     notificaciones,
     noLeidas,
@@ -218,43 +214,30 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         router.replace("/login");
         return;
       }
-
       try {
-        // 1. Obtener el token actualizado directamente de Firebase
         const token = await user.getIdToken();
-
-        // 2. Inyectar el token en la petición explícitamente por si Axios aún no lo tiene
-        const res = await api.get("/api/v1/app/usuarios/empresas", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+        const res   = await api.get("/api/v1/app/usuarios/empresas", {
+          headers: { Authorization: `Bearer ${token}` },
         });
-
         const empresas = res.data.data ?? [];
-        if (empresas.length === 0) { 
-          router.replace("/onboarding"); 
-          return; 
-        }
+        const role     = res.data.role ?? null;  // ← capturar role
 
-        setUser(user.uid, user.email ?? "", "");
+        if (empresas.length === 0) {
+          router.replace("/onboarding");
+          return;
+        }
+        setUser(user.uid, user.email ?? "", "", role);  // ← pasar role
         setEmpresas(empresas);
         if (!empresa) setEmpresa(empresas[0]);
-
       } catch (error) {
-        console.error("Error al cargar empresas tras recargar:", error);
-        // Opcional: Solo mandar al login si realmente es un 401
+        console.error("Error al cargar empresas:", error);
         router.replace("/login");
       } finally {
         setLoading(false);
         setInicializando(false);
-        try {
-          await registrarNotificaciones();
-        } catch (e) {
-          // Ignorar
-        }
+        try { await registrarNotificaciones(); } catch {}
       }
     });
-
     return () => unsub();
   }, []);
 
@@ -296,11 +279,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {showLogoutModal && (
         <ModalLogout onConfirm={handleLogout} onCancel={() => setShowLogoutModal(false)} />
       )}
-
       {showSelectorEmp && (
         <SelectorEmpresa onClose={() => setShowSelectorEmp(false)} />
       )}
-
       <NotificacionesDrawer
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
@@ -310,7 +291,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         onMarcarLeida={marcarLeida}
         onMarcarTodas={marcarTodasLeidas}
       />
-
       {sidebarOpen && (
         <div className="fixed inset-0 bg-black/60 z-20 lg:hidden" onClick={() => setSidebarOpen(false)} />
       )}
@@ -435,9 +415,30 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               )}
             </div>
           ))}
+
+          {/* Link Admin — solo superadmin */}
+          {role === "superadmin" && (
+            <>
+              <div className="border-t border-gray-800 my-2" />
+              <Link
+                href="/admin"
+                onClick={() => setSidebarOpen(false)}
+                className={clsx(
+                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                  pathname.startsWith("/admin")
+                    ? "bg-indigo-600/20 text-indigo-400"
+                    : "text-gray-400 hover:text-white hover:bg-gray-800"
+                )}
+              >
+                <Shield size={17} />
+                Panel Admin
+                {pathname.startsWith("/admin") && <ChevronRight size={14} className="ml-auto" />}
+              </Link>
+            </>
+          )}
         </nav>
 
-        {/* Footer — créditos + notificaciones + logout */}
+        {/* Footer */}
         <div className="px-4 py-4 border-t border-gray-800 space-y-3">
           {empresa && (
             <Link href="/creditos"
@@ -464,13 +465,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </Link>
           )}
 
-          {/* Notificaciones */}
           <NotificacionesBadge
             noLeidas={noLeidas}
             onClick={() => setDrawerOpen(true)}
           />
 
-          {/* Cerrar sesión */}
           <button
             onClick={() => setShowLogoutModal(true)}
             className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
@@ -494,6 +493,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </main>
       </div>
 
+      <PWAInstallBanner />
     </div>
   );
 }
