@@ -113,7 +113,7 @@ export default function TabCreditos({ creditos, planes, ambiente }: Props) {
                   {/* Stripe */}
                   <button
                     onClick={() => iniciarPago(p.id)}
-                    disabled={pagando === p.id || ambiente !== 2}
+                    disabled={pagando === p.id }//|| ambiente !== 2}
                     className="mt-3 w-full py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-medium transition-colors flex items-center justify-center gap-2"
                   >
                     {pagando === p.id
