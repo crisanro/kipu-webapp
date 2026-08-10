@@ -193,6 +193,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const pathname = usePathname();
   const { empresa, empresas, setUser, setEmpresa, setEmpresas, logout } = useAuthStore();
 
+  const [inicializando,    setInicializando]    = useState(true);
   const [loading,          setLoading]          = useState(true);
   const [sidebarOpen,      setSidebarOpen]       = useState(false);
   const [documentosOpen,   setDocumentosOpen]    = useState(pathname.startsWith("/facturas"));
@@ -211,7 +212,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
-      if (!user) { router.replace("/login"); return; }
+      if (!user) {
+        setInicializando(false);
+        router.replace("/login");
+        return;
+      }
       try {
         const res      = await api.get("/api/v1/app/usuarios/empresas");
         const empresas = res.data.data ?? [];
@@ -223,6 +228,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         router.replace("/login");
       } finally {
         setLoading(false);
+        setInicializando(false);
         try {
           await registrarNotificaciones();
         } catch (e) {
@@ -254,7 +260,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return pathname.startsWith(href);
   };
 
-  if (loading) {
+  if (inicializando || loading) {
     return (
       <div className="h-screen flex items-center justify-center bg-gray-950">
         <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
