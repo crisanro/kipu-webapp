@@ -2,21 +2,42 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Download, X } from "lucide-react";
+import { Download, X, Share } from "lucide-react";
+
+// Detectar si es iOS
+const isIOS = () =>
+  /iphone|ipad|ipod/i.test(navigator.userAgent) && !(window as any).MSStream;
+
+// Detectar si ya está instalada como PWA
+const isInStandaloneMode = () =>
+  "standalone" in window.navigator && (window.navigator as any).standalone;
 
 export default function PWAInstallBanner() {
-  const [prompt,  setPrompt]  = useState<any>(null);
-  const [visible, setVisible] = useState(false);
+  const [prompt,     setPrompt]     = useState<any>(null);
+  const [showIOS,    setShowIOS]    = useState(false);
+  const [visible,    setVisible]    = useState(false);
 
   useEffect(() => {
+    // Ya instalada — no mostrar nada
+    if (isInStandaloneMode()) return;
+
+    const descartado = localStorage.getItem("pwa-install-dismissed");
+    if (descartado) return;
+
+    // Android — esperar el evento
     const handler = (e: any) => {
       e.preventDefault();
       setPrompt(e);
-      // Solo mostrar si no fue descartado antes
-      const descartado = localStorage.getItem("pwa-install-dismissed");
-      if (!descartado) setVisible(true);
+      setVisible(true);
     };
     window.addEventListener("beforeinstallprompt", handler);
+
+    // iOS — mostrar instrucciones manuales
+    if (isIOS()) {
+      setShowIOS(true);
+      setVisible(true);
+    }
+
     return () => window.removeEventListener("beforeinstallprompt", handler);
   }, []);
 
@@ -24,9 +45,7 @@ export default function PWAInstallBanner() {
     if (!prompt) return;
     prompt.prompt();
     const result = await prompt.userChoice;
-    if (result.outcome === "accepted") {
-      setVisible(false);
-    }
+    if (result.outcome === "accepted") setVisible(false);
   };
 
   const descartar = () => {
@@ -45,9 +64,16 @@ export default function PWAInstallBanner() {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-white">Instalar Kipu</p>
-            <p className="text-xs text-gray-400 mt-0.5">
-              Accede más rápido y recibe notificaciones nativas.
-            </p>
+            {showIOS ? (
+              <p className="text-xs text-gray-400 mt-0.5">
+                Toca <Share size={11} className="inline mx-0.5" /> y luego{" "}
+                <strong className="text-white">"Añadir a pantalla de inicio"</strong>
+              </p>
+            ) : (
+              <p className="text-xs text-gray-400 mt-0.5">
+                Accede más rápido y recibe notificaciones nativas.
+              </p>
+            )}
           </div>
           <button
             onClick={descartar}
@@ -56,21 +82,35 @@ export default function PWAInstallBanner() {
             <X size={16} />
           </button>
         </div>
-        <div className="flex gap-2 mt-3">
-          <button
-            onClick={descartar}
-            className="flex-1 py-2 rounded-lg border border-gray-700 text-gray-400 hover:text-white text-xs transition-colors"
-          >
-            Ahora no
-          </button>
-          <button
-            onClick={instalar}
-            className="flex-1 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium transition-colors flex items-center justify-center gap-1.5"
-          >
-            <Download size={13} />
-            Instalar
-          </button>
-        </div>
+
+        {/* Solo Android muestra botón de instalar */}
+        {!showIOS && (
+          <div className="flex gap-2 mt-3">
+            <button
+              onClick={descartar}
+              className="flex-1 py-2 rounded-lg border border-gray-700 text-gray-400 hover:text-white text-xs transition-colors"
+            >
+              Ahora no
+            </button>
+            <button
+              onClick={instalar}
+              className="flex-1 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium transition-colors flex items-center justify-center gap-1.5"
+            >
+              <Download size={13} />
+              Instalar
+            </button>
+          </div>
+        )}
+
+        {/* iOS — solo mostrar el ícono de share */}
+        {showIOS && (
+          <div className="mt-3 flex items-center gap-2 bg-gray-800 rounded-lg px-3 py-2">
+            <Share size={14} className="text-indigo-400 shrink-0" />
+            <p className="text-xs text-gray-400">
+              Compartir → Añadir a pantalla de inicio
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
