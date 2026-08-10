@@ -200,7 +200,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [showLogoutModal,  setShowLogoutModal]   = useState(false);
   const [showSelectorEmp,  setShowSelectorEmp]   = useState(false);
 
-  // Estados y hook para Notificaciones
+  // Estados y hook para Notificaciones (bloqueado hasta que termine el loading de auth)
   const [drawerOpen, setDrawerOpen] = useState(false);
   const {
     notificaciones,
@@ -208,23 +208,41 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     loading: loadingNotifs,
     marcarLeida,
     marcarTodasLeidas,
-  } = useNotificaciones();
+  } = useNotificaciones(loading || inicializando);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
       if (!user) {
         setInicializando(false);
+        setLoading(false);
         router.replace("/login");
         return;
       }
+
       try {
-        const res      = await api.get("/api/v1/app/usuarios/empresas");
+        // 1. Obtener el token actualizado directamente de Firebase
+        const token = await user.getIdToken();
+
+        // 2. Inyectar el token en la petición explícitamente por si Axios aún no lo tiene
+        const res = await api.get("/api/v1/app/usuarios/empresas", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
         const empresas = res.data.data ?? [];
-        if (empresas.length === 0) { router.replace("/onboarding"); return; }
+        if (empresas.length === 0) { 
+          router.replace("/onboarding"); 
+          return; 
+        }
+
         setUser(user.uid, user.email ?? "", "");
         setEmpresas(empresas);
         if (!empresa) setEmpresa(empresas[0]);
-      } catch {
+
+      } catch (error) {
+        console.error("Error al cargar empresas tras recargar:", error);
+        // Opcional: Solo mandar al login si realmente es un 401
         router.replace("/login");
       } finally {
         setLoading(false);
@@ -232,10 +250,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         try {
           await registrarNotificaciones();
         } catch (e) {
-          // No crítico — no bloquear el login
+          // Ignorar
         }
       }
     });
+
     return () => unsub();
   }, []);
 

@@ -52,27 +52,32 @@ function tiempoRelativo(fecha: string): string {
 }
 
 // ── Hook para notificaciones ───────────────────────────────────────────────────
-export function useNotificaciones() {
+export function useNotificaciones(authLoading: boolean = false) {
   const [noLeidas,       setNoLeidas]       = useState(0);
   const [notificaciones, setNotificaciones] = useState<Notificacion[]>([]);
   const [loading,        setLoading]        = useState(false);
 
   const cargar = useCallback(async () => {
+    // No cargar si aún está autenticando
+    if (authLoading) return;
     try {
       const res = await api.get("/api/v1/app/notificaciones");
       setNotificaciones(res.data.notificaciones ?? []);
       setNoLeidas(res.data.no_leidas ?? 0);
-    } catch (e) {
+    } catch (e: any) {
+      // Ignorar 401 — significa que el token aún no está listo
+      if (e?.response?.status === 401) return;
       console.error(e);
     }
-  }, []);
+  }, [authLoading]);
 
   useEffect(() => {
+    if (authLoading) return; // esperar a que termine el auth
     cargar();
     // Polling cada 60 segundos
     const interval = setInterval(cargar, 60000);
     return () => clearInterval(interval);
-  }, [cargar]);
+  }, [authLoading, cargar]);
 
   const marcarLeida = async (id: number) => {
     try {
@@ -128,13 +133,13 @@ export function NotificacionesBadge({
 
 // ── Drawer ─────────────────────────────────────────────────────────────────────
 interface DrawerProps {
-  open:              boolean;
-  onClose:           () => void;
-  notificaciones:    Notificacion[];
-  noLeidas:          number;
-  loading:           boolean;
-  onMarcarLeida:     (id: number) => void;
-  onMarcarTodas:     () => void;
+  open:           boolean;
+  onClose:        () => void;
+  notificaciones: Notificacion[];
+  noLeidas:       number;
+  loading:        boolean;
+  onMarcarLeida:  (id: number) => void;
+  onMarcarTodas:  () => void;
 }
 
 export function NotificacionesDrawer({
