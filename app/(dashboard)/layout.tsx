@@ -8,6 +8,7 @@ import { auth } from "@/lib/firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { useAuthStore } from "@/store/auth.store";
 import api from "@/lib/api";
+import { registrarNotificaciones } from "@/lib/notifications";
 import {
   LayoutDashboard, FileText, Users, Package, Settings,
   LogOut, Zap, ChevronRight, ChevronDown, Menu, X,
@@ -15,6 +16,11 @@ import {
   CheckCircle2, Plus, ChevronUp,
 } from "lucide-react";
 import { clsx } from "clsx";
+import {
+  useNotificaciones,
+  NotificacionesBadge,
+  NotificacionesDrawer,
+} from "@/components/NotificacionesDrawer";
 
 const NAV_GROUPS = [
   {
@@ -193,6 +199,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [showLogoutModal,  setShowLogoutModal]   = useState(false);
   const [showSelectorEmp,  setShowSelectorEmp]   = useState(false);
 
+  // Estados y hook para Notificaciones
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const {
+    notificaciones,
+    noLeidas,
+    loading: loadingNotifs,
+    marcarLeida,
+    marcarTodasLeidas,
+  } = useNotificaciones();
+
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
       if (!user) { router.replace("/login"); return; }
@@ -207,6 +223,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         router.replace("/login");
       } finally {
         setLoading(false);
+        try {
+          await registrarNotificaciones();
+        } catch (e) {
+          // No crítico — no bloquear el login
+        }
       }
     });
     return () => unsub();
@@ -254,6 +275,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {showSelectorEmp && (
         <SelectorEmpresa onClose={() => setShowSelectorEmp(false)} />
       )}
+
+      <NotificacionesDrawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        notificaciones={notificaciones}
+        noLeidas={noLeidas}
+        loading={loadingNotifs}
+        onMarcarLeida={marcarLeida}
+        onMarcarTodas={marcarTodasLeidas}
+      />
 
       {sidebarOpen && (
         <div className="fixed inset-0 bg-black/60 z-20 lg:hidden" onClick={() => setSidebarOpen(false)} />
@@ -381,7 +412,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           ))}
         </nav>
 
-        {/* Footer — créditos + logout */}
+        {/* Footer — créditos + notificaciones + logout */}
         <div className="px-4 py-4 border-t border-gray-800 space-y-3">
           {empresa && (
             <Link href="/creditos"
@@ -408,6 +439,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </Link>
           )}
 
+          {/* Notificaciones */}
+          <NotificacionesBadge
+            noLeidas={noLeidas}
+            onClick={() => setDrawerOpen(true)}
+          />
+
+          {/* Cerrar sesión */}
           <button
             onClick={() => setShowLogoutModal(true)}
             className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"

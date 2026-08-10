@@ -11,6 +11,7 @@ import {
 import { clsx } from "clsx";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import Checklist, { HealthData } from "@/components/Checklist";
+import DeclaracionWidget from "@/components/DeclaracionWidget";
 
 interface DashboardData {
   health?:   HealthData;
@@ -128,6 +129,9 @@ export default function DashboardPage() {
       {data?.health && !data.health.listo_produccion && (
         <Checklist health={data.health} compact />
       )}
+
+      {/* Widget de Declaraciones Fiscales */}
+      <DeclaracionWidget />
 
       {/* Alerta ambiente pruebas */}
       {!esProduccion && (
@@ -284,7 +288,7 @@ export default function DashboardPage() {
           {/* Accesos rápidos */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {[
-              { href: "/facturas/nueva", icon: Zap,    label: "Nueva Factura", desc: "Emitir comprobante",    color: "bg-indigo-600/20 text-indigo-400" },
+              { href: "/facturas/nueva", icon: Zap,     label: "Nueva Factura", desc: "Emitir comprobante",    color: "bg-indigo-600/20 text-indigo-400" },
               { href: "/clientes",       icon: Users,   label: "Clientes",      desc: "Gestionar compradores", color: "bg-blue-600/20 text-blue-400" },
               { href: "/productos",      icon: Package, label: "Productos",     desc: "Catálogo de servicios", color: "bg-emerald-600/20 text-emerald-400" },
             ].map(({ href, icon: Icon, label, desc, color }) => (
