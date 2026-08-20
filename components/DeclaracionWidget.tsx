@@ -1,12 +1,12 @@
 // components/DeclaracionWidget.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import api from "@/lib/api";
 import { CheckCircle2, AlertTriangle, Clock, XCircle, Loader2, ExternalLink } from "lucide-react";
 import { clsx } from "clsx";
 
-interface DeclaracionData {
+export interface DeclaracionData {
   periodo:         string;
   periodo_iso:     string;
   declarado:       boolean;
@@ -15,6 +15,11 @@ interface DeclaracionData {
   vencimiento_fmt: string;
   dias_restantes:  number;
   estado:          "DECLARADO" | "VENCIDO" | "URGENTE" | "PROXIMO" | "PENDIENTE";
+}
+
+interface Props {
+  data: DeclaracionData;
+  onDeclarado: () => void; 
 }
 
 // ── Modal de confirmación ──────────────────────────────────────────────────────
@@ -109,27 +114,10 @@ const ESTADO_UI = {
 };
 
 // ── Componente principal ───────────────────────────────────────────────────────
-export default function DeclaracionWidget() {
-  const [data,           setData]           = useState<DeclaracionData | null>(null);
-  const [loading,        setLoading]        = useState(true);
-  const [confirmando,    setConfirmando]    = useState(false);
-  const [guardando,      setGuardando]      = useState(false);
-  const [error,          setError]          = useState("");
-
-  const cargar = async () => {
-    try {
-      const res = await api.get("/api/v1/app/declaraciones/actual");
-      if (res.data.aplica) {
-        setData(res.data.data);
-      }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => { cargar(); }, []);
+export default function DeclaracionWidget({ data, onDeclarado }: Props) {
+  const [confirmando, setConfirmando] = useState(false);
+  const [guardando,   setGuardando]   = useState(false);
+  const [error,       setError]       = useState("");
 
   const confirmarDeclaracion = async () => {
     setGuardando(true);
@@ -137,7 +125,8 @@ export default function DeclaracionWidget() {
     try {
       await api.post("/api/v1/app/declaraciones/declarar");
       setConfirmando(false);
-      await cargar();
+      // Recargar la página o emitir evento de actualización si es necesario
+      onDeclarado(); 
     } catch (e: any) {
       setError(e?.response?.data?.detail ?? "Error al registrar la declaración.");
     } finally {
@@ -145,10 +134,9 @@ export default function DeclaracionWidget() {
     }
   };
 
-  // No mostrar si está cargando, no aplica, o no hay datos
-  if (loading || !data) return null;
+  if (!data) return null;
 
-  const ui   = ESTADO_UI[data.estado];
+  const ui   = ESTADO_UI[data.estado] || ESTADO_UI.PENDIENTE;
   const Icon = ui.icon;
 
   return (

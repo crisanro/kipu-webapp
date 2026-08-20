@@ -1,3 +1,4 @@
+// app/clientes/[id]/page.tsx
 "use client";
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -19,11 +20,11 @@ const TIPO_ID: Record<string, string> = {
 };
 
 const ESTADO_CONFIG: Record<string, { label: string; color: string; icon: any }> = {
-  AUTORIZADO: { label: "Autorizada", color: "text-emerald-400 bg-emerald-400/10", icon: CheckCircle2 },
-  RECIBIDA:   { label: "En proceso", color: "text-indigo-400 bg-indigo-400/10",   icon: Clock },
+  AUTORIZADO: { label: "Autorizado", color: "text-emerald-400 bg-emerald-400/10", icon: CheckCircle2 },
+  RECIBIDA:   { label: "En proceso", color: "text-indigo-400 bg-indigo-400/10",    icon: Clock },
   FIRMADO:    { label: "En cola",    color: "text-blue-400 bg-blue-400/10",        icon: Clock },
-  DEVUELTA:   { label: "Devuelta",   color: "text-amber-400 bg-amber-400/10",      icon: AlertTriangle },
-  RECHAZADO:  { label: "Rechazada",  color: "text-red-400 bg-red-400/10",          icon: XCircle },
+  DEVUELTA:   { label: "Devuelto",   color: "text-amber-400 bg-amber-400/10",      icon: AlertTriangle },
+  RECHAZADO:  { label: "Rechazado",  color: "text-red-400 bg-red-400/10",          icon: XCircle },
 };
 
 const fmt = (n: any) => parseFloat(n ?? 0).toFixed(2);
@@ -77,10 +78,10 @@ export default function DetalleClientePage() {
     if (!data?.cliente) return;
     sessionStorage.setItem("kipu:prefill", JSON.stringify({
       cliente: {
-        id:           data.cliente.id,
-        razon_social: data.cliente.razon_social,
+        id:            data.cliente.id,
+        razon_social:  data.cliente.razon_social,
         identificacion: data.cliente.identificacion,
-        tipo_id:      data.cliente.tipo_identificacion_sri,
+        tipo_id:       data.cliente.tipo_identificacion_sri,
       },
       esConsumidorFinal: false,
       items: [],
@@ -89,7 +90,7 @@ export default function DetalleClientePage() {
         ? [{ nombre: "Email", valor: data.cliente.email }]
         : [],
     }));
-    router.push("/facturas/nueva");
+    router.push("/documentos/emitir/fac");
   };
 
   if (loading) {
@@ -149,7 +150,7 @@ export default function DetalleClientePage() {
         </div>
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
           <p className="text-xs text-gray-500 mb-1">Facturas emitidas</p>
-          <p className="text-2xl font-bold text-white">{resumen.total_facturas}</p>
+          <p className="text-2xl font-bold text-white">{resumen.total_documentos}</p>
           <p className="text-xs text-gray-600 mt-0.5">total histórico</p>
         </div>
       </div>
@@ -288,12 +289,12 @@ export default function DetalleClientePage() {
         ) : (
           <div className="divide-y divide-gray-800">
             {facturas.map((f: any) => {
-              const estado = ESTADO_CONFIG[f.estado] ?? ESTADO_CONFIG.FIRMADO;
+              const estado = ESTADO_CONFIG[f.estado_sri] ?? ESTADO_CONFIG.FIRMADO;
               const Icon   = estado.icon;
               return (
                 <Link
                   key={f.id}
-                  href={`/facturas/${f.id}`}
+                  href={`/documentos/${f.id}`}
                   className="flex items-center gap-3 px-4 py-3 hover:bg-gray-800/50 transition-colors"
                 >
                   <div className={clsx(
@@ -303,7 +304,7 @@ export default function DetalleClientePage() {
                     <Icon size={13} className={estado.color.split(" ")[0]} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-mono text-indigo-400">{f.numero_factura}</p>
+                    <p className="text-sm font-mono text-indigo-400">{f.numero_doc}</p>
                     <p className="text-xs text-gray-500">{f.fecha_emision}</p>
                   </div>
                   <div className="text-right shrink-0">

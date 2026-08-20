@@ -28,7 +28,7 @@ export default function TabCreditos({ creditos, planes, ambiente }: Props) {
   const iniciarPago = async (planId: number) => {
     setPagando(planId);
     try {
-      const res = await api.post("/api/v1/app/creditos/stripe/checkout", { plan_id: planId });
+      const res = await api.post("/api/v1/app/planes/stripe/checkout", { plan_id: planId });
       window.location.href = res.data.checkout_url;
     } catch (err: any) {
       alert(err?.response?.data?.detail ?? "Error al iniciar el pago.");

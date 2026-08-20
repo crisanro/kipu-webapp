@@ -1,10 +1,10 @@
 // app/(dashboard)/layout.tsx
 "use client";
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@/lib/firebase";
-import { onAuthStateChanged, signOut } from "firebase/auth";
+import { signOut } from "firebase/auth";
 import { useAuthStore } from "@/store/auth.store";
 import api from "@/lib/api";
 import PWAInstallBanner from "@/components/PWAInstallBanner";
@@ -13,7 +13,7 @@ import {
   LayoutDashboard, FileText, Users, Package, Settings,
   LogOut, Zap, ChevronRight, ChevronDown, Menu, X,
   AlertTriangle, FileInput, Building2, CreditCard, UserCog,
-  CheckCircle2, Plus, ChevronUp, Shield,
+  CheckCircle2, Plus, ChevronUp, Shield, RefreshCw,
 } from "lucide-react";
 import { clsx } from "clsx";
 import {
@@ -25,17 +25,28 @@ import {
 const NAV_GROUPS = [
   {
     items: [
-      { href: "/dashboard",      label: "Dashboard",     icon: LayoutDashboard },
-      { href: "/facturas/nueva", label: "Nueva Factura", icon: Zap },
+      { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     ]
+  },
+  {
+    label:    "Emitir",
+    icon:     Zap,
+    base:     "/documentos/emitir",
+    children: [
+      { href: "/documentos/emitir/fac",     label: "Factura", icon: FileText },
+      { href: "/documentos/emitir/liq",     label: "Liquidación de compra", icon: FileText },
+      { href: "/documentos/emitir/ncr",     label: "Nota de crédito", icon: FileText },
+      { href: "/documentos/emitir/ndb",     label: "Nota de débito", icon: FileText },
+      { href: "/documentos/emitir/ret",     label: "Retención", icon: FileText },
+    ],
   },
   {
     label:    "Documentos",
     icon:     FileText,
-    base:     "/facturas",
+    base:     "/documentos",
     children: [
-      { href: "/facturas",           label: "Emitidos",  icon: FileText },
-      { href: "/facturas/recibidas", label: "Recibidos", icon: FileInput },
+      { href: "/documentos",           label: "Emitidos",  icon: FileText  },
+      { href: "/documentos/recibidos", label: "Recibidos", icon: FileInput },
     ],
   },
   {
@@ -48,14 +59,13 @@ const NAV_GROUPS = [
     separator: true,
     items: [
       { href: "/estructura",    label: "Estructura",    icon: Building2 },
-      { href: "/creditos",      label: "Créditos",      icon: CreditCard },
+      { href: "/planes",      label: "Planes",   icon: CreditCard },
       { href: "/usuarios",      label: "Usuarios",      icon: UserCog },
       { href: "/configuracion", label: "Configuración", icon: Settings },
     ]
   },
 ];
 
-// ── Modal confirmación logout ──────────────────────────────────────────────────
 function ModalLogout({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
   return (
     <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
@@ -84,30 +94,29 @@ function ModalLogout({ onConfirm, onCancel }: { onConfirm: () => void; onCancel:
   );
 }
 
-// ── Selector de empresa ────────────────────────────────────────────────────────
 function SelectorEmpresa({ onClose }: { onClose: () => void }) {
-  const router      = useRouter();
+  const router  = useRouter();
   const { empresas, empresa, setEmpresa } = useAuthStore();
-  const [cambiando, setCambiando]         = useState<number | null>(null);
+  const [cambiando, setCambiando] = useState<number | null>(null);
 
   const cambiar = async (e: any) => {
     if (e.id === empresa?.id) { onClose(); return; }
     setCambiando(e.id);
     try {
-      const res = await api.post("/api/v1/app/usuarios/empresas/cambiar", {
-        emisor_id: e.id
-      });
+      const res  = await api.post("/api/v1/app/usuarios/empresas/cambiar", { emisor_id: e.id });
       const data = res.data.data;
       setEmpresa({
-        id:                e.id,
-        ruc:               data.ruc,
-        razon_social:      data.razon_social,
-        nombre_comercial:  e.nombre_comercial,
-        ambiente:          data.ambiente,
-        rol:               data.rol,
-        balance_emision:   data.balance_emision,
-        balance_recepcion: data.balance_recepcion,
-        firma_ok:          e.firma_ok,
+        id:                 e.id,
+        ruc:                data.ruc,
+        razon_social:       data.razon_social,
+        nombre_comercial:   e.nombre_comercial,
+        ambiente:           data.ambiente,
+        tipo_emisor:        data.tipo_emisor,
+        rol:                data.rol,
+        firma_ok:           e.firma_ok,
+        suscripcion_activa: data.suscripcion_activa,
+        suscripcion:        data.suscripcion,
+        balance_api:        data.balance_api,
       });
       onClose();
       router.push("/dashboard");
@@ -123,23 +132,17 @@ function SelectorEmpresa({ onClose }: { onClose: () => void }) {
       <div className="bg-gray-900 border border-gray-800 rounded-xl w-full max-w-sm">
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800">
           <h2 className="text-sm font-semibold text-white">Cambiar empresa</h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-white">
-            <X size={16} />
-          </button>
+          <button onClick={onClose} className="text-gray-500 hover:text-white"><X size={16} /></button>
         </div>
         <div className="divide-y divide-gray-800 max-h-64 overflow-y-auto">
           {empresas.map((e) => {
             const activa = e.id === empresa?.id;
             return (
-              <button
-                key={e.id}
-                onClick={() => cambiar(e)}
-                disabled={!!cambiando}
+              <button key={e.id} onClick={() => cambiar(e)} disabled={!!cambiando}
                 className={clsx(
                   "w-full flex items-center gap-3 px-4 py-3 text-left transition-colors",
                   activa ? "bg-indigo-600/10" : "hover:bg-gray-800"
-                )}
-              >
+                )}>
                 <div className={clsx(
                   "w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-xs font-bold",
                   activa ? "bg-indigo-600 text-white" : "bg-gray-800 text-gray-400"
@@ -155,9 +158,7 @@ function SelectorEmpresa({ onClose }: { onClose: () => void }) {
                 <div className="flex items-center gap-2 shrink-0">
                   <span className={clsx(
                     "text-[10px] px-1.5 py-0.5 rounded-full",
-                    e.ambiente === 2
-                      ? "bg-emerald-500/20 text-emerald-400"
-                      : "bg-amber-500/20 text-amber-400"
+                    e.ambiente === 2 ? "bg-emerald-500/20 text-emerald-400" : "bg-amber-500/20 text-amber-400"
                   )}>
                     {e.ambiente === 2 ? "Prod" : "Pruebas"}
                   </span>
@@ -175,8 +176,7 @@ function SelectorEmpresa({ onClose }: { onClose: () => void }) {
             onClick={() => { onClose(); router.push("/nueva-empresa"); }}
             className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-dashed border-gray-700 text-gray-400 hover:text-white hover:border-gray-600 text-sm transition-colors"
           >
-            <Plus size={14} />
-            Agregar empresa
+            <Plus size={14} /> Agregar empresa
           </button>
         </div>
       </div>
@@ -184,65 +184,43 @@ function SelectorEmpresa({ onClose }: { onClose: () => void }) {
   );
 }
 
-// ── Layout principal ───────────────────────────────────────────────────────────
+// =============================================================================
+// LAYOUT PRINCIPAL
+// =============================================================================
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router   = useRouter();
   const pathname = usePathname();
-  const { empresa, empresas, role, setUser, setEmpresa, setEmpresas, logout } = useAuthStore();
+  const { empresa, empresas, role, logout } = useAuthStore();
 
-  const [inicializando,   setInicializando]   = useState(true);
-  const [loading,         setLoading]         = useState(true);
-  const [sidebarOpen,     setSidebarOpen]      = useState(false);
-  const [documentosOpen,  setDocumentosOpen]   = useState(pathname.startsWith("/facturas"));
-  const [showLogoutModal, setShowLogoutModal]  = useState(false);
-  const [showSelectorEmp, setShowSelectorEmp]  = useState(false);
-  const [drawerOpen,      setDrawerOpen]       = useState(false);
+  const [sidebarOpen,     setSidebarOpen]     = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showSelectorEmp, setShowSelectorEmp] = useState(false);
+  const [drawerOpen,      setDrawerOpen]      = useState(false);
 
-  const {
-    notificaciones,
-    noLeidas,
-    loading: loadingNotifs,
-    marcarLeida,
-    marcarTodasLeidas,
-  } = useNotificaciones(loading || inicializando);
+  // Manejo de estado para carpetas colapsables
+  const [gruposAbiertos, setGruposAbiertos] = useState<Record<string, boolean>>({
+    "/documentos/emitir": pathname.startsWith("/documentos/emitir"),
+    "/documentos":        pathname.startsWith("/documentos") && !pathname.startsWith("/documentos/emitir"),
+  });
+
+  const toggleGrupo = (base: string) => {
+    setGruposAbiertos(prev => ({ ...prev, [base]: !prev[base] }));
+  };
+
+  const { notificaciones, noLeidas, loading: loadingNotifs, marcarLeida, marcarTodasLeidas } =
+    useNotificaciones(false);
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        setInicializando(false);
-        setLoading(false);
-        router.replace("/login");
-        return;
-      }
-      try {
-        const token = await user.getIdToken();
-        const res   = await api.get("/api/v1/app/usuarios/empresas", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const empresas = res.data.data ?? [];
-        const role     = res.data.role ?? null;  // ← capturar role
-
-        if (empresas.length === 0) {
-          router.replace("/onboarding");
-          return;
-        }
-        setUser(user.uid, user.email ?? "", "", role);  // ← pasar role
-        setEmpresas(empresas);
-        if (!empresa) setEmpresa(empresas[0]);
-      } catch (error) {
-        console.error("Error al cargar empresas:", error);
-        router.replace("/login");
-      } finally {
-        setLoading(false);
-        setInicializando(false);
-        try { await registrarNotificaciones(); } catch {}
-      }
-    });
-    return () => unsub();
+    registrarNotificaciones().catch(() => {});
   }, []);
 
   useEffect(() => {
-    if (pathname.startsWith("/facturas")) setDocumentosOpen(true);
+    if (pathname.startsWith("/documentos/emitir")) {
+      setGruposAbiertos(prev => ({ ...prev, "/documentos/emitir": true }));
+    }
+    if (pathname.startsWith("/documentos") && !pathname.startsWith("/documentos/emitir")) {
+      setGruposAbiertos(prev => ({ ...prev, "/documentos": true }));
+    }
   }, [pathname]);
 
   const handleLogout = async () => {
@@ -252,17 +230,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   };
 
   const isActive = (href: string) => {
-    if (href === "/facturas/nueva") return pathname === "/facturas/nueva";
-    if (href === "/facturas") {
-      return pathname === "/facturas" ||
-        (pathname.startsWith("/facturas/") &&
-         !pathname.startsWith("/facturas/recibidas") &&
-         !pathname.startsWith("/facturas/nueva"));
+    if (href === "/documentos") {
+      return pathname === "/documentos" ||
+        (pathname.startsWith("/documentos/") &&
+         !pathname.startsWith("/documentos/emitir") &&
+         !pathname.startsWith("/documentos/recibidos"));
     }
     return pathname.startsWith(href);
   };
 
-  if (inicializando || loading) {
+  if (!empresa) {
     return (
       <div className="h-screen flex items-center justify-center bg-gray-950">
         <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
@@ -270,12 +247,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     );
   }
 
-  const ambienteColor = empresa?.ambiente === 2 ? "text-emerald-400" : "text-amber-400";
-  const ambienteLabel = empresa?.ambiente === 2 ? "Producción" : "Pruebas";
+  const ambienteColor = empresa.ambiente === 2 ? "text-emerald-400" : "text-amber-400";
+  const ambienteLabel = empresa.ambiente === 2 ? "Producción" : "Pruebas";
 
   return (
     <div className="flex h-screen overflow-hidden">
-
       {showLogoutModal && (
         <ModalLogout onConfirm={handleLogout} onCancel={() => setShowLogoutModal(false)} />
       )}
@@ -291,8 +267,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         onMarcarLeida={marcarLeida}
         onMarcarTodas={marcarTodasLeidas}
       />
+
       {sidebarOpen && (
-        <div className="fixed inset-0 bg-black/60 z-20 lg:hidden" onClick={() => setSidebarOpen(false)} />
+        <div className="fixed inset-0 bg-black/60 z-20 lg:hidden"
+          onClick={() => setSidebarOpen(false)} />
       )}
 
       {/* Sidebar */}
@@ -301,7 +279,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         "bg-gray-900 border-r border-gray-800 transition-transform duration-200",
         sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
       )}>
-
         {/* Logo */}
         <div className="flex items-center gap-2 px-5 py-5 border-b border-gray-800">
           <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center">
@@ -313,63 +290,55 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </button>
         </div>
 
-        {/* Selector de empresa */}
-        {empresa && (
-          <button
-            onClick={() => setShowSelectorEmp(true)}
-            className="px-4 py-3 border-b border-gray-800 text-left hover:bg-gray-800/50 transition-colors group w-full"
-          >
-            <p className="text-xs text-gray-500 mb-0.5">Empresa activa</p>
-            <div className="flex items-center justify-between">
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-white truncate">
-                  {empresa.nombre_comercial || empresa.razon_social}
-                </p>
-                <p className="text-xs text-gray-500">{empresa.ruc}</p>
-              </div>
-              <div className="flex items-center gap-1 shrink-0 ml-2">
-                {empresas.length > 1 && (
-                  <ChevronUp size={12} className="text-gray-500 group-hover:text-white transition-colors rotate-180" />
-                )}
-              </div>
+        {/* Selector empresa */}
+        <button
+          onClick={() => setShowSelectorEmp(true)}
+          className="px-4 py-3 border-b border-gray-800 text-left hover:bg-gray-800/50 transition-colors group w-full"
+        >
+          <p className="text-xs text-gray-500 mb-0.5">Empresa activa</p>
+          <div className="flex items-center justify-between">
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium text-white truncate">
+                {empresa.nombre_comercial || empresa.razon_social}
+              </p>
+              <p className="text-xs text-gray-500">{empresa.ruc}</p>
             </div>
-            <div className="flex items-center justify-between mt-1">
-              <span className={clsx("text-xs font-medium", ambienteColor)}>
-                ● {ambienteLabel}
-              </span>
-              {empresas.length > 1 && (
-                <span className="text-[10px] text-gray-600">
-                  {empresas.length} empresas
-                </span>
-              )}
-            </div>
-          </button>
-        )}
+            {empresas.length > 1 && (
+              <ChevronUp size={12} className="text-gray-500 group-hover:text-white transition-colors rotate-180 ml-2 shrink-0" />
+            )}
+          </div>
+          <div className="flex items-center justify-between mt-1">
+            <span className={clsx("text-xs font-medium", ambienteColor)}>
+              ● {ambienteLabel}
+            </span>
+            {empresas.length > 1 && (
+              <span className="text-[10px] text-gray-600">{empresas.length} empresas</span>
+            )}
+          </div>
+        </button>
 
         {/* Nav */}
         <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
           {NAV_GROUPS.map((group, gi) => (
             <div key={gi}>
               {group.separator && <div className="border-t border-gray-800 my-2" />}
-
               {"children" in group && group.children ? (
                 <div>
                   <button
-                    onClick={() => setDocumentosOpen(!documentosOpen)}
+                    onClick={() => toggleGrupo(group.base ?? "")}
                     className={clsx(
                       "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
                       pathname.startsWith(group.base ?? "")
                         ? "bg-indigo-600/20 text-indigo-400"
                         : "text-gray-400 hover:text-white hover:bg-gray-800"
-                    )}
-                  >
+                    )}>
                     <group.icon size={17} />
                     {group.label}
                     <span className="ml-auto">
-                      {documentosOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                      {(gruposAbiertos[group.base ?? ""] ?? false) ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                     </span>
                   </button>
-                  {documentosOpen && (
+                  {(gruposAbiertos[group.base ?? ""] ?? false) && (
                     <div className="mt-0.5 ml-4 pl-3 border-l border-gray-800 space-y-0.5">
                       {group.children.map((child) => {
                         const active = isActive(child.href);
@@ -382,8 +351,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                               active
                                 ? "text-indigo-400 bg-indigo-600/10 font-medium"
                                 : "text-gray-500 hover:text-white hover:bg-gray-800"
-                            )}
-                          >
+                            )}>
                             <Icon size={14} />
                             {child.label}
                           </Link>
@@ -404,8 +372,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         active
                           ? "bg-indigo-600/20 text-indigo-400"
                           : "text-gray-400 hover:text-white hover:bg-gray-800"
-                      )}
-                    >
+                      )}>
                       <Icon size={17} />
                       {item.label}
                       {active && <ChevronRight size={14} className="ml-auto" />}
@@ -416,20 +383,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
           ))}
 
-          {/* Link Admin — solo superadmin */}
           {role === "superadmin" && (
             <>
               <div className="border-t border-gray-800 my-2" />
-              <Link
-                href="/admin"
-                onClick={() => setSidebarOpen(false)}
+              <Link href="/admin" onClick={() => setSidebarOpen(false)}
                 className={clsx(
                   "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
                   pathname.startsWith("/admin")
                     ? "bg-indigo-600/20 text-indigo-400"
                     : "text-gray-400 hover:text-white hover:bg-gray-800"
-                )}
-              >
+                )}>
                 <Shield size={17} />
                 Panel Admin
                 {pathname.startsWith("/admin") && <ChevronRight size={14} className="ml-auto" />}
@@ -440,42 +403,55 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* Footer */}
         <div className="px-4 py-4 border-t border-gray-800 space-y-3">
-          {empresa && (
-            <Link href="/creditos"
-              className="block bg-gray-800 hover:bg-gray-700 rounded-lg px-3 py-2.5 transition-colors"
-            >
-              <p className="text-xs text-gray-500 mb-1">Créditos disponibles</p>
-              <div className="flex items-center gap-3">
-                <div>
-                  <p className="text-xs text-gray-600">Emisión</p>
-                  <p className="text-sm font-bold text-white">{empresa.balance_emision}</p>
-                </div>
-                <div className="w-px h-6 bg-gray-700" />
-                <div>
-                  <p className="text-xs text-gray-600">Recepción</p>
-                  <p className="text-sm font-bold text-white">{empresa.balance_recepcion ?? 0}</p>
-                </div>
+          <Link href="/planes"
+            className="block bg-gray-800 hover:bg-gray-700 rounded-lg px-3 py-2.5 transition-colors">
+            <p className="text-xs text-gray-500 mb-1">Plan activo</p>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-bold text-white">
+                  {empresa.suscripcion?.plan ?? "—"}
+                </p>
+                <p className="text-xs text-gray-500">
+                  {empresa.suscripcion?.estado === "TRIAL"
+                    ? "⏳ En prueba"
+                    : empresa.suscripcion_activa
+                    ? "✅ Activo"
+                    : "❌ Inactivo"}
+                </p>
               </div>
-              {empresa.balance_emision <= 10 && (
-                <div className="flex items-center gap-1 mt-1.5">
-                  <AlertTriangle size={11} className="text-amber-400" />
-                  <span className="text-xs text-amber-400">Créditos bajos — recargar</span>
+              {empresa.balance_api > 0 && (
+                <div className="text-right">
+                  <p className="text-xs text-gray-500">Créditos API</p>
+                  <p className="text-sm font-bold text-amber-400">{empresa.balance_api}</p>
                 </div>
               )}
-            </Link>
-          )}
+            </div>
+            {!empresa.suscripcion_activa && (
+              <div className="flex items-center gap-1 mt-1.5">
+                <AlertTriangle size={11} className="text-red-400" />
+                <span className="text-xs text-red-400">Sin suscripción activa</span>
+              </div>
+            )}
+          </Link>
 
-          <NotificacionesBadge
-            noLeidas={noLeidas}
-            onClick={() => setDrawerOpen(true)}
-          />
+          <NotificacionesBadge noLeidas={noLeidas} onClick={() => setDrawerOpen(true)} />
 
-          <button
-            onClick={() => setShowLogoutModal(true)}
-            className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
-          >
+          <button onClick={() => setShowLogoutModal(true)}
+            className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-colors">
             <LogOut size={16} />
             Cerrar sesión
+          </button>
+
+          <button
+            onClick={() => {
+              localStorage.removeItem("kipu:empresas");
+              localStorage.removeItem("kipu-swr-cache");
+              window.location.reload();
+            }}
+            className="flex items-center justify-center gap-1.5 text-xs text-gray-500 hover:text-gray-300 transition-colors w-full py-1"
+          >
+            <RefreshCw size={12} />
+            Actualizar datos
           </button>
         </div>
       </aside>

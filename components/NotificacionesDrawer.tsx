@@ -1,9 +1,11 @@
 // components/NotificacionesDrawer.tsx
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
+import useSWR from "swr";
+import { useAuthStore } from "@/store/auth.store";
 import {
   Bell, X, CheckCheck, Loader2,
   FileText, CreditCard, AlertTriangle, Info, ClipboardList
@@ -51,53 +53,65 @@ function tiempoRelativo(fecha: string): string {
   return new Date(fecha).toLocaleDateString("es-EC");
 }
 
-// ── Hook para notificaciones ───────────────────────────────────────────────────
+// ── Hook para notificaciones con SWR ──────────────────────────────────────────
+const fetcher = (url: string) => api.get(url).then(r => r.data);
+
 export function useNotificaciones(authLoading: boolean = false) {
-  const [noLeidas,       setNoLeidas]       = useState(0);
-  const [notificaciones, setNotificaciones] = useState<Notificacion[]>([]);
-  const [loading,        setLoading]        = useState(false);
+  const listo = useAuthStore((s) => s.listo);
 
-  const cargar = useCallback(async () => {
-    if (authLoading) return; // ← no cargar hasta que termine el auth
-    setLoading(true);
-    try {
-      const res = await api.get("/api/v1/app/notificaciones");
-      setNotificaciones(res.data.notificaciones ?? []);
-      setNoLeidas(res.data.no_leidas ?? 0);
-    } catch (e: any) {
-      if (e?.response?.status === 401) return;
-      console.error(e);
-    } finally {
-      setLoading(false);
+  const { data, mutate } = useSWR(
+    !authLoading && listo ? "/api/v1/app/notificaciones" : null,
+    fetcher,
+    {
+      revalidateOnFocus:     false,
+      revalidateOnReconnect: false,
+      revalidateIfStale:     false,
+      dedupingInterval:      300000, // 5 min
     }
-  }, [authLoading]);
+  );
 
-  useEffect(() => {
-    if (authLoading) return;
-    cargar();
-  }, [authLoading, cargar]);
+  const notificaciones: Notificacion[] = data?.notificaciones ?? [];
+  const noLeidas:        number        = data?.no_leidas       ?? 0;
+  const loading                        = !data && listo;
 
   const marcarLeida = useCallback(async (id: number) => {
     try {
       await api.patch(`/api/v1/app/notificaciones/${id}/leer`);
-      setNotificaciones(prev =>
-        prev.map(n => n.id === id ? { ...n, is_read: true } : n)
+      mutate(
+        (prev: any) => prev ? {
+          ...prev,
+          notificaciones: prev.notificaciones.map((n: Notificacion) =>
+            n.id === id ? { ...n, is_read: true } : n
+          ),
+          no_leidas: Math.max(0, (prev.no_leidas ?? 1) - 1),
+        } : prev,
+        false
       );
-      setNoLeidas(prev => Math.max(0, prev - 1));
     } catch (e) { console.error(e); }
-  }, []);
+  }, [mutate]);
 
   const marcarTodasLeidas = useCallback(async () => {
-    setLoading(true);
     try {
       await api.patch("/api/v1/app/notificaciones/leer-todas");
-      setNotificaciones(prev => prev.map(n => ({ ...n, is_read: true })));
-      setNoLeidas(0);
+      mutate(
+        (prev: any) => prev ? {
+          ...prev,
+          notificaciones: prev.notificaciones.map((n: Notificacion) => ({ ...n, is_read: true })),
+          no_leidas: 0,
+        } : prev,
+        false
+      );
     } catch (e) { console.error(e); }
-    finally { setLoading(false); }
-  }, []);
+  }, [mutate]);
 
-  return { notificaciones, noLeidas, loading, cargar, marcarLeida, marcarTodasLeidas };
+  return {
+    notificaciones,
+    noLeidas,
+    loading,
+    cargar: () => mutate(),
+    marcarLeida,
+    marcarTodasLeidas,
+  };
 }
 
 // ── Badge ──────────────────────────────────────────────────────────────────────

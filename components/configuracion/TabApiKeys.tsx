@@ -8,16 +8,13 @@ import { clsx } from "clsx";
 import PinInput from "@/components/PinInput";
 import { useAuthStore } from "@/store/auth.store";
 
-
 interface ApiKey {
   id:           number;
   nombre:       string;
-  tipo:         string;
   estado:       string;
   created_at:   string;
   last_used_at: string | null;
 }
-
 
 export default function TabApiKeys() {
   const email = useAuthStore((s) => s.email) ?? "";

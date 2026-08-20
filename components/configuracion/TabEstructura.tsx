@@ -63,7 +63,6 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
   const [puntoForm,   setPuntoForm]   = useState({ establecimiento_codigo: "001", codigo: "001", nombre: "" });
   const [editEstab,   setEditEstab]   = useState({ nombre_comercial: "", direccion: "" });
   const [editPunto,   setEditPunto]   = useState({ nombre: "" });
-  const [nuevoSec,    setNuevoSec]    = useState("");
 
   const [saving,    setSaving]    = useState(false);
   const [toggling,  setToggling]  = useState<number | null>(null);
@@ -113,19 +112,6 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
       onActualizar(); cerrar();
     } catch (e: any) {
       setError(e?.response?.data?.detail ?? "Error al actualizar.");
-    } finally { setSaving(false); }
-  };
-
-  // ── Editar secuencial ────────────────────────────────────────────────────────
-  const guardarSecuencial = async (puntoId: number) => {
-    setError(""); setSaving(true);
-    try {
-      await api.patch(`/api/v1/app/estructura/puntos-emision/${puntoId}/secuencial`, {
-        secuencial_actual: parseInt(nuevoSec),
-      });
-      onActualizar(); cerrar();
-    } catch (e: any) {
-      setError(e?.response?.data?.detail ?? "Error al actualizar secuencial.");
     } finally { setSaving(false); }
   };
 
@@ -236,7 +222,18 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
                     <div key={punto.id} className="flex items-center gap-2 bg-gray-800/50 rounded-lg px-3 py-2">
                       <span className="font-mono text-xs text-gray-400 shrink-0">{punto.codigo}</span>
                       <span className="text-xs text-white flex-1 truncate">{punto.nombre}</span>
-                      <span className="text-xs text-gray-500 shrink-0">Sec. {punto.secuencial_actual}</span>
+
+                      {/* Desglose de secuenciales por tipo */}
+                      <div className="flex gap-1 shrink-0">
+                        {punto.secuenciales && Object.entries(punto.secuenciales).map(([tipo, sec]: [string, any]) => (
+                          sec > 0 && (
+                            <span key={tipo} className="text-[10px] font-mono text-gray-400 bg-gray-800 px-1.5 py-0.5 rounded">
+                              {tipo}:{sec}
+                            </span>
+                          )
+                        ))}
+                      </div>
+
                       {punto.es_canal_whatsapp && (
                         <span className="text-xs bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded shrink-0">WS</span>
                       )}
@@ -258,9 +255,9 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
 
                       {/* Editar secuencial */}
                       <BtnAccion
-                        onClick={() => { setNuevoSec(String(punto.secuencial_actual)); setModal({ tipo: "secuencial", punto }); }}
+                        onClick={() => { setModal({ tipo: "secuencial", punto }); }}
                         color="text-gray-500 hover:text-amber-400 hover:bg-amber-500/10"
-                        title="Editar secuencial"
+                        title="Editar secuenciales"
                       >
                         <span className="text-[10px] font-mono font-bold">#</span>
                       </BtnAccion>
@@ -397,7 +394,8 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
 
       {/* Editar secuencial */}
       {modal?.tipo === "secuencial" && (
-        <Modal title={`Secuencial — Punto ${modal.punto.codigo}`} onClose={cerrar}>
+        <Modal title={`Secuenciales — Punto ${modal.punto.codigo}`} onClose={cerrar}>
+           {console.log("punto completo:", modal.punto) as any}
           <div className="flex items-start gap-3 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2.5">
             <AlertTriangle size={14} className="text-amber-400 shrink-0 mt-0.5" />
             <p className="text-xs text-amber-300">
@@ -405,25 +403,49 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
               El SRI puede rechazar comprobantes con secuenciales duplicados.
             </p>
           </div>
-          <Campo label="Secuencial actual">
-            <input value={modal.punto.secuencial_actual} disabled className={inputDisCls} />
-          </Campo>
-          <Campo label="Nuevo secuencial">
-            <input
-              type="number"
-              value={nuevoSec}
-              onChange={e => setNuevoSec(e.target.value)}
-              min={1}
-              placeholder="Ej: 42"
-              className={inputCls}
-            />
-          </Campo>
+          <div className="space-y-2">
+            {Object.entries(modal.punto.secuenciales || {}).map(([tipo, sec]: [string, any]) => (
+              <div key={tipo} className="flex items-center gap-3">
+                <span className="text-xs font-bold text-gray-400 w-10 shrink-0">{tipo}</span>
+                <input
+                  type="number"
+                  defaultValue={sec}
+                  min={0}
+                  id={`sec-${tipo}`}
+                  className={inputCls}
+                />
+              </div>
+            ))}
+          </div>
           {error && <p className="text-xs text-red-400 bg-red-400/10 px-3 py-2 rounded-lg">{error}</p>}
           <div className="flex gap-3 pt-1">
-            <button onClick={cerrar} className="flex-1 py-2.5 rounded-lg border border-gray-700 text-gray-400 text-sm">Cancelar</button>
-            <button onClick={() => guardarSecuencial(modal.punto.id)} disabled={saving || !nuevoSec}
-              className="flex-1 py-2.5 rounded-lg bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white text-sm font-medium flex items-center justify-center gap-2">
-              {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Actualizar
+            <button onClick={cerrar}
+              className="flex-1 py-2.5 rounded-lg border border-gray-700 text-gray-400 text-sm">
+              Cancelar
+            </button>
+            <button
+              onClick={async () => {
+                setError(""); setSaving(true);
+                try {
+                  const nuevos: Record<string, number> = {};
+                  Object.keys(modal.punto.secuenciales || {}).forEach(tipo => {
+                    const el = document.getElementById(`sec-${tipo}`) as HTMLInputElement;
+                    nuevos[tipo] = parseInt(el?.value || "0");
+                  });
+                  await api.patch(
+                    `/api/v1/app/estructura/puntos-emision/${modal.punto.id}/secuencial`,
+                    { secuenciales: nuevos }
+                  );
+                  onActualizar(); cerrar();
+                } catch (e: any) {
+                  setError(e?.response?.data?.detail ?? "Error al actualizar secuenciales.");
+                } finally { setSaving(false); }
+              }}
+              disabled={saving}
+              className="flex-1 py-2.5 rounded-lg bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white text-sm font-medium flex items-center justify-center gap-2"
+            >
+              {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+              Actualizar
             </button>
           </div>
         </Modal>

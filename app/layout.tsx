@@ -2,15 +2,16 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import { AppProviders } from "./providers";
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const viewport: Viewport = {
-  themeColor:        "#4f46e5",
-  width:             "device-width",
-  initialScale:      1,
-  maximumScale:      1,
-  userScalable:      false,
+  themeColor:    "#4f46e5",
+  width:         "device-width",
+  initialScale:  1,
+  maximumScale:  1,
+  userScalable:  false,
 };
 
 export const metadata: Metadata = {
@@ -23,7 +24,7 @@ export const metadata: Metadata = {
     title:          "Kipu",
   },
   icons: {
-    icon:  [
+    icon: [
       { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
       { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
     ],
@@ -33,15 +34,13 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es">
       <body className={`${inter.className} bg-gray-950 text-gray-100 antialiased`}>
-        {children}
+        <AppProviders>
+          {children}
+        </AppProviders>
       </body>
     </html>
   );
