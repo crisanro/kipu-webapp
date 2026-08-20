@@ -395,7 +395,6 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
       {/* Editar secuencial */}
       {modal?.tipo === "secuencial" && (
         <Modal title={`Secuenciales — Punto ${modal.punto.codigo}`} onClose={cerrar}>
-           {console.log("punto completo:", modal.punto) as any}
           <div className="flex items-start gap-3 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2.5">
             <AlertTriangle size={14} className="text-amber-400 shrink-0 mt-0.5" />
             <p className="text-xs text-amber-300">
