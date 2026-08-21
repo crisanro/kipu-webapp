@@ -5,15 +5,15 @@ import api from "@/lib/api";
 import {
   Search, Plus, FileText, Loader2, CheckCircle2, Clock,
   XCircle, AlertTriangle, RefreshCw, ChevronDown, ChevronUp,
-  TrendingUp
+  TrendingUp, FlaskConical
 } from "lucide-react";
 import { clsx } from "clsx";
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 interface Documento {
-  id:            string;
-  clave_acceso:  string;
-  numero_doc:    string;
+  id:             string;
+  clave_acceso:   string;
+  numero_doc:     string;
   fecha_emision: string;
   estado_sri:    string;
   tipo_doc:      string;
@@ -32,6 +32,7 @@ const ESTADO_CONFIG: Record<string, { label: string; color: string; icon: any }>
   DEVUELTA:   { label: "Devuelto",   color: "text-amber-400 bg-amber-400/10",     icon: AlertTriangle },
   RECHAZADO:  { label: "Rechazado",  color: "text-red-400 bg-red-400/10",         icon: XCircle },
   PENDIENTE:  { label: "Pendiente",  color: "text-gray-400 bg-gray-400/10",       icon: Clock },
+  SANDBOX:    { label: "Prueba",     color: "text-cyan-400 bg-cyan-400/10",       icon: FlaskConical },
 };
 
 const TIPO_COMPROBANTE: Record<string, { label: string; color: string }> = {
@@ -108,13 +109,14 @@ function ResumenTipoCard({ tipo, label, color, data }: {
 
 // ── Página ─────────────────────────────────────────────────────────────────────
 export default function HistorialPage() {
-  const [documentos,    setDocumentos]    = useState<Documento[]>([]);
-  const [resumen,       setResumen]       = useState<any>(null);
-  const [loading,       setLoading]       = useState(true);
-  const [resumenOpen,   setResumenOpen]   = useState(false);
-  const [query,         setQuery]         = useState("");
-  const [filtroEstado,  setFiltroEstado]  = useState("TODOS");
-  const [filtroTipo,    setFiltroTipo]    = useState("TODOS");
+  const [documentos,   setDocumentos]   = useState<Documento[]>([]);
+  const [resumen,      setResumen]      = useState<any>(null);
+  const [loading,      setLoading]      = useState(true);
+  const [resumenOpen,  setResumenOpen]  = useState(false);
+  const [query,        setQuery]        = useState("");
+  const [filtroEstado, setFiltroEstado] = useState("TODOS");
+  const [filtroTipo,   setFiltroTipo]   = useState("TODOS");
+  const [sandbox,      setSandbox]      = useState(false);
 
   const hoy = new Date().toISOString().split("T")[0];
   const [fechaInicio, setFechaInicio] = useState(hoy);
@@ -131,11 +133,13 @@ export default function HistorialPage() {
       const params = new URLSearchParams();
       if (fechaInicio) params.append("fecha_inicio", fechaInicio);
       if (fechaFin)    params.append("fecha_fin",    fechaFin);
+      if (sandbox)     params.append("sandbox",      "true");
+      
       const res = await api.get(`/api/v1/app/documentos?${params.toString()}`);
       setDocumentos(res.data.data ?? []);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
-  }, [fechaInicio, fechaFin, diasRango]);
+  }, [fechaInicio, fechaFin, diasRango, sandbox]);
 
   const cargarResumen = useCallback(async () => {
     if (diasRango > 45) return;
@@ -143,6 +147,7 @@ export default function HistorialPage() {
       const params = new URLSearchParams();
       if (fechaInicio) params.append("fecha_inicio", fechaInicio);
       if (fechaFin)    params.append("fecha_fin",    fechaFin);
+      
       const res = await api.get(`/api/v1/app/documentos/resumen?${params.toString()}`);
       setResumen(res.data.data);
     } catch (e) { console.error(e); }
@@ -178,10 +183,24 @@ export default function HistorialPage() {
           <p className="text-sm text-gray-500">{documentos.length} comprobantes encontrados</p>
         </div>
         <div className="flex items-center gap-2">
+          {/* Toggle Sandbox */}
+          <button
+            onClick={() => setSandbox(!sandbox)}
+            className={clsx(
+              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border",
+              sandbox
+                ? "bg-cyan-500/20 text-cyan-400 border-cyan-500/30"
+                : "bg-gray-900 text-gray-400 border-gray-800 hover:text-white"
+            )}
+          >
+            <FlaskConical size={14} />
+            {sandbox ? "Sandbox" : "Producción"}
+          </button>
+
           <button
             onClick={() => { cargar(); cargarResumen(); }}
             disabled={diasRango > 45}
-            className="p-2 rounded-lg border border-gray-700 text-gray-400 hover:text-white transition-colors disabled:opacity-40"
+            className="p-2 rounded-lg border border-gray-800 bg-gray-900 text-gray-400 hover:text-white transition-colors disabled:opacity-40"
           >
             <RefreshCw size={16} />
           </button>
@@ -216,7 +235,7 @@ export default function HistorialPage() {
       )}
 
       {/* ── RESUMEN FISCAL COLAPSABLE ────────────────────────────────────── */}
-      {tieneResumen && (
+      {!sandbox && tieneResumen && (
         <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
           {/* Header colapsable */}
           <button
@@ -367,7 +386,7 @@ export default function HistorialPage() {
           <p className="text-gray-500 text-sm">
             {query || filtroEstado !== "TODOS" || filtroTipo !== "TODOS"
               ? "No hay comprobantes que coincidan."
-              : "Sin comprobantes en este rango de fechas."}
+              : `Sin comprobantes de ${sandbox ? "prueba (Sandbox)" : "producción"} en este rango.`}
           </p>
           {!query && filtroEstado === "TODOS" && (
             <Link href="/documentos/emitir/fac"

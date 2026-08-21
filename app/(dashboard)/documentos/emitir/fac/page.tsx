@@ -1,8 +1,9 @@
 // app/(dashboard)/documentos/emitir/fac/page.tsx
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { v4 as uuidv4 } from "uuid";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
 import { CheckCircle2, AlertTriangle } from "lucide-react";
@@ -69,8 +70,11 @@ function calcTotales(items: Item[], incluirPropina: boolean) {
 
 // ── Página principal ───────────────────────────────────────────────────────────
 export default function NuevaFacturaPage() {
-  const router        = useRouter();
-  const empresa       = useAuthStore((s) => s.empresa);
+  const router  = useRouter();
+  const empresa = useAuthStore((s) => s.empresa);
+
+  // ── Idempotencia ────────────────────────────────────────────────────────────
+  const idempotencyKey = useRef(uuidv4());
 
   // ── Estado cliente ──────────────────────────────────────────────────────────
   const [clienteSelected,   setClienteSelected]   = useState<Cliente | null>(null);
@@ -154,7 +158,7 @@ export default function NuevaFacturaPage() {
         setEsConsumidorFinal(true);
       } else if (data.cliente) {
         setClienteSelected({
-          id:                    data.cliente.id || "",
+          id:                     data.cliente.id || "",
           razon_social:          data.cliente.razon_social || "",
           identificacion:        data.cliente.identificacion || "",
           tipo_identificacion_sri: data.cliente.tipo_id || "05",
@@ -178,6 +182,7 @@ export default function NuevaFacturaPage() {
 
   // ── Reset ────────────────────────────────────────────────────────────────────
   const reset = () => {
+    idempotencyKey.current = uuidv4(); // Regenerar key al resetear
     setResultado(null);
     setClienteSelected(null);
     setEsConsumidorFinal(false);
@@ -230,7 +235,7 @@ export default function NuevaFacturaPage() {
     // Construir payload
     const payload: any = {
       establecimiento: estabSelected,
-      punto_emision:   ptoSelected,
+      punto_emision:    ptoSelected,
 
       // Cliente
       cliente_id: esConsumidorFinal
@@ -245,7 +250,7 @@ export default function NuevaFacturaPage() {
         email:          clienteNuevo.email,
       } : undefined,
 
-      // Items — el backend completa desde catálogo si hay código
+      // Items
       items: items.map(i => {
         const c = calcItem(i);
         return {
@@ -259,7 +264,7 @@ export default function NuevaFacturaPage() {
         };
       }),
 
-      // Pagos — el backend resuelve el saldo restante
+      // Pagos
       pagos: pagos.map(p => ({
         forma_pago: p.forma_pago,
         ...(p.total !== null ? { total: p.total } : {}),
@@ -273,9 +278,20 @@ export default function NuevaFacturaPage() {
     };
 
     try {
-      const res = await api.post("/api/v1/app/documentos/emit/FAC", payload);
+      const res = await api.post(
+        "/api/v1/app/documentos/emit/FAC",
+        payload,
+        {
+          headers: {
+            "X-Idempotency-Key": idempotencyKey.current,
+          },
+        }
+      );
       setResultado(res.data);
     } catch (err: any) {
+      // Si falla la emisión por un error de validación/servidor, renovamos la clave para el reintento
+      idempotencyKey.current = uuidv4();
+
       const detail = err?.response?.data?.detail;
       if (Array.isArray(detail)) {
         setError(detail.map((e: any) => `${e.campo}: ${e.mensaje}`).join(" | "));

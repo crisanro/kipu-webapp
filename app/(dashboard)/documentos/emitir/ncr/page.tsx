@@ -1,8 +1,9 @@
 // app/(dashboard)/documentos/emitir/ncr/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { v4 as uuidv4 } from "uuid";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
 import { CheckCircle2, AlertTriangle } from "lucide-react";
@@ -57,6 +58,9 @@ export default function NuevaNcrPage() {
   const searchParams = useSearchParams();
   const empresa      = useAuthStore((s) => s.empresa);
 
+  // ── Idempotencia ────────────────────────────────────────────────────────────
+  const idempotencyKey = useRef(uuidv4());
+
   // Doc origen
   const [docOrigen, setDocOrigen] = useState<DocOrigen>(null);
 
@@ -70,7 +74,7 @@ export default function NuevaNcrPage() {
   const [establecimientos, setEstablecimientos] = useState<Establecimiento[]>([]);
   const [estabSelected,    setEstabSelected]    = useState("");
   const [ptoSelected,      setPtoSelected]      = useState("");
-  const [puntos,            setPuntos]           = useState<{ codigo: string; nombre?: string }[]>([]);
+  const [puntos,           setPuntos]           = useState<{ codigo: string; nombre?: string }[]>([]);
 
   // UI
   const [submitting, setSubmitting] = useState(false);
@@ -157,6 +161,7 @@ export default function NuevaNcrPage() {
   };
 
   const reset = () => {
+    idempotencyKey.current = uuidv4(); // Regenerar key al resetear
     setResultado(null);
     setDocOrigen(null);
     setMotivo(MOTIVOS[0]);
@@ -181,7 +186,7 @@ export default function NuevaNcrPage() {
     try {
       const payload: any = {
         establecimiento: estabSelected,
-        punto_emision:   ptoSelected,
+        punto_emision:    ptoSelected,
         motivo:          motivoFinal,
         items: items.map(i => {
           const c = calcItem(i);
@@ -207,9 +212,20 @@ export default function NuevaNcrPage() {
         payload.cliente_origen     = docOrigen.data.cliente;
       }
 
-      const res = await api.post("/api/v1/app/documentos/emit/NCR", payload);
+      const res = await api.post(
+        "/api/v1/app/documentos/emit/NCR",
+        payload,
+        {
+          headers: {
+            "X-Idempotency-Key": idempotencyKey.current,
+          },
+        }
+      );
       setResultado(res.data);
     } catch (err: any) {
+      // Regenerar key si ocurre un error durante el envío
+      idempotencyKey.current = uuidv4();
+
       const detail = err?.response?.data?.detail;
       setError(Array.isArray(detail)
         ? detail.map((e: any) => `${e.campo}: ${e.mensaje}`).join(" | ")

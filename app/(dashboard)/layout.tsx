@@ -6,6 +6,7 @@ import Link from "next/link";
 import { auth } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
 import { useAuthStore } from "@/store/auth.store";
+import { useSandboxStore } from "@/store/sandbox.store";
 import api from "@/lib/api";
 import PWAInstallBanner from "@/components/PWAInstallBanner";
 import { registrarNotificaciones } from "@/lib/notifications";
@@ -13,7 +14,7 @@ import {
   LayoutDashboard, FileText, Users, Package, Settings,
   LogOut, Zap, ChevronRight, ChevronDown, Menu, X,
   AlertTriangle, FileInput, Building2, CreditCard, UserCog,
-  CheckCircle2, Plus, ChevronUp, Shield, RefreshCw,
+  CheckCircle2, Plus, ChevronUp, Shield, RefreshCw, FlaskConical,
 } from "lucide-react";
 import { clsx } from "clsx";
 import {
@@ -33,11 +34,11 @@ const NAV_GROUPS = [
     icon:     Zap,
     base:     "/documentos/emitir",
     children: [
-      { href: "/documentos/emitir/fac",     label: "Factura", icon: FileText },
-      { href: "/documentos/emitir/liq",     label: "Liquidación de compra", icon: FileText },
-      { href: "/documentos/emitir/ncr",     label: "Nota de crédito", icon: FileText },
-      { href: "/documentos/emitir/ndb",     label: "Nota de débito", icon: FileText },
-      { href: "/documentos/emitir/ret",     label: "Retención", icon: FileText },
+      { href: "/documentos/emitir/fac",      label: "Factura", icon: FileText },
+      { href: "/documentos/emitir/liq",      label: "Liquidación de compra", icon: FileText },
+      { href: "/documentos/emitir/ncr",      label: "Nota de crédito", icon: FileText },
+      { href: "/documentos/emitir/ndb",      label: "Nota de débito", icon: FileText },
+      { href: "/documentos/emitir/ret",      label: "Retención", icon: FileText },
     ],
   },
   {
@@ -59,7 +60,7 @@ const NAV_GROUPS = [
     separator: true,
     items: [
       { href: "/estructura",    label: "Estructura",    icon: Building2 },
-      { href: "/planes",      label: "Planes",   icon: CreditCard },
+      { href: "/planes",        label: "Planes",        icon: CreditCard },
       { href: "/usuarios",      label: "Usuarios",      icon: UserCog },
       { href: "/configuracion", label: "Configuración", icon: Settings },
     ]
@@ -191,13 +192,28 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router   = useRouter();
   const pathname = usePathname();
   const { empresa, empresas, role, logout } = useAuthStore();
+  const { activo: sandbox, setSandbox } = useSandboxStore();
 
   const [sidebarOpen,     setSidebarOpen]     = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showSelectorEmp, setShowSelectorEmp] = useState(false);
   const [drawerOpen,      setDrawerOpen]      = useState(false);
 
-  // Manejo de estado para carpetas colapsables
+  // Lógica de permisos para Sandbox / Producción
+  const firmaOk         = empresa?.firma_ok ?? false;
+  const puedeProduccion = firmaOk && empresa?.ambiente === 2;
+
+  // Forzar desactivación de sandbox si no hay firma cargada
+  useEffect(() => {
+    if (!firmaOk) setSandbox(false);
+  }, [firmaOk, setSandbox]);
+
+  // Forzar activación de sandbox si la empresa está configurada en ambiente de pruebas
+  useEffect(() => {
+    if (firmaOk && empresa?.ambiente === 1) setSandbox(true);
+  }, [firmaOk, empresa?.ambiente, setSandbox]);
+
+  // Carpetas colapsables mutuamente exclusivas
   const [gruposAbiertos, setGruposAbiertos] = useState<Record<string, boolean>>({
     "/documentos/emitir": pathname.startsWith("/documentos/emitir"),
     "/documentos":        pathname.startsWith("/documentos") && !pathname.startsWith("/documentos/emitir"),
@@ -216,10 +232,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   useEffect(() => {
     if (pathname.startsWith("/documentos/emitir")) {
-      setGruposAbiertos(prev => ({ ...prev, "/documentos/emitir": true }));
-    }
-    if (pathname.startsWith("/documentos") && !pathname.startsWith("/documentos/emitir")) {
-      setGruposAbiertos(prev => ({ ...prev, "/documentos": true }));
+      setGruposAbiertos(prev => ({
+        ...prev,
+        "/documentos/emitir": true,
+        "/documentos": false,
+      }));
+    } else if (pathname.startsWith("/documentos")) {
+      setGruposAbiertos(prev => ({
+        ...prev,
+        "/documentos": true,
+        "/documentos/emitir": false,
+      }));
     }
   }, [pathname]);
 
@@ -234,9 +257,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       return pathname === "/documentos" ||
         (pathname.startsWith("/documentos/") &&
          !pathname.startsWith("/documentos/emitir") &&
-         !pathname.startsWith("/documentos/recibidos"));
+         !pathname.startsWith("/documentos/recibidos") &&
+         !pathname.startsWith("/documentos/nueva"));
     }
-    return pathname.startsWith(href);
+    return pathname === href || pathname.startsWith(href + "/");
   };
 
   if (!empresa) {
@@ -436,6 +460,49 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
           <NotificacionesBadge noLeidas={noLeidas} onClick={() => setDrawerOpen(true)} />
 
+          {/* Toggle Sandbox en Footer con Validación de Firma y Ambiente */}
+          {firmaOk ? (
+            <button
+              onClick={() => {
+                if (!puedeProduccion && sandbox) return;
+                setSandbox(!sandbox);
+              }}
+              disabled={!puedeProduccion}
+              className={clsx(
+                "flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm transition-colors border",
+                sandbox
+                  ? "bg-blue-500/20 text-blue-400 border-blue-500/30"
+                  : "bg-gray-800/50 text-gray-400 border-gray-700 hover:text-gray-300",
+                !puedeProduccion && "opacity-60 cursor-not-allowed"
+              )}
+              title={!puedeProduccion ? "Activa producción para cambiar de modo" : ""}
+            >
+              <FlaskConical size={15} />
+              <span className="flex-1 text-left text-xs font-medium">
+                {sandbox ? "Modo Sandbox" : "Producción"}
+              </span>
+              {!puedeProduccion && (
+                <span className="text-[10px] text-amber-400">Solo sandbox</span>
+              )}
+              {puedeProduccion && (
+                <div className={clsx(
+                  "w-8 h-4 rounded-full transition-colors relative shrink-0",
+                  sandbox ? "bg-blue-600" : "bg-emerald-600"
+                )}>
+                  <span className={clsx(
+                    "absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all",
+                    sandbox ? "left-0.5" : "left-4"
+                  )} />
+                </div>
+              )}
+            </button>
+          ) : (
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/20 text-xs text-red-400">
+              <AlertTriangle size={13} className="shrink-0" />
+              <span>Sin firma — no puedes emitir</span>
+            </div>
+          )}
+
           <button onClick={() => setShowLogoutModal(true)}
             className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-colors">
             <LogOut size={16} />
@@ -465,6 +532,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <span className="font-semibold text-white">Kipu</span>
         </header>
         <main className="flex-1 overflow-y-auto">
+          {/* Banner Global Sandbox */}
+          {sandbox && (
+            <div className="w-full bg-blue-600 px-4 py-2 flex items-center justify-center gap-2 text-xs font-medium text-white shadow-md shrink-0">
+              <FlaskConical size={14} />
+              <span>MODO SANDBOX — Las facturas no van al SRI real ni poseen validez tributaria.</span>
+              {puedeProduccion && (
+                <button onClick={() => setSandbox(false)}
+                  className="ml-3 underline underline-offset-2 hover:no-underline font-semibold opacity-90 hover:opacity-100">
+                  Salir
+                </button>
+              )}
+            </div>
+          )}
           {children}
         </main>
       </div>

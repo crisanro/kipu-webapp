@@ -79,9 +79,10 @@ export default function TabEmpresa({ legal, health, onActualizar }: Props) {
       {showProdModal && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
           <div className="bg-gray-900 border border-gray-800 rounded-xl w-full max-w-sm p-5">
-            <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 mb-4">
-              <p className="text-xs text-red-300">
-                ⚠️ Esta acción es <strong>irreversible</strong>. Las facturas de prueba serán eliminadas.
+            <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3 mb-4">
+              <p className="text-xs text-emerald-300">
+                🎉 Al activar producción podrás emitir documentos reales ante el SRI. 
+                Seguirás teniendo acceso al modo sandbox para pruebas.
               </p>
             </div>
             <PinInput

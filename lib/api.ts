@@ -1,21 +1,29 @@
 // lib/api.ts
 import axios from "axios";
 import { auth } from "./firebase";
+import { useSandboxStore } from "@/store/sandbox.store";
 
 const api = axios.create({
-  baseURL:          process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000",
-  timeout:          30000,
-  maxRedirects:     5,    // AGREGAR — seguir redirects 307
-  withCredentials:  false,
+  baseURL:         process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000",
+  timeout:         30000,
+  maxRedirects:    5,
+  withCredentials: false,
 });
 
-// Interceptor — agrega el token Firebase en cada request automáticamente
+// Interceptor — agrega token Firebase + header sandbox
 api.interceptors.request.use(async (config) => {
   const user = auth.currentUser;
   if (user) {
     const token = await user.getIdToken();
     config.headers.Authorization = `Bearer ${token}`;
   }
+
+  // Agregar header sandbox si está activo
+  const sandbox = useSandboxStore.getState().activo;
+  if (sandbox) {
+    config.headers["X-Sandbox"] = "true";
+  }
+
   return config;
 });
 
@@ -24,7 +32,6 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Token expirado — redirigir al login
       auth.signOut();
       window.location.href = "/login";
     }

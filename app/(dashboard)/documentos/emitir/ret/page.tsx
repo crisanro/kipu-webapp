@@ -1,8 +1,9 @@
 // app/(dashboard)/documentos/emitir/ret/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { v4 as uuidv4 } from "uuid";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
 import { CheckCircle2, AlertTriangle, Loader2, Plus, Trash2, Calendar } from "lucide-react";
@@ -97,6 +98,9 @@ export default function NuevaRetPage() {
   const searchParams = useSearchParams();
   const empresa      = useAuthStore((s) => s.empresa);
 
+  // ── Idempotencia ────────────────────────────────────────────────────────────
+  const idempotencyKey = useRef(uuidv4());
+
   // Tipo de origen
   const [origenTipo, setOrigenTipo] = useState<OrigenRet>("fac_recibida");
   const [docOrigen,  setDocOrigen]  = useState<DocOrigen>(null);
@@ -119,7 +123,7 @@ export default function NuevaRetPage() {
   const [establecimientos, setEstablecimientos] = useState<Establecimiento[]>([]);
   const [estabSelected,    setEstabSelected]    = useState("");
   const [ptoSelected,      setPtoSelected]      = useState("");
-  const [puntos,            setPuntos]           = useState<{ codigo: string; nombre?: string }[]>([]);
+  const [puntos,           setPuntos]           = useState<{ codigo: string; nombre?: string }[]>([]);
 
   // UI
   const [submitting, setSubmitting] = useState(false);
@@ -185,7 +189,7 @@ export default function NuevaRetPage() {
 
             const nuevasRet: ImpuestoRet[] = [];
             nuevasRet.push({
-              _id:               genId(),
+              _id:                genId(),
               codigo:            "1",
               codigoRetencion:   "303",
               baseImponible:     r2(subtotal),
@@ -198,7 +202,7 @@ export default function NuevaRetPage() {
               const valor  = parseFloat(imp.valor ?? "0");
               if (tarifa > 0 && valor > 0) {
                 nuevasRet.push({
-                  _id:               genId(),
+                  _id:                genId(),
                   codigo:            "2",
                   codigoRetencion:   "1",
                   baseImponible:     r2(valor),
@@ -304,6 +308,7 @@ export default function NuevaRetPage() {
   };
 
   const reset = () => {
+    idempotencyKey.current = uuidv4(); // Regenerar key al resetear
     setResultado(null);
     setDocOrigen(null);
     setOrigenTipo("fac_recibida");
@@ -329,7 +334,7 @@ export default function NuevaRetPage() {
 
       const payload: any = {
         establecimiento: estabSelected,
-        punto_emision:   ptoSelected,
+        punto_emision:    ptoSelected,
         periodo_fiscal:  periodoFiscal,
         impuestos: impuestos.map(i => ({
           codigo:            i.codigo,
@@ -362,9 +367,20 @@ export default function NuevaRetPage() {
         }
       }
 
-      const res = await api.post("/api/v1/app/documentos/emit/RET", payload);
+      const res = await api.post(
+        "/api/v1/app/documentos/emit/RET",
+        payload,
+        {
+          headers: {
+            "X-Idempotency-Key": idempotencyKey.current,
+          },
+        }
+      );
       setResultado(res.data);
     } catch (err: any) {
+      // Regenerar la clave en caso de error para permitir reintentar con una nueva
+      idempotencyKey.current = uuidv4();
+
       const detail = err?.response?.data?.detail;
       setError(Array.isArray(detail)
         ? detail.map((e: any) => `${e.campo}: ${e.mensaje}`).join(" | ")
@@ -464,7 +480,7 @@ export default function NuevaRetPage() {
               if (selected?.tipo === "kipu") {
                 try {
                   if (origenTipo === "liq_emitida") {
-                    const res     = await api.get(`/api/v1/app/documentos/${selected.data.id}/desglose`);
+                    const res      = await api.get(`/api/v1/app/documentos/${selected.data.id}/desglose`);
                     const desglose = res.data.data;
                     const subtotal = desglose.subtotal;
                     const resumen  = desglose.resumen_impuestos ?? [];
@@ -473,7 +489,7 @@ export default function NuevaRetPage() {
 
                     // Retención Renta (sobre subtotal)
                     nuevasRet.push({
-                      _id:               genId(),
+                      _id:                genId(),
                       codigo:            "1",
                       codigoRetencion:   "303",
                       baseImponible:     r2(subtotal),
@@ -487,7 +503,7 @@ export default function NuevaRetPage() {
                       const valor  = parseFloat(imp.valor ?? "0");
                       if (tarifa > 0 && valor > 0) {
                         nuevasRet.push({
-                          _id:               genId(),
+                          _id:                genId(),
                           codigo:            "2",
                           codigoRetencion:   "1",
                           baseImponible:     r2(valor),
@@ -500,7 +516,7 @@ export default function NuevaRetPage() {
                     setImpuestos(nuevasRet);
                   } else {
                     setImpuestos([{
-                      _id:               genId(),
+                      _id:                genId(),
                       codigo:            "1",
                       codigoRetencion:   "303",
                       baseImponible:     r2(selected.data.importe_total),
@@ -510,7 +526,7 @@ export default function NuevaRetPage() {
                   }
                 } catch {
                   setImpuestos([{
-                    _id:               genId(),
+                    _id:                genId(),
                     codigo:            "1",
                     codigoRetencion:   "303",
                     baseImponible:     r2(selected.data.importe_total),

@@ -1,7 +1,9 @@
 // app/(dashboard)/documentos/emitir/liq/page.tsx
 "use client";
-import { useState, useEffect } from "react";
+
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { v4 as uuidv4 } from "uuid";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
 import { CheckCircle2, AlertTriangle, User, Search, Loader2, X } from "lucide-react";
@@ -38,20 +40,20 @@ function calcTotales(items: Item[]) {
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 interface Proveedor {
-  id:                      string;
-  razon_social:            string;
-  identificacion:          string;
+  id:                     string;
+  razon_social:           string;
+  identificacion:         string;
   tipo_identificacion_sri: string;
-  email:                   string;
-  direccion:               string;
+  email:                  string;
+  direccion:              string;
 }
 
 interface ProveedorNuevo {
   tipo_identificacion_sri: string;
-  identificacion:          string;
-  razon_social:            string;
-  email:                   string;
-  direccion:               string;
+  identificacion:         string;
+  razon_social:           string;
+  email:                  string;
+  direccion:              string;
 }
 
 interface Establecimiento {
@@ -65,6 +67,9 @@ interface Establecimiento {
 export default function NuevaLiqPage() {
   const router  = useRouter();
   const empresa = useAuthStore((s) => s.empresa);
+
+  // ── Idempotencia ────────────────────────────────────────────────────────────
+  const idempotencyKey = useRef(uuidv4());
 
   // Proveedor
   const [query,             setQuery]             = useState("");
@@ -159,6 +164,7 @@ export default function NuevaLiqPage() {
   };
 
   const reset = () => {
+    idempotencyKey.current = uuidv4(); // Regenerar key al resetear
     setResultado(null);
     limpiar();
     setItems([{ _id: genId(), ...EMPTY_ITEM }]);
@@ -196,37 +202,48 @@ export default function NuevaLiqPage() {
 
     setSubmitting(true);
     try {
-      const res = await api.post("/api/v1/app/documentos/emit/LIQ", {
-        establecimiento: estabSelected,
-        punto_emision:   ptoSelected,
-        cliente_id:      proveedorNuevo ? undefined : proveedorSelected?.id,
-        cliente:         proveedorNuevo ? {
-          tipo_id:        proveedorNuevo.tipo_identificacion_sri,
-          nombre:         proveedorNuevo.razon_social,
-          identificacion: proveedorNuevo.identificacion,
-          email:          proveedorNuevo.email,
-          direccion:      proveedorNuevo.direccion,
-        } : undefined,
-        items: items.map(i => {
-          const c = calcItem(i);
-          return {
-            codigo:          i.codigo || undefined,
-            descripcion:     i.descripcion,
-            cantidad:        i.cantidad,
-            precio_unitario: i.precio,
-            descuento:       c.descuento,
-            tipo_iva:        i.tipo_iva,
-            unidad_medida:   i.unidad,
-          };
-        }),
-        pagos: pagos.map(p => ({
-          forma_pago: p.forma_pago,
-          ...(p.total !== null ? { total: p.total } : {}),
-        })),
-        campos_adicionales: camposAdicionales.filter(c => c.nombre && c.valor),
-      });
+      const res = await api.post(
+        "/api/v1/app/documentos/emit/LIQ",
+        {
+          establecimiento: estabSelected,
+          punto_emision:    ptoSelected,
+          cliente_id:      proveedorNuevo ? undefined : proveedorSelected?.id,
+          cliente:          proveedorNuevo ? {
+            tipo_id:        proveedorNuevo.tipo_identificacion_sri,
+            nombre:         proveedorNuevo.razon_social,
+            identificacion: proveedorNuevo.identificacion,
+            email:          proveedorNuevo.email,
+            direccion:      proveedorNuevo.direccion,
+          } : undefined,
+          items: items.map(i => {
+            const c = calcItem(i);
+            return {
+              codigo:          i.codigo || undefined,
+              descripcion:     i.descripcion,
+              cantidad:        i.cantidad,
+              precio_unitario: i.precio,
+              descuento:       c.descuento,
+              tipo_iva:        i.tipo_iva,
+              unidad_medida:   i.unidad,
+            };
+          }),
+          pagos: pagos.map(p => ({
+            forma_pago: p.forma_pago,
+            ...(p.total !== null ? { total: p.total } : {}),
+          })),
+          campos_adicionales: camposAdicionales.filter(c => c.nombre && c.valor),
+        },
+        {
+          headers: {
+            "X-Idempotency-Key": idempotencyKey.current,
+          },
+        }
+      );
       setResultado(res.data);
     } catch (err: any) {
+      // Regenerar la clave en caso de error para permitir un nuevo intento limpio
+      idempotencyKey.current = uuidv4();
+
       const detail = err?.response?.data?.detail;
       setError(Array.isArray(detail)
         ? detail.map((e: any) => `${e.campo}: ${e.mensaje}`).join(" | ")
@@ -339,7 +356,7 @@ export default function NuevaLiqPage() {
                           setShowDrop(false);
                           setProveedorNuevo({
                             tipo_identificacion_sri: "05",
-                            identificacion:          query,
+                            identificacion:         query,
                             razon_social:            "",
                             email:                   "",
                             direccion:               "",

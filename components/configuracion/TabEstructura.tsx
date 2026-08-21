@@ -225,8 +225,8 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
 
                       {/* Desglose de secuenciales por tipo */}
                       <div className="flex gap-1 shrink-0">
-                        {punto.secuenciales && Object.entries(punto.secuenciales).map(([tipo, sec]: [string, any]) => (
-                          sec > 0 && (
+                        {punto.secuenciales?.produccion && Object.entries(punto.secuenciales.produccion).map(([tipo, sec]: [string, any]) => (
+                          (sec as number) > 0 && (
                             <span key={tipo} className="text-[10px] font-mono text-gray-400 bg-gray-800 px-1.5 py-0.5 rounded">
                               {tipo}:{sec}
                             </span>
@@ -402,21 +402,47 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
               El SRI puede rechazar comprobantes con secuenciales duplicados.
             </p>
           </div>
+
+          {/* Producción */}
           <div className="space-y-2">
-            {Object.entries(modal.punto.secuenciales || {}).map(([tipo, sec]: [string, any]) => (
-              <div key={tipo} className="flex items-center gap-3">
+            <p className="text-xs font-semibold text-emerald-400 uppercase tracking-wider">
+              Producción
+            </p>
+            {Object.entries(modal.punto.secuenciales?.produccion || {}).map(([tipo, sec]: [string, any]) => (
+              <div key={`prod-${tipo}`} className="flex items-center gap-3">
                 <span className="text-xs font-bold text-gray-400 w-10 shrink-0">{tipo}</span>
                 <input
                   type="number"
                   defaultValue={sec}
                   min={0}
-                  id={`sec-${tipo}`}
+                  id={`sec-produccion-${tipo}`}
                   className={inputCls}
                 />
               </div>
             ))}
           </div>
+
+          {/* Pruebas */}
+          <div className="space-y-2 pt-2 border-t border-gray-800">
+            <p className="text-xs font-semibold text-blue-400 uppercase tracking-wider">
+              Pruebas / Sandbox
+            </p>
+            {Object.entries(modal.punto.secuenciales?.pruebas || {}).map(([tipo, sec]: [string, any]) => (
+              <div key={`test-${tipo}`} className="flex items-center gap-3">
+                <span className="text-xs font-bold text-gray-400 w-10 shrink-0">{tipo}</span>
+                <input
+                  type="number"
+                  defaultValue={sec}
+                  min={0}
+                  id={`sec-pruebas-${tipo}`}
+                  className={inputCls}
+                />
+              </div>
+            ))}
+          </div>
+
           {error && <p className="text-xs text-red-400 bg-red-400/10 px-3 py-2 rounded-lg">{error}</p>}
+
           <div className="flex gap-3 pt-1">
             <button onClick={cerrar}
               className="flex-1 py-2.5 rounded-lg border border-gray-700 text-gray-400 text-sm">
@@ -426,14 +452,22 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
               onClick={async () => {
                 setError(""); setSaving(true);
                 try {
-                  const nuevos: Record<string, number> = {};
-                  Object.keys(modal.punto.secuenciales || {}).forEach(tipo => {
-                    const el = document.getElementById(`sec-${tipo}`) as HTMLInputElement;
-                    nuevos[tipo] = parseInt(el?.value || "0");
+                  const produccion: Record<string, number> = {};
+                  const pruebas:    Record<string, number> = {};
+
+                  Object.keys(modal.punto.secuenciales?.produccion || {}).forEach(tipo => {
+                    const el = document.getElementById(`sec-produccion-${tipo}`) as HTMLInputElement;
+                    produccion[tipo] = parseInt(el?.value || "0");
                   });
+
+                  Object.keys(modal.punto.secuenciales?.pruebas || {}).forEach(tipo => {
+                    const el = document.getElementById(`sec-pruebas-${tipo}`) as HTMLInputElement;
+                    pruebas[tipo] = parseInt(el?.value || "0");
+                  });
+
                   await api.patch(
                     `/api/v1/app/estructura/puntos-emision/${modal.punto.id}/secuencial`,
-                    { secuenciales: nuevos }
+                    { secuenciales: { produccion, pruebas } }
                   );
                   onActualizar(); cerrar();
                 } catch (e: any) {
