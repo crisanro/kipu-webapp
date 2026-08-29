@@ -33,28 +33,28 @@ interface PlanCredito {
 }
 
 interface Transaccion {
-  id:            string;
-  tipo:          string;
-  cantidad:      number;
-  precio_total:  number;
-  metodo_pago:   string;
-  notas:         string;
-  created_at:    string;
+  id:           string;
+  tipo:         string;
+  cantidad:     number;
+  precio_total: number;
+  metodo_pago:  string;
+  notas:        string;
+  created_at:   string;
 }
 
 // ── Página ────────────────────────────────────────────────────────────────────
 export default function CreditosPage() {
   const empresa = useAuthStore((s) => s.empresa);
 
-  const [sub,          setSub]          = useState<EstadoSub | null>(null);
-  const [balance,      setBalance]      = useState(0);
-  const [planes,       setPlanes]       = useState<PlanCredito[]>([]);
-  const [historial,    setHistorial]    = useState<Transaccion[]>([]);
-  const [loading,      setLoading]      = useState(true);
-  const [pagando,      setPagando]      = useState<string | null>(null);
-  const [abriendo,     setAbriendo]     = useState(false);
-  const [cancelando,   setCancelando]   = useState(false);
-  const [tab,          setTab]          = useState<"suscripcion" | "creditos">("suscripcion");
+  const [sub,         setSub]         = useState<EstadoSub | null>(null);
+  const [balance,     setBalance]     = useState(0);
+  const [planes,      setPlanes]      = useState<PlanCredito[]>([]);
+  const [historial,   setHistorial]   = useState<Transaccion[]>([]);
+  const [loading,     setLoading]     = useState(true);
+  const [pagando,     setPagando]     = useState<string | null>(null);
+  const [abriendo,    setAbriendo]    = useState(false);
+  const [cancelando,  setCancelando]  = useState(false);
+  const [tab,         setTab]         = useState<"suscripcion" | "creditos">("suscripcion");
 
   const cargar = useCallback(async () => {
     setLoading(true);
@@ -148,7 +148,7 @@ export default function CreditosPage() {
           </div>
           <div>
             <h1 className="text-xl font-bold text-white">Plan y créditos</h1>
-            <p className="text-sm text-gray-500">Suscripción y créditos API para integración REST</p>
+            <p className="text-sm text-gray-500">Suscripción mensual o créditos por uso</p>
           </div>
         </div>
         <button onClick={cargar} disabled={loading}
@@ -202,7 +202,7 @@ export default function CreditosPage() {
                 </span>
               </div>
               <p className="text-lg font-bold text-white">{balance} créditos</p>
-              <p className="text-xs text-gray-500 mt-0.5">Para emisión REST externa</p>
+              <p className="text-xs text-gray-500 mt-0.5">Para emitir comprobantes</p>
             </div>
           </div>
 
@@ -286,7 +286,7 @@ export default function CreditosPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {[
                       { plan: "NATURAL",  label: "Natural",  desc: "Personas naturales", mensual: 14.99, anual: 129.99, popular: false },
-                      { plan: "JURIDICO", label: "Jurídico", desc: "Personas jurídicas",  mensual: 24.99, anual: 199.99, popular: true  },
+                      { plan: "JURIDICO", label: "Jurídico", desc: "Personas jurídicas",  mensual: 24.99, anual: 199.99, popular: false  },
                     ].map((p) => (
                       <div key={p.plan} className={clsx(
                         "relative border rounded-xl p-5 space-y-3",
@@ -368,16 +368,16 @@ export default function CreditosPage() {
                   <div>
                     <p className="text-xs text-gray-500 mb-1">Balance actual</p>
                     <p className="text-4xl font-bold text-white">{balance}</p>
-                    <p className="text-sm text-gray-500 mt-1">créditos API disponibles</p>
+                    <p className="text-sm text-gray-500 mt-1">créditos disponibles</p>
                   </div>
                   <div className="w-16 h-16 rounded-2xl bg-yellow-400/10 flex items-center justify-center">
                     <Zap size={28} className="text-yellow-400" />
                   </div>
                 </div>
                 <div className="mt-4 pt-4 border-t border-gray-800 text-xs text-gray-500 space-y-1">
-                  <p>· 1 crédito = 1 documento emitido vía API REST</p>
-                  <p>· Los créditos no vencen</p>
-                  <p>· Compatible con suscripción activa</p>
+                  <p>· 1 crédito = 1 comprobante emitido</p>
+                  <p>· No vencen nunca</p>
+                  <p>· Compatibles con suscripción activa</p>
                 </div>
               </div>
 
@@ -478,11 +478,11 @@ export default function CreditosPage() {
 
               {/* Info */}
               <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 text-xs text-gray-500 space-y-1.5">
-                <p className="font-semibold text-gray-400 mb-2">¿Para qué sirven los créditos API?</p>
-                <p>· Para integrar Kipu en tu propio sistema mediante la REST API</p>
-                <p>· Cada documento emitido (FAC, LIQ, NCR, NDB, RET) consume 1 crédito</p>
-                <p>· Si tienes suscripción activa, los créditos son adicionales para consumo API</p>
-                <p>· Sin suscripción, los créditos son la única forma de emitir documentos</p>
+                <p className="font-semibold text-gray-400 mb-2">¿Para qué sirven los créditos?</p>
+                <p>· Para emitir comprobantes desde el panel o vía API REST</p>
+                <p>· Cada comprobante emitido (FAC, LIQ, NCR, NDB, RET) consume 1 crédito</p>
+                <p>· Con suscripción activa, los créditos son adicionales</p>
+                <p>· Sin suscripción, los créditos son tu acceso para emitir</p>
               </div>
             </div>
           )}
