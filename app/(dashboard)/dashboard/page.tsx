@@ -1,8 +1,10 @@
 // app/(dashboard)/dashboard/page.tsx
 "use client";
+import { useEffect } from "react";
 import useSWR from "swr";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
+import { useSandboxStore } from "@/store/sandbox.store";
 import { Loader2, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import Checklist, { HealthData } from "@/components/Checklist";
@@ -26,6 +28,7 @@ const fetcher = (url: string) => api.get(url).then((r) => r.data.data ?? r.data)
 
 export default function DashboardPage() {
   const empresa = useAuthStore((s) => s.empresa);
+  const { activo: sandbox } = useSandboxStore();
 
   const hoy       = new Date();
   const primerDia = new Date(hoy.getFullYear(), hoy.getMonth(), 1)
@@ -34,14 +37,19 @@ export default function DashboardPage() {
   const hoyStr = hoy.toISOString().split("T")[0];
 
   const { data, isLoading, mutate } = useSWR<DashboardData>(
-    `/api/v1/app/dashboard?fecha_inicio=${primerDia}&fecha_fin=${hoyStr}`,
+    `/api/v1/app/dashboard?fecha_inicio=${primerDia}&fecha_fin=${hoyStr}&sandbox=${sandbox}`,
     fetcher,
     {
-      revalidateOnFocus: false,
+      revalidateOnFocus:     false,
       revalidateOnReconnect: true,
-      dedupingInterval: 120000, // 2 min
+      revalidateOnMount:     true,
+      dedupingInterval:      5000,
     }
   );
+
+  useEffect(() => {
+    mutate();
+  }, [sandbox]);
 
   const nombre       = empresa?.nombre_comercial || empresa?.razon_social || "tu empresa";
   const esProduccion = empresa?.ambiente === 2;
@@ -56,8 +64,8 @@ export default function DashboardPage() {
           <h1 className="text-2xl font-bold text-white">Hola 👋</h1>
           <p className="text-sm text-gray-400 mt-0.5 truncate max-w-xs">
             {nombre} ·{" "}
-            <span className={esProduccion ? "text-emerald-400" : "text-amber-400"}>
-              {esProduccion ? "🟢 Producción" : "🟡 Pruebas"}
+            <span className={sandbox ? "text-blue-400" : esProduccion ? "text-emerald-400" : "text-amber-400"}>
+              {sandbox ? "🧪 Sandbox" : esProduccion ? "🟢 Producción" : "🟡 Pruebas"}
             </span>
           </p>
         </div>
@@ -77,9 +85,9 @@ export default function DashboardPage() {
 
       {/* Widget declaraciones */}
       {declaracion && (
-        <DeclaracionWidget 
-          data={declaracion} 
-          onDeclarado={() => mutate()} 
+        <DeclaracionWidget
+          data={declaracion}
+          onDeclarado={() => mutate()}
         />
       )}
 
@@ -122,13 +130,8 @@ export default function DashboardPage() {
       ) : (
         <div className="space-y-6">
 
-          {/* Stats */}
-          <StatsGrid
-            resumen={data?.resumen}
-            empresa={empresa}
-          />
+          <StatsGrid resumen={data?.resumen} empresa={empresa} />
 
-          {/* Gráfico + Accesos */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <div className="lg:col-span-2">
               <GraficoFacturacion documentos={data?.documentos ?? []} />
@@ -136,7 +139,6 @@ export default function DashboardPage() {
             <AccesosRapidos />
           </div>
 
-          {/* Documentos */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <UltimosDocumentos documentos={data?.documentos ?? []} />
             <DocumentosRecibidos docs={data?.recibidos_recientes ?? []} />

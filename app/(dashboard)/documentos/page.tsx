@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
+import { useSandboxStore } from "@/store/sandbox.store";
 import Link from "next/link";
 import api from "@/lib/api";
 import {
@@ -116,11 +117,16 @@ export default function HistorialPage() {
   const [query,        setQuery]        = useState("");
   const [filtroEstado, setFiltroEstado] = useState("TODOS");
   const [filtroTipo,   setFiltroTipo]   = useState("TODOS");
-  const [sandbox,      setSandbox]      = useState(false);
+  const { activo: sandboxGlobal } = useSandboxStore();
+  const [sandbox,      setSandbox]      = useState(sandboxGlobal);
 
   const hoy = new Date().toISOString().split("T")[0];
   const [fechaInicio, setFechaInicio] = useState(hoy);
   const [fechaFin,    setFechaFin]    = useState(hoy);
+
+  useEffect(() => {
+      setSandbox(sandboxGlobal);
+  }, [sandboxGlobal]);
 
   const diasRango = fechaInicio && fechaFin
     ? Math.ceil((new Date(fechaFin).getTime() - new Date(fechaInicio).getTime()) / (1000 * 60 * 60 * 24))

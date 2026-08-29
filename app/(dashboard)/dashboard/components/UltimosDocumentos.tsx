@@ -33,7 +33,7 @@ export default function UltimosDocumentos({ documentos }: Props) {
           <p className="text-xs text-gray-500 mt-0.5">Comprobantes recientes</p>
         </div>
         <Link
-          href="/facturas"
+          href="/documentos"
           className="flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
         >
           Ver todos <ArrowRight size={12} />

@@ -52,7 +52,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
       if (!user) {
         setListoLocal(true);
         setListo(true);
-        const rutasProtegidas = ["/dashboard", "/facturas", "/clientes",
+        const rutasProtegidas = ["/dashboard", "/documentos", "/clientes",
                                   "/productos", "/configuracion", "/estructura",
                                   "/planes", "/usuarios", "/admin"];
         if (rutasProtegidas.some(r => pathname.startsWith(r))) {

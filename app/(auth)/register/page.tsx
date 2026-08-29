@@ -1,16 +1,23 @@
 // app/(auth)/register/page.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect  } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import api from "@/lib/api";
+import { useAuthStore } from "@/store/auth.store";
 import { Zap, Eye, EyeOff, Loader2 } from "lucide-react";
 
 export default function RegisterPage() {
   const router = useRouter();
+
+  const { uid } = useAuthStore();
+  useEffect(() => {
+      if (uid) router.replace("/dashboard");
+  }, [uid]);
+  
   const [email,    setEmail]    = useState("");
   const [password, setPassword] = useState("");
   const [showPass, setShowPass] = useState(false);

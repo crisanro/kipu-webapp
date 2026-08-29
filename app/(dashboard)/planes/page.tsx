@@ -90,7 +90,7 @@ export default function CreditosPage() {
   const iniciarCheckoutCreditos = async (plan_id: number) => {
     setPagando(`cred_${plan_id}`);
     try {
-      const res = await api.post("/api/v1/app/planes/checkout", { plan_id });
+      const res = await api.post("/api/v1/app/creditos/checkout", { plan_id });
       window.location.href = res.data.checkout_url;
     } catch (err: any) {
       alert(err?.response?.data?.detail ?? "Error al iniciar el pago.");

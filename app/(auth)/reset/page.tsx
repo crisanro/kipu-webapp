@@ -1,7 +1,9 @@
 // app/(auth)/reset/page.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuthStore } from "@/store/auth.store";
 import Link from "next/link";
 import api from "@/lib/api";
 import { Zap, Loader2, CheckCircle2, ArrowLeft } from "lucide-react";
@@ -11,6 +13,12 @@ export default function ResetPage() {
   const [loading, setLoading] = useState(false);
   const [sent,    setSent]    = useState(false);
   const [error,   setError]   = useState("");
+
+  const router = useRouter();
+  const { uid } = useAuthStore();
+  useEffect(() => {
+      if (uid) router.replace("/dashboard");
+  }, [uid]);
 
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault();

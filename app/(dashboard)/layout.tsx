@@ -11,7 +11,7 @@ import api from "@/lib/api";
 import PWAInstallBanner from "@/components/PWAInstallBanner";
 import { registrarNotificaciones } from "@/lib/notifications";
 import {
-  LayoutDashboard, FileText, Users, Package, Settings,
+  LayoutDashboard, FileText, Users, Package, Settings, Key,
   LogOut, Zap, ChevronRight, ChevronDown, Menu, X,
   AlertTriangle, FileInput, Building2, CreditCard, UserCog,
   CheckCircle2, Plus, ChevronUp, Shield, RefreshCw, FlaskConical,
@@ -62,6 +62,7 @@ const NAV_GROUPS = [
       { href: "/estructura",    label: "Estructura",    icon: Building2 },
       { href: "/planes",        label: "Planes",        icon: CreditCard },
       { href: "/usuarios",      label: "Usuarios",      icon: UserCog },
+      { href: "/api-keys",      label: "API Keys",      icon: Key },        // ← agregar
       { href: "/configuracion", label: "Configuración", icon: Settings },
     ]
   },
@@ -399,7 +400,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                       )}>
                       <Icon size={17} />
                       {item.label}
-                      {active && <ChevronRight size={14} className="ml-auto" />}
+                      {active && item.href !== "/dashboard" && <ChevronRight size={14} className="ml-auto" />}
                     </Link>
                   );
                 })

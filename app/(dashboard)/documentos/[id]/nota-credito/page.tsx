@@ -182,7 +182,7 @@ export default function NotaCreditoPage() {
               Ver documento original
             </button>
             <button
-              onClick={() => router.push("/facturas")}
+              onClick={() => router.push("/documentos")}
               className="flex-1 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors"
             >
               Ver historial
