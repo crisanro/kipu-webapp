@@ -402,7 +402,7 @@ export default function DetalleShared({ factura, onRecargar, children }: Props) 
           </button>
         </div>
         {factura.estado_sri === "AUTORIZADO" && (
-          <a href={`https://srienlinea.sri.gob.ec/facturacion-internet/consultas/publico/ruc-establecimiento-usuario.jspa?ruc=${factura.datos?.infoTributaria?.ruc}`}
+          <a href={`https://srienlinea.sri.gob.ec/comprobantes-electronicos-internet/publico/validezComprobantes.jsf`}
             target="_blank" rel="noopener noreferrer"
             className="mt-2 inline-flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 transition-colors">
             <Eye size={12} /> Verificar en portal SRI
