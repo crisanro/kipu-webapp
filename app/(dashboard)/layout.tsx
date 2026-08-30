@@ -12,7 +12,7 @@ import PWAInstallBanner from "@/components/PWAInstallBanner";
 import { registrarNotificaciones } from "@/lib/notifications";
 import {
   LayoutDashboard, FileText, Users, Package, Settings, Key,
-  LogOut, Zap, ChevronRight, ChevronDown, Menu, X,
+  LogOut, Zap, ChevronRight, ChevronDown, Menu, X, BarChart3,
   AlertTriangle, FileInput, Building2, CreditCard, UserCog,
   CheckCircle2, Plus, ChevronUp, Shield, RefreshCw, FlaskConical,
 } from "lucide-react";
@@ -61,6 +61,7 @@ const NAV_GROUPS = [
     items: [
       { href: "/estructura",    label: "Estructura",    icon: Building2 },
       { href: "/planes",        label: "Planes",        icon: CreditCard },
+      { href: "/reportes",      label: "Reportes",      icon: BarChart3  },
       { href: "/usuarios",      label: "Usuarios",      icon: UserCog },
       { href: "/api-keys",      label: "API Keys",      icon: Key },        // ← agregar
       { href: "/configuracion", label: "Configuración", icon: Settings },
