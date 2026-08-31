@@ -1,4 +1,3 @@
-// app/(dashboard)/layout.tsx
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
@@ -15,6 +14,7 @@ import {
   LogOut, Zap, ChevronRight, ChevronDown, Menu, X, BarChart3,
   AlertTriangle, FileInput, Building2, CreditCard, UserCog,
   CheckCircle2, Plus, ChevronUp, Shield, RefreshCw, FlaskConical,
+  MessageCircle, Mail, QrCode,
 } from "lucide-react";
 import { clsx } from "clsx";
 import {
@@ -23,52 +23,138 @@ import {
   NotificacionesDrawer,
 } from "@/components/NotificacionesDrawer";
 
+// =============================================================================
+// SOPORTE WHATSAPP
+// =============================================================================
+const WHATSAPP_NUMBER = "593960585581";
+
+function SoporteWhatsApp({ empresa }: { empresa: any }) {
+  const [showQR, setShowQR] = useState(false);
+
+  const mensaje = encodeURIComponent(
+    `Hola, necesito soporte con Kipu.\nMi correo es: ${empresa?.email ?? ""}\nMi RUC es: ${empresa?.ruc ?? ""}`
+  );
+  const waUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${mensaje}`;
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(waUrl)}`;
+
+  return (
+    <div className="relative">
+      {/* Desktop — botón que muestra QR */}
+      <button
+        onClick={() => setShowQR(!showQR)}
+        className="hidden lg:flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-green-400 hover:bg-green-500/10 transition-colors"
+      >
+        <MessageCircle size={16} />
+        Soporte
+      </button>
+
+      {/* Mobile — link directo */}
+      <a
+        href={waUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex lg:hidden items-center gap-2 w-full px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-green-400 hover:bg-green-500/10 transition-colors"
+      >
+        <MessageCircle size={16} />
+        Soporte WhatsApp
+      </a>
+
+      {/* QR Popup — solo desktop */}
+      {showQR && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setShowQR(false)} />
+          <div className="absolute bottom-10 left-0 z-50 bg-gray-900 border border-gray-700 rounded-xl p-4 shadow-xl w-56">
+            <button
+              onClick={() => setShowQR(false)}
+              className="absolute top-2 right-2 text-gray-500 hover:text-white"
+            >
+              <X size={14} />
+            </button>
+            <p className="text-xs text-gray-400 mb-3 text-center">
+              Escanea para chatear por WhatsApp
+            </p>
+            <img
+              src={qrUrl}
+              alt="QR Soporte WhatsApp"
+              className="w-full rounded-lg"
+            />
+            <a
+              href={waUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-3 flex items-center justify-center gap-2 w-full py-2 rounded-lg bg-green-600 hover:bg-green-500 text-white text-xs font-medium transition-colors"
+            >
+              <MessageCircle size={13} />
+              Abrir WhatsApp
+            </a>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// =============================================================================
+// NAV — con permisos
+// =============================================================================
 const NAV_GROUPS = [
   {
     items: [
-      { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+      { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, permiso: null },
     ]
   },
   {
     label:    "Emitir",
     icon:     Zap,
     base:     "/documentos/emitir",
+    permiso:  "emitir",
     children: [
-      { href: "/documentos/emitir/fac",      label: "Factura", icon: FileText },
-      { href: "/documentos/emitir/liq",      label: "Liquidación de compra", icon: FileText },
-      { href: "/documentos/emitir/ncr",      label: "Nota de crédito", icon: FileText },
-      { href: "/documentos/emitir/ndb",      label: "Nota de débito", icon: FileText },
-      { href: "/documentos/emitir/ret",      label: "Retención", icon: FileText },
+      { href: "/documentos/emitir/fac", label: "Factura",           icon: FileText },
+      { href: "/documentos/emitir/liq", label: "Liquidación",       icon: FileText },
+      { href: "/documentos/emitir/ncr", label: "Nota de crédito",   icon: FileText },
+      { href: "/documentos/emitir/ndb", label: "Nota de débito",    icon: FileText },
+      { href: "/documentos/emitir/ret", label: "Retención",         icon: FileText },
     ],
   },
   {
     label:    "Documentos",
     icon:     FileText,
     base:     "/documentos",
+    permiso:  "descargar",
     children: [
-      { href: "/documentos",           label: "Emitidos",  icon: FileText  },
-      { href: "/documentos/recibidos", label: "Recibidos", icon: FileInput },
+      { href: "/documentos",           label: "Emitidos",  icon: FileText,  permiso: "descargar"            },
+      { href: "/documentos/recibidos", label: "Recibidos", icon: FileInput, permiso: "documentos_recibidos" },
     ],
   },
   {
     items: [
-      { href: "/clientes",  label: "Clientes",  icon: Users },
-      { href: "/productos", label: "Productos", icon: Package },
+      { href: "/clientes",  label: "Clientes",  icon: Users,   permiso: "clientes"  },
+      { href: "/productos", label: "Productos", icon: Package, permiso: "productos" },
     ]
   },
   {
     separator: true,
     items: [
-      { href: "/estructura",    label: "Estructura",    icon: Building2 },
-      { href: "/planes",        label: "Planes",        icon: CreditCard },
-      { href: "/reportes",      label: "Reportes",      icon: BarChart3  },
-      { href: "/usuarios",      label: "Usuarios",      icon: UserCog },
-      { href: "/api-keys",      label: "API Keys",      icon: Key },        // ← agregar
-      { href: "/configuracion", label: "Configuración", icon: Settings },
+      { href: "/estructura",    label: "Estructura",    icon: Building2, permiso: "configuracion" },
+      { href: "/planes",        label: "Planes",        icon: CreditCard, permiso: null           },
+      { href: "/reportes",      label: "Reportes",      icon: BarChart3,  permiso: "reportes"     },
+      { href: "/usuarios",      label: "Usuarios",      icon: UserCog,    permiso: "usuarios"     },
+      { href: "/api-keys",      label: "API Keys",      icon: Key,        permiso: "api_keys"     },
+      { href: "/configuracion", label: "Configuración", icon: Settings,   permiso: "configuracion"},
     ]
   },
 ];
 
+// Helper para verificar permisos
+function tienePermiso(empresa: any, permiso: string | null): boolean {
+  if (!permiso) return true;                          // sin restricción
+  if (empresa?.rol === "admin") return true;          // admin ve todo
+  return empresa?.permisos?.[permiso] === true;
+}
+
+// =============================================================================
+// MODALES — sin cambios
+// =============================================================================
 function ModalLogout({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
   return (
     <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
@@ -116,6 +202,7 @@ function SelectorEmpresa({ onClose }: { onClose: () => void }) {
         ambiente:           data.ambiente,
         tipo_emisor:        data.tipo_emisor,
         rol:                data.rol,
+        permisos:           data.permisos,
         firma_ok:           e.firma_ok,
         suscripcion_activa: data.suscripcion_activa,
         suscripcion:        data.suscripcion,
@@ -200,22 +287,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showSelectorEmp, setShowSelectorEmp] = useState(false);
   const [drawerOpen,      setDrawerOpen]      = useState(false);
+  const [emailVerificado, setEmailVerificado] = useState(true);
 
-  // Lógica de permisos para Sandbox / Producción
   const firmaOk         = empresa?.firma_ok ?? false;
   const puedeProduccion = firmaOk && empresa?.ambiente === 2;
 
-  // Forzar desactivación de sandbox si no hay firma cargada
+  // Verificar email al montar
+  useEffect(() => {
+    const user = auth.currentUser;
+    if (user) setEmailVerificado(user.emailVerified);
+  }, []);
+
   useEffect(() => {
     if (!firmaOk) setSandbox(false);
   }, [firmaOk, setSandbox]);
 
-  // Forzar activación de sandbox si la empresa está configurada en ambiente de pruebas
   useEffect(() => {
     if (firmaOk && empresa?.ambiente === 1) setSandbox(true);
   }, [firmaOk, empresa?.ambiente, setSandbox]);
 
-  // Carpetas colapsables mutuamente exclusivas
   const [gruposAbiertos, setGruposAbiertos] = useState<Record<string, boolean>>({
     "/documentos/emitir": pathname.startsWith("/documentos/emitir"),
     "/documentos":        pathname.startsWith("/documentos") && !pathname.startsWith("/documentos/emitir"),
@@ -234,17 +324,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   useEffect(() => {
     if (pathname.startsWith("/documentos/emitir")) {
-      setGruposAbiertos(prev => ({
-        ...prev,
-        "/documentos/emitir": true,
-        "/documentos": false,
-      }));
+      setGruposAbiertos(prev => ({ ...prev, "/documentos/emitir": true, "/documentos": false }));
     } else if (pathname.startsWith("/documentos")) {
-      setGruposAbiertos(prev => ({
-        ...prev,
-        "/documentos": true,
-        "/documentos/emitir": false,
-      }));
+      setGruposAbiertos(prev => ({ ...prev, "/documentos": true, "/documentos/emitir": false }));
     }
   }, [pathname]);
 
@@ -252,6 +334,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     await signOut(auth);
     logout();
     router.replace("/login");
+  };
+
+  const reenviarVerificacion = async () => {
+    try {
+      await api.post("/api/v1/app/auth/send-verification");
+      alert("Correo de verificación enviado. Revisa tu bandeja.");
+    } catch {
+      alert("Error al enviar el correo. Intenta de nuevo.");
+    }
   };
 
   const isActive = (href: string) => {
@@ -293,7 +384,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         onMarcarLeida={marcarLeida}
         onMarcarTodas={marcarTodasLeidas}
       />
-
       {sidebarOpen && (
         <div className="fixed inset-0 bg-black/60 z-20 lg:hidden"
           onClick={() => setSidebarOpen(false)} />
@@ -334,77 +424,84 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             )}
           </div>
           <div className="flex items-center justify-between mt-1">
-            <span className={clsx("text-xs font-medium", ambienteColor)}>
-              ● {ambienteLabel}
-            </span>
+            <span className={clsx("text-xs font-medium", ambienteColor)}>● {ambienteLabel}</span>
             {empresas.length > 1 && (
               <span className="text-[10px] text-gray-600">{empresas.length} empresas</span>
             )}
           </div>
         </button>
 
-        {/* Nav */}
+        {/* Nav con permisos */}
         <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
           {NAV_GROUPS.map((group, gi) => (
             <div key={gi}>
               {group.separator && <div className="border-t border-gray-800 my-2" />}
               {"children" in group && group.children ? (
-                <div>
-                  <button
-                    onClick={() => toggleGrupo(group.base ?? "")}
-                    className={clsx(
-                      "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
-                      pathname.startsWith(group.base ?? "")
-                        ? "bg-indigo-600/20 text-indigo-400"
-                        : "text-gray-400 hover:text-white hover:bg-gray-800"
-                    )}>
-                    <group.icon size={17} />
-                    {group.label}
-                    <span className="ml-auto">
-                      {(gruposAbiertos[group.base ?? ""] ?? false) ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                    </span>
-                  </button>
-                  {(gruposAbiertos[group.base ?? ""] ?? false) && (
-                    <div className="mt-0.5 ml-4 pl-3 border-l border-gray-800 space-y-0.5">
-                      {group.children.map((child) => {
-                        const active = isActive(child.href);
-                        const Icon   = child.icon;
-                        return (
-                          <Link key={child.href} href={child.href}
-                            onClick={() => setSidebarOpen(false)}
-                            className={clsx(
-                              "flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors",
-                              active
-                                ? "text-indigo-400 bg-indigo-600/10 font-medium"
-                                : "text-gray-500 hover:text-white hover:bg-gray-800"
-                            )}>
-                            <Icon size={14} />
-                            {child.label}
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              ) : (
-                group.items?.map((item) => {
-                  const active = isActive(item.href);
-                  const Icon   = item.icon;
-                  return (
-                    <Link key={item.href} href={item.href}
-                      onClick={() => setSidebarOpen(false)}
+                // Grupos colapsables — mostrar solo si tiene permiso del grupo
+                tienePermiso(empresa, group.permiso ?? null) && (
+                  <div>
+                    <button
+                      onClick={() => toggleGrupo(group.base ?? "")}
                       className={clsx(
-                        "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
-                        active
+                        "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                        pathname.startsWith(group.base ?? "")
                           ? "bg-indigo-600/20 text-indigo-400"
                           : "text-gray-400 hover:text-white hover:bg-gray-800"
                       )}>
-                      <Icon size={17} />
-                      {item.label}
-                      {active && item.href !== "/dashboard" && <ChevronRight size={14} className="ml-auto" />}
-                    </Link>
-                  );
-                })
+                      <group.icon size={17} />
+                      {group.label}
+                      <span className="ml-auto">
+                        {(gruposAbiertos[group.base ?? ""] ?? false)
+                          ? <ChevronDown size={14} />
+                          : <ChevronRight size={14} />}
+                      </span>
+                    </button>
+                    {(gruposAbiertos[group.base ?? ""] ?? false) && (
+                      <div className="mt-0.5 ml-4 pl-3 border-l border-gray-800 space-y-0.5">
+                        {group.children
+                          .filter(child => tienePermiso(empresa, (child as any).permiso ?? null))
+                          .map((child) => {
+                            const active = isActive(child.href);
+                            const Icon   = child.icon;
+                            return (
+                              <Link key={child.href} href={child.href}
+                                onClick={() => setSidebarOpen(false)}
+                                className={clsx(
+                                  "flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors",
+                                  active
+                                    ? "text-indigo-400 bg-indigo-600/10 font-medium"
+                                    : "text-gray-500 hover:text-white hover:bg-gray-800"
+                                )}>
+                                <Icon size={14} />
+                                {child.label}
+                              </Link>
+                            );
+                          })}
+                      </div>
+                    )}
+                  </div>
+                )
+              ) : (
+                group.items
+                  ?.filter(item => tienePermiso(empresa, (item as any).permiso ?? null))
+                  .map((item) => {
+                    const active = isActive(item.href);
+                    const Icon   = item.icon;
+                    return (
+                      <Link key={item.href} href={item.href}
+                        onClick={() => setSidebarOpen(false)}
+                        className={clsx(
+                          "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                          active
+                            ? "bg-indigo-600/20 text-indigo-400"
+                            : "text-gray-400 hover:text-white hover:bg-gray-800"
+                        )}>
+                        <Icon size={17} />
+                        {item.label}
+                        {active && item.href !== "/dashboard" && <ChevronRight size={14} className="ml-auto" />}
+                      </Link>
+                    );
+                  })
               )}
             </div>
           ))}
@@ -434,20 +531,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <p className="text-xs text-gray-500 mb-1">Plan activo</p>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-bold text-white">
-                  {empresa.suscripcion?.plan ?? "—"}
-                </p>
+                <p className="text-sm font-bold text-white">{empresa.suscripcion?.plan ?? "—"}</p>
                 <p className="text-xs text-gray-500">
                   {empresa.suscripcion?.estado === "TRIAL"
                     ? "⏳ En prueba"
-                    : empresa.suscripcion_activa
-                    ? "✅ Activo"
-                    : "❌ Inactivo"}
+                    : empresa.suscripcion_activa ? "✅ Activo" : "❌ Inactivo"}
                 </p>
               </div>
               {empresa.balance_api > 0 && (
                 <div className="text-right">
-                  <p className="text-xs text-gray-500">Créditos API</p>
+                  <p className="text-xs text-gray-500">Créditos emisión</p>
                   <p className="text-sm font-bold text-amber-400">{empresa.balance_api}</p>
                 </div>
               )}
@@ -462,13 +555,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
           <NotificacionesBadge noLeidas={noLeidas} onClick={() => setDrawerOpen(true)} />
 
-          {/* Toggle Sandbox en Footer con Validación de Firma y Ambiente */}
+          {/* Toggle Sandbox */}
           {firmaOk ? (
             <button
-              onClick={() => {
-                if (!puedeProduccion && sandbox) return;
-                setSandbox(!sandbox);
-              }}
+              onClick={() => { if (!puedeProduccion && sandbox) return; setSandbox(!sandbox); }}
               disabled={!puedeProduccion}
               className={clsx(
                 "flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm transition-colors border",
@@ -477,15 +567,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   : "bg-gray-800/50 text-gray-400 border-gray-700 hover:text-gray-300",
                 !puedeProduccion && "opacity-60 cursor-not-allowed"
               )}
-              title={!puedeProduccion ? "Activa producción para cambiar de modo" : ""}
             >
               <FlaskConical size={15} />
               <span className="flex-1 text-left text-xs font-medium">
                 {sandbox ? "Modo Sandbox" : "Producción"}
               </span>
-              {!puedeProduccion && (
-                <span className="text-[10px] text-amber-400">Solo sandbox</span>
-              )}
+              {!puedeProduccion && <span className="text-[10px] text-amber-400">Solo sandbox</span>}
               {puedeProduccion && (
                 <div className={clsx(
                   "w-8 h-4 rounded-full transition-colors relative shrink-0",
@@ -505,6 +592,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
           )}
 
+          {/* Soporte WhatsApp */}
+          <SoporteWhatsApp empresa={empresa} />
+
           <button onClick={() => setShowLogoutModal(true)}
             className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-colors">
             <LogOut size={16} />
@@ -512,11 +602,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </button>
 
           <button
-            onClick={() => {
-              localStorage.removeItem("kipu:empresas");
-              localStorage.removeItem("kipu-swr-cache");
-              window.location.reload();
-            }}
+            onClick={() => { localStorage.removeItem("kipu:empresas"); localStorage.removeItem("kipu-swr-cache"); window.location.reload(); }}
             className="flex items-center justify-center gap-1.5 text-xs text-gray-500 hover:text-gray-300 transition-colors w-full py-1"
           >
             <RefreshCw size={12} />
@@ -533,24 +619,44 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </button>
           <span className="font-semibold text-white">Kipu</span>
         </header>
+
         <main className="flex-1 overflow-y-auto">
-          {/* Banner Global Sandbox */}
+          {/* Banner email no verificado */}
+          {!emailVerificado && (
+            <div className="w-full bg-amber-500/10 border-b border-amber-500/20 px-4 py-2.5 flex items-center justify-between gap-3 shrink-0">
+              <div className="flex items-center gap-2 text-amber-400 text-xs">
+                <AlertTriangle size={14} className="shrink-0" />
+                <span>
+                  Tu correo <strong>{auth.currentUser?.email}</strong> no está verificado.
+                  Verifica tu email para poder emitir comprobantes.
+                </span>
+              </div>
+              <button
+                onClick={reenviarVerificacion}
+                className="text-xs text-amber-400 hover:text-amber-300 underline underline-offset-2 whitespace-nowrap shrink-0"
+              >
+                Reenviar
+              </button>
+            </div>
+          )}
+
+          {/* Banner Sandbox */}
           {sandbox && (
             <div className="w-full bg-blue-600 px-4 py-2 flex items-center justify-center gap-2 text-xs font-medium text-white shadow-md shrink-0">
               <FlaskConical size={14} />
               <span>MODO SANDBOX — Las facturas no van al SRI real ni poseen validez tributaria.</span>
               {puedeProduccion && (
                 <button onClick={() => setSandbox(false)}
-                  className="ml-3 underline underline-offset-2 hover:no-underline font-semibold opacity-90 hover:opacity-100">
+                  className="ml-3 underline underline-offset-2 hover:no-underline font-semibold">
                   Salir
                 </button>
               )}
             </div>
           )}
+
           {children}
         </main>
       </div>
-
       <PWAInstallBanner />
     </div>
   );

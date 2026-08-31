@@ -70,11 +70,11 @@ export default function DashboardPage() {
           </p>
         </div>
         <Link
-          href="/documentos/nueva"
+          href="/documentos/emitir/fac"
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition-colors shadow-lg shadow-indigo-500/20"
         >
           <span className="text-base">+</span>
-          <span className="hidden sm:inline">Nuevo Comprobante</span>
+          <span className="hidden sm:inline">Nueva Factura</span>
         </Link>
       </div>
 

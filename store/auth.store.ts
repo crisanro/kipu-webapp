@@ -20,6 +20,7 @@ interface Empresa {
   suscripcion_activa: boolean;
   suscripcion:        Suscripcion;
   balance_api:        number;
+  permisos:           Record<string, boolean>; 
 }
 
 interface AuthState {

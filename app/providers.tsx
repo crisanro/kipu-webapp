@@ -12,15 +12,19 @@ const CACHE_KEY = "kipu:empresas";
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutos
 
 async function cargarEmpresas(token: string) {
-  // Intentar desde cache primero
   const cached = localStorage.getItem(CACHE_KEY);
   if (cached) {
     try {
       const { data, timestamp } = JSON.parse(cached);
-      if (Date.now() - timestamp < CACHE_TTL) {
-        return data; // ← sin llamar al backend
+      // Invalidar cache viejo sin permisos
+      if (data.empresas?.[0] && !("permisos" in data.empresas[0])) {
+        localStorage.removeItem(CACHE_KEY);
+      } else if (Date.now() - timestamp < CACHE_TTL) {
+        return data;
       }
-    } catch {}
+    } catch {
+      localStorage.removeItem(CACHE_KEY);
+    }
   }
 
   // Cache expirado — llamar al backend
@@ -31,6 +35,17 @@ async function cargarEmpresas(token: string) {
     empresas: res.data.data ?? [],
     role:     res.data.role ?? null,
   };
+
+  // Invalidar cache viejo que no tiene permisos
+  const cachedOld = localStorage.getItem(CACHE_KEY);
+  if (cachedOld) {
+    try {
+      const { data: oldData } = JSON.parse(cachedOld);
+      if (oldData.empresas?.[0] && !("permisos" in oldData.empresas[0])) {
+        localStorage.removeItem(CACHE_KEY); // ← forzar recarga
+      }
+    } catch {}
+  }
 
   localStorage.setItem(CACHE_KEY, JSON.stringify({
     data,
@@ -53,8 +68,8 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
         setListoLocal(true);
         setListo(true);
         const rutasProtegidas = ["/dashboard", "/documentos", "/clientes",
-                                  "/productos", "/configuracion", "/estructura",
-                                  "/planes", "/usuarios", "/admin"];
+                                 "/productos", "/configuracion", "/estructura",
+                                 "/planes", "/usuarios", "/admin"];
         if (rutasProtegidas.some(r => pathname.startsWith(r))) {
           router.replace("/login");
         }
@@ -73,12 +88,19 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
         const data  = await cargarEmpresas(token); // ← usa cache si existe
 
         if (data.empresas.length === 0) {
-          router.replace("/onboarding");
+          const params   = new URLSearchParams(window.location.search);
+          const empresaParam = params.get("empresa");
+          router.replace(empresaParam ? `/bienvenida?empresa=${empresaParam}` : "/bienvenida");
           return;
         }
 
         setUser(user.uid, user.email ?? "", "", data.role);
         setEmpresas(data.empresas);
+
+        // Limpiar store viejo sin permisos
+        if (empresa && !("permisos" in empresa)) {
+          localStorage.removeItem("kipu-auth");
+        }
 
         if (!empresa) {
           const e = data.empresas[0];
@@ -90,6 +112,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
             ambiente:           e.ambiente,
             tipo_emisor:        e.tipo_emisor,
             rol:                e.rol,
+            permisos:           e.permisos ?? {},
             firma_ok:           e.firma_ok,
             suscripcion_activa: e.suscripcion_activa,
             suscripcion:        e.suscripcion,

@@ -1,10 +1,10 @@
 // app/(auth)/register/page.tsx
 "use client";
 
-import { useState, useEffect  } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword, signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
@@ -13,18 +13,20 @@ import { Zap, Eye, EyeOff, Loader2 } from "lucide-react";
 export default function RegisterPage() {
   const router = useRouter();
 
-  const { uid } = useAuthStore();
+  const { uid, logout } = useAuthStore();
   useEffect(() => {
       if (uid) router.replace("/dashboard");
   }, [uid]);
   
-  const [email,    setEmail]    = useState("");
-  const [password, setPassword] = useState("");
-  const [showPass, setShowPass] = useState(false);
-  const [confirm,  setConfirm]  = useState("");
-  const [showConf, setShowConf] = useState(false);
-  const [loading,  setLoading]  = useState(false);
-  const [error,    setError]    = useState("");
+  const [email,          setEmail]          = useState("");
+  const [password,       setPassword]       = useState("");
+  const [showPass,       setShowPass]       = useState(false);
+  const [confirm,        setConfirm]        = useState("");
+  const [showConf,       setShowConf]       = useState(false);
+  const [aceptaTerminos, setAceptaTerminos] = useState(false);
+  const [loading,        setLoading]        = useState(false);
+  const [error,          setError]          = useState("");
+  const [confirmDelete,  setConfirmDelete]  = useState(false);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,6 +39,11 @@ export default function RegisterPage() {
 
     if (password !== confirm) {
       setError("Las contraseñas no coinciden.");
+      return;
+    }
+
+    if (!aceptaTerminos) {
+      setError("Debes aceptar la Política de Privacidad y el Tratamiento de Datos para continuar.");
       return;
     }
 
@@ -53,8 +60,9 @@ export default function RegisterPage() {
         // No crítico — el usuario igual puede continuar
       }
 
-      // 3. Ir al onboarding para configurar la empresa
-      router.replace("/onboarding");
+      // 3. Ir a bienvenida con el parámetro de empresa si existe
+      const empresaParam = new URLSearchParams(window.location.search).get("empresa");
+      router.replace(empresaParam ? `/bienvenida?empresa=${empresaParam}` : "/bienvenida");
 
     } catch (err: any) {
       const code = err?.code ?? "";
@@ -69,6 +77,22 @@ export default function RegisterPage() {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCerrarSesion = async () => {
+    await signOut(auth);
+    logout();
+    router.replace("/login");
+  };
+
+  const handleEliminarCuenta = async () => {
+    try {
+      await auth.currentUser?.delete();
+      logout();
+      router.replace("/register");
+    } catch {
+      alert("Por seguridad, cierra sesión y vuelve a iniciar para eliminar tu cuenta.");
     }
   };
 
@@ -147,6 +171,38 @@ export default function RegisterPage() {
             </div>
           </div>
 
+          {/* Checkbox LOPDP */}
+          <div className="flex items-start gap-2 pt-1">
+            <input
+              type="checkbox"
+              id="terminos"
+              checked={aceptaTerminos}
+              onChange={(e) => setAceptaTerminos(e.target.checked)}
+              className="mt-0.5 w-4 h-4 rounded border-gray-700 bg-gray-900 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+            />
+            <label htmlFor="terminos" className="text-xs text-gray-500 leading-relaxed">
+              He leído y acepto la{" "}
+              <a 
+                href="https://kipu.ec/politica-de-privacidad" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="text-indigo-400 hover:text-indigo-300 underline"
+              >
+                Política de Privacidad
+              </a>{" "}
+              y el{" "}
+              <a 
+                href="https://kipu.ec/tratamiento-de-datos-personales" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="text-indigo-400 hover:text-indigo-300 underline"
+              >
+                Tratamiento de Datos Personales
+              </a>{" "}
+              de Kipu EC.
+            </label>
+          </div>
+
           {error && (
             <p className="text-sm text-red-400 bg-red-400/10 px-3 py-2 rounded-lg">
               {error}
@@ -155,7 +211,7 @@ export default function RegisterPage() {
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || !aceptaTerminos}
             className="w-full py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium text-sm transition-colors flex items-center justify-center gap-2"
           >
             {loading ? (
@@ -172,6 +228,43 @@ export default function RegisterPage() {
             Inicia sesión
           </Link>
         </p>
+
+        {/* Opciones de salida */}
+        <div className="mt-8 flex flex-col items-center gap-2">
+          <button
+            onClick={handleCerrarSesion}
+            className="text-xs text-gray-600 hover:text-gray-400 transition-colors"
+          >
+            Cerrar sesión
+          </button>
+
+          {!confirmDelete ? (
+            <button
+              onClick={() => setConfirmDelete(true)}
+              className="text-xs text-red-800 hover:text-red-500 transition-colors"
+            >
+              Eliminar mi cuenta
+            </button>
+          ) : (
+            <div className="text-center space-y-2">
+              <p className="text-xs text-red-400">¿Estás seguro? Esta acción no se puede deshacer.</p>
+              <div className="flex gap-3 justify-center">
+                <button
+                  onClick={() => setConfirmDelete(false)}
+                  className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleEliminarCuenta}
+                  className="text-xs text-red-500 hover:text-red-400 transition-colors font-medium"
+                >
+                  Sí, eliminar
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
