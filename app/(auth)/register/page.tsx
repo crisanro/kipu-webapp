@@ -4,7 +4,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { createUserWithEmailAndPassword, signOut } from "firebase/auth";
+import { createUserWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
@@ -13,7 +13,7 @@ import { Zap, Eye, EyeOff, Loader2 } from "lucide-react";
 export default function RegisterPage() {
   const router = useRouter();
 
-  const { uid, logout } = useAuthStore();
+  const { uid } = useAuthStore();
   useEffect(() => {
       if (uid) router.replace("/dashboard");
   }, [uid]);
@@ -26,7 +26,6 @@ export default function RegisterPage() {
   const [aceptaTerminos, setAceptaTerminos] = useState(false);
   const [loading,        setLoading]        = useState(false);
   const [error,          setError]          = useState("");
-  const [confirmDelete,  setConfirmDelete]  = useState(false);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -77,22 +76,6 @@ export default function RegisterPage() {
       }
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleCerrarSesion = async () => {
-    await signOut(auth);
-    logout();
-    router.replace("/login");
-  };
-
-  const handleEliminarCuenta = async () => {
-    try {
-      await auth.currentUser?.delete();
-      logout();
-      router.replace("/register");
-    } catch {
-      alert("Por seguridad, cierra sesión y vuelve a iniciar para eliminar tu cuenta.");
     }
   };
 
@@ -228,43 +211,6 @@ export default function RegisterPage() {
             Inicia sesión
           </Link>
         </p>
-
-        {/* Opciones de salida */}
-        <div className="mt-8 flex flex-col items-center gap-2">
-          <button
-            onClick={handleCerrarSesion}
-            className="text-xs text-gray-600 hover:text-gray-400 transition-colors"
-          >
-            Cerrar sesión
-          </button>
-
-          {!confirmDelete ? (
-            <button
-              onClick={() => setConfirmDelete(true)}
-              className="text-xs text-red-800 hover:text-red-500 transition-colors"
-            >
-              Eliminar mi cuenta
-            </button>
-          ) : (
-            <div className="text-center space-y-2">
-              <p className="text-xs text-red-400">¿Estás seguro? Esta acción no se puede deshacer.</p>
-              <div className="flex gap-3 justify-center">
-                <button
-                  onClick={() => setConfirmDelete(false)}
-                  className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={handleEliminarCuenta}
-                  className="text-xs text-red-500 hover:text-red-400 transition-colors font-medium"
-                >
-                  Sí, eliminar
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
       </div>
     </div>
   );

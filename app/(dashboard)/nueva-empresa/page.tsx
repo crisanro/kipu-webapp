@@ -71,6 +71,7 @@ export default function NuevaEmpresaPage() {
         nombre_comercial:   form.nombre_comercial.toUpperCase() || "",
         ambiente:           1,
         rol:                "admin",
+        permisos:           {},
         balance_emision:    10,
         balance_recepcion:  0,
         firma_ok:           false,
