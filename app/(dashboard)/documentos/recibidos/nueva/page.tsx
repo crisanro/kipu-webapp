@@ -3,24 +3,26 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/auth.store";
-import { AlertTriangle, FileText, FileImage } from "lucide-react";
+import { AlertTriangle, FileText, FileImage, Download } from "lucide-react";
 import { clsx } from "clsx";
 
-import TabXML               from "./_components/TabXML";
-import TabFisico            from "./_components/TabFisico";
-import ReviewXML            from "./_components/ReviewXML";
-import DoneScreen           from "./_components/DoneScreen";
-import { DocParseado }      from "./_components/ReviewXML";
+import TabXML              from "./_components/TabXML";
+import TabFisico           from "./_components/TabFisico";
+import TabSRI              from "./_components/TabSRI";
+import ReviewXML           from "./_components/ReviewXML";
+import DoneScreen          from "./_components/DoneScreen";
+import { DocParseado }     from "./_components/ReviewXML";
 
 export default function NuevaRecibidaPage() {
   const router  = useRouter();
   const empresa = useAuthStore((s) => s.empresa);
 
-  const [tab,      setTab]      = useState<"xml" | "fisico">("xml");
+  const [tab,      setTab]      = useState<"xml" | "fisico" | "sri">("xml");
   const [parsed,   setParsed]   = useState<DocParseado | null>(null);
   const [xmlFile,  setXmlFile]  = useState<File | null>(null);
   const [doneXML,  setDoneXML]  = useState(false);
   const [doneFis,  setDoneFis]  = useState(false);
+  const [doneSRI,  setDoneSRI]  = useState(false);
   const [error,    setError]    = useState("");
   const [dragging, setDragging] = useState(false);
 
@@ -44,6 +46,17 @@ export default function NuevaRecibidaPage() {
         titulo    = "Documento registrado"
         subtitulo = "Documento físico guardado correctamente"
         onOtro    = {() => setDoneFis(false)}
+      />
+    );
+  }
+
+  // ── Done SRI ────────────────────────────────────────────────────────────────
+  if (tab === "sri" && doneSRI) {
+    return (
+      <DoneScreen
+        titulo    = "Importación completada"
+        subtitulo = "Documentos del SRI importados correctamente"
+        onOtro    = {() => setDoneSRI(false)}
       />
     );
   }
@@ -101,6 +114,16 @@ export default function NuevaRecibidaPage() {
           <FileImage size={15} />
           Documento Físico
         </button>
+        <button
+          onClick={() => { setTab("sri"); setError(""); }}
+          className={clsx(
+            "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-colors",
+            tab === "sri" ? "bg-indigo-600 text-white" : "text-gray-400 hover:text-white"
+          )}
+        >
+          <Download size={15} />
+          SRI Masivo
+        </button>
       </div>
 
       {/* Error compartido */}
@@ -127,6 +150,13 @@ export default function NuevaRecibidaPage() {
         <TabFisico
           suscripcionActiva = {suscripcionActiva}
           onDone            = {() => setDoneFis(true)}
+        />
+      )}
+
+      {tab === "sri" && (
+        <TabSRI
+          empresa = {empresa}
+          onDone  = {() => setDoneSRI(true)}
         />
       )}
 

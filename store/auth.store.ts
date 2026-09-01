@@ -74,6 +74,7 @@ export const useAuthStore = create<AuthState>()(
         if (typeof window !== "undefined") {
           localStorage.removeItem("kipu:empresas");
           localStorage.removeItem("kipu-swr-cache");
+          localStorage.removeItem("kipu-ext-token");
         }
         set({
           uid:      null,

@@ -63,10 +63,15 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
   const [listo, setListoLocal] = useState(false);
 
   useEffect(() => {
+    let refreshInterval: NodeJS.Timeout | null = null;
+
     const unsub = onAuthStateChanged(auth, async (user) => {
       if (!user) {
         setListoLocal(true);
         setListo(true);
+        localStorage.removeItem("kipu-ext-token");
+        if (refreshInterval) clearInterval(refreshInterval);
+
         const rutasProtegidas = ["/dashboard", "/documentos", "/clientes",
                                  "/productos", "/configuracion", "/estructura",
                                  "/planes", "/usuarios", "/admin"];
@@ -76,16 +81,28 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      if (inicializado.current) {
-        setListoLocal(true);
-        setListo(true);
-        return;
-      }
-      inicializado.current = true;
-
       try {
         const token = await user.getIdToken();
-        const data  = await cargarEmpresas(token); // ← usa cache si existe
+        localStorage.setItem("kipu-ext-token", token);
+
+        // Refrescar token cada 50 minutos para la extensión
+        if (!refreshInterval) {
+          refreshInterval = setInterval(async () => {
+            try {
+              const t = await user.getIdToken(true);
+              localStorage.setItem("kipu-ext-token", t);
+            } catch {}
+          }, 50 * 60 * 1000);
+        }
+
+        if (inicializado.current) {
+          setListoLocal(true);
+          setListo(true);
+          return;
+        }
+        inicializado.current = true;
+
+        const data = await cargarEmpresas(token); // ← usa cache si existe
 
         if (data.empresas.length === 0) {
           const params   = new URLSearchParams(window.location.search);
@@ -105,32 +122,37 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
         if (!empresa) {
           const e = data.empresas[0];
           setEmpresa({
-            id:                 e.id,
-            ruc:                e.ruc,
-            razon_social:       e.razon_social,
-            nombre_comercial:   e.nombre_comercial,
-            ambiente:           e.ambiente,
-            tipo_emisor:        e.tipo_emisor,
-            rol:                e.rol,
-            permisos:           e.permisos ?? {},
-            firma_ok:           e.firma_ok,
-            suscripcion_activa: e.suscripcion_activa,
-            suscripcion:        e.suscripcion,
-            balance_api:        e.balance_api,
+            id:                  e.id,
+            ruc:                 e.ruc,
+            razon_social:        e.razon_social,
+            nombre_comercial:    e.nombre_comercial,
+            ambiente:            e.ambiente,
+            tipo_emisor:         e.tipo_emisor,
+            rol:                 e.rol,
+            permisos:            e.permisos ?? {},
+            firma_ok:            e.firma_ok,
+            suscripcion_activa:  e.suscripcion_activa,
+            suscripcion:         e.suscripcion,
+            balance_api:         e.balance_api,
           });
         }
       } catch (error) {
         console.error("[Auth] Error:", error);
         // Limpiar cache corrupto
         localStorage.removeItem(CACHE_KEY);
+        localStorage.removeItem("kipu-ext-token");
         router.replace("/login");
       } finally {
         setListoLocal(true);
         setListo(true);
       }
     });
-    return () => unsub();
-  }, []);
+
+    return () => {
+      unsub();
+      if (refreshInterval) clearInterval(refreshInterval);
+    };
+  }, [pathname, router, empresa, setUser, setEmpresa, setEmpresas, setListo]);
 
   if (!listo) {
     return (
