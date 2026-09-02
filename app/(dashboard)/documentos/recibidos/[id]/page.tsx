@@ -41,10 +41,10 @@ function ModalClasificacion({ doc, onClose, onSaved }: {
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const [items,   setItems]   = useState<any[]>(doc.items_detalle ?? []);
-  const [notas,   setNotas]   = useState(doc.notas ?? "");
-  const [saving,  setSaving]  = useState(false);
-  const [error,   setError]   = useState("");
+  const [items,  setItems]  = useState<any[]>(doc.items_detalle ?? []);
+  const [notas,  setNotas]  = useState(doc.notas ?? "");
+  const [saving, setSaving] = useState(false);
+  const [error,  setError]  = useState("");
 
   const editItem = (idx: number, field: string, val: boolean) => {
     setItems(prev => prev.map((item, i) =>
@@ -68,82 +68,123 @@ function ModalClasificacion({ doc, onClose, onSaved }: {
     } finally { setSaving(false); }
   };
 
+  const totalDeducible = items.filter(i => i.deducible_renta).reduce((s, i) => s + i.subtotal, 0);
+  const totalCredito   = items.filter(i => i.credito_tributario_iva).reduce((s, i) => s + i.valor_iva, 0);
+
   return (
     <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-      <div className="bg-gray-900 border border-gray-800 rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+      <div className="bg-gray-900 border border-gray-800 rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+
+        {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-800 sticky top-0 bg-gray-900">
           <h2 className="text-sm font-semibold text-white">Clasificación fiscal</h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-white">
+          <button onClick={onClose} className="text-gray-500 hover:text-white transition-colors">
             <X size={18} />
           </button>
         </div>
+
         <div className="p-5 space-y-4">
+
+          {/* Ítems — misma estructura que ReviewXML */}
           {items.length > 0 ? (
-            <div className="space-y-2">
-              <div className="grid grid-cols-12 gap-2 text-[10px] uppercase font-semibold tracking-wider text-gray-600 px-1">
-                <div className="col-span-5">Descripción</div>
+            <div className="border border-gray-800 rounded-xl overflow-hidden">
+              {/* Header columnas */}
+              <div className="grid grid-cols-12 gap-2 px-4 py-2 text-[10px] uppercase font-semibold tracking-wider text-gray-600 bg-gray-800/40">
+                <div className="col-span-4">Descripción</div>
                 <div className="col-span-2 text-right">Subtotal</div>
                 <div className="col-span-2 text-right">IVA</div>
-                <div className="col-span-1.5 text-center">Ded.</div>
-                <div className="col-span-1.5 text-center">CT IVA</div>
+                <div className="col-span-2 text-center">Deducible</div>
+                <div className="col-span-2 text-center">Crédito IVA</div>
               </div>
-              {items.map((item, idx) => (
-                <div key={idx} className="grid grid-cols-12 gap-2 items-center bg-gray-800/40 rounded-lg px-3 py-2.5">
-                  <div className="col-span-5">
-                    <p className="text-xs text-white truncate">{item.descripcion}</p>
-                    <p className="text-[10px] text-gray-600">
-                      {item.cantidad} × ${fmt(item.precio_unitario)}
-                    </p>
-                  </div>
-                  <div className="col-span-2 text-right text-xs text-gray-400">
-                    ${fmt(item.subtotal)}
-                  </div>
-                  <div className="col-span-2 text-right text-xs text-gray-400">
-                    {item.tarifa_iva > 0 ? `${item.tarifa_iva}% $${fmt(item.valor_iva)}` : "—"}
-                  </div>
-                  <div className="col-span-1 flex justify-center">
-                    <button onClick={() => editItem(idx, "deducible_renta", !item.deducible_renta)}
-                      className={clsx("w-8 h-4 rounded-full transition-colors relative",
-                        item.deducible_renta ? "bg-emerald-600" : "bg-gray-700")}>
-                      <span className={clsx("absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all",
-                        item.deducible_renta ? "left-4" : "left-0.5")} />
-                    </button>
-                  </div>
-                  <div className="col-span-2 flex justify-center">
-                    {item.tarifa_iva > 0 ? (
-                      <button onClick={() => editItem(idx, "credito_tributario_iva", !item.credito_tributario_iva)}
+              {/* Filas */}
+              <div className="divide-y divide-gray-800">
+                {items.map((item, idx) => (
+                  <div key={idx} className="grid grid-cols-12 gap-2 px-4 py-2.5 items-center hover:bg-gray-800/30">
+                    <div className="col-span-4">
+                      <p className="text-xs text-white truncate">{item.descripcion}</p>
+                      <p className="text-[10px] text-gray-600">
+                        {item.cantidad} × ${fmt(item.precio_unitario)}
+                      </p>
+                    </div>
+                    <div className="col-span-2 text-right text-xs text-gray-400">
+                      ${fmt(item.subtotal)}
+                    </div>
+                    <div className="col-span-2 text-right text-xs text-gray-400">
+                      {item.tarifa_iva > 0 ? `${item.tarifa_iva}% $${fmt(item.valor_iva)}` : "—"}
+                    </div>
+                    <div className="col-span-2 flex justify-center">
+                      <button
+                        onClick={() => editItem(idx, "deducible_renta", !item.deducible_renta)}
                         className={clsx("w-8 h-4 rounded-full transition-colors relative",
-                          item.credito_tributario_iva ? "bg-indigo-600" : "bg-gray-700")}>
+                          item.deducible_renta ? "bg-emerald-600" : "bg-gray-700")}>
                         <span className={clsx("absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all",
-                          item.credito_tributario_iva ? "left-4" : "left-0.5")} />
+                          item.deducible_renta ? "left-4" : "left-0.5")} />
                       </button>
-                    ) : (
-                      <span className="text-[10px] text-gray-700">N/A</span>
-                    )}
+                    </div>
+                    <div className="col-span-2 flex justify-center">
+                      {item.tarifa_iva > 0 ? (
+                        <button
+                          onClick={() => editItem(idx, "credito_tributario_iva", !item.credito_tributario_iva)}
+                          className={clsx("w-8 h-4 rounded-full transition-colors relative",
+                            item.credito_tributario_iva ? "bg-indigo-600" : "bg-gray-700")}>
+                          <span className={clsx("absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all",
+                            item.credito_tributario_iva ? "left-4" : "left-0.5")} />
+                        </button>
+                      ) : (
+                        <span className="text-[10px] text-gray-700">N/A</span>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           ) : (
             <p className="text-sm text-gray-500 text-center py-4">Sin ítems registrados.</p>
           )}
 
-          <div className="border-t border-gray-800 pt-3">
-            <label className="block text-xs text-gray-500 mb-1.5">Notas</label>
-            <textarea value={notas} onChange={e => setNotas(e.target.value)}
-              rows={2} placeholder="Observaciones internas..."
-              className="w-full px-3 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white text-sm resize-none focus:outline-none focus:border-indigo-500" />
+          {/* Resumen fiscal — igual que ReviewXML */}
+          <div className="bg-gray-800/40 rounded-xl p-4 space-y-2 text-sm">
+            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Resumen fiscal</h3>
+            <div className="flex justify-between text-gray-400">
+              <span>Total documento</span>
+              <span className="text-white font-bold">${fmt(doc.importe_total)}</span>
+            </div>
+            {doc.tipo_doc !== "RET" && (
+              <div className="flex justify-between text-gray-400">
+                <span>Deducible renta</span>
+                <span className="text-emerald-400">${fmt(totalDeducible)}</span>
+              </div>
+            )}
+            <div className="flex justify-between text-gray-400">
+              <span>Crédito tributario IVA</span>
+              <span className="text-indigo-400">${fmt(totalCredito)}</span>
+            </div>
           </div>
 
-          {error && <p className="text-xs text-red-400 bg-red-400/10 px-3 py-2 rounded-lg">{error}</p>}
+          {/* Notas */}
+          <div>
+            <label className="block text-xs text-gray-500 mb-1.5">Notas</label>
+            <textarea
+              value={notas}
+              onChange={e => setNotas(e.target.value)}
+              rows={2}
+              placeholder="Observaciones internas..."
+              className="w-full px-3 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white text-sm resize-none focus:outline-none focus:border-indigo-500"
+            />
+          </div>
 
+          {error && (
+            <p className="text-xs text-red-400 bg-red-400/10 px-3 py-2 rounded-lg">{error}</p>
+          )}
+
+          {/* Botones */}
           <div className="flex gap-3">
             <button onClick={onClose}
-              className="flex-1 py-2.5 rounded-lg border border-gray-700 text-gray-400 text-sm">
+              className="flex-1 py-2.5 rounded-lg border border-gray-700 text-gray-400 hover:text-white text-sm transition-colors">
               Cancelar
             </button>
             <button onClick={guardar} disabled={saving}
-              className="flex-1 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm font-medium flex items-center justify-center gap-2">
+              className="flex-1 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm font-medium flex items-center justify-center gap-2 transition-colors">
               {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
               Guardar
             </button>
