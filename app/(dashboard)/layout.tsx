@@ -601,13 +601,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             Cerrar sesión
           </button>
 
-          <button
-            onClick={() => { localStorage.removeItem("kipu:empresas"); localStorage.removeItem("kipu-swr-cache"); window.location.reload(); }}
-            className="flex items-center justify-center gap-1.5 text-xs text-gray-500 hover:text-gray-300 transition-colors w-full py-1"
-          >
-            <RefreshCw size={12} />
-            Actualizar datos
-          </button>
         </div>
       </aside>
 

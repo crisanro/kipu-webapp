@@ -62,6 +62,14 @@ export default function ReporteIVAPage() {
 
   useEffect(() => { cargar(); }, [cargar]);
 
+  // Agregar después de cargar() en ReporteIVAPage:
+  const guardarCamposManuales = async (valores: Record<string, number>) => {
+    await api.patch(
+      `/api/v1/app/declaraciones/iva/campos-manuales?periodo=${periodo}`,
+      valores
+    );
+  };
+
   const marcarDeclarado = async () => {
     setMarcando(true);
     try {
@@ -238,6 +246,8 @@ export default function ReporteIVAPage() {
           tipo="IVA"
           casilleros={reporte.resumen.casilleros ?? {}}
           camposManuales={reporte.resumen.campos_manuales ?? []}
+          valoresGuardados={data?.campos_manuales_valores ?? {}}  // ← nuevo
+          onGuardar={guardarCamposManuales}                       // ← nuevo
         />
       )}
 

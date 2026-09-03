@@ -8,51 +8,14 @@ import { useAuthStore } from "@/store/auth.store";
 import { SWRProvider } from "@/lib/swrConfig";
 import api from "@/lib/api";
 
-const CACHE_KEY = "kipu:empresas";
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutos
-
 async function cargarEmpresas(token: string) {
-  const cached = localStorage.getItem(CACHE_KEY);
-  if (cached) {
-    try {
-      const { data, timestamp } = JSON.parse(cached);
-      // Invalidar cache viejo sin permisos
-      if (data.empresas?.[0] && !("permisos" in data.empresas[0])) {
-        localStorage.removeItem(CACHE_KEY);
-      } else if (Date.now() - timestamp < CACHE_TTL) {
-        return data;
-      }
-    } catch {
-      localStorage.removeItem(CACHE_KEY);
-    }
-  }
-
-  // Cache expirado — llamar al backend
   const res  = await api.get("/api/v1/app/usuarios/empresas", {
     headers: { Authorization: `Bearer ${token}` },
   });
-  const data = {
+  return {
     empresas: res.data.data ?? [],
     role:     res.data.role ?? null,
   };
-
-  // Invalidar cache viejo que no tiene permisos
-  const cachedOld = localStorage.getItem(CACHE_KEY);
-  if (cachedOld) {
-    try {
-      const { data: oldData } = JSON.parse(cachedOld);
-      if (oldData.empresas?.[0] && !("permisos" in oldData.empresas[0])) {
-        localStorage.removeItem(CACHE_KEY); // ← forzar recarga
-      }
-    } catch {}
-  }
-
-  localStorage.setItem(CACHE_KEY, JSON.stringify({
-    data,
-    timestamp: Date.now(),
-  }));
-
-  return data;
 }
 
 export function AppProviders({ children }: { children: React.ReactNode }) {
@@ -71,7 +34,6 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
         setListo(true);
         localStorage.removeItem("kipu-ext-token");
         if (refreshInterval) clearInterval(refreshInterval);
-
         const rutasProtegidas = ["/dashboard", "/documentos", "/clientes",
                                  "/productos", "/configuracion", "/estructura",
                                  "/planes", "/usuarios", "/admin"];
@@ -85,7 +47,6 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
         const token = await user.getIdToken();
         localStorage.setItem("kipu-ext-token", token);
 
-        // Refrescar token cada 50 minutos para la extensión
         if (!refreshInterval) {
           refreshInterval = setInterval(async () => {
             try {
@@ -102,10 +63,11 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
         }
         inicializado.current = true;
 
-        const data = await cargarEmpresas(token); // ← usa cache si existe
+        // Siempre llamar al backend — Redis cachea por 5 min, no el frontend
+        const data = await cargarEmpresas(token);
 
         if (data.empresas.length === 0) {
-          const params   = new URLSearchParams(window.location.search);
+          const params       = new URLSearchParams(window.location.search);
           const empresaParam = params.get("empresa");
           router.replace(empresaParam ? `/bienvenida?empresa=${empresaParam}` : "/bienvenida");
           return;
@@ -114,32 +76,25 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
         setUser(user.uid, user.email ?? "", "", data.role);
         setEmpresas(data.empresas);
 
-        // Limpiar store viejo sin permisos
-        if (empresa && !("permisos" in empresa)) {
-          localStorage.removeItem("kipu-auth");
-        }
-
         if (!empresa) {
           const e = data.empresas[0];
           setEmpresa({
-            id:                  e.id,
-            ruc:                 e.ruc,
-            razon_social:        e.razon_social,
-            nombre_comercial:    e.nombre_comercial,
-            ambiente:            e.ambiente,
-            tipo_emisor:         e.tipo_emisor,
-            rol:                 e.rol,
-            permisos:            e.permisos ?? {},
-            firma_ok:            e.firma_ok,
-            suscripcion_activa:  e.suscripcion_activa,
-            suscripcion:         e.suscripcion,
-            balance_api:         e.balance_api,
+            id:                 e.id,
+            ruc:                e.ruc,
+            razon_social:       e.razon_social,
+            nombre_comercial:   e.nombre_comercial,
+            ambiente:           e.ambiente,
+            tipo_emisor:        e.tipo_emisor,
+            rol:                e.rol,
+            permisos:           e.permisos ?? {},
+            firma_ok:           e.firma_ok,
+            suscripcion_activa: e.suscripcion_activa,
+            suscripcion:        e.suscripcion,
+            balance_api:        e.balance_api,
           });
         }
       } catch (error) {
         console.error("[Auth] Error:", error);
-        // Limpiar cache corrupto
-        localStorage.removeItem(CACHE_KEY);
         localStorage.removeItem("kipu-ext-token");
         router.replace("/login");
       } finally {

@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSandboxStore } from "@/store/sandbox.store";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import api from "@/lib/api";
 import {
   Search, Plus, FileText, Loader2, CheckCircle2, Clock,
@@ -28,30 +29,42 @@ interface Documento {
 // ── Configs ───────────────────────────────────────────────────────────────────
 const ESTADO_CONFIG: Record<string, { label: string; color: string; icon: any }> = {
   AUTORIZADO: { label: "Autorizado", color: "text-emerald-400 bg-emerald-400/10", icon: CheckCircle2 },
-  RECIBIDA:   { label: "En proceso", color: "text-indigo-400 bg-indigo-400/10",   icon: Clock },
-  FIRMADO:    { label: "En cola",    color: "text-blue-400 bg-blue-400/10",       icon: Clock },
-  DEVUELTA:   { label: "Devuelto",   color: "text-amber-400 bg-amber-400/10",     icon: AlertTriangle },
-  RECHAZADO:  { label: "Rechazado",  color: "text-red-400 bg-red-400/10",         icon: XCircle },
-  PENDIENTE:  { label: "Pendiente",  color: "text-gray-400 bg-gray-400/10",       icon: Clock },
-  SANDBOX:    { label: "Prueba",     color: "text-cyan-400 bg-cyan-400/10",       icon: FlaskConical },
+  RECIBIDA:   { label: "En proceso", color: "text-indigo-400 bg-indigo-400/10",    icon: Clock },
+  FIRMADO:    { label: "En cola",    color: "text-blue-400 bg-blue-400/10",        icon: Clock },
+  DEVUELTA:   { label: "Devuelto",   color: "text-amber-400 bg-amber-400/10",      icon: AlertTriangle },
+  RECHAZADO:  { label: "Rechazado",  color: "text-red-400 bg-red-400/10",          icon: XCircle },
+  PENDIENTE:  { label: "Pendiente",  color: "text-gray-400 bg-gray-400/10",        icon: Clock },
+  SANDBOX:    { label: "Prueba",     color: "text-cyan-400 bg-cyan-400/10",        icon: FlaskConical },
 };
-
 const TIPO_COMPROBANTE: Record<string, { label: string; color: string }> = {
-  FAC: { label: "Factura",          color: "text-gray-400 bg-gray-400/10"     },
+  FAC: { label: "Factura",          color: "text-gray-400 bg-gray-400/10"      },
   NCR: { label: "Nota de Crédito",  color: "text-purple-400 bg-purple-400/10" },
   NDB: { label: "Nota de Débito",   color: "text-orange-400 bg-orange-400/10" },
   RET: { label: "Retención",        color: "text-yellow-400 bg-yellow-400/10" },
-  LIQ: { label: "Liquidación",      color: "text-cyan-400 bg-cyan-400/10"     },
+  LIQ: { label: "Liquidación",      color: "text-cyan-400 bg-cyan-400/10"      },
 };
-
 const COBRO_CONFIG: Record<string, { label: string; color: string }> = {
   PENDIENTE: { label: "Por cobrar", color: "text-amber-400"   },
   PAGADO:    { label: "Cobrado",    color: "text-emerald-400" },
   PARCIAL:   { label: "Parcial",    color: "text-blue-400"    },
   ANULADO:   { label: "Anulado",    color: "text-red-400"     },
 };
-
 const fmt = (n: any) => parseFloat(n ?? 0).toFixed(2);
+
+// ── Storage helpers ────────────────────────────────────────────────────────────
+const SS_KEY_INICIO = "kipu_emitidos_fecha_inicio";
+const SS_KEY_FIN    = "kipu_emitidos_fecha_fin";
+
+function getHoy() {
+  return new Date().toISOString().split("T")[0];
+}
+function leerFecha(key: string): string {
+  try { return sessionStorage.getItem(key) || getHoy(); }
+  catch { return getHoy(); }
+}
+function guardarFecha(key: string, val: string) {
+  try { sessionStorage.setItem(key, val); } catch {}
+}
 
 // ── Componente ResumenTipoCard ─────────────────────────────────────────────────
 const COLOR_MAP: Record<string, { badge: string; total: string }> = {
@@ -61,7 +74,6 @@ const COLOR_MAP: Record<string, { badge: string; total: string }> = {
   amber:  { badge: "bg-amber-400/10 text-amber-400",   total: "text-amber-400"  },
   yellow: { badge: "bg-yellow-400/10 text-yellow-400", total: "text-yellow-400" },
 };
-
 function ResumenTipoCard({ tipo, label, color, data }: {
   tipo:  string;
   label: string;
@@ -110,6 +122,7 @@ function ResumenTipoCard({ tipo, label, color, data }: {
 
 // ── Página ─────────────────────────────────────────────────────────────────────
 export default function HistorialPage() {
+  const searchParams = useSearchParams();
   const [documentos,   setDocumentos]   = useState<Documento[]>([]);
   const [resumen,      setResumen]      = useState<any>(null);
   const [loading,      setLoading]      = useState(true);
@@ -117,16 +130,31 @@ export default function HistorialPage() {
   const [query,        setQuery]        = useState("");
   const [filtroEstado, setFiltroEstado] = useState("TODOS");
   const [filtroTipo,   setFiltroTipo]   = useState("TODOS");
+
   const { activo: sandboxGlobal } = useSandboxStore();
-  const [sandbox,      setSandbox]      = useState(sandboxGlobal);
+  const [sandbox, setSandbox] = useState(sandboxGlobal);
 
-  const hoy = new Date().toISOString().split("T")[0];
-  const [fechaInicio, setFechaInicio] = useState(hoy);
-  const [fechaFin,    setFechaFin]    = useState(hoy);
+  const [fechaInicio, setFechaInicio] = useState<string>(() => {
+    const fromUrl = searchParams.get("fecha_inicio");
+    if (fromUrl) {
+      guardarFecha(SS_KEY_INICIO, fromUrl);
+      return fromUrl;
+    }
+    return leerFecha(SS_KEY_INICIO);
+  });
+  const [fechaFin, setFechaFin] = useState<string>(() => {
+    const fromUrl = searchParams.get("fecha_fin");
+    if (fromUrl) {
+      guardarFecha(SS_KEY_FIN, fromUrl);
+      return fromUrl;
+    }
+    return leerFecha(SS_KEY_FIN);
+  });
 
-  useEffect(() => {
-      setSandbox(sandboxGlobal);
-  }, [sandboxGlobal]);
+  useEffect(() => { guardarFecha(SS_KEY_INICIO, fechaInicio); }, [fechaInicio]);
+  useEffect(() => { guardarFecha(SS_KEY_FIN,    fechaFin);    }, [fechaFin]);
+
+  useEffect(() => { setSandbox(sandboxGlobal); }, [sandboxGlobal]);
 
   const diasRango = fechaInicio && fechaFin
     ? Math.ceil((new Date(fechaFin).getTime() - new Date(fechaInicio).getTime()) / (1000 * 60 * 60 * 24))
@@ -140,7 +168,6 @@ export default function HistorialPage() {
       if (fechaInicio) params.append("fecha_inicio", fechaInicio);
       if (fechaFin)    params.append("fecha_fin",    fechaFin);
       if (sandbox)     params.append("sandbox",      "true");
-      
       const res = await api.get(`/api/v1/app/documentos?${params.toString()}`);
       setDocumentos(res.data.data ?? []);
     } catch (e) { console.error(e); }
@@ -153,7 +180,6 @@ export default function HistorialPage() {
       const params = new URLSearchParams();
       if (fechaInicio) params.append("fecha_inicio", fechaInicio);
       if (fechaFin)    params.append("fecha_fin",    fechaFin);
-      
       const res = await api.get(`/api/v1/app/documentos/resumen?${params.toString()}`);
       setResumen(res.data.data);
     } catch (e) { console.error(e); }
@@ -181,7 +207,6 @@ export default function HistorialPage() {
 
   return (
     <div className="p-4 md:p-6 space-y-4">
-
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -189,7 +214,6 @@ export default function HistorialPage() {
           <p className="text-sm text-gray-500">{documentos.length} comprobantes encontrados</p>
         </div>
         <div className="flex items-center gap-2">
-          {/* Toggle Sandbox */}
           <button
             onClick={() => setSandbox(!sandbox)}
             className={clsx(
@@ -202,7 +226,6 @@ export default function HistorialPage() {
             <FlaskConical size={14} />
             {sandbox ? "Sandbox" : "Producción"}
           </button>
-
           <button
             onClick={() => { cargar(); cargarResumen(); }}
             disabled={diasRango > 45}
@@ -217,7 +240,7 @@ export default function HistorialPage() {
         </div>
       </div>
 
-      {/* Fechas */}
+      {/* Filtros */}
       <div className="flex flex-col md:flex-row gap-3">
         <div className="relative flex-1">
           <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
@@ -236,14 +259,14 @@ export default function HistorialPage() {
             className="px-3 py-2 rounded-lg bg-gray-900 border border-gray-800 text-white text-sm focus:outline-none focus:border-indigo-500" />
         </div>
       </div>
+
       {diasRango > 45 && (
         <p className="text-xs text-amber-400 font-medium">El rango máximo es de 45 días.</p>
       )}
 
-      {/* ── RESUMEN FISCAL COLAPSABLE ────────────────────────────────────── */}
+      {/* Resumen fiscal */}
       {!sandbox && tieneResumen && (
         <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
-          {/* Header colapsable */}
           <button
             onClick={() => setResumenOpen(!resumenOpen)}
             className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-800/50 transition-colors"
@@ -256,7 +279,6 @@ export default function HistorialPage() {
               </span>
             </div>
             <div className="flex items-center gap-3">
-              {/* Totales rápidos siempre visibles */}
               {resumen.por_tipo?.FAC && (
                 <span className="text-xs text-gray-400 hidden sm:block">
                   FAC <span className="text-white font-medium">${fmt(resumen.por_tipo.FAC.total)}</span>
@@ -273,45 +295,21 @@ export default function HistorialPage() {
               }
             </div>
           </button>
-
-          {/* Contenido expandido */}
           {resumenOpen && (
             <div className="px-4 pb-4 space-y-3 border-t border-gray-800">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 pt-3">
-
-                {/* FAC */}
                 {resumen.por_tipo?.FAC && (
-                  <ResumenTipoCard
-                    tipo="FAC" label="Facturas Emitidas"
-                    color="indigo" data={resumen.por_tipo.FAC}
-                  />
+                  <ResumenTipoCard tipo="FAC" label="Facturas Emitidas"        color="indigo" data={resumen.por_tipo.FAC} />
                 )}
-
-                {/* LIQ */}
                 {resumen.por_tipo?.LIQ && (
-                  <ResumenTipoCard
-                    tipo="LIQ" label="Liquidaciones de Compra"
-                    color="cyan" data={resumen.por_tipo.LIQ}
-                  />
+                  <ResumenTipoCard tipo="LIQ" label="Liquidaciones de Compra" color="cyan"   data={resumen.por_tipo.LIQ} />
                 )}
-
-                {/* NCR */}
                 {resumen.por_tipo?.NCR && (
-                  <ResumenTipoCard
-                    tipo="NCR" label="Notas de Crédito"
-                    color="purple" data={resumen.por_tipo.NCR}
-                  />
+                  <ResumenTipoCard tipo="NCR" label="Notas de Crédito"         color="purple" data={resumen.por_tipo.NCR} />
                 )}
-
-                {/* NDB */}
                 {resumen.por_tipo?.NDB && (
-                  <ResumenTipoCard
-                    tipo="NDB" label="Notas de Débito"
-                    color="amber" data={resumen.por_tipo.NDB}
-                  />
+                  <ResumenTipoCard tipo="NDB" label="Notas de Débito"          color="amber"  data={resumen.por_tipo.NDB} />
                 )}
-
-                {/* RET */}
                 {resumen.retenciones?.num_docs > 0 && (
                   <div className="bg-gray-950/60 border border-gray-800 rounded-xl p-4">
                     <div className="flex items-center justify-between mb-3">
@@ -321,9 +319,7 @@ export default function HistorialPage() {
                         </span>
                         <h3 className="text-xs font-semibold text-white">Retenciones Emitidas</h3>
                       </div>
-                      <span className="text-[10px] text-gray-500">
-                        {resumen.retenciones.num_docs} docs
-                      </span>
+                      <span className="text-[10px] text-gray-500">{resumen.retenciones.num_docs} docs</span>
                     </div>
                     <div className="space-y-1.5">
                       {Object.entries(resumen.retenciones.por_tipo).map(([tipo, data]: [string, any]) => (

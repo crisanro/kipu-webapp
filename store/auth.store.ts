@@ -72,19 +72,12 @@ export const useAuthStore = create<AuthState>()(
 
       logout: () => {
         if (typeof window !== "undefined") {
-          localStorage.removeItem("kipu:empresas");
-          localStorage.removeItem("kipu-swr-cache");
-          localStorage.removeItem("kipu-ext-token");
+          localStorage.removeItem("kipu-auth");        // ← store de zustand
+          localStorage.removeItem("kipu-ext-token");   // ← token extensión
+          // kipu:empresas ya no existe
         }
-        set({
-          uid:      null,
-          email:    null,
-          profile_id: null,
-          role:     null,
-          listo:    false,
-          empresa:  null,
-          empresas: [],
-        });
+        set({ uid: null, email: null, profile_id: null,
+              role: null, listo: false, empresa: null, empresas: [] });
       },
     }),
     {

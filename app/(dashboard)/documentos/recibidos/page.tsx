@@ -1,7 +1,7 @@
 // app/(dashboard)/documentos/recibidas/page.tsx
 "use client";
 import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import api from "@/lib/api";
 import {
   Plus, FileText, Loader2, RefreshCw, Search,
@@ -26,9 +26,8 @@ interface DocRecibido {
   notas:                  string | null;
   fuente:                 string;
 }
-
 interface Resumen {
-  total_documentos:       number;
+  total_documentos:        number;
   importe_total:          number;
   total_deducible:        number;
   iva_credito_tributario: number;
@@ -43,30 +42,41 @@ const TIPO_COLOR: Record<string, string> = {
   NDB: "bg-amber-400/10 text-amber-400",
   RET: "bg-blue-400/10 text-blue-400",
 };
-
 const PAGO_COLOR: Record<string, string> = {
   PENDIENTE: "text-amber-400 bg-amber-400/10",
   PAGADO:    "text-emerald-400 bg-emerald-400/10",
   PARCIAL:   "text-blue-400 bg-blue-400/10",
   ANULADO:   "text-red-400 bg-red-400/10",
 };
-
 const PAGO_LABEL: Record<string, string> = {
   PENDIENTE: "Por pagar", PAGADO: "Pagado",
   PARCIAL: "Parcial", ANULADO: "Anulado",
 };
-
 const FUENTE_COLOR: Record<string, string> = {
   XML:    "text-indigo-400 bg-indigo-400/10",
   FISICO: "text-amber-400 bg-amber-400/10",
   API:    "text-cyan-400 bg-cyan-400/10",
 };
 
+// ── Storage helpers ────────────────────────────────────────────────────────────
+const SS_KEY_INICIO = "kipu_recibidos_fecha_inicio";
+const SS_KEY_FIN    = "kipu_recibidos_fecha_fin";
+
+function getHoy() {
+  return new Date().toISOString().split("T")[0];
+}
+function leerFecha(key: string): string {
+  try { return sessionStorage.getItem(key) || getHoy(); }
+  catch { return getHoy(); }
+}
+function guardarFecha(key: string, val: string) {
+  try { sessionStorage.setItem(key, val); } catch {}
+}
+
 // ── Box expandido ──────────────────────────────────────────────────────────────
 function DocExpandido({ doc, onVerDetalle }: { doc: DocRecibido; onVerDetalle: () => void }) {
   return (
     <div className="border-t border-gray-800/60 bg-gray-800/20">
-
       {/* Resumen fiscal */}
       <div className="px-4 py-3 grid grid-cols-3 gap-2">
         <div className="bg-gray-900/60 rounded-lg p-2.5 text-center">
@@ -82,7 +92,6 @@ function DocExpandido({ doc, onVerDetalle }: { doc: DocRecibido; onVerDetalle: (
           <p className="text-sm font-bold text-white">${fmt(doc.importe_total)}</p>
         </div>
       </div>
-
       {/* Clasificación fiscal */}
       <div className="px-4 pb-3 grid grid-cols-2 gap-2">
         <div className={clsx(
@@ -108,7 +117,6 @@ function DocExpandido({ doc, onVerDetalle }: { doc: DocRecibido; onVerDetalle: (
           </p>
         </div>
       </div>
-
       {/* Estado pago — solo FAC/LIQ */}
       {["FAC", "LIQ"].includes(doc.tipo_doc) && doc.estado_pago && (
         <div className="mx-4 mb-3 flex items-center justify-between bg-gray-900/60 rounded-lg px-3 py-2">
@@ -121,7 +129,6 @@ function DocExpandido({ doc, onVerDetalle }: { doc: DocRecibido; onVerDetalle: (
           </span>
         </div>
       )}
-
       {/* Fuente + notas + acción */}
       <div className="mx-4 mb-3 flex items-center justify-between gap-3">
         <div className="flex items-center gap-2 min-w-0">
@@ -149,16 +156,34 @@ function DocExpandido({ doc, onVerDetalle }: { doc: DocRecibido; onVerDetalle: (
 // ── Página principal ───────────────────────────────────────────────────────────
 export default function FacturasRecibidasPage() {
   const router = useRouter();
-  const hoy    = new Date().toISOString().split("T")[0];
+  const searchParams = useSearchParams();
 
-  const [docs,      setDocs]      = useState<DocRecibido[]>([]);
-  const [resumen,   setResumen]   = useState<Resumen | null>(null);
-  const [loading,   setLoading]   = useState(true);
-  const [fechaInicio, setFechaInicio] = useState(hoy);
-  const [fechaFin,    setFechaFin]    = useState(hoy);
-  const [query,     setQuery]     = useState("");
-  const [expandido, setExpandido] = useState<string | null>(null);
+  const [fechaInicio, setFechaInicio] = useState<string>(() => {
+    const fromUrl = searchParams.get("fecha_inicio");
+    if (fromUrl) {
+      guardarFecha(SS_KEY_INICIO, fromUrl);
+      return fromUrl;
+    }
+    return leerFecha(SS_KEY_INICIO);
+  });
+  const [fechaFin, setFechaFin] = useState<string>(() => {
+    const fromUrl = searchParams.get("fecha_fin");
+    if (fromUrl) {
+      guardarFecha(SS_KEY_FIN, fromUrl);
+      return fromUrl;
+    }
+    return leerFecha(SS_KEY_FIN);
+  });
+
+  const [docs,        setDocs]      = useState<DocRecibido[]>([]);
+  const [resumen,     setResumen]   = useState<Resumen | null>(null);
+  const [loading,     setLoading]   = useState(true);
+  const [query,       setQuery]     = useState("");
+  const [expandido,   setExpandido] = useState<string | null>(null);
   const [resumenOpen, setResumenOpen] = useState(false);
+
+  useEffect(() => { guardarFecha(SS_KEY_INICIO, fechaInicio); }, [fechaInicio]);
+  useEffect(() => { guardarFecha(SS_KEY_FIN,    fechaFin);    }, [fechaFin]);
 
   const diasRango = fechaInicio && fechaFin
     ? Math.ceil((new Date(fechaFin).getTime() - new Date(fechaInicio).getTime()) / (1000 * 60 * 60 * 24))
@@ -172,14 +197,13 @@ export default function FacturasRecibidasPage() {
       if (fechaInicio) params.append("fecha_inicio", fechaInicio);
       if (fechaFin)    params.append("fecha_fin",    fechaFin);
       const res = await api.get(`/api/v1/app/recibidos?${params}`);
-      setDocs(res.data.data       ?? []);
+      setDocs(res.data.data        ?? []);
       setResumen(res.data.resumen ?? null);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   }, [fechaInicio, fechaFin, diasRango]);
 
-  // Solo carga al montar
-  useEffect(() => { cargar(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { cargar(); }, [cargar]);
 
   const filtrados = docs.filter(d =>
     !query ||
@@ -189,7 +213,6 @@ export default function FacturasRecibidasPage() {
 
   return (
     <div className="p-4 md:p-6 space-y-5">
-
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -230,11 +253,12 @@ export default function FacturasRecibidasPage() {
           </button>
         </div>
       </div>
+
       {diasRango > 45 && (
         <p className="text-xs text-amber-400 font-medium">El rango máximo es 45 días.</p>
       )}
 
-      {/* Resumen fiscal — viene del backend, exacto */}
+      {/* Resumen fiscal */}
       {resumen && resumen.total_documentos > 0 && (
         <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
           <button onClick={() => setResumenOpen(!resumenOpen)}
@@ -260,7 +284,6 @@ export default function FacturasRecibidasPage() {
               }
             </div>
           </button>
-
           {resumenOpen && (
             <div className="px-4 pb-4 border-t border-gray-800 pt-3">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -310,17 +333,13 @@ export default function FacturasRecibidasPage() {
               const isOpen = expandido === doc.id;
               return (
                 <div key={doc.id}>
-                  {/* Fila */}
                   <div
                     onClick={() => setExpandido(isOpen ? null : doc.id)}
                     className="flex items-center gap-3 px-4 py-3 hover:bg-gray-800/40 transition-colors cursor-pointer select-none"
                   >
-                    {/* Tipo */}
                     <span className={clsx("text-[10px] px-1.5 py-0.5 rounded font-bold shrink-0", TIPO_COLOR[doc.tipo_doc] ?? TIPO_COLOR.FAC)}>
                       {doc.tipo_doc}
                     </span>
-
-                    {/* Info */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <p className="text-sm text-white font-medium truncate">
@@ -339,8 +358,6 @@ export default function FacturasRecibidasPage() {
                         {doc.numero_doc} · {doc.fecha_emision}
                       </p>
                     </div>
-
-                    {/* Total + estado pago */}
                     <div className="text-right shrink-0">
                       <p className="text-sm font-semibold text-white">${fmt(doc.importe_total)}</p>
                       {doc.estado_pago && ["FAC", "LIQ"].includes(doc.tipo_doc) && (
@@ -352,8 +369,6 @@ export default function FacturasRecibidasPage() {
                         </span>
                       )}
                     </div>
-
-                    {/* Ir al detalle */}
                     <button
                       onClick={e => { e.stopPropagation(); router.push(`/documentos/recibidos/${doc.id}`); }}
                       className="p-1.5 rounded-lg text-gray-600 hover:text-indigo-400 hover:bg-indigo-400/10 transition-colors shrink-0"
@@ -361,14 +376,10 @@ export default function FacturasRecibidasPage() {
                     >
                       <ArrowUpRight size={15} />
                     </button>
-
-                    {/* Chevron */}
                     <div className="text-gray-600 shrink-0">
                       {isOpen ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
                     </div>
                   </div>
-
-                  {/* Box expandido */}
                   {isOpen && (
                     <DocExpandido
                       doc={doc}
