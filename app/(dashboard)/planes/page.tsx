@@ -24,12 +24,12 @@ interface EstadoSub {
 }
 
 interface PlanCredito {
-  id:                 number;
-  nombre:             string;
-  descripcion:        string;
-  cantidad:           number;
-  precio:             number;
-  precio_por_credito: number;
+  id:                   number;
+  nombre:               string;
+  descripcion:          string;
+  cantidad:             number;
+  precio:               number;
+  precio_por_credito:   number;
 }
 
 interface Transaccion {
@@ -229,7 +229,7 @@ export default function CreditosPage() {
                     <div>
                       <p className="text-2xl font-bold text-white">Plan {sub.plan}</p>
                       <p className="text-sm text-gray-500">
-                        {sub.periodo === "MENSUAL" ? "Mensual" : "Anual"}
+                        {sub.periodo === "MENSUAL" ? "Mensual" : "Anual"} · IVA incluido
                         {sub.cancel_at_period_end && " · Cancela al vencer"}
                       </p>
                     </div>
@@ -285,8 +285,8 @@ export default function CreditosPage() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {[
-                      { plan: "NATURAL",  label: "Natural",  desc: "Personas naturales", mensual: 14.99, anual: 129.99, popular: false },
-                      { plan: "JURIDICO", label: "Jurídico", desc: "Personas jurídicas",  mensual: 24.99, anual: 199.99, popular: false  },
+                      { plan: "NATURAL",  label: "Individual",   desc: "Personas no obligadas a llevar contabilidad", mensual: 14.99, anual: 129.99, popular: false },
+                      { plan: "JURIDICO", label: "Empresarial",  desc: "Personas obligadas a llevar contabilidad",    mensual: 24.99, anual: 199.99, popular: false },
                     ].map((p) => (
                       <div key={p.plan} className={clsx(
                         "relative border rounded-xl p-5 space-y-3",
@@ -306,7 +306,7 @@ export default function CreditosPage() {
                         <div className="bg-gray-800/60 rounded-lg p-3">
                           <div className="flex items-baseline justify-between mb-2">
                             <span className="text-xl font-bold text-white">${p.mensual}<span className="text-xs text-gray-500 font-normal ml-1">/mes</span></span>
-                            <span className="text-xs text-gray-600">IVA inc.</span>
+                            <span className="text-xs text-emerald-400/70 font-medium">IVA incluido</span>
                           </div>
                           <button onClick={() => iniciarCheckoutSub(p.plan, "MENSUAL")}
                             disabled={!!pagando || !enProduccion}
@@ -324,7 +324,7 @@ export default function CreditosPage() {
                               Ahorra ${((p.mensual * 12) - p.anual).toFixed(0)}
                             </span>
                           </div>
-                          <p className="text-xs text-gray-500 mb-2">${(p.anual / 12).toFixed(2)}/mes equivalente</p>
+                          <p className="text-xs text-gray-500 mb-2">${(p.anual / 12).toFixed(2)}/mes · IVA incluido</p>
                           <button onClick={() => iniciarCheckoutSub(p.plan, "ANUAL")}
                             disabled={!!pagando || !enProduccion}
                             className="w-full py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-semibold transition-colors flex items-center justify-center gap-1.5">
@@ -340,12 +340,14 @@ export default function CreditosPage() {
 
               {/* Qué incluye */}
               <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Incluye</h3>
-                <div className="space-y-2">
+                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Todos los planes incluyen</h3>
+                <div className="space-y-2 mb-4">
                   {[
-                    "Emisión ilimitada de facturas, liquidaciones, notas de crédito/débito y retenciones",
+                    "Emisión ilimitada de facturas, liquidaciones, notas de crédito/débito y retenciones (web + API 200/mes)",
                     "Registro y clasificación fiscal de documentos recibidos",
-                    "Resúmenes fiscales y reportes para declaraciones IVA y Renta",
+                    "Proformas comerciales con descarga en PDF",
+                    "Cuentas por cobrar y cuentas por pagar",
+                    "Reportes de IVA y Renta para declaraciones",
                     "Hasta 5 usuarios por empresa",
                     "Soporte por WhatsApp",
                   ].map((item, i) => (
@@ -354,6 +356,17 @@ export default function CreditosPage() {
                       <p className="text-xs text-gray-400">{item}</p>
                     </div>
                   ))}
+                </div>
+                <div className="border-t border-gray-800 pt-3">
+                  <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                    Solo plan Empresarial
+                  </h3>
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2 size={13} className="text-indigo-400 shrink-0 mt-0.5" />
+                    <p className="text-xs text-gray-400">
+                      Reporte ATS (Anexo Transaccional Simplificado) para empresas obligadas a presentarlo al SRI
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -384,7 +397,7 @@ export default function CreditosPage() {
               {/* Planes de créditos */}
               <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
                 <h2 className="text-sm font-semibold text-white mb-1">Comprar créditos</h2>
-                <p className="text-xs text-gray-500 mb-4">Pago único · Sin suscripción · No vencen</p>
+                <p className="text-xs text-gray-500 mb-4">Pago único · Sin suscripción · No vencen · IVA incluido</p>
 
                 {planes.length === 0 ? (
                   <p className="text-sm text-gray-500 text-center py-4">No hay planes disponibles.</p>
@@ -409,7 +422,7 @@ export default function CreditosPage() {
                             </div>
                             <div className="text-right">
                               <p className="text-xl font-bold text-white">${fmt(p.precio)}</p>
-                              <p className="text-xs text-gray-500">${p.precio_por_credito.toFixed(3)}/crédito</p>
+                              <p className="text-xs text-gray-500">${p.precio_por_credito.toFixed(3)}/crédito · IVA inc.</p>
                             </div>
                           </div>
                           {p.descripcion && (

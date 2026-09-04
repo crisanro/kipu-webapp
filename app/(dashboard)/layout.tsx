@@ -14,7 +14,7 @@ import {
   LogOut, Zap, ChevronRight, ChevronDown, Menu, X, BarChart3,
   AlertTriangle, FileInput, Building2, CreditCard, UserCog,
   CheckCircle2, Plus, ChevronUp, Shield, RefreshCw, FlaskConical,
-  MessageCircle, Mail, QrCode, Wallet,
+  MessageCircle, Mail, QrCode, Wallet,ClipboardList,
 } from "lucide-react";
 import { clsx } from "clsx";
 import {
@@ -103,6 +103,11 @@ const NAV_GROUPS = [
       { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, permiso: null },
     ]
   },
+  {
+  items: [
+    { href: "/proformas", label: "Proformas", icon: ClipboardList, permiso: "emitir" },  // ← agregar
+  ]
+},
   {
     label:    "Emitir",
     icon:     Zap,

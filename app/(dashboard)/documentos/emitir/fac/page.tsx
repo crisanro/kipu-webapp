@@ -97,6 +97,9 @@ export default function NuevaFacturaPage() {
   const [ptoSelected,      setPtoSelected]      = useState("");
   const [puntos,           setPuntos]           = useState<{ codigo: string; nombre?: string }[]>([]);
 
+  // ── Estado Proforma ─────────────────────────────────────────────────────────
+  const [proformaId, setProformaId] = useState<string | null>(null);
+
   // ── Estado UI ───────────────────────────────────────────────────────────────
   const [submitting, setSubmitting] = useState(false);
   const [resultado,  setResultado]  = useState<any>(null);
@@ -140,25 +143,29 @@ export default function NuevaFacturaPage() {
 
       if (data.items && Array.isArray(data.items)) {
         setItems(data.items.map((i: any) => ({
-          _id:            genId(),
-          codigo:         String(i.codigo ?? ""),
-          descripcion:    String(i.descripcion ?? ""),
-          cantidad:       parseFloat(i.cantidad)  || 1,
-          precio:         parseFloat(i.precio)    || 0,
-          descuento:      parseFloat(i.descuento) || 0,
+          _id:             genId(),
+          codigo:          String(i.codigo ?? ""),
+          descripcion:     String(i.descripcion ?? ""),
+          cantidad:        parseFloat(i.cantidad)  || 1,
+          precio:          parseFloat(i.precio)    || 0,
+          descuento:       parseFloat(i.descuento) || 0,
           tipo_descuento: (i.tipo_descuento === "%" ? "%" : "$") as "$" | "%",
-          tipo_iva:       ["0","5","15"].includes(String(i.tipo_iva)) ? String(i.tipo_iva) : "15",
-          unidad:         String(i.unidad ?? "UNIDAD"),
+          tipo_iva:        ["0","5","15"].includes(String(i.tipo_iva)) ? String(i.tipo_iva) : "15",
+          unidad:          String(i.unidad ?? "UNIDAD"),
         })));
       }
 
       if (data.camposAdicionales) setCamposAdicionales(data.camposAdicionales);
 
+      if (data._proforma_id) {
+        setProformaId(data._proforma_id);
+      }
+
       if (data.esConsumidorFinal) {
         setEsConsumidorFinal(true);
       } else if (data.cliente) {
         setClienteSelected({
-          id:                     data.cliente.id || "",
+          id:                    data.cliente.id || "",
           razon_social:          data.cliente.razon_social || "",
           identificacion:        data.cliente.identificacion || "",
           tipo_identificacion_sri: data.cliente.tipo_id || "05",
@@ -182,7 +189,7 @@ export default function NuevaFacturaPage() {
 
   // ── Reset ────────────────────────────────────────────────────────────────────
   const reset = () => {
-    idempotencyKey.current = uuidv4(); // Regenerar key al resetear
+    idempotencyKey.current = uuidv4();
     setResultado(null);
     setClienteSelected(null);
     setEsConsumidorFinal(false);
@@ -191,6 +198,7 @@ export default function NuevaFacturaPage() {
     setPagos([{ ...PAGO_INICIAL, _id: Math.random().toString(36).slice(2) }]);
     setPropina(false);
     setCamposAdicionales([]);
+    setProformaId(null);
     setError("");
   };
 
@@ -216,14 +224,12 @@ export default function NuevaFacturaPage() {
       return;
     }
     
-    // Validación actualizada de acceso para emitir
     const puedeEmitir = empresa?.suscripcion_activa || (empresa?.balance_api ?? 0) > 0;
     if (!puedeEmitir) {
       setError("Se requiere suscripción activa o créditos API para emitir.");
       return;
     }
 
-    // Validar pagos — la suma de montos fijos no puede superar el total
     const totalCubierto = pagos.reduce((s, p) => s + (p.total ?? 0), 0);
     if (totalCubierto > totales.total) {
       setError(`Los pagos ($${fmt(totalCubierto)}) superan el total ($${fmt(totales.total)}).`);
@@ -232,12 +238,10 @@ export default function NuevaFacturaPage() {
 
     setSubmitting(true);
 
-    // Construir payload
     const payload: any = {
       establecimiento: estabSelected,
       punto_emision:    ptoSelected,
 
-      // Cliente
       cliente_id: esConsumidorFinal
         ? "consumidor_final"
         : clienteNuevo
@@ -250,7 +254,6 @@ export default function NuevaFacturaPage() {
         email:          clienteNuevo.email,
       } : undefined,
 
-      // Items
       items: items.map(i => {
         const c = calcItem(i);
         return {
@@ -264,17 +267,14 @@ export default function NuevaFacturaPage() {
         };
       }),
 
-      // Pagos
       pagos: pagos.map(p => ({
         forma_pago: p.forma_pago,
         ...(p.total !== null ? { total: p.total } : {}),
       })),
 
-      // Propina
       ...(propina ? { propina: totales.propina } : {}),
-
-      // Campos adicionales
       campos_adicionales: camposAdicionales.filter(c => c.nombre && c.valor),
+      ...(proformaId ? { proforma_id: proformaId } : {}),
     };
 
     try {
@@ -289,7 +289,6 @@ export default function NuevaFacturaPage() {
       );
       setResultado(res.data);
     } catch (err: any) {
-      // Si falla la emisión por un error de validación/servidor, renovamos la clave para el reintento
       idempotencyKey.current = uuidv4();
 
       const detail = err?.response?.data?.detail;

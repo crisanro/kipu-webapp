@@ -22,45 +22,38 @@ const getDeviceId = (): string => {
 // ── Pedir permiso y registrar token FCM ───────────────────────────────────────
 export async function registrarNotificaciones(): Promise<boolean> {
   try {
-    console.log("[FCM] Iniciando registro...");
+    // Si ya registramos en esta sesión, no volver a hacerlo
+    const yaRegistrado = sessionStorage.getItem("kipu-fcm-ok");
+    if (yaRegistrado) return true;
 
-    if (!("Notification" in window)) {
-      console.log("[FCM] ❌ Notifications no soportado");
-      return false;
-    }
-    if (!("serviceWorker" in navigator)) {
-      console.log("[FCM] ❌ ServiceWorker no soportado");
-      return false;
-    }
+    if (!("Notification" in window)) return false;
+    if (!("serviceWorker" in navigator)) return false;
 
     const permiso = await Notification.requestPermission();
-    console.log("[FCM] Permiso:", permiso);
     if (permiso !== "granted") return false;
 
     const messaging = await getFirebaseMessaging();
-    console.log("[FCM] Messaging:", messaging ? "✅" : "❌ null");
     if (!messaging) return false;
 
     const registration = await navigator.serviceWorker.register(
       "/firebase-messaging-sw.js"
     );
-    console.log("[FCM] SW registrado:", registration.scope);
 
     const token = await getToken(messaging, {
       vapidKey:                  VAPID_KEY,
       serviceWorkerRegistration: registration,
     });
-    console.log("[FCM] Token:", token ? token.slice(0, 20) + "..." : "❌ null");
+
     if (!token) return false;
 
-    // ← Enviar token + device_id
     await api.post("/api/v1/app/notificaciones/fcm-token", {
       token,
       device_id: getDeviceId(),
     });
-    console.log("[FCM] ✅ Token guardado en backend");
-    return true;
 
+    // Marcar como registrado para esta sesión
+    sessionStorage.setItem("kipu-fcm-ok", "1");
+    return true;
   } catch (e) {
     console.error("[FCM] ❌ Error:", e);
     return false;
