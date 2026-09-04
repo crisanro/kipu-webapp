@@ -189,7 +189,7 @@ export default function DetalleCuentaPage() {
               <User size={13} /> Persona
             </span>
             <Link
-              href={`/clientes/${cuenta.cliente_id}`}
+              href={`/personas/${cuenta.cliente_id}`}
               className="text-indigo-400 hover:text-indigo-300 font-medium truncate max-w-[60%] text-right"
             >
               {cuenta.razon_social}
