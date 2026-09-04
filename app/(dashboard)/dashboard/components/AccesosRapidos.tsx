@@ -9,21 +9,21 @@ import {
 
 const accesos = [
   {
-    href:   "/documentos/nueva",
+    href:   "/documentos/emitir/fac",
     icon:   Zap,
     label:  "Nueva Factura",
     color:  "bg-indigo-500/20 text-indigo-400 border-indigo-500/20",
     hover:  "hover:bg-indigo-500/30",
   },
   {
-    href:   "/documentos/recibidas/nueva",
+    href:   "/documentos/recibidos/nueva",
     icon:   FileInput,
     label:  "Registrar XML",
     color:  "bg-blue-500/20 text-blue-400 border-blue-500/20",
     hover:  "hover:bg-blue-500/30",
   },
   {
-    href:   "/clientes",
+    href:   "/personas",
     icon:   Users,
     label:  "Clientes",
     color:  "bg-emerald-500/20 text-emerald-400 border-emerald-500/20",
