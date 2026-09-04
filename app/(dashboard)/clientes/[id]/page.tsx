@@ -1,13 +1,13 @@
 // app/clientes/[id]/page.tsx
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import api from "@/lib/api";
 import {
   ArrowLeft, User, Mail, Phone, MapPin, FileText,
   CheckCircle2, Clock, AlertTriangle, XCircle,
-  Loader2, Edit2, Save, X, Plus
+  Loader2, Edit2, Save, X, Plus, Wallet, TrendingUp, TrendingDown, Ban, Scale
 } from "lucide-react";
 import { clsx } from "clsx";
 
@@ -40,6 +40,10 @@ export default function DetalleClientePage() {
   const [error,   setError]   = useState("");
   const [form,    setForm]    = useState<any>({});
 
+  const [cuentas,        setCuentas]        = useState<any[]>([]);
+  const [resumenCuentas, setResumenCuentas] = useState({ por_cobrar: 0, por_pagar: 0 });
+  const [loadingCuentas, setLoadingCuentas] = useState(true);
+
   const cargar = async () => {
     setLoading(true);
     try {
@@ -58,7 +62,23 @@ export default function DetalleClientePage() {
     }
   };
 
-  useEffect(() => { cargar(); }, [id]);
+  const cargarCuentas = useCallback(async () => {
+    setLoadingCuentas(true);
+    try {
+      const res = await api.get(`/api/v1/app/cuentas/cliente/${id}`);
+      setCuentas(res.data.data       ?? []);
+      setResumenCuentas(res.data.resumen ?? { por_cobrar: 0, por_pagar: 0 });
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoadingCuentas(false);
+    }
+  }, [id]);
+
+  useEffect(() => { 
+    cargar(); 
+    cargarCuentas(); 
+  }, [id, cargarCuentas]);
 
   const guardar = async () => {
     setError("");
@@ -78,10 +98,10 @@ export default function DetalleClientePage() {
     if (!data?.cliente) return;
     sessionStorage.setItem("kipu:prefill", JSON.stringify({
       cliente: {
-        id:            data.cliente.id,
-        razon_social:  data.cliente.razon_social,
+        id:             data.cliente.id,
+        razon_social:   data.cliente.razon_social,
         identificacion: data.cliente.identificacion,
-        tipo_id:       data.cliente.tipo_identificacion_sri,
+        tipo_id:        data.cliente.tipo_identificacion_sri,
       },
       esConsumidorFinal: false,
       items: [],
@@ -310,6 +330,88 @@ export default function DetalleClientePage() {
                   <div className="text-right shrink-0">
                     <p className="text-sm font-semibold text-white">${fmt(f.importe_total)}</p>
                     <p className={clsx("text-xs", estado.color.split(" ")[0])}>{estado.label}</p>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Cuentas por cobrar / pagar */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <div className="px-4 py-3 border-b border-gray-800 flex items-center justify-between">
+          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+            Cuentas
+          </h2>
+          <div className="flex items-center gap-3">
+            {resumenCuentas.por_cobrar > 0 && (
+              <span className="text-xs text-emerald-400 flex items-center gap-1">
+                <TrendingUp size={11} />
+                ${resumenCuentas.por_cobrar.toFixed(2)} por cobrar
+              </span>
+            )}
+            {resumenCuentas.por_pagar > 0 && (
+              <span className="text-xs text-red-400 flex items-center gap-1">
+                <TrendingDown size={11} />
+                ${resumenCuentas.por_pagar.toFixed(2)} por pagar
+              </span>
+            )}
+            <Link
+              href={`/cuentas?cliente=${id}`}
+              className="flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
+            >
+              <Plus size={12} /> Nueva
+            </Link>
+          </div>
+        </div>
+
+        {loadingCuentas ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 size={18} className="animate-spin text-indigo-400" />
+          </div>
+        ) : cuentas.length === 0 ? (
+          <div className="px-4 py-8 text-center">
+            <Wallet size={28} className="text-gray-700 mx-auto mb-2" />
+            <p className="text-xs text-gray-600">Sin cuentas registradas.</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-gray-800">
+            {cuentas.map((c: any) => {
+              const ESTADO_COLOR: Record<string, string> = {
+                PENDIENTE: "text-amber-400",
+                PARCIAL:   "text-blue-400",
+                PAGADO:    "text-emerald-400",
+                ANULADO:   "text-gray-500",
+              };
+              return (
+                <Link
+                  key={c.id}
+                  href={`/cuentas/${c.id}`}
+                  className="flex items-center gap-3 px-4 py-3 hover:bg-gray-800/50 transition-colors"
+                >
+                  <div className={clsx(
+                    "w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-bold",
+                    c.tipo === "COBRAR"
+                      ? "bg-emerald-400/10 text-emerald-400"
+                      : "bg-red-400/10 text-red-400"
+                  )}>
+                    {c.tipo === "COBRAR" ? "C" : "P"}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-white truncate">{c.concepto}</p>
+                    <p className="text-xs text-gray-500">
+                      {c.fecha_emision}
+                      {c.fecha_vencimiento && ` · vence ${c.fecha_vencimiento}`}
+                    </p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-sm font-semibold text-white">
+                      ${c.saldo_pendiente.toFixed(2)}
+                    </p>
+                    <p className={clsx("text-xs", ESTADO_COLOR[c.estado] ?? "text-gray-500")}>
+                      {c.estado.toLowerCase()}
+                    </p>
                   </div>
                 </Link>
               );

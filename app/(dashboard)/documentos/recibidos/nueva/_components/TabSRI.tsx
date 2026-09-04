@@ -8,8 +8,8 @@ interface Props {
 }
 
 const VIDEO_ID        = "dQw4w9WgXcQ"; // placeholder — reemplazar con el real
-const CHROME_EXT_URL  = "#"; // placeholder — Chrome Web Store
-const FIREFOX_EXT_URL = "#"; // placeholder — Firefox Add-ons
+const CHROME_EXT_URL  = "https://chromewebstore.google.com/detail/kipu-%E2%80%94-importador-sri/fpaeflibkbihlpdkfbpniminocmplplo"; // placeholder — Chrome Web Store
+const FIREFOX_EXT_URL = "https://addons.mozilla.org/es-ES/firefox/addon/kipu-importador-sri/"; // placeholder — Firefox Add-ons
 
 export default function TabSRI({ empresa, onDone }: Props) {
   return (
@@ -25,6 +25,37 @@ export default function TabSRI({ empresa, onDone }: Props) {
           Instala la extensión y descarga tus documentos recibidos del portal del SRI
           directo a Kipu — sin descargar archivos ni copiar datos.
         </p>
+      </div>
+
+            {/* Botones descarga */}
+      <div className="space-y-2">
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Instalar extensión</p>
+        <a
+          href={CHROME_EXT_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-3 w-full px-4 py-3 rounded-xl bg-gray-900 border border-gray-800 hover:border-indigo-500/40 hover:bg-indigo-500/5 transition-colors group"
+        >
+          <Globe  size={20} className="text-gray-400 group-hover:text-indigo-400 transition-colors shrink-0" />
+          <div className="flex-1 text-left">
+            <p className="text-sm text-white font-medium">Google Chrome</p>
+            <p className="text-xs text-gray-500">Chrome Web Store</p>
+          </div>
+          <ArrowRight size={14} className="text-gray-600 group-hover:text-indigo-400 transition-colors" />
+        </a>
+        <a
+          href={FIREFOX_EXT_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-3 w-full px-4 py-3 rounded-xl bg-gray-900 border border-gray-800 hover:border-orange-500/40 hover:bg-orange-500/5 transition-colors group"
+        >
+          <Puzzle size={20} className="text-gray-400 group-hover:text-orange-400 transition-colors shrink-0" />
+          <div className="flex-1 text-left">
+            <p className="text-sm text-white font-medium">Mozilla Firefox</p>
+            <p className="text-xs text-gray-500">Firefox Add-ons</p>
+          </div>
+          <ArrowRight size={14} className="text-gray-600 group-hover:text-orange-400 transition-colors" />
+        </a>
       </div>
 
       {/* Cómo funciona */}
@@ -62,37 +93,6 @@ export default function TabSRI({ empresa, onDone }: Props) {
             allowFullScreen
           />
         </div>
-      </div>
-
-      {/* Botones descarga */}
-      <div className="space-y-2">
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Instalar extensión</p>
-        <a
-          href={CHROME_EXT_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-3 w-full px-4 py-3 rounded-xl bg-gray-900 border border-gray-800 hover:border-indigo-500/40 hover:bg-indigo-500/5 transition-colors group"
-        >
-          <Globe  size={20} className="text-gray-400 group-hover:text-indigo-400 transition-colors shrink-0" />
-          <div className="flex-1 text-left">
-            <p className="text-sm text-white font-medium">Google Chrome</p>
-            <p className="text-xs text-gray-500">Chrome Web Store</p>
-          </div>
-          <ArrowRight size={14} className="text-gray-600 group-hover:text-indigo-400 transition-colors" />
-        </a>
-        <a
-          href={FIREFOX_EXT_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-3 w-full px-4 py-3 rounded-xl bg-gray-900 border border-gray-800 hover:border-orange-500/40 hover:bg-orange-500/5 transition-colors group"
-        >
-          <Puzzle size={20} className="text-gray-400 group-hover:text-orange-400 transition-colors shrink-0" />
-          <div className="flex-1 text-left">
-            <p className="text-sm text-white font-medium">Mozilla Firefox</p>
-            <p className="text-xs text-gray-500">Firefox Add-ons</p>
-          </div>
-          <ArrowRight size={14} className="text-gray-600 group-hover:text-orange-400 transition-colors" />
-        </a>
       </div>
 
       {/* Link historial */}
