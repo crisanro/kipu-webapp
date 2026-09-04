@@ -63,7 +63,6 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
         }
         inicializado.current = true;
 
-        // Siempre llamar al backend — Redis cachea por 5 min, no el frontend
         const data = await cargarEmpresas(token);
 
         if (data.empresas.length === 0) {
@@ -76,23 +75,25 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
         setUser(user.uid, user.email ?? "", "", data.role);
         setEmpresas(data.empresas);
 
-        if (!empresa) {
-          const e = data.empresas[0];
-          setEmpresa({
-            id:                 e.id,
-            ruc:                e.ruc,
-            razon_social:       e.razon_social,
-            nombre_comercial:   e.nombre_comercial,
-            ambiente:           e.ambiente,
-            tipo_emisor:        e.tipo_emisor,
-            rol:                e.rol,
-            permisos:           e.permisos ?? {},
-            firma_ok:           e.firma_ok,
-            suscripcion_activa: e.suscripcion_activa,
-            suscripcion:        e.suscripcion,
-            balance_api:        e.balance_api,
-          });
-        }
+        // Siempre actualizar la empresa activa con datos frescos del backend
+        const empresaActual = empresa
+          ? data.empresas.find((e: any) => e.id === empresa.id) ?? data.empresas[0]
+          : data.empresas[0];
+
+        setEmpresa({
+          id:                 empresaActual.id,
+          ruc:                empresaActual.ruc,
+          razon_social:       empresaActual.razon_social,
+          nombre_comercial:   empresaActual.nombre_comercial,
+          ambiente:           empresaActual.ambiente,
+          tipo_emisor:        empresaActual.tipo_emisor,
+          rol:                empresaActual.rol,
+          permisos:           empresaActual.permisos ?? {},
+          firma_ok:           empresaActual.firma_ok,
+          suscripcion_activa: empresaActual.suscripcion_activa,
+          suscripcion:        empresaActual.suscripcion,
+          balance_api:        empresaActual.balance_api,
+        });
       } catch (error) {
         console.error("[Auth] Error:", error);
         localStorage.removeItem("kipu-ext-token");

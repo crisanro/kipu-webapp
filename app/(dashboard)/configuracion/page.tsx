@@ -6,11 +6,14 @@ import { Loader2 } from "lucide-react";
 import { HealthData } from "@/components/Checklist";
 import TabEmpresa from "@/components/configuracion/TabEmpresa";
 import TabFirma   from "@/components/configuracion/TabFirma";
+import { useAuthStore } from "@/store/auth.store";
 
 export default function ConfiguracionPage() {
   const [loading, setLoading] = useState(true);
   const [config,  setConfig]  = useState<any>(null);
   const [health,  setHealth]  = useState<HealthData | null>(null);
+
+  const { empresa, updateEmpresa } = useAuthStore();
 
   const cargar = async () => {
     setLoading(true);
@@ -22,6 +25,13 @@ export default function ConfiguracionPage() {
       ]);
       setConfig(resConfig.data.data);
       setHealth(resDash.data.data?.health ?? null);
+
+      // Actualizar store con firma_ok real desde el backend
+      const firma = resConfig.data.data?.firma;
+      const firmaOk = firma?.configurada && firma?.estado !== "EXPIRADA";
+      if (empresa) {
+        updateEmpresa({ ...empresa, firma_ok: firmaOk });
+      }
     } catch (e) {
       console.error(e);
     } finally {
