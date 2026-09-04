@@ -1,10 +1,12 @@
+// app/(dashboard)/cuentas/page.tsx
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import api from "@/lib/api";
 import {
   Wallet, Plus, Loader2, X, ChevronDown, Save,
-  TrendingUp, TrendingDown, Scale, Search, Filter,
+  TrendingUp, TrendingDown, Scale, Search,
   AlertTriangle, CheckCircle2, Clock, Ban,
 } from "lucide-react";
 import { clsx } from "clsx";
@@ -36,13 +38,11 @@ interface Resumen {
 const fmt = (n: number) => `$${n.toFixed(2)}`;
 
 const ESTADO_CONFIG = {
-  PENDIENTE: { label: "Pendiente", color: "text-amber-400 bg-amber-400/10",   icon: Clock        },
-  PARCIAL:   { label: "Parcial",   color: "text-blue-400 bg-blue-400/10",     icon: AlertTriangle },
+  PENDIENTE: { label: "Pendiente", color: "text-amber-400 bg-amber-400/10",    icon: Clock         },
+  PARCIAL:   { label: "Parcial",   color: "text-blue-400 bg-blue-400/10",      icon: AlertTriangle },
   PAGADO:    { label: "Pagado",    color: "text-emerald-400 bg-emerald-400/10", icon: CheckCircle2 },
-  ANULADO:   { label: "Anulado",   color: "text-gray-500 bg-gray-500/10",     icon: Ban          },
+  ANULADO:   { label: "Anulado",   color: "text-gray-500 bg-gray-500/10",      icon: Ban          },
 };
-
-const FORMAS_PAGO = ["EFECTIVO", "TRANSFERENCIA", "CHEQUE", "TARJETA", "OTRO"];
 
 const EMPTY_FORM = {
   cliente_id:        "",
@@ -54,8 +54,10 @@ const EMPTY_FORM = {
   notas:             "",
 };
 
-// ── Página ─────────────────────────────────────────────────────────────────────
-export default function CuentasPage() {
+// ── Componente Interno ─────────────────────────────────────────────────────────
+function CuentasContent() {
+  const searchParams = useSearchParams();
+
   const [cuentas,    setCuentas]    = useState<Cuenta[]>([]);
   const [resumen,    setResumen]    = useState<Resumen>({ por_cobrar: 0, por_pagar: 0, balance: 0 });
   const [loading,    setLoading]    = useState(true);
@@ -93,6 +95,26 @@ export default function CuentasPage() {
 
   useEffect(() => { cargar(); }, [cargar]);
 
+  // Manejo de query param para preseleccionar cliente
+  useEffect(() => {
+    const clienteId = searchParams.get("cliente");
+    if (!clienteId) return;
+    const preseleccionar = async () => {
+      try {
+        const res = await api.get(`/api/v1/app/clientes/detalle/${clienteId}`);
+        const c = res.data.cliente;
+        if (c) {
+          setClienteSelec({ id: c.id, razon_social: c.razon_social, identificacion: c.identificacion });
+          setShowModal(true);
+          setError("");
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    preseleccionar();
+  }, [searchParams]);
+
   // Buscar clientes para el selector del modal
   useEffect(() => {
     if (clienteQuery.length < 2) { setClientesBusq([]); return; }
@@ -117,7 +139,7 @@ export default function CuentasPage() {
     );
   });
 
-    const handleGuardar = async () => {
+  const handleGuardar = async () => {
     setError("");
     if (!clienteSelec)      return setError("Selecciona una persona.");
     if (!form.concepto)     return setError("El concepto es obligatorio.");
@@ -148,7 +170,7 @@ export default function CuentasPage() {
     } finally {
         setSaving(false);
     }
-    };
+  };
 
   const resetModal = () => {
     setForm(EMPTY_FORM);
@@ -391,7 +413,7 @@ export default function CuentasPage() {
                       <div className="absolute top-full left-0 right-0 mt-1 bg-gray-800 border border-gray-700 rounded-lg overflow-hidden z-10 shadow-xl">
                         {clientesBusq.map((cl) => (
                           <button
-                            key={cl.uid}
+                            key={cl.uid ?? cl.id}
                             onClick={() => { setClienteSelec(cl); setClienteQuery(""); setClientesBusq([]); }}
                             className="w-full flex items-start gap-2 px-3 py-2.5 hover:bg-gray-700 transition-colors text-left"
                           >
@@ -494,5 +516,18 @@ export default function CuentasPage() {
         </div>
       )}
     </div>
+  );
+}
+
+// ── Página Principal Envuelta en Suspense ──────────────────────────────────────
+export default function CuentasPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center py-20">
+        <Loader2 size={24} className="animate-spin text-indigo-400" />
+      </div>
+    }>
+      <CuentasContent />
+    </Suspense>
   );
 }
