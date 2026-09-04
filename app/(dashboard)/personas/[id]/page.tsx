@@ -1,4 +1,4 @@
-// app/clientes/[id]/page.tsx
+// app/(dashboard)/personas/[id]/page.tsx
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -7,7 +7,7 @@ import api from "@/lib/api";
 import {
   ArrowLeft, User, Mail, Phone, MapPin, FileText,
   CheckCircle2, Clock, AlertTriangle, XCircle,
-  Loader2, Edit2, Save, X, Plus, Wallet, TrendingUp, TrendingDown, Ban, Scale
+  Loader2, Edit2, Save, X, Plus, Wallet, TrendingUp, TrendingDown, AlertCircle, Check
 } from "lucide-react";
 import { clsx } from "clsx";
 
@@ -21,15 +21,22 @@ const TIPO_ID: Record<string, string> = {
 
 const ESTADO_CONFIG: Record<string, { label: string; color: string; icon: any }> = {
   AUTORIZADO: { label: "Autorizado", color: "text-emerald-400 bg-emerald-400/10", icon: CheckCircle2 },
-  RECIBIDA:   { label: "En proceso", color: "text-indigo-400 bg-indigo-400/10",    icon: Clock },
-  FIRMADO:    { label: "En cola",    color: "text-blue-400 bg-blue-400/10",        icon: Clock },
-  DEVUELTA:   { label: "Devuelto",   color: "text-amber-400 bg-amber-400/10",      icon: AlertTriangle },
-  RECHAZADO:  { label: "Rechazado",  color: "text-red-400 bg-red-400/10",          icon: XCircle },
+  RECIBIDA:   { label: "En proceso", color: "text-indigo-400 bg-indigo-400/10",   icon: Clock },
+  FIRMADO:    { label: "En cola",    color: "text-blue-400 bg-blue-400/10",       icon: Clock },
+  DEVUELTA:   { label: "Devuelto",   color: "text-amber-400 bg-amber-400/10",     icon: AlertTriangle },
+  RECHAZADO:  { label: "Rechazado",  color: "text-red-400 bg-red-400/10",         icon: XCircle },
 };
 
 const fmt = (n: any) => parseFloat(n ?? 0).toFixed(2);
 
-export default function DetalleClientePage() {
+// ── Validaciones ──────────────────────────────────────────────────────────────
+function validarEmail(email: string): boolean {
+  if (!email) return true;
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+// ── Componente ────────────────────────────────────────────────────────────────
+export default function DetallePersonaPage() {
   const { id } = useParams();
   const router  = useRouter();
 
@@ -38,35 +45,45 @@ export default function DetalleClientePage() {
   const [editing, setEditing] = useState(false);
   const [saving,  setSaving]  = useState(false);
   const [error,   setError]   = useState("");
-  const [form,    setForm]    = useState<any>({});
+  const [form,    setForm]    = useState({
+    razon_social: "",
+    email:        "",
+    telefono:     "",
+    direccion:    "",
+  });
 
   const [cuentas,        setCuentas]        = useState<any[]>([]);
   const [resumenCuentas, setResumenCuentas] = useState({ por_cobrar: 0, por_pagar: 0 });
   const [loadingCuentas, setLoadingCuentas] = useState(true);
 
-  const cargar = async () => {
+  // Validación reactiva del form de edición
+  const emailOk     = validarEmail(form.email);
+  const nombreOk    = form.razon_social.trim().length > 0;
+  const puedeGuardar = emailOk && nombreOk && !saving;
+
+  const cargar = useCallback(async () => {
     setLoading(true);
     try {
       const res = await api.get(`/api/v1/app/clientes/detalle/${id}`);
       setData(res.data);
       setForm({
-        razon_social: res.data.cliente.razon_social,
-        email:        res.data.cliente.email        ?? "",
-        telefono:     res.data.cliente.telefono     ?? "",
-        direccion:    res.data.cliente.direccion    ?? "",
+        razon_social: res.data.cliente.razon_social     ?? "",
+        email:        res.data.cliente.email            ?? "",
+        telefono:     res.data.cliente.telefono         ?? "",
+        direccion:    res.data.cliente.direccion        ?? "",
       });
     } catch (e) {
       console.error(e);
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
 
   const cargarCuentas = useCallback(async () => {
     setLoadingCuentas(true);
     try {
       const res = await api.get(`/api/v1/app/cuentas/cliente/${id}`);
-      setCuentas(res.data.data       ?? []);
+      setCuentas(res.data.data          ?? []);
       setResumenCuentas(res.data.resumen ?? { por_cobrar: 0, por_pagar: 0 });
     } catch (e) {
       console.error(e);
@@ -75,16 +92,38 @@ export default function DetalleClientePage() {
     }
   }, [id]);
 
-  useEffect(() => { 
-    cargar(); 
-    cargarCuentas(); 
-  }, [id, cargarCuentas]);
+  useEffect(() => {
+    cargar();
+    cargarCuentas();
+  }, [cargar, cargarCuentas]);
+
+  const cancelarEdicion = () => {
+    setEditing(false);
+    setError("");
+    // Restaurar form al estado guardado
+    if (data?.cliente) {
+      setForm({
+        razon_social: data.cliente.razon_social ?? "",
+        email:        data.cliente.email        ?? "",
+        telefono:     data.cliente.telefono     ?? "",
+        direccion:    data.cliente.direccion    ?? "",
+      });
+    }
+  };
 
   const guardar = async () => {
     setError("");
+    if (!nombreOk) { setError("El nombre es obligatorio."); return; }
+    if (!emailOk)  { setError("El email no es válido."); return; }
+
     setSaving(true);
     try {
-      await api.patch(`/api/v1/app/clientes/${id}`, form);
+      await api.patch(`/api/v1/app/clientes/${id}`, {
+        razon_social: form.razon_social.trim().toUpperCase(),
+        email:        form.email.trim().toLowerCase(),
+        telefono:     form.telefono.trim(),
+        direccion:    form.direccion.trim().toUpperCase(),
+      });
       await cargar();
       setEditing(false);
     } catch (err: any) {
@@ -103,16 +142,17 @@ export default function DetalleClientePage() {
         identificacion: data.cliente.identificacion,
         tipo_id:        data.cliente.tipo_identificacion_sri,
       },
-      esConsumidorFinal: false,
-      items: [],
-      formaPago: "01",
-      camposAdicionales: data.cliente.email
+      esConsumidorFinal:  false,
+      items:              [],
+      formaPago:          "01",
+      camposAdicionales:  data.cliente.email
         ? [{ nombre: "Email", valor: data.cliente.email }]
         : [],
     }));
     router.push("/documentos/emitir/fac");
   };
 
+  // ── Loading / not found ───────────────────────────────────────────────────
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -120,12 +160,11 @@ export default function DetalleClientePage() {
       </div>
     );
   }
-
   if (!data) {
     return (
       <div className="p-6 text-center">
         <User size={40} className="text-gray-700 mx-auto mb-3" />
-        <p className="text-gray-500">Cliente no encontrado.</p>
+        <p className="text-gray-500">Persona no encontrada.</p>
         <button onClick={() => router.back()} className="mt-4 text-indigo-400 text-sm">Volver</button>
       </div>
     );
@@ -133,9 +172,57 @@ export default function DetalleClientePage() {
 
   const { cliente, resumen, facturas } = data;
 
+  // ── Campo editable inline ─────────────────────────────────────────────────
+  const CampoEditable = ({
+    icon: Icon, label, value, field, type = "text", placeholder = "",
+    transform, validate, validError,
+  }: {
+    icon: any; label: string; value: string; field: string;
+    type?: string; placeholder?: string;
+    transform?: (v: string) => string;
+    validate?: (v: string) => boolean;
+    validError?: string;
+  }) => {
+    const isInvalid = editing && validate && form[field as keyof typeof form] && !validate(form[field as keyof typeof form]);
+    return (
+      <div className="flex justify-between items-center text-sm gap-4">
+        <span className="text-gray-500 flex items-center gap-2 shrink-0">
+          <Icon size={13} /> {label}
+        </span>
+        {editing ? (
+          <div className="flex-1 flex flex-col items-end gap-1">
+            <div className="relative w-full max-w-[220px]">
+              <input
+                type={type}
+                value={form[field as keyof typeof form]}
+                onChange={(e) => {
+                  const val = transform ? transform(e.target.value) : e.target.value;
+                  setForm({ ...form, [field]: val });
+                }}
+                placeholder={placeholder}
+                className={`w-full px-2 py-1 rounded-lg bg-gray-800 border text-white text-xs focus:outline-none text-right pr-6 ${
+                  isInvalid ? "border-red-500/70" : "border-gray-700 focus:border-indigo-500"
+                }`}
+              />
+              {validate && form[field as keyof typeof form] && !isInvalid && (
+                <Check size={10} className="absolute right-2 top-1/2 -translate-y-1/2 text-emerald-400" />
+              )}
+            </div>
+            {isInvalid && validError && (
+              <p className="flex items-center gap-1 text-xs text-red-400">
+                <AlertCircle size={10} /> {validError}
+              </p>
+            )}
+          </div>
+        ) : (
+          <span className="text-white text-right max-w-[60%] truncate">{value || "—"}</span>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="p-4 md:p-6 max-w-3xl mx-auto space-y-4">
-
       {/* Header */}
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
@@ -175,10 +262,10 @@ export default function DetalleClientePage() {
         </div>
       </div>
 
-      {/* Datos del cliente */}
+      {/* Datos */}
       <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Datos del cliente</h2>
+          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Datos</h2>
           {!editing ? (
             <button
               onClick={() => setEditing(true)}
@@ -187,17 +274,19 @@ export default function DetalleClientePage() {
               <Edit2 size={12} /> Editar
             </button>
           ) : (
-            <div className="flex gap-2">
+            <div className="flex gap-3">
               <button
-                onClick={() => { setEditing(false); setError(""); }}
+                type="button"
+                onClick={cancelarEdicion}
                 className="flex items-center gap-1 text-xs text-gray-500 hover:text-white transition-colors"
               >
                 <X size={12} /> Cancelar
               </button>
               <button
+                type="button"
                 onClick={guardar}
-                disabled={saving}
-                className="flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
+                disabled={!puedeGuardar}
+                className="flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-300 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
                 {saving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
                 Guardar
@@ -207,104 +296,60 @@ export default function DetalleClientePage() {
         </div>
 
         <div className="space-y-3">
-          {/* Tipo + Identificación — no editables */}
+          {/* Tipo e identificación — nunca editables */}
           <div className="flex justify-between text-sm">
-            <span className="text-gray-500 flex items-center gap-2">
-              <User size={13} /> Tipo
-            </span>
+            <span className="text-gray-500 flex items-center gap-2"><User size={13} /> Tipo</span>
             <span className="text-white">{TIPO_ID[cliente.tipo_identificacion_sri] ?? cliente.tipo_identificacion_sri}</span>
           </div>
           <div className="flex justify-between text-sm">
-            <span className="text-gray-500 flex items-center gap-2">
-              <FileText size={13} /> Identificación
-            </span>
+            <span className="text-gray-500 flex items-center gap-2"><FileText size={13} /> Identificación</span>
             <span className="text-white font-mono">{cliente.identificacion}</span>
           </div>
 
-          {/* Razón Social */}
-          <div className="flex justify-between items-center text-sm">
-            <span className="text-gray-500 flex items-center gap-2 shrink-0">
-              <User size={13} /> Nombre
-            </span>
-            {editing ? (
-              <input
-                value={form.razon_social}
-                onChange={(e) => setForm({ ...form, razon_social: e.target.value })}
-                className="flex-1 ml-4 px-2 py-1 rounded-lg bg-gray-800 border border-gray-700 text-white text-xs focus:outline-none focus:border-indigo-500 text-right"
-              />
-            ) : (
-              <span className="text-white text-right">{cliente.razon_social}</span>
-            )}
-          </div>
-
-          {/* Email */}
-          <div className="flex justify-between items-center text-sm">
-            <span className="text-gray-500 flex items-center gap-2 shrink-0">
-              <Mail size={13} /> Email
-            </span>
-            {editing ? (
-              <input
-                type="email"
-                value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
-                placeholder="cliente@email.com"
-                className="flex-1 ml-4 px-2 py-1 rounded-lg bg-gray-800 border border-gray-700 text-white text-xs focus:outline-none focus:border-indigo-500 text-right"
-              />
-            ) : (
-              <span className="text-white">{cliente.email || "—"}</span>
-            )}
-          </div>
-
-          {/* Teléfono */}
-          <div className="flex justify-between items-center text-sm">
-            <span className="text-gray-500 flex items-center gap-2 shrink-0">
-              <Phone size={13} /> Teléfono
-            </span>
-            {editing ? (
-              <input
-                value={form.telefono}
-                onChange={(e) => setForm({ ...form, telefono: e.target.value })}
-                placeholder="0999999999"
-                className="flex-1 ml-4 px-2 py-1 rounded-lg bg-gray-800 border border-gray-700 text-white text-xs focus:outline-none focus:border-indigo-500 text-right"
-              />
-            ) : (
-              <span className="text-white">{cliente.telefono || "—"}</span>
-            )}
-          </div>
-
-          {/* Dirección */}
-          <div className="flex justify-between items-center text-sm">
-            <span className="text-gray-500 flex items-center gap-2 shrink-0">
-              <MapPin size={13} /> Dirección
-            </span>
-            {editing ? (
-              <input
-                value={form.direccion}
-                onChange={(e) => setForm({ ...form, direccion: e.target.value })}
-                placeholder="Av. Principal 123"
-                className="flex-1 ml-4 px-2 py-1 rounded-lg bg-gray-800 border border-gray-700 text-white text-xs focus:outline-none focus:border-indigo-500 text-right"
-              />
-            ) : (
-              <span className="text-white text-right max-w-[60%]">{cliente.direccion || "—"}</span>
-            )}
-          </div>
+          {/* Campos editables */}
+          <CampoEditable
+            icon={User} label="Nombre" field="razon_social"
+            value={cliente.razon_social}
+            placeholder="APELLIDOS NOMBRES"
+            transform={(v) => v.toUpperCase()}
+          />
+          <CampoEditable
+            icon={Mail} label="Email" field="email"
+            value={cliente.email} type="email"
+            placeholder="persona@email.com"
+            transform={(v) => v.toLowerCase()}
+            validate={validarEmail}
+            validError="Email inválido."
+          />
+          <CampoEditable
+            icon={Phone} label="Teléfono" field="telefono"
+            value={cliente.telefono}
+            placeholder="0999999999"
+            transform={(v) => v.replace(/\D/g, "")}
+          />
+          <CampoEditable
+            icon={MapPin} label="Dirección" field="direccion"
+            value={cliente.direccion}
+            placeholder="AV. PRINCIPAL 123"
+            transform={(v) => v.toUpperCase()}
+          />
         </div>
 
         {error && (
-          <p className="mt-3 text-xs text-red-400 bg-red-400/10 px-3 py-2 rounded-lg">{error}</p>
+          <div className="mt-3 flex items-center gap-2 text-xs text-red-400 bg-red-400/10 px-3 py-2 rounded-lg">
+            <AlertCircle size={12} /> {error}
+          </div>
         )}
       </div>
 
       {/* Historial de facturas */}
       <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
         <div className="px-4 py-3 border-b border-gray-800">
-          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-            Historial de facturas
-          </h2>
+          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Historial de facturas</h2>
         </div>
         {facturas.length === 0 ? (
           <div className="px-4 py-8 text-center">
-            <p className="text-xs text-gray-600">Sin facturas emitidas a este cliente.</p>
+            <p className="text-xs text-gray-600">Sin facturas emitidas a esta persona.</p>
           </div>
         ) : (
           <div className="divide-y divide-gray-800">
@@ -317,10 +362,7 @@ export default function DetalleClientePage() {
                   href={`/documentos/${f.id}`}
                   className="flex items-center gap-3 px-4 py-3 hover:bg-gray-800/50 transition-colors"
                 >
-                  <div className={clsx(
-                    "w-7 h-7 rounded-full flex items-center justify-center shrink-0",
-                    estado.color.split(" ")[1]
-                  )}>
+                  <div className={clsx("w-7 h-7 rounded-full flex items-center justify-center shrink-0", estado.color.split(" ")[1])}>
                     <Icon size={13} className={estado.color.split(" ")[0]} />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -338,23 +380,19 @@ export default function DetalleClientePage() {
         )}
       </div>
 
-      {/* Cuentas por cobrar / pagar */}
+      {/* Cuentas */}
       <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
         <div className="px-4 py-3 border-b border-gray-800 flex items-center justify-between">
-          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-            Cuentas
-          </h2>
+          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Cuentas</h2>
           <div className="flex items-center gap-3">
             {resumenCuentas.por_cobrar > 0 && (
               <span className="text-xs text-emerald-400 flex items-center gap-1">
-                <TrendingUp size={11} />
-                ${resumenCuentas.por_cobrar.toFixed(2)} por cobrar
+                <TrendingUp size={11} /> ${resumenCuentas.por_cobrar.toFixed(2)} por cobrar
               </span>
             )}
             {resumenCuentas.por_pagar > 0 && (
               <span className="text-xs text-red-400 flex items-center gap-1">
-                <TrendingDown size={11} />
-                ${resumenCuentas.por_pagar.toFixed(2)} por pagar
+                <TrendingDown size={11} /> ${resumenCuentas.por_pagar.toFixed(2)} por pagar
               </span>
             )}
             <Link
@@ -365,7 +403,6 @@ export default function DetalleClientePage() {
             </Link>
           </div>
         </div>
-
         {loadingCuentas ? (
           <div className="flex items-center justify-center py-8">
             <Loader2 size={18} className="animate-spin text-indigo-400" />
@@ -392,9 +429,7 @@ export default function DetalleClientePage() {
                 >
                   <div className={clsx(
                     "w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-bold",
-                    c.tipo === "COBRAR"
-                      ? "bg-emerald-400/10 text-emerald-400"
-                      : "bg-red-400/10 text-red-400"
+                    c.tipo === "COBRAR" ? "bg-emerald-400/10 text-emerald-400" : "bg-red-400/10 text-red-400"
                   )}>
                     {c.tipo === "COBRAR" ? "C" : "P"}
                   </div>
@@ -406,9 +441,7 @@ export default function DetalleClientePage() {
                     </p>
                   </div>
                   <div className="text-right shrink-0">
-                    <p className="text-sm font-semibold text-white">
-                      ${c.saldo_pendiente.toFixed(2)}
-                    </p>
+                    <p className="text-sm font-semibold text-white">${c.saldo_pendiente.toFixed(2)}</p>
                     <p className={clsx("text-xs", ESTADO_COLOR[c.estado] ?? "text-gray-500")}>
                       {c.estado.toLowerCase()}
                     </p>
@@ -419,7 +452,6 @@ export default function DetalleClientePage() {
           </div>
         )}
       </div>
-
     </div>
   );
 }

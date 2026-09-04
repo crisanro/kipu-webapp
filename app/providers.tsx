@@ -34,7 +34,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
         setListo(true);
         localStorage.removeItem("kipu-ext-token");
         if (refreshInterval) clearInterval(refreshInterval);
-        const rutasProtegidas = ["/dashboard", "/documentos", "/clientes",
+        const rutasProtegidas = ["/dashboard", "/documentos", "/personas",
                                  "/productos", "/configuracion", "/estructura",
                                  "/planes", "/usuarios", "/admin"];
         if (rutasProtegidas.some(r => pathname.startsWith(r))) {

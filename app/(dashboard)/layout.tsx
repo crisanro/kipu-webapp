@@ -133,7 +133,7 @@ const NAV_GROUPS = [
   },
   {
     items: [
-      { href: "/clientes",  label: "Personas",  icon: Users,   permiso: "clientes"  },
+      { href: "/personas",  label: "Personas",  icon: Users,   permiso: "clientes"  },
       { href: "/cuentas",   label: "Cuentas",   icon: Wallet,  permiso: "clientes"  },
       { href: "/productos", label: "Productos", icon: Package, permiso: "productos" },
     ]
