@@ -10,7 +10,7 @@ import SinAcceso from "@/components/SinAcceso";
 
 
 export default function EstructuraPage() {
-  const puedeVer = usePermiso("reportes");
+  const puedeVer = usePermiso("configuracion");
   if (!puedeVer) return <SinAcceso />;
   const [estructura, setEstructura] = useState<any[]>([]);
   const [loading,    setLoading]    = useState(true);
