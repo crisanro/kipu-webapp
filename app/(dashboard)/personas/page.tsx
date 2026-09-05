@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import api from "@/lib/api";
+import { usePermiso } from "@/hooks/usePermiso";
+import SinAcceso from "@/components/SinAcceso";
 import {
   Search, Plus, Users, Loader2, X,
   ChevronDown, Save, AlertCircle, Check
@@ -100,6 +102,8 @@ function validarEmail(email: string): boolean {
 
 // ── Página ────────────────────────────────────────────────────────────────────
 export default function PersonasPage() {
+  const puedeVer = usePermiso("clientes");
+  if (!puedeVer) return <SinAcceso />;
   const [personas,  setPersonas]  = useState<Persona[]>([]);
   const [loading,   setLoading]   = useState(true);
   const [query,     setQuery]     = useState("");

@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
 import { ClipboardList, AlertTriangle } from "lucide-react";
+import { hoyEC } from "@/lib/fecha";
 import { clsx } from "clsx";
 
 // ── Componentes reutilizados de factura ────────────────────────────────────────
@@ -51,6 +52,7 @@ function calcTotales(items: Item[]) {
 export default function NuevaProformaPage() {
   const router  = useRouter();
   const empresa = useAuthStore((s) => s.empresa);
+  const tieneSub = empresa?.suscripcion_activa ?? false;
 
   // ── Estado cliente ───────────────────────────────────────────────────────────
   const [clienteSelected,   setClienteSelected]   = useState<Cliente | null>(null);
@@ -64,7 +66,7 @@ export default function NuevaProformaPage() {
   const [camposAdicionales, setCamposAdicionales] = useState<CampoAdicional[]>([]);
 
   // ── Estado fechas ────────────────────────────────────────────────────────────
-  const [fechaEmision, setFechaEmision] = useState(new Date().toISOString().split("T")[0]);
+  const [fechaEmision, setFechaEmision] = useState(hoyEC());
   const [fechaValidez, setFechaValidez] = useState("");
 
   // ── Estado UI ────────────────────────────────────────────────────────────────
@@ -83,10 +85,10 @@ export default function NuevaProformaPage() {
       if (data.items && Array.isArray(data.items)) {
         setItems(data.items.map((i: any) => ({
           _id:            genId(),
-          codigo:         String(i.codigo         ?? ""),
-          descripcion:    String(i.descripcion    ?? ""),
+          codigo:         String(i.codigo          ?? ""),
+          descripcion:    String(i.descripcion     ?? ""),
           cantidad:       parseFloat(i.cantidad)  || 1,
-          precio:         parseFloat(i.precio)    || parseFloat(i.precio_unitario) || 0,
+          precio:         parseFloat(i.precio     ) || parseFloat(i.precio_unitario) || 0,
           descuento:      parseFloat(i.descuento) || 0,
           tipo_descuento: (i.tipo_descuento === "%" ? "%" : "$") as "$" | "%",
           tipo_iva:       ["0","5","15"].includes(String(i.tipo_iva)) ? String(i.tipo_iva) : "15",
@@ -192,130 +194,158 @@ export default function NuevaProformaPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-        {/* ── Columna principal ── */}
-        <div className="lg:col-span-2 space-y-6">
-
-          {/* Cliente */}
-          <ClienteSelector
-            clienteSelected={clienteSelected}
-            esConsumidorFinal={esConsumidorFinal}
-            clienteNuevo={clienteNuevo}
-            onSelectCliente={(c) => {
-              setClienteSelected(c);
-              setEsConsumidorFinal(false);
-              setClienteNuevo(null);
-            }}
-            onSelectConsumidorFinal={() => {
-              setClienteSelected(null);
-              setEsConsumidorFinal(true);
-              setClienteNuevo(null);
-            }}
-            onClienteNuevo={(c) => {
-              setClienteNuevo(c);
-              if (c) {
-                setClienteSelected(null);
-                setEsConsumidorFinal(false);
-              }
-            }}
-            onClear={() => {
-              setClienteSelected(null);
-              setEsConsumidorFinal(false);
-            }}
-          />
-
-          {/* Items */}
-          <ItemsEditor items={items} onChange={setItems} />
-
-          {/* Campos adicionales — usados como observaciones en el PDF */}
-          <CamposAdicionales
-            campos={camposAdicionales}
-            onChange={setCamposAdicionales}
-          />
-        </div>
-
-        {/* ── Panel lateral ── */}
-        <div className="space-y-4">
-
-          {/* Fechas */}
-          <div className="bg-gray-900 rounded-xl border border-gray-800 p-4 space-y-3">
-            <h2 className="text-sm font-semibold text-white">Fechas</h2>
-            <div>
-              <label className="block text-xs text-gray-500 mb-1.5">Fecha emisión</label>
-              <input
-                type="date"
-                value={fechaEmision}
-                onChange={(e) => setFechaEmision(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-indigo-500 text-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-500 mb-1.5">Válida hasta</label>
-              <input
-                type="date"
-                value={fechaValidez}
-                onChange={(e) => setFechaValidez(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-indigo-500 text-sm"
-              />
-              <p className="text-xs text-gray-600 mt-1">Opcional — si no, no vence</p>
-            </div>
-          </div>
-
-          {/* Resumen */}
-          <div className="bg-gray-900 rounded-xl border border-gray-800 p-4 sticky top-4">
-            <h2 className="text-sm font-semibold text-white mb-4">Resumen</h2>
-            <div className="space-y-2 text-sm">
-              {totales.subtotal > 0 && (
-                <div className="flex justify-between text-gray-400">
-                  <span>Subtotal</span>
-                  <span>${fmt(totales.subtotal)}</span>
-                </div>
-              )}
-              {totales.descuento > 0 && (
-                <div className="flex justify-between text-amber-400">
-                  <span>Descuento</span>
-                  <span>-${fmt(totales.descuento)}</span>
-                </div>
-              )}
-              {totales.iva > 0 && (
-                <div className="flex justify-between text-gray-400">
-                  <span>IVA</span>
-                  <span>${fmt(totales.iva)}</span>
-                </div>
-              )}
-              <div className="border-t border-gray-800 pt-2 flex justify-between font-bold text-white text-base">
-                <span>Total</span>
-                <span>${fmt(totales.total)}</span>
-              </div>
-            </div>
-
-            <div className="mt-3 px-3 py-2 rounded-lg bg-gray-800 text-xs text-gray-500 flex items-center gap-2">
-              <ClipboardList size={12} />
-              Documento referencial — no tiene validez tributaria
-            </div>
-
-            {error && (
-              <p className="mt-3 text-xs text-red-400 bg-red-400/10 px-3 py-2 rounded-lg">{error}</p>
-            )}
-
+      {/* Bloqueo sin suscripción */}
+      {!tieneSub && (
+        <div className="flex flex-col items-center justify-center py-16 text-center bg-gray-900 border border-gray-800 rounded-xl">
+          <AlertTriangle size={36} className="text-amber-400 mb-3" />
+          <h2 className="text-white font-semibold mb-1">Suscripción requerida</h2>
+          <p className="text-sm text-gray-500 mb-4 max-w-xs">
+            Las proformas están disponibles con un plan activo. Activa tu suscripción para continuar.
+          </p>
+          <div className="flex gap-3">
             <button
-              onClick={guardar}
-              disabled={submitting}
-              className="mt-4 w-full py-3 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2"
+              onClick={() => router.back()}
+              className="px-4 py-2 rounded-lg border border-gray-700 text-gray-400 hover:text-white text-sm transition-colors"
             >
-              {submitting ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Guardando...
-                </>
-              ) : (
-                `Guardar proforma · $${fmt(totales.total)}`
-              )}
+              Volver
+            </button>
+            <button
+              onClick={() => router.push("/planes")}
+              className="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-sm font-medium transition-colors"
+            >
+              Ver planes
             </button>
           </div>
         </div>
-      </div>
+      )}
+
+      {/* Formulario — solo si tiene suscripción */}
+      {tieneSub && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+          {/* ── Columna principal ── */}
+          <div className="lg:col-span-2 space-y-6">
+
+            {/* Cliente */}
+            <ClienteSelector
+              clienteSelected={clienteSelected}
+              esConsumidorFinal={esConsumidorFinal}
+              clienteNuevo={clienteNuevo}
+              onSelectCliente={(c) => {
+                setClienteSelected(c);
+                setEsConsumidorFinal(false);
+                setClienteNuevo(null);
+              }}
+              onSelectConsumidorFinal={() => {
+                setClienteSelected(null);
+                setEsConsumidorFinal(true);
+                setClienteNuevo(null);
+              }}
+              onClienteNuevo={(c) => {
+                setClienteNuevo(c);
+                if (c) {
+                  setClienteSelected(null);
+                  setEsConsumidorFinal(false);
+                }
+              }}
+              onClear={() => {
+                setClienteSelected(null);
+                setEsConsumidorFinal(false);
+              }}
+            />
+
+            {/* Items */}
+            <ItemsEditor items={items} onChange={setItems} />
+
+            {/* Campos adicionales — usados como observaciones en el PDF */}
+            <CamposAdicionales
+              campos={camposAdicionales}
+              onChange={setCamposAdicionales}
+            />
+          </div>
+
+          {/* ── Panel lateral ── */}
+          <div className="space-y-4">
+
+            {/* Fechas */}
+            <div className="bg-gray-900 rounded-xl border border-gray-800 p-4 space-y-3">
+              <h2 className="text-sm font-semibold text-white">Fechas</h2>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1.5">Fecha emisión</label>
+                <input
+                  type="date"
+                  value={fechaEmision}
+                  onChange={(e) => setFechaEmision(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-indigo-500 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1.5">Válida hasta</label>
+                <input
+                  type="date"
+                  value={fechaValidez}
+                  onChange={(e) => setFechaValidez(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-indigo-500 text-sm"
+                />
+                <p className="text-xs text-gray-600 mt-1">Opcional — si no, no vence</p>
+              </div>
+            </div>
+
+            {/* Resumen */}
+            <div className="bg-gray-900 rounded-xl border border-gray-800 p-4 sticky top-4">
+              <h2 className="text-sm font-semibold text-white mb-4">Resumen</h2>
+              <div className="space-y-2 text-sm">
+                {totales.subtotal > 0 && (
+                  <div className="flex justify-between text-gray-400">
+                    <span>Subtotal</span>
+                    <span>${fmt(totales.subtotal)}</span>
+                  </div>
+                )}
+                {totales.descuento > 0 && (
+                  <div className="flex justify-between text-amber-400">
+                    <span>Descuento</span>
+                    <span>-${fmt(totales.descuento)}</span>
+                  </div>
+                )}
+                {totales.iva > 0 && (
+                  <div className="flex justify-between text-gray-400">
+                    <span>IVA</span>
+                    <span>${fmt(totales.iva)}</span>
+                  </div>
+                )}
+                <div className="border-t border-gray-800 pt-2 flex justify-between font-bold text-white text-base">
+                  <span>Total</span>
+                  <span>${fmt(totales.total)}</span>
+                </div>
+              </div>
+
+              <div className="mt-3 px-3 py-2 rounded-lg bg-gray-800 text-xs text-gray-500 flex items-center gap-2">
+                <ClipboardList size={12} />
+                Documento referencial — no tiene validez tributaria
+              </div>
+
+              {error && (
+                <p className="mt-3 text-xs text-red-400 bg-red-400/10 px-3 py-2 rounded-lg">{error}</p>
+              )}
+
+              <button
+                onClick={guardar}
+                disabled={submitting}
+                className="mt-4 w-full py-3 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2"
+              >
+                {submitting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Guardando...
+                  </>
+                ) : (
+                  `Guardar proforma · $${fmt(totales.total)}`
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

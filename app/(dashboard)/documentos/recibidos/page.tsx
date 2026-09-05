@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import api from "@/lib/api";
+import { usePermiso } from "@/hooks/usePermiso";
+import SinAcceso from "@/components/SinAcceso";
 import {
   Plus, FileText, Loader2, RefreshCw, Search,
   ChevronDown, ChevronUp, TrendingUp, ArrowUpRight,
@@ -63,7 +65,7 @@ const SS_KEY_INICIO = "kipu_recibidos_fecha_inicio";
 const SS_KEY_FIN    = "kipu_recibidos_fecha_fin";
 
 function getHoy() {
-  return new Date().toISOString().split("T")[0];
+  return new Date().toLocaleDateString("en-CA", { timeZone: "America/Guayaquil" });
 }
 function leerFecha(key: string): string {
   try { return sessionStorage.getItem(key) || getHoy(); }
@@ -155,6 +157,8 @@ function DocExpandido({ doc, onVerDetalle }: { doc: DocRecibido; onVerDetalle: (
 
 // ── Página principal ───────────────────────────────────────────────────────────
 export default function FacturasRecibidasPage() {
+  const puedeVer = usePermiso("documentos_recibidos");
+  if (!puedeVer) return <SinAcceso />;
   const router = useRouter();
   const searchParams = useSearchParams();
 

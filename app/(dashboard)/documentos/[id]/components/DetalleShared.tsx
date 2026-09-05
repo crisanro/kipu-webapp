@@ -129,7 +129,6 @@ export default function DetalleShared({ factura, onRecargar, children }: Props) 
   const [copiado,       setCopiado]       = useState(false);
   const [reintento,     setReintento]     = useState(false);
   const [showAnular,    setShowAnular]    = useState(false);
-  const [motivo,        setMotivo]        = useState("");
   const [motivoCustom,  setMotivoCustom]  = useState("");
   const [confirmado,    setConfirmado]    = useState(false);
   const [anulando,      setAnulando]      = useState(false);
@@ -170,9 +169,8 @@ export default function DetalleShared({ factura, onRecargar, children }: Props) 
   const idComprador     = infoFac.identificacionComprador || infoFac.identificacionProveedor || factura.cliente?.identificacion || "";
   const emailComprador  = factura.datos?.legacy_email_comprador || factura.cliente?.email || "";
 
-  const motivoFinal = motivo === "OTRO" ? motivoCustom.trim() : motivo;
-  const puedeAnular = !!motivoFinal && confirmado && !anulando &&
-    (motivo !== "OTRO" || motivoCustom.trim().length > 0);
+  const motivoFinal = motivoCustom.trim();
+  const puedeAnular = confirmado && !anulando;
 
   const base_url     = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
   const xml_url      = `${base_url}/api/v1/public/xml/${factura.clave_acceso}`;
@@ -406,7 +404,7 @@ export default function DetalleShared({ factura, onRecargar, children }: Props) 
               {/* ── Anular ──────────────────────────────────────────── */}
               {["FAC", "LIQ"].includes(factura.tipo_doc) && (
                 <button
-                  onClick={() => { setShowAnular(true); setMotivo(""); setMotivoCustom(""); setConfirmado(false); setErrorAnular(""); }}
+                  onClick={() => { setShowAnular(true); setMotivoCustom(""); setConfirmado(false); setErrorAnular(""); }}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs border border-red-500/20 transition-colors">
                   <Ban size={13} /> Anular
                 </button>
@@ -645,31 +643,35 @@ export default function DetalleShared({ factura, onRecargar, children }: Props) 
 
               {/* Motivo */}
               <div>
-                <label className="block text-xs text-gray-500 mb-1.5">Motivo de anulación *</label>
-                <select
-                  value={motivo}
-                  onChange={(e) => setMotivo(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white text-sm focus:outline-none focus:border-red-500"
-                >
-                  <option value="">Selecciona un motivo...</option>
-                  {MOTIVOS_ANULACION.map((m) => (
-                    <option key={m} value={m}>{m}</option>
+                <label className="block text-xs text-gray-500 mb-1.5">
+                  Motivo de anulación <span className="text-gray-600">(opcional)</span>
+                </label>
+                <div className="relative">
+                  <textarea
+                    value={motivoCustom}
+                    onChange={(e) => setMotivoCustom(e.target.value.toUpperCase().slice(0, 100))}
+                    placeholder="Ej: ERROR EN DATOS DEL CLIENTE, DOCUMENTO DUPLICADO..."
+                    maxLength={100}
+                    rows={2}
+                    className="w-full px-3 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-600 text-sm focus:outline-none focus:border-red-500 resize-none pr-12"
+                  />
+                  <span className="absolute right-3 bottom-2 text-xs text-gray-600">
+                    {motivoCustom.length}/100
+                  </span>
+                </div>
+                {/* Sugerencias rápidas */}
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {MOTIVOS_ANULACION.filter(m => m !== "OTRO").map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => setMotivoCustom(m.slice(0, 100))}
+                      className="text-[10px] px-2 py-1 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white border border-gray-700 transition-colors"
+                    >
+                      {m}
+                    </button>
                   ))}
-                </select>
-                {motivo === "OTRO" && (
-                  <div className="mt-2 relative">
-                    <input
-                      value={motivoCustom}
-                      onChange={(e) => setMotivoCustom(e.target.value.toUpperCase().slice(0, 100))}
-                      placeholder="Describe el motivo..."
-                      maxLength={100}
-                      className="w-full px-3 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-600 text-sm focus:outline-none focus:border-red-500 pr-12"
-                    />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-600">
-                      {motivoCustom.length}/100
-                    </span>
-                  </div>
-                )}
+                </div>
               </div>
 
               {/* Confirmación */}

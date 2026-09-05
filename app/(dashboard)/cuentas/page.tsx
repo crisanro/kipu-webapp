@@ -4,6 +4,10 @@ import { useState, useEffect, useCallback, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import api from "@/lib/api";
+import { usePermiso } from "@/hooks/usePermiso";
+import SinAcceso from "@/components/SinAcceso";
+import { useAuthStore } from "@/store/auth.store";
+import { hoyEC } from "@/lib/fecha";
 import {
   Wallet, Plus, Loader2, X, ChevronDown, Save,
   TrendingUp, TrendingDown, Scale, Search,
@@ -38,7 +42,7 @@ interface Resumen {
 const fmt = (n: number) => `$${n.toFixed(2)}`;
 
 const ESTADO_CONFIG = {
-  PENDIENTE: { label: "Pendiente", color: "text-amber-400 bg-amber-400/10",    icon: Clock         },
+  PENDIENTE: { label: "Pendiente", color: "text-amber-400 bg-amber-400/10",    icon: Clock          },
   PARCIAL:   { label: "Parcial",   color: "text-blue-400 bg-blue-400/10",      icon: AlertTriangle },
   PAGADO:    { label: "Pagado",    color: "text-emerald-400 bg-emerald-400/10", icon: CheckCircle2 },
   ANULADO:   { label: "Anulado",   color: "text-gray-500 bg-gray-500/10",      icon: Ban          },
@@ -49,7 +53,7 @@ const EMPTY_FORM = {
   tipo:              "COBRAR",
   concepto:          "",
   monto_total:       "",
-  fecha_emision:     new Date().toISOString().split("T")[0],
+  fecha_emision:     hoyEC(),
   fecha_vencimiento: "",
   notas:             "",
 };
@@ -64,6 +68,9 @@ function CuentasContent() {
   const [query,      setQuery]      = useState("");
   const [filtroTipo, setFiltroTipo] = useState<"" | "COBRAR" | "PAGAR">("");
   const [filtroEst,  setFiltroEst]  = useState("");
+
+  const empresa  = useAuthStore((s) => s.empresa);
+  const tieneSub = empresa?.suscripcion_activa ?? false;
 
   // Modal nueva cuenta
   const [showModal,  setShowModal]  = useState(false);
@@ -153,7 +160,7 @@ function CuentasContent() {
         tipo:              form.tipo,
         concepto:          form.concepto,
         monto_total:       parseFloat(form.monto_total),
-        fecha_emision:     form.fecha_emision     || null,
+        fecha_emision:     form.fecha_emision      || null,
         fecha_vencimiento: form.fecha_vencimiento || null,
         notas:             form.notas             || null,
         });
@@ -189,13 +196,33 @@ function CuentasContent() {
           <p className="text-sm text-gray-500">{cuentas.length} registradas</p>
         </div>
         <button
-          onClick={() => { setShowModal(true); resetModal(); }}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors"
+          onClick={() => { if (!tieneSub) return; setShowModal(true); resetModal(); }}
+          disabled={!tieneSub}
+          title={!tieneSub ? "Requiere suscripción activa" : undefined}
+          className={clsx(
+            "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+            tieneSub
+              ? "bg-indigo-600 hover:bg-indigo-500 text-white"
+              : "bg-gray-800 text-gray-500 cursor-not-allowed"
+          )}
         >
           <Plus size={15} />
           Nueva cuenta
         </button>
       </div>
+
+      {!tieneSub && (
+        <div className="flex items-center gap-3 bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-3 mb-4">
+          <AlertTriangle size={15} className="text-amber-400 shrink-0" />
+          <div className="flex-1">
+            <p className="text-sm text-amber-300 font-medium">Suscripción requerida</p>
+            <p className="text-xs text-amber-400/70">Las cuentas por cobrar/pagar requieren un plan activo.</p>
+          </div>
+          <Link href="/planes" className="text-xs text-amber-400 hover:text-amber-300 underline underline-offset-2 shrink-0">
+            Ver planes
+          </Link>
+        </div>
+      )}
 
       {/* Resumen */}
       <div className="grid grid-cols-3 gap-3 mb-6">
@@ -280,12 +307,21 @@ function CuentasContent() {
               : "Aún no tienes cuentas registradas."}
           </p>
           {!query && !filtroTipo && !filtroEst && (
-            <button
-              onClick={() => { setShowModal(true); resetModal(); }}
-              className="mt-4 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors"
-            >
-              Registrar primera cuenta
-            </button>
+            tieneSub ? (
+              <button
+                onClick={() => { setShowModal(true); resetModal(); }}
+                className="mt-4 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors"
+              >
+                Registrar primera cuenta
+              </button>
+            ) : (
+              <Link
+                href="/planes"
+                className="mt-4 px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-sm font-medium transition-colors"
+              >
+                Ver planes
+              </Link>
+            )
           )}
         </div>
       ) : (
@@ -521,6 +557,8 @@ function CuentasContent() {
 
 // ── Página Principal Envuelta en Suspense ──────────────────────────────────────
 export default function CuentasPage() {
+  const puedeVer = usePermiso("reportes");
+  if (!puedeVer) return <SinAcceso />;
   return (
     <Suspense fallback={
       <div className="flex items-center justify-center py-20">

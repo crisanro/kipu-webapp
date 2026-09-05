@@ -4,6 +4,8 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import api from "@/lib/api";
+import { usePermiso } from "@/hooks/usePermiso";
+import SinAcceso from "@/components/SinAcceso";
 import { useAuthStore } from "@/store/auth.store";
 import {
   Loader2,
@@ -100,8 +102,16 @@ function estadoFromDecl(decl: DeclaracionRow): EstadoReporte {
 }
 
 export default function ReportesPage() {
+  const puedeVer = usePermiso("reportes");
+  if (!puedeVer) return <SinAcceso />;
   const empresa = useAuthStore((s) => s.empresa);
   const tieneSuscripcion = empresa?.suscripcion_activa ?? false;
+
+  const planEmpresa = empresa?.suscripcion?.plan ?? null;
+  const tieneATS = planEmpresa === "EMPRESARIAL";
+  const TABS_VISIBLES = (Object.keys(TAB_CONFIG) as Tab[]).filter(
+    (t) => t !== "ATS" || tieneATS
+  );
 
   const [tab, setTab] = useState<Tab>("IVA");
   const [declaraciones, setDeclaraciones] = useState<DeclaracionRow[]>([]);
@@ -109,8 +119,12 @@ export default function ReportesPage() {
   const [loading, setLoading] = useState(true);
   const [anio, setAnio] = useState(new Date().getFullYear());
 
+  useEffect(() => {
+    if (tab === "ATS" && !tieneATS) setTab("IVA");
+  }, [tieneATS, tab]);
+
   const cargar = useCallback(async () => {
-    if (!tieneSuscripcion) return; // Evitar llamadas a la API si no hay suscripción
+    if (!tieneSuscripcion || (tab === "ATS" && !tieneATS)) return;
     
     setLoading(true);
     try {
@@ -126,13 +140,12 @@ export default function ReportesPage() {
     } finally {
       setLoading(false);
     }
-  }, [tab, anio, tieneSuscripcion]);
+  }, [tab, anio, tieneSuscripcion, tieneATS]);
 
   useEffect(() => {
     cargar();
   }, [cargar]);
 
-  // Merge declaraciones + reportes por período
   const items = declaraciones.map((decl) => {
     const key = periodoKey(decl, tab);
     const reporte = reportes.find((r) => r.periodo.startsWith(key));
@@ -140,7 +153,6 @@ export default function ReportesPage() {
     const venc = new Date(decl.vencimiento);
     const dias = Math.ceil((venc.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
 
-    // Es mes/año actual
     const esActual =
       tab === "RENTA"
         ? parseInt(key) === hoy.getFullYear()
@@ -178,7 +190,7 @@ export default function ReportesPage() {
             </p>
           </div>
         </div>
-        {tieneSuscripcion && (
+        {tieneSuscripcion && !(tab === "ATS" && !tieneATS) && (
           <button
             onClick={cargar}
             disabled={loading}
@@ -192,7 +204,6 @@ export default function ReportesPage() {
       {/* ── SIN SUSCRIPCIÓN — banner + preview clickeable ─────────────────── */}
       {!tieneSuscripcion && (
         <>
-          {/* Banner upgrade */}
           <div className="relative overflow-hidden bg-indigo-600/10 border border-indigo-500/30 rounded-2xl p-5">
             <div className="flex items-start gap-4">
               <div className="w-10 h-10 rounded-xl bg-indigo-600/30 flex items-center justify-center shrink-0">
@@ -238,11 +249,9 @@ export default function ReportesPage() {
                 </p>
               </div>
             </div>
-            {/* Decoración */}
             <div className="absolute -bottom-6 -right-6 w-32 h-32 bg-indigo-600/10 rounded-full blur-2xl pointer-events-none" />
           </div>
 
-          {/* Preview demo — tabs */}
           <div className="flex gap-1 bg-gray-900 border border-gray-800 rounded-xl p-1">
             {(Object.keys(TAB_CONFIG) as Tab[]).map((t) => (
               <button
@@ -258,7 +267,6 @@ export default function ReportesPage() {
             ))}
           </div>
 
-          {/* Cards demo — clickeables, sin overlay */}
           <div className="space-y-3">
             {DEMO_CARDS[tab].map((card, i) => {
               const href = tab === "IVA" ? `/reportes/iva/2026-08`
@@ -273,7 +281,7 @@ export default function ReportesPage() {
                         "w-9 h-9 rounded-lg flex items-center justify-center shrink-0",
                         tab === "IVA"   ? "bg-indigo-600/20 text-indigo-400" :
                         tab === "RENTA" ? "bg-purple-600/20 text-purple-400" :
-                                         "bg-cyan-600/20   text-cyan-400"
+                                         "bg-cyan-600/20    text-cyan-400"
                       )}>
                         <FileText size={16} />
                       </div>
@@ -283,7 +291,7 @@ export default function ReportesPage() {
                             "text-[10px] font-bold px-2 py-0.5 rounded-full border",
                             tab === "IVA"   ? "bg-indigo-600/20 text-indigo-400 border-indigo-500/20" :
                             tab === "RENTA" ? "bg-purple-600/20 text-purple-400 border-purple-500/20" :
-                                             "bg-cyan-600/20   text-cyan-400   border-cyan-500/20"
+                                             "bg-cyan-600/20    text-cyan-400    border-cyan-500/20"
                           )}>
                             {TAB_CONFIG[tab].label}
                           </span>
@@ -311,7 +319,6 @@ export default function ReportesPage() {
               );
             })}
           </div>
-          {/* Nota demo */}
           <div className="flex items-center gap-2 justify-center py-2">
             <Lock size={12} className="text-gray-600" />
             <p className="text-xs text-gray-600">
@@ -324,7 +331,6 @@ export default function ReportesPage() {
       {/* ── CON SUSCRIPCIÓN — contenido real ─────────────────────────────── */}
       {tieneSuscripcion && (
         <>
-          {/* Alerta producción */}
           {!enProduccion && (
             <div className="flex items-start gap-3 bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-3">
               <AlertTriangle size={15} className="text-amber-400 shrink-0 mt-0.5" />
@@ -334,9 +340,9 @@ export default function ReportesPage() {
             </div>
           )}
 
-          {/* Tabs */}
+          {/* Tabs — con suscripción */}
           <div className="flex gap-1 bg-gray-900 border border-gray-800 rounded-xl p-1">
-            {(Object.keys(TAB_CONFIG) as Tab[]).map((t) => (
+            {TABS_VISIBLES.map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
@@ -350,110 +356,175 @@ export default function ReportesPage() {
             ))}
           </div>
 
-          {/* Selector año */}
-          <div className="flex items-center justify-between bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5">
-            <button
-              onClick={() => setAnio((a) => a - 1)}
-              className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
-            >
-              <ChevronLeft size={16} />
-            </button>
-            <span className="text-sm font-semibold text-white">{anio}</span>
-            <button
-              onClick={() => setAnio((a) => Math.min(a + 1, new Date().getFullYear()))}
-              disabled={anio >= new Date().getFullYear()}
-              className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-colors disabled:opacity-30"
-            >
-              <ChevronRight size={16} />
-            </button>
-          </div>
-
-          {/* Info tab */}
-          <div
-            className={clsx(
-              "rounded-xl px-4 py-3 border text-xs",
-              tab === "IVA" ? "bg-indigo-500/5 border-indigo-500/20 text-indigo-300" :
-              tab === "RENTA" ? "bg-purple-500/5 border-purple-500/20 text-purple-300" :
-              "bg-cyan-500/5 border-cyan-500/20 text-cyan-300"
-            )}
-          >
-            {tab === "IVA" && "Declaración mensual del IVA — Formulario 104. Vence según el noveno dígito del RUC."}
-            {tab === "RENTA" && "Declaración anual del Impuesto a la Renta — Formulario 102. Vence entre marzo y abril del año siguiente."}
-            {tab === "ATS" && "Anexo Transaccional Simplificado — Detalle mensual de todas tus compras y ventas. Solo obligados a contabilidad."}
-          </div>
-
-          {/* Lista */}
-          {loading ? (
-            <div className="flex items-center justify-center py-16">
-              <Loader2 size={24} className="animate-spin text-indigo-400" />
-            </div>
-          ) : items.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <FileText size={40} className="text-gray-700 mb-3" />
-              <p className="text-gray-500 text-sm">
-                No hay declaraciones registradas para {anio}
-              </p>
-              <p className="text-gray-600 text-xs mt-1">
-                Las declaraciones se crean automáticamente cuando emites documentos en producción.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {items.map((item) => (
-                <ReporteCard
-                  key={item.periodo}
-                  tipo={tab}
-                  periodo={item.periodo}
-                  periodoFmt={item.periodoFmt}
-                  estado={item.estado}
-                  diasRestantes={item.diasRestantes}
-                  vencimiento={item.vencimiento}
-                  declarado={item.declarado}
-                  cached={item.cached}
-                  enCurso={item.enCurso}
-                  generadoAt={item.generadoAt}
-                  resumen={
-                    item.resumen
-                      ? {
-                          ivaAPagar: item.resumen?.resultado?.a_pagar ?? item.resumen?.casilleros?.["859"] ?? 0,
-                          saldoFavor: item.resumen?.resultado?.saldo_favor ?? 0,
-                          impuestoCausado: item.resumen?.resultado?.impuesto_causado ?? 0,
-                          totalDocs: item.totalDocs,
-                        }
-                      : undefined
-                  }
-                />
-              ))}
-            </div>
-          )}
-
-          {/* Stats */}
-          {!loading && items.length > 0 && (
-            <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
-                Resumen {anio}
-              </p>
-              <div className="grid grid-cols-3 gap-3 text-center">
-                <div>
-                  <p className="text-lg font-bold text-white">
-                    {items.filter((i) => i.declarado).length}
-                  </p>
-                  <p className="text-xs text-gray-500">Declarados</p>
-                </div>
-                <div>
-                  <p className="text-lg font-bold text-amber-400">
-                    {items.filter((i) => !i.declarado && !i.enCurso).length}
-                  </p>
-                  <p className="text-xs text-gray-500">Pendientes</p>
-                </div>
-                <div>
-                  <p className="text-lg font-bold text-indigo-400">
-                    {items.filter((i) => i.cached).length}
-                  </p>
-                  <p className="text-xs text-gray-500">Con reporte</p>
+          {tab === "ATS" && !tieneATS ? (
+            <>
+              {/* Banner upgrade */}
+              <div className="relative overflow-hidden bg-cyan-600/10 border border-cyan-500/30 rounded-2xl p-5">
+                <div className="flex items-start gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-cyan-600/30 flex items-center justify-center shrink-0">
+                    <Shield size={18} className="text-cyan-300" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-bold text-white mb-1">ATS disponible en Plan Empresarial</p>
+                    <p className="text-xs text-gray-400 mb-3">
+                      El Anexo Transaccional Simplificado es para empresas obligadas a llevar contabilidad. Actualiza tu plan para generarlo automáticamente.
+                    </p>
+                    <Link
+                      href="/planes"
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-sm font-semibold transition-colors"
+                    >
+                      Actualizar a Empresarial
+                      <ChevronRightIcon size={15} />
+                    </Link>
+                  </div>
                 </div>
               </div>
-            </div>
+
+              {/* Demo cards ATS */}
+              <div className="space-y-3">
+                {DEMO_CARDS.ATS.map((card, i) => {
+                  const href = `/reportes/ats/2026-08`;
+                  return (
+                    <Link key={i} href={href}
+                      className="block bg-gray-900 border border-gray-800 rounded-xl p-4 hover:border-gray-600 transition-all group">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-start gap-3">
+                          <div className="w-9 h-9 rounded-lg bg-cyan-600/20 flex items-center justify-center shrink-0 text-cyan-400">
+                            <FileText size={16} />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border bg-cyan-600/20 text-cyan-400 border-cyan-500/20">
+                                ATS
+                              </span>
+                              <p className="text-sm font-semibold text-white">{card.periodo}</p>
+                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-600/20 text-cyan-400 border border-cyan-500/20 font-medium">
+                                DEMO
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="text-[10px] font-semibold px-2 py-1 rounded-full bg-gray-700 text-gray-400">
+                            {card.estado}
+                          </span>
+                          <ChevronRight size={14} className="text-gray-600 group-hover:text-gray-400 transition-colors" />
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+
+              <div className="flex items-center gap-2 justify-center py-2">
+                <Lock size={12} className="text-gray-600" />
+                <p className="text-xs text-gray-600">Datos de ejemplo — actualiza a Empresarial para ver los tuyos</p>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center justify-between bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5">
+                <button
+                  onClick={() => setAnio((a) => a - 1)}
+                  className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
+                >
+                  <ChevronLeft size={16} />
+                </button>
+                <span className="text-sm font-semibold text-white">{anio}</span>
+                <button
+                  onClick={() => setAnio((a) => Math.min(a + 1, new Date().getFullYear()))}
+                  disabled={anio >= new Date().getFullYear()}
+                  className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-colors disabled:opacity-30"
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+
+              <div
+                className={clsx(
+                  "rounded-xl px-4 py-3 border text-xs",
+                  tab === "IVA" ? "bg-indigo-500/5 border-indigo-500/20 text-indigo-300" :
+                  tab === "RENTA" ? "bg-purple-500/5 border-purple-500/20 text-purple-300" :
+                  "bg-cyan-500/5 border-cyan-500/20 text-cyan-300"
+                )}
+              >
+                {tab === "IVA" && "Declaración mensual del IVA — Formulario 104. Vence según el noveno dígito del RUC."}
+                {tab === "RENTA" && "Declaración anual del Impuesto a la Renta — Formulario 102. Vence entre marzo y abril del año siguiente."}
+                {tab === "ATS" && "Anexo Transaccional Simplificado — Detalle mensual de todas tus compras y ventas. Solo obligados a contabilidad."}
+              </div>
+
+              {loading ? (
+                <div className="flex items-center justify-center py-16">
+                  <Loader2 size={24} className="animate-spin text-indigo-400" />
+                </div>
+              ) : items.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 text-center">
+                  <FileText size={40} className="text-gray-700 mb-3" />
+                  <p className="text-gray-500 text-sm">
+                    No hay declaraciones registradas para {anio}
+                  </p>
+                  <p className="text-gray-600 text-xs mt-1">
+                    Las declaraciones se crean automáticamente cuando emites documentos en producción.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {items.map((item) => (
+                    <ReporteCard
+                      key={item.periodo}
+                      tipo={tab}
+                      periodo={item.periodo}
+                      periodoFmt={item.periodoFmt}
+                      estado={item.estado}
+                      diasRestantes={item.diasRestantes}
+                      vencimiento={item.vencimiento}
+                      declarado={item.declarado}
+                      cached={item.cached}
+                      enCurso={item.enCurso}
+                      generadoAt={item.generadoAt}
+                      resumen={
+                        item.resumen
+                          ? {
+                              ivaAPagar: item.resumen?.resultado?.a_pagar ?? item.resumen?.casilleros?.["859"] ?? 0,
+                              saldoFavor: item.resumen?.resultado?.saldo_favor ?? 0,
+                              impuestoCausado: item.resumen?.resultado?.impuesto_causado ?? 0,
+                              totalDocs: item.totalDocs,
+                            }
+                          : undefined
+                      }
+                    />
+                  ))}
+                </div>
+              )}
+
+              {!loading && items.length > 0 && (
+                <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+                    Resumen {anio}
+                  </p>
+                  <div className="grid grid-cols-3 gap-3 text-center">
+                    <div>
+                      <p className="text-lg font-bold text-white">
+                        {items.filter((i) => i.declarado).length}
+                      </p>
+                      <p className="text-xs text-gray-500">Declarados</p>
+                    </div>
+                    <div>
+                      <p className="text-lg font-bold text-amber-400">
+                        {items.filter((i) => !i.declarado && !i.enCurso).length}
+                      </p>
+                      <p className="text-xs text-gray-500">Pendientes</p>
+                    </div>
+                    <div>
+                      <p className="text-lg font-bold text-indigo-400">
+                        {items.filter((i) => i.cached).length}
+                      </p>
+                      <p className="text-xs text-gray-500">Con reporte</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </>
       )}

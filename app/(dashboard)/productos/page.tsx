@@ -2,6 +2,8 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import api from "@/lib/api";
+import { usePermiso } from "@/hooks/usePermiso";
+import SinAcceso from "@/components/SinAcceso";
 import {
   Search, Plus, Package, Loader2, X,
   Save, Pencil, PowerOff, Power
@@ -9,29 +11,35 @@ import {
 import { clsx } from "clsx";
 
 interface Producto {
-  id:          string;
-  codigo:      string;
-  descripcion: string;
-  precio:      number;
-  tipo_iva:    string;
-  unidad:      string;
-  activo:      boolean;
-  stock:       number;
+  id:           string;
+  codigo:       string;
+  descripcion:  string;
+  precio:       number;
+  tipo_iva:     string;
+  unidad:       string;
+  activo:       boolean;
+  stock:        number;
+  stock_minimo: number;  // ← añadir
 }
 
 const EMPTY_FORM = {
-  codigo:      "",
-  descripcion: "",
-  precio:      "",
-  tipo_iva:    "15",
-  unidad:      "UNIDAD",
-  stock:       "-1",
+  codigo:       "",
+  descripcion:  "",
+  precio:       "",
+  tipo_iva:     "15",
+  unidad:       "UNIDAD",
+  stock:        "-1",
+  stock_minimo: "0",  // ← añadir
 };
 
 const UNIDADES = ["UNIDAD", "SERVICIO", "KG", "LB", "LT", "MT", "CM", "CAJA", "PAQUETE", "HORA"];
 const fmt = (n: number) => n?.toFixed(2) ?? "0.00";
 
 export default function ProductosPage() {
+  
+  const puedeVer = usePermiso("productos");
+  if (!puedeVer) return <SinAcceso />;
+
   const [productos,    setProductos]    = useState<Producto[]>([]);
   const [loading,      setLoading]      = useState(true);
   const [query,        setQuery]        = useState("");
@@ -72,12 +80,13 @@ export default function ProductosPage() {
   const abrirEditar = (p: Producto) => {
     setEditando(p);
     setForm({
-      codigo:      p.codigo   ?? "",
-      descripcion: p.descripcion,
-      precio:      String(p.precio),
-      tipo_iva:    p.tipo_iva,
-      unidad:      p.unidad,
-      stock:       String(p.stock ?? -1),
+      codigo:       p.codigo ?? "",
+      descripcion:  p.descripcion,
+      precio:       String(p.precio),
+      tipo_iva:     p.tipo_iva,
+      unidad:       p.unidad,
+      stock:        String(p.stock ?? -1),
+      stock_minimo: String(p.stock_minimo ?? 0),  // ← añadir
     });
     setError("");
     setShowModal(true);
@@ -96,7 +105,6 @@ export default function ProductosPage() {
       setError("El precio no puede ser negativo.");
       return;
     }
-    // Fix #5: código obligatorio si maneja stock
     if (stockValue() !== -1 && !form.codigo.trim()) {
       setError("El código es obligatorio cuando el producto maneja stock.");
       return;
@@ -106,8 +114,9 @@ export default function ProductosPage() {
     try {
       const payload = {
         ...form,
-        precio: parseFloat(form.precio),
-        stock:  stockValue(), // Fix #1: stock 0 ya no se convierte a -1
+        precio:       parseFloat(form.precio),
+        stock:        stockValue(),
+        stock_minimo: parseInt(form.stock_minimo) || 0,  // ← añadir
       };
       if (editando) {
         await api.patch(`/api/v1/app/productos/${editando.id}`, payload);
@@ -134,7 +143,6 @@ export default function ProductosPage() {
     }
   };
 
-  // Fix #4: reactivar producto
   const reactivar = async (id: string) => {
     if (!confirm("¿Reactivar este producto?")) return;
     try {
@@ -251,7 +259,11 @@ export default function ProductosPage() {
                   ) : (
                     <span className={clsx(
                       "px-2 py-0.5 rounded-full",
-                      p.stock <= 5 ? "text-amber-400 bg-amber-400/10" : "text-emerald-400 bg-emerald-400/10"
+                      p.stock_minimo > 0 && p.stock <= p.stock_minimo
+                        ? "text-red-400 bg-red-400/10"      // ← bajo mínimo
+                        : p.stock <= 5
+                          ? "text-amber-400 bg-amber-400/10"
+                          : "text-emerald-400 bg-emerald-400/10"
                     )}>
                       {p.stock}
                     </span>
@@ -266,7 +278,6 @@ export default function ProductosPage() {
                   >
                     <Pencil size={14} />
                   </button>
-                  {/* Fix #4: botón reactivar/desactivar */}
                   {p.activo ? (
                     <button
                       onClick={() => desactivar(p.id)}
@@ -306,7 +317,6 @@ export default function ProductosPage() {
             <div className="p-5 space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  {/* Fix #5: asterisco si maneja stock */}
                   <label className="block text-xs text-gray-500 mb-1.5">
                     Código {stockValue() !== -1 ? <span className="text-red-400">*</span> : "(opcional)"}
                   </label>
@@ -365,7 +375,6 @@ export default function ProductosPage() {
               </div>
               {/* Campo Stock */}
               <div>
-                {/* Fix #3: label dinámico */}
                 <label className="block text-xs text-gray-500 mb-1.5">
                   {editando ? "Stock actual" : "Stock inicial"}
                 </label>
@@ -380,6 +389,26 @@ export default function ProductosPage() {
                 />
                 <p className="text-[11px] text-gray-600 mt-1">-1 = sin control de stock</p>
               </div>
+
+              {/* Stock mínimo — solo si maneja stock */}
+              {stockValue() !== -1 && (
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1.5">
+                    Stock mínimo <span className="text-gray-600">(alerta cuando llegue a este nivel)</span>
+                  </label>
+                  <input
+                    type="number"
+                    value={form.stock_minimo}
+                    onChange={(e) => setForm({ ...form, stock_minimo: e.target.value })}
+                    placeholder="0"
+                    min={0}
+                    step={1}
+                    className="w-full px-3 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 text-sm"
+                  />
+                  <p className="text-[11px] text-gray-600 mt-1">0 = sin alerta de stock bajo</p>
+                </div>
+              )}
+
               {error && (
                 <p className="text-xs text-red-400 bg-red-400/10 px-3 py-2 rounded-lg">{error}</p>
               )}

@@ -14,7 +14,7 @@ import {
   LogOut, Zap, ChevronRight, ChevronDown, Menu, X, BarChart3,
   AlertTriangle, FileInput, Building2, CreditCard, UserCog,
   CheckCircle2, Plus, ChevronUp, Shield, RefreshCw, FlaskConical,
-  MessageCircle, Mail, QrCode, Wallet,ClipboardList,
+  MessageCircle, Mail, QrCode, Wallet, ClipboardList,
 } from "lucide-react";
 import { clsx } from "clsx";
 import {
@@ -104,10 +104,10 @@ const NAV_GROUPS = [
     ]
   },
   {
-  items: [
-    { href: "/proformas", label: "Proformas", icon: ClipboardList, permiso: "emitir" },  // ← agregar
-  ]
-},
+    items: [
+      { href: "/proformas", label: "Proformas", icon: ClipboardList, permiso: "emitir" },
+    ]
+  },
   {
     label:    "Emitir",
     icon:     Zap,
@@ -118,7 +118,7 @@ const NAV_GROUPS = [
       { href: "/documentos/emitir/liq", label: "Liquidación",       icon: FileText },
       { href: "/documentos/emitir/ncr", label: "Nota de crédito",   icon: FileText },
       { href: "/documentos/emitir/ndb", label: "Nota de débito",    icon: FileText },
-      { href: "/documentos/emitir/ret", label: "Retención",         icon: FileText },
+      { href: "/documentos/emitir/ret", label: "Retención",          icon: FileText },
     ],
   },
   {
@@ -127,7 +127,7 @@ const NAV_GROUPS = [
     base:     "/documentos",
     permiso:  "descargar",
     children: [
-      { href: "/documentos",           label: "Emitidos",  icon: FileText,  permiso: "descargar"            },
+      { href: "/documentos",            label: "Emitidos",  icon: FileText,  permiso: "descargar"             },
       { href: "/documentos/recibidos", label: "Recibidos", icon: FileInput, permiso: "documentos_recibidos" },
     ],
   },
@@ -141,11 +141,11 @@ const NAV_GROUPS = [
   {
     separator: true,
     items: [
-      { href: "/estructura",    label: "Estructura",    icon: Building2, permiso: "configuracion" },
-      { href: "/planes",        label: "Planes",        icon: CreditCard, permiso: null           },
-      { href: "/reportes",      label: "Reportes",      icon: BarChart3,  permiso: "reportes"     },
-      { href: "/usuarios",      label: "Usuarios",      icon: UserCog,    permiso: "usuarios"     },
-      { href: "/api-keys",      label: "API Keys",      icon: Key,        permiso: "api_keys"     },
+      { href: "/estructura",     label: "Estructura",     icon: Building2, permiso: "configuracion" },
+      { href: "/planes",         label: "Planes",         icon: CreditCard, permiso: null            },
+      { href: "/reportes",       label: "Reportes",       icon: BarChart3,  permiso: "reportes"      },
+      { href: "/usuarios",       label: "Usuarios",       icon: UserCog,    permiso: "usuarios"      },
+      { href: "/api-keys",       label: "API Keys",       icon: Key,        permiso: "api_keys"      },
       { href: "/configuracion", label: "Configuración", icon: Settings,   permiso: "configuracion"},
     ]
   },
@@ -153,7 +153,7 @@ const NAV_GROUPS = [
 
 // Helper para verificar permisos
 function tienePermiso(empresa: any, permiso: string | null): boolean {
-  if (!permiso) return true;                          // sin restricción
+  if (!permiso) return true;                         // sin restricción
   if (empresa?.rol === "admin") return true;          // admin ve todo
   return empresa?.permisos?.[permiso] === true;
 }
@@ -214,14 +214,21 @@ function SelectorEmpresa({ onClose }: { onClose: () => void }) {
         suscripcion:        data.suscripcion,
         balance_api:        data.balance_api,
       });
+      sessionStorage.clear();
       onClose();
-      router.push("/dashboard");
+      window.location.href = "/dashboard";
     } catch (err) {
       console.error(err);
     } finally {
       setCambiando(null);
     }
   };
+
+  const empresasOrdenadas = [...empresas].sort((a, b) => {
+    if (a.rol === "admin" && b.rol !== "admin") return -1;
+    if (b.rol === "admin" && a.rol !== "admin") return 1;
+    return (a.nombre_comercial || a.razon_social).localeCompare(b.nombre_comercial || b.razon_social);
+  });
 
   return (
     <div className="fixed inset-0 bg-black/70 z-50 flex items-end sm:items-center justify-center p-4">
@@ -231,7 +238,7 @@ function SelectorEmpresa({ onClose }: { onClose: () => void }) {
           <button onClick={onClose} className="text-gray-500 hover:text-white"><X size={16} /></button>
         </div>
         <div className="divide-y divide-gray-800 max-h-64 overflow-y-auto">
-          {empresas.map((e) => {
+          {empresasOrdenadas.map((e) => {
             const activa = e.id === empresa?.id;
             return (
               <button key={e.id} onClick={() => cambiar(e)} disabled={!!cambiando}
@@ -252,6 +259,10 @@ function SelectorEmpresa({ onClose }: { onClose: () => void }) {
                   <p className="text-xs text-gray-500">{e.ruc}</p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
+                  {e.rol === "admin"
+                    ? <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-400">Admin</span>
+                    : <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-700 text-gray-400">Invitado</span>
+                  }
                   <span className={clsx(
                     "text-[10px] px-1.5 py-0.5 rounded-full",
                     e.ambiente === 2 ? "bg-emerald-500/20 text-emerald-400" : "bg-amber-500/20 text-amber-400"
@@ -289,13 +300,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { empresa, empresas, role, logout } = useAuthStore();
   const { activo: sandbox, setSandbox } = useSandboxStore();
 
-  const [sidebarOpen,     setSidebarOpen]     = useState(false);
+  const [sidebarOpen,      setSidebarOpen]      = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showSelectorEmp, setShowSelectorEmp] = useState(false);
   const [drawerOpen,      setDrawerOpen]      = useState(false);
   const [emailVerificado, setEmailVerificado] = useState(true);
 
-  const firmaOk         = empresa?.firma_ok ?? false;
+  const firmaOk          = empresa?.firma_ok ?? false;
   const puedeProduccion = firmaOk && empresa?.ambiente === 2;
 
   // Verificar email al montar

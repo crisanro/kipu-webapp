@@ -4,8 +4,12 @@
 import { useAuthStore } from "@/store/auth.store";
 import { UserCog, Loader2 } from "lucide-react";
 import TabUsuarios from "@/components/configuracion/TabUsuarios";
+import { usePermiso } from "@/hooks/usePermiso";
+import SinAcceso from "@/components/SinAcceso";
 
 export default function UsuariosPage() {
+  const puedeVer = usePermiso("usuarios");
+  if (!puedeVer) return <SinAcceso />;
   const empresa = useAuthStore((s) => s.empresa);
 
   if (!empresa) {

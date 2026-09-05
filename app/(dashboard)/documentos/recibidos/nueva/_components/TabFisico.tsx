@@ -5,6 +5,7 @@ import api from "@/lib/api";
 import {
   Camera, X, Loader2, AlertTriangle, Plus, Trash2,
 } from "lucide-react";
+import { hoyEC } from "@/lib/fecha";
 import { clsx } from "clsx";
 
 interface LineaRetencion {
@@ -67,7 +68,7 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
   const [rucProveedor,          setRucProveedor]          = useState("");
   const [razonSocial,           setRazonSocial]           = useState("");
   const [numeroDoc,             setNumeroDoc]             = useState("");
-  const [fechaEmision,          setFechaEmision]          = useState(new Date().toISOString().split("T")[0]);
+  const [fechaEmision,          setFechaEmision]          = useState(hoyEC());
   const [notas,                 setNotas]                 = useState("");
   const [deducibleRenta,        setDeducibleRenta]        = useState(true);
   const [creditoTributarioIva,  setCreditoTributarioIva]  = useState(false);
@@ -142,7 +143,7 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
 
   const resetForm = () => {
     setTipoDoc("FAC"); setRucProveedor(""); setRazonSocial("");
-    setNumeroDoc(""); setFechaEmision(new Date().toISOString().split("T")[0]);
+    setNumeroDoc(""); setFechaEmision(hoyEC());
     setNotas(""); setDeducibleRenta(true); setCreditoTributarioIva(false);
     setSubtotal0(""); setSubtotalIva(""); setTarifaIva("15");
     setValorIva(""); setImporteTotal("");

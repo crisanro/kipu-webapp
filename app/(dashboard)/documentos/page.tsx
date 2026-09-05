@@ -3,11 +3,13 @@ import { useState, useEffect, useCallback } from "react";
 import { useSandboxStore } from "@/store/sandbox.store";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { usePermiso } from "@/hooks/usePermiso";
+import SinAcceso from "@/components/SinAcceso";
 import api from "@/lib/api";
 import {
   Search, Plus, FileText, Loader2, CheckCircle2, Clock,
   XCircle, AlertTriangle, RefreshCw, ChevronDown, ChevronUp,
-  TrendingUp, FlaskConical
+  TrendingUp, FlaskConical, Ban  
 } from "lucide-react";
 import { clsx } from "clsx";
 
@@ -33,6 +35,7 @@ const ESTADO_CONFIG: Record<string, { label: string; color: string; icon: any }>
   FIRMADO:    { label: "En cola",    color: "text-blue-400 bg-blue-400/10",        icon: Clock },
   DEVUELTA:   { label: "Devuelto",   color: "text-amber-400 bg-amber-400/10",      icon: AlertTriangle },
   RECHAZADO:  { label: "Rechazado",  color: "text-red-400 bg-red-400/10",          icon: XCircle },
+  ANULADO:    { label: "Anulado",    color: "text-gray-500 bg-gray-500/10",        icon: Ban },  // ← añadir
   PENDIENTE:  { label: "Pendiente",  color: "text-gray-400 bg-gray-400/10",        icon: Clock },
   SANDBOX:    { label: "Prueba",     color: "text-cyan-400 bg-cyan-400/10",        icon: FlaskConical },
 };
@@ -56,7 +59,7 @@ const SS_KEY_INICIO = "kipu_emitidos_fecha_inicio";
 const SS_KEY_FIN    = "kipu_emitidos_fecha_fin";
 
 function getHoy() {
-  return new Date().toISOString().split("T")[0];
+  return new Date().toLocaleDateString("en-CA", { timeZone: "America/Guayaquil" });
 }
 function leerFecha(key: string): string {
   try { return sessionStorage.getItem(key) || getHoy(); }
@@ -122,6 +125,8 @@ function ResumenTipoCard({ tipo, label, color, data }: {
 
 // ── Página ─────────────────────────────────────────────────────────────────────
 export default function HistorialPage() {
+  const puedeVer = usePermiso("descargar");
+  if (!puedeVer) return <SinAcceso />;
   const searchParams = useSearchParams();
   const [documentos,   setDocumentos]   = useState<Documento[]>([]);
   const [resumen,      setResumen]      = useState<any>(null);
@@ -350,7 +355,7 @@ export default function HistorialPage() {
       {/* Filtros por estado y tipo */}
       <div className="space-y-2">
         <div className="flex gap-2 flex-wrap">
-          {["TODOS", "AUTORIZADO", "RECIBIDA", "DEVUELTA", "RECHAZADO"].map(estado => (
+          {["TODOS", "AUTORIZADO", "RECIBIDA", "DEVUELTA", "RECHAZADO", "ANULADO"].map(estado => (
             <button key={estado} onClick={() => setFiltroEstado(estado)}
               className={clsx(
                 "px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",

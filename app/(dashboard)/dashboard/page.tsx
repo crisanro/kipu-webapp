@@ -30,11 +30,9 @@ export default function DashboardPage() {
   const empresa = useAuthStore((s) => s.empresa);
   const { activo: sandbox } = useSandboxStore();
 
-  const hoy       = new Date();
-  const primerDia = new Date(hoy.getFullYear(), hoy.getMonth(), 1)
-    .toISOString()
-    .split("T")[0];
-  const hoyStr = hoy.toISOString().split("T")[0];
+  const hoyStr    = new Date().toLocaleDateString("en-CA", { timeZone: "America/Guayaquil" });
+  const [anio, mes] = hoyStr.split("-");
+  const primerDia = `${anio}-${mes}-01`;
 
   const { data, isLoading, mutate } = useSWR<DashboardData>(
     `/api/v1/app/dashboard?fecha_inicio=${primerDia}&fecha_fin=${hoyStr}&sandbox=${sandbox}`,

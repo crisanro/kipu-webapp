@@ -5,8 +5,13 @@ import { useState, useEffect, useCallback } from "react";
 import api from "@/lib/api";
 import { Building2, Loader2 } from "lucide-react";
 import TabEstructura from "@/components/configuracion/TabEstructura";
+import { usePermiso } from "@/hooks/usePermiso";
+import SinAcceso from "@/components/SinAcceso";
+
 
 export default function EstructuraPage() {
+  const puedeVer = usePermiso("reportes");
+  if (!puedeVer) return <SinAcceso />;
   const [estructura, setEstructura] = useState<any[]>([]);
   const [loading,    setLoading]    = useState(true);
 

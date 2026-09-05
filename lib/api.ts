@@ -2,6 +2,7 @@
 import axios from "axios";
 import { auth } from "./firebase";
 import { useSandboxStore } from "@/store/sandbox.store";
+import { useAuthStore } from "@/store/auth.store";
 
 const api = axios.create({
   baseURL:         process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000",
@@ -10,7 +11,7 @@ const api = axios.create({
   withCredentials: false,
 });
 
-// Interceptor — agrega token Firebase + header sandbox
+// Interceptor — agrega token Firebase + header sandbox + emisor activo
 api.interceptors.request.use(async (config) => {
   const user = auth.currentUser;
   if (user) {
@@ -18,7 +19,13 @@ api.interceptors.request.use(async (config) => {
     config.headers.Authorization = `Bearer ${token}`;
   }
 
-  // Agregar header sandbox si está activo
+  // Emisor activo — para que el backend sepa qué empresa usar
+  const empresa = useAuthStore.getState().empresa;
+  if (empresa?.id) {
+    config.headers["X-Emisor-ID"] = String(empresa.id);
+  }
+
+  // Sandbox
   const sandbox = useSandboxStore.getState().activo;
   if (sandbox) {
     config.headers["X-Sandbox"] = "true";

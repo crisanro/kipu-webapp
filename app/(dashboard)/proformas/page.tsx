@@ -3,6 +3,9 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
+import { usePermiso } from "@/hooks/usePermiso";
+import SinAcceso from "@/components/SinAcceso";
+import { useAuthStore } from "@/store/auth.store";
 import {
   ClipboardList, Plus, Loader2, Search,
   CheckCircle2, AlertTriangle, Clock,
@@ -10,8 +13,8 @@ import {
 import { clsx } from "clsx";
 
 interface Proforma {
-  id:            string;
-  numero:        string;
+  id:             string;
+  numero:         string;
   fecha_emision: string;
   fecha_validez: string | null;
   subtotal:      number;
@@ -30,10 +33,17 @@ interface Proforma {
 const fmt = (n: number) => `$${n.toFixed(2)}`;
 
 export default function ProformasPage() {
+  
+  const puedeVer = usePermiso("emitir");
+  if (!puedeVer) return <SinAcceso />;
+
   const router = useRouter();
   const [proformas, setProformas] = useState<Proforma[]>([]);
   const [loading,   setLoading]   = useState(true);
   const [query,     setQuery]     = useState("");
+
+  const empresa  = useAuthStore((s) => s.empresa);
+  const tieneSub = empresa?.suscripcion_activa ?? false;
 
   const cargar = useCallback(async () => {
     setLoading(true);
@@ -68,13 +78,34 @@ export default function ProformasPage() {
           <p className="text-sm text-gray-500">{proformas.length} registradas</p>
         </div>
         <button
-          onClick={() => router.push("/proformas/nueva")}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors"
+          onClick={() => tieneSub && router.push("/proformas/nueva")}
+          disabled={!tieneSub}
+          title={!tieneSub ? "Requiere suscripción activa" : undefined}
+          className={clsx(
+            "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+            tieneSub
+              ? "bg-indigo-600 hover:bg-indigo-500 text-white"
+              : "bg-gray-800 text-gray-500 cursor-not-allowed"
+          )}
         >
           <Plus size={15} />
           Nueva proforma
         </button>
       </div>
+
+      {/* Banner de suscripción */}
+      {!tieneSub && (
+        <div className="flex items-center gap-3 bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-3 mb-4">
+          <AlertTriangle size={15} className="text-amber-400 shrink-0" />
+          <div className="flex-1">
+            <p className="text-sm text-amber-300 font-medium">Suscripción requerida</p>
+            <p className="text-xs text-amber-400/70">Las proformas están disponibles con un plan activo.</p>
+          </div>
+          <Link href="/planes" className="text-xs text-amber-400 hover:text-amber-300 underline underline-offset-2 shrink-0">
+            Ver planes
+          </Link>
+        </div>
+      )}
 
       {/* Buscador */}
       <div className="relative mb-4">
@@ -99,12 +130,21 @@ export default function ProformasPage() {
             {query ? "No hay proformas que coincidan." : "Aún no tienes proformas registradas."}
           </p>
           {!query && (
-            <button
-              onClick={() => router.push("/proformas/nueva")}
-              className="mt-4 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors"
-            >
-              Crear primera proforma
-            </button>
+            tieneSub ? (
+              <button
+                onClick={() => router.push("/proformas/nueva")}
+                className="mt-4 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors"
+              >
+                Crear primera proforma
+              </button>
+            ) : (
+              <Link
+                href="/planes"
+                className="mt-4 px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-sm font-medium transition-colors"
+              >
+                Ver planes para crear proformas
+              </Link>
+            )
           )}
         </div>
       ) : (

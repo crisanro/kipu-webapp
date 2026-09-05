@@ -7,8 +7,12 @@ import { HealthData } from "@/components/Checklist";
 import TabEmpresa from "@/components/configuracion/TabEmpresa";
 import TabFirma   from "@/components/configuracion/TabFirma";
 import { useAuthStore } from "@/store/auth.store";
+import { usePermiso } from "@/hooks/usePermiso";
+import SinAcceso from "@/components/SinAcceso";
 
 export default function ConfiguracionPage() {
+  const puedeVer = usePermiso("configuracion");
+  if (!puedeVer) return <SinAcceso />;
   const [loading, setLoading] = useState(true);
   const [config,  setConfig]  = useState<any>(null);
   const [health,  setHealth]  = useState<HealthData | null>(null);
@@ -18,7 +22,7 @@ export default function ConfiguracionPage() {
   const cargar = async () => {
     setLoading(true);
     try {
-      const hoyIso = new Date().toISOString().split("T")[0];
+      const hoyIso = new Date().toLocaleDateString("en-CA", { timeZone: "America/Guayaquil" });
       const [resConfig, resDash] = await Promise.all([
         api.get("/api/v1/app/emisor/config"),
         api.get(`/api/v1/app/dashboard?fecha_inicio=${hoyIso}&fecha_fin=${hoyIso}`),

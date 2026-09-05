@@ -285,8 +285,8 @@ export default function CreditosPage() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {[
-                      { plan: "NATURAL",  label: "Individual",   desc: "Personas no obligadas a llevar contabilidad", mensual: 14.99, anual: 129.99, popular: false },
-                      { plan: "JURIDICO", label: "Empresarial",  desc: "Personas obligadas a llevar contabilidad",    mensual: 24.99, anual: 199.99, popular: false },
+                      { plan: "PROFESIONAL",  label: "Profesional",   desc: "Personas no obligadas a llevar contabilidad", mensual: 14.99, anual: 129.99, popular: false },
+                      { plan: "EMPRESARIAL", label: "Empresarial",  desc: "Personas obligadas a llevar contabilidad",    mensual: 24.99, anual: 199.99, popular: false },
                     ].map((p) => (
                       <div key={p.plan} className={clsx(
                         "relative border rounded-xl p-5 space-y-3",

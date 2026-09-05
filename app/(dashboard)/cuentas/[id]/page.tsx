@@ -3,6 +3,8 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import api from "@/lib/api";
+import { useAuthStore } from "@/store/auth.store";
+import { hoyEC } from "@/lib/fecha";
 import {
   ArrowLeft, Loader2, Plus, X, Save, Ban,
   TrendingUp, TrendingDown, CheckCircle2, Clock,
@@ -26,17 +28,20 @@ export default function DetalleCuentaPage() {
   const { id }  = useParams();
   const router  = useRouter();
 
-  const [data,          setData]          = useState<any>(null);
-  const [loading,       setLoading]       = useState(true);
-  const [showAbono,     setShowAbono]     = useState(false);
-  const [showAnular,    setShowAnular]    = useState(false);
-  const [savingAbono,   setSavingAbono]   = useState(false);
-  const [savingAnular,  setSavingAnular]  = useState(false);
-  const [error,         setError]         = useState("");
+  const empresa  = useAuthStore((s) => s.empresa);
+  const tieneSub = empresa?.suscripcion_activa ?? false;
+
+  const [data,         setData]         = useState<any>(null);
+  const [loading,      setLoading]      = useState(true);
+  const [showAbono,    setShowAbono]    = useState(false);
+  const [showAnular,   setShowAnular]   = useState(false);
+  const [savingAbono,  setSavingAbono]  = useState(false);
+  const [savingAnular, setSavingAnular] = useState(false);
+  const [error,        setError]        = useState("");
 
   const [abonoForm, setAbonoForm] = useState({
     monto:      "",
-    fecha:      new Date().toISOString().split("T")[0],
+    fecha:      hoyEC(),
     forma_pago: "EFECTIVO",
     notas:      "",
   });
@@ -70,7 +75,7 @@ export default function DetalleCuentaPage() {
       });
       await cargar();
       setShowAbono(false);
-      setAbonoForm({ monto: "", fecha: new Date().toISOString().split("T")[0], forma_pago: "EFECTIVO", notas: "" });
+      setAbonoForm({ monto: "", fecha: hoyEC(), forma_pago: "EFECTIVO", notas: "" });
     } catch (err: any) {
       setError(err?.response?.data?.detail ?? "Error al registrar el abono.");
     } finally {
@@ -223,7 +228,7 @@ export default function DetalleCuentaPage() {
         </div>
 
         {/* Acciones */}
-        {activa && (
+        {activa && tieneSub && (
           <div className="flex gap-2 mt-5 pt-4 border-t border-gray-800">
             <button
               onClick={() => { setShowAbono(true); setError(""); }}
@@ -238,6 +243,15 @@ export default function DetalleCuentaPage() {
             >
               <Ban size={14} />
             </button>
+          </div>
+        )}
+        {activa && !tieneSub && (
+          <div className="mt-5 pt-4 border-t border-gray-800">
+            <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20">
+              <AlertTriangle size={13} className="text-amber-400 shrink-0" />
+              <p className="text-xs text-amber-300">Requiere suscripción activa para registrar abonos.</p>
+              <Link href="/planes" className="ml-auto text-xs text-amber-400 underline shrink-0">Ver planes</Link>
+            </div>
           </div>
         )}
       </div>
