@@ -156,7 +156,7 @@ export default function ResumenImpositivo({
       if (v !== undefined && v !== 0) init[k] = String(v);
     }
     setManuales(init);
-  }, [valoresGuardados, dirty]);
+  }, [JSON.stringify(valoresGuardados), dirty]); // ← stringify en vez del objeto
 
   const handleManual = (casillero: string, val: string) => {
     setManuales(prev => ({ ...prev, [casillero]: val }));

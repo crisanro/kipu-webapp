@@ -5,14 +5,12 @@ import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
 import {
   CreditCard, Zap, Loader2, RefreshCw,
-  CheckCircle2, AlertTriangle, ChevronRight,
-  TrendingDown
+  CheckCircle2, AlertTriangle, TrendingDown, Star, ArrowRight, Info
 } from "lucide-react";
 import { clsx } from "clsx";
 
 const fmt = (n: any) => parseFloat(String(n ?? 0)).toFixed(2);
 
-// ── Tipos ─────────────────────────────────────────────────────────────────────
 interface EstadoSub {
   plan:                 string;
   periodo:              string;
@@ -22,16 +20,14 @@ interface EstadoSub {
   cancel_at_period_end: boolean;
   dias_restantes:       number | null;
 }
-
 interface PlanCredito {
-  id:                   number;
-  nombre:               string;
-  descripcion:          string;
-  cantidad:             number;
-  precio:               number;
-  precio_por_credito:   number;
+  id:                 number;
+  nombre:             string;
+  descripcion:        string;
+  cantidad:           number;
+  precio:             number;
+  precio_por_credito: number;
 }
-
 interface Transaccion {
   id:           string;
   tipo:         string;
@@ -42,19 +38,42 @@ interface Transaccion {
   created_at:   string;
 }
 
-// ── Página ────────────────────────────────────────────────────────────────────
-export default function CreditosPage() {
+const PRECIO_PRO_ANUAL = 69.00;
+const IVA_RATE         = 0.15;
+const PRECIO_CON_IVA   = +(PRECIO_PRO_ANUAL * (1 + IVA_RATE)).toFixed(2);
+
+const ESTADO_COLOR: Record<string, string> = {
+  ACTIVO:    "text-emerald-400 bg-emerald-400/10 border-emerald-500/20",
+  TRIAL:     "text-blue-400 bg-blue-400/10 border-blue-500/20",
+  CANCELADO: "text-amber-400 bg-amber-400/10 border-amber-500/20",
+  VENCIDO:   "text-red-400 bg-red-400/10 border-red-500/20",
+};
+
+const FEATURES: { texto: string; destacado?: boolean }[] = [
+  { texto: "Emisión ilimitada desde el panel web — facturas, liquidaciones, notas de crédito/débito y retenciones" },
+  { texto: "API REST — 100 comprobantes/mes incluidos · más con créditos", destacado: true },
+  { texto: "Registro y clasificación fiscal de documentos recibidos" },
+  { texto: "Reporte de IVA mensual y semestral para declaración 104/104A" },
+  { texto: "Reporte de Renta anual" },
+  { texto: "Anexo Transaccional Simplificado (ATS) mensual" },
+  { texto: "Proformas comerciales con descarga en PDF" },
+  { texto: "Cuentas por cobrar y cuentas por pagar" },
+  { texto: "Hasta 5 usuarios por empresa" },
+  { texto: "Soporte por WhatsApp" },
+];
+
+export default function PlanesPage() {
   const empresa = useAuthStore((s) => s.empresa);
 
-  const [sub,         setSub]         = useState<EstadoSub | null>(null);
-  const [balance,     setBalance]     = useState(0);
-  const [planes,      setPlanes]      = useState<PlanCredito[]>([]);
-  const [historial,   setHistorial]   = useState<Transaccion[]>([]);
-  const [loading,     setLoading]     = useState(true);
-  const [pagando,     setPagando]     = useState<string | null>(null);
-  const [abriendo,    setAbriendo]    = useState(false);
-  const [cancelando,  setCancelando]  = useState(false);
-  const [tab,         setTab]         = useState<"suscripcion" | "creditos">("suscripcion");
+  const [sub,        setSub]        = useState<EstadoSub | null>(null);
+  const [balance,    setBalance]    = useState(0);
+  const [planes,     setPlanes]     = useState<PlanCredito[]>([]);
+  const [historial,  setHistorial]  = useState<Transaccion[]>([]);
+  const [loading,    setLoading]    = useState(true);
+  const [pagando,    setPagando]    = useState<string | null>(null);
+  const [abriendo,   setAbriendo]   = useState(false);
+  const [cancelando, setCancelando] = useState(false);
+  const [tab,        setTab]        = useState<"suscripcion" | "creditos">("suscripcion");
 
   const cargar = useCallback(async () => {
     setLoading(true);
@@ -75,11 +94,10 @@ export default function CreditosPage() {
 
   useEffect(() => { cargar(); }, [cargar]);
 
-  const iniciarCheckoutSub = async (plan: string, periodo: string) => {
-    const key = `${plan}_${periodo}`;
-    setPagando(key);
+  const iniciarCheckout = async () => {
+    setPagando("pro");
     try {
-      const res = await api.post("/api/v1/app/suscripcion/checkout", { plan, periodo });
+      const res = await api.post("/api/v1/app/suscripcion/checkout");
       window.location.href = res.data.checkout_url;
     } catch (err: any) {
       alert(err?.response?.data?.detail ?? "Error al iniciar el pago.");
@@ -128,14 +146,9 @@ export default function CreditosPage() {
     }
   };
 
-  const ESTADO_COLOR: Record<string, string> = {
-    ACTIVO:    "text-emerald-400 bg-emerald-400/10 border-emerald-500/20",
-    TRIAL:     "text-blue-400 bg-blue-400/10 border-blue-500/20",
-    CANCELADO: "text-amber-400 bg-amber-400/10 border-amber-500/20",
-    VENCIDO:   "text-red-400 bg-red-400/10 border-red-500/20",
-  };
-
-  const enProduccion = empresa?.ambiente === 2;
+  const enProduccion  = empresa?.ambiente === 2;
+  const esFree        = !sub?.activa;
+  const sinCreditos   = esFree && balance === 0;
 
   return (
     <div className="p-4 md:p-6 max-w-3xl mx-auto space-y-5">
@@ -148,7 +161,7 @@ export default function CreditosPage() {
           </div>
           <div>
             <h1 className="text-xl font-bold text-white">Plan y créditos</h1>
-            <p className="text-sm text-gray-500">Suscripción mensual o créditos por uso</p>
+            <p className="text-sm text-gray-500">Gestiona tu suscripción y créditos de emisión</p>
           </div>
         </div>
         <button onClick={cargar} disabled={loading}
@@ -163,8 +176,10 @@ export default function CreditosPage() {
         </div>
       ) : (
         <>
-          {/* Resumen rápido */}
+          {/* ── Resumen rápido ─────────────────────────────────────────────── */}
           <div className="grid grid-cols-2 gap-3">
+
+            {/* Card plan */}
             <div className={clsx(
               "bg-gray-900 border rounded-xl p-4 cursor-pointer transition-colors",
               tab === "suscripcion" ? "border-indigo-500" : "border-gray-800 hover:border-gray-700"
@@ -175,22 +190,25 @@ export default function CreditosPage() {
                   ? <span className={clsx("text-[10px] px-2 py-0.5 rounded-full border font-semibold", ESTADO_COLOR[sub.estado])}>
                       {sub.estado}
                     </span>
-                  : <span className="text-[10px] px-2 py-0.5 rounded-full border border-gray-700 text-gray-500">
-                      SIN PLAN
+                  : <span className="text-[10px] px-2 py-0.5 rounded-full border border-gray-700 text-gray-400 font-semibold">
+                      FREE
                     </span>
                 }
               </div>
               <p className="text-lg font-bold text-white">
-                {sub?.activa ? `Plan ${sub.plan}` : "Sin suscripción"}
+                {sub?.activa ? "Plan Pro" : "Plan Free"}
               </p>
               <p className="text-xs text-gray-500 mt-0.5">
                 {sub?.activa
-                  ? `${sub.periodo === "MENSUAL" ? "Mensual" : "Anual"} · ${sub.dias_restantes ?? 0} días`
-                  : "Panel web completo"
+                  ? `Anual · ${sub.dias_restantes ?? 0} días restantes`
+                  : balance > 0
+                    ? "Emitiendo con créditos"
+                    : "Sin créditos disponibles"
                 }
               </p>
             </div>
 
+            {/* Card créditos */}
             <div className={clsx(
               "bg-gray-900 border rounded-xl p-4 cursor-pointer transition-colors",
               tab === "creditos" ? "border-indigo-500" : "border-gray-800 hover:border-gray-700"
@@ -198,11 +216,18 @@ export default function CreditosPage() {
               <div className="flex items-center justify-between mb-2">
                 <Zap size={16} className="text-yellow-400" />
                 <span className="text-[10px] px-2 py-0.5 rounded-full border border-yellow-500/20 text-yellow-400 bg-yellow-400/10 font-semibold">
-                  API
+                  CRÉDITOS
                 </span>
               </div>
               <p className="text-lg font-bold text-white">{balance} créditos</p>
-              <p className="text-xs text-gray-500 mt-0.5">Para emitir comprobantes</p>
+              <p className="text-xs text-gray-500 mt-0.5">
+                {balance === 0
+                  ? "Sin créditos — compra un paquete"
+                  : esFree
+                    ? `${balance} comprobante${balance !== 1 ? "s" : ""} disponible${balance !== 1 ? "s" : ""}`
+                    : "Complementan tu plan Pro"
+                }
+              </p>
             </div>
           </div>
 
@@ -219,7 +244,24 @@ export default function CreditosPage() {
           {/* ── Tab: Suscripción ───────────────────────────────────────────── */}
           {tab === "suscripcion" && (
             <div className="space-y-4">
-              {/* Estado actual */}
+
+              {/* Banner explicativo — solo en Free */}
+              {esFree && (
+                <div className="flex items-start gap-3 bg-indigo-500/10 border border-indigo-500/20 rounded-xl px-4 py-3">
+                  <Info size={15} className="text-indigo-400 shrink-0 mt-0.5" />
+                  <div className="text-sm">
+                    <p className="text-indigo-300 font-medium mb-0.5">Estás en Plan Free</p>
+                    <p className="text-indigo-300/70 text-xs">
+                      {balance > 0
+                        ? `Tienes ${balance} crédito${balance !== 1 ? "s" : ""} para emitir comprobantes. Con Plan Pro emites sin límite por $${PRECIO_PRO_ANUAL}/año + IVA.`
+                        : `Sin créditos disponibles. Con Plan Pro emites sin límite por $${PRECIO_PRO_ANUAL}/año + IVA.`
+                      }
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Suscripción activa */}
               {sub?.activa && (
                 <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
                   <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">
@@ -227,9 +269,9 @@ export default function CreditosPage() {
                   </h2>
                   <div className="flex items-center justify-between mb-4">
                     <div>
-                      <p className="text-2xl font-bold text-white">Plan {sub.plan}</p>
+                      <p className="text-2xl font-bold text-white">Plan Pro</p>
                       <p className="text-sm text-gray-500">
-                        {sub.periodo === "MENSUAL" ? "Mensual" : "Anual"} · IVA incluido
+                        Anual · IVA incluido
                         {sub.cancel_at_period_end && " · Cancela al vencer"}
                       </p>
                     </div>
@@ -240,7 +282,6 @@ export default function CreditosPage() {
                       {sub.estado}
                     </span>
                   </div>
-
                   {sub.period_end && (
                     <div className="bg-gray-800 rounded-lg px-4 py-3 mb-4 flex justify-between text-sm">
                       <span className="text-gray-500">
@@ -248,13 +289,10 @@ export default function CreditosPage() {
                       </span>
                       <span className="text-white font-medium">
                         {new Date(sub.period_end).toLocaleDateString("es-EC")}
-                        <span className="text-gray-500 ml-2 text-xs">
-                          ({sub.dias_restantes} días)
-                        </span>
+                        <span className="text-gray-500 ml-2 text-xs">({sub.dias_restantes} días)</span>
                       </span>
                     </div>
                   )}
-
                   <div className="flex gap-2 flex-wrap">
                     <button onClick={abrirPortal} disabled={abriendo}
                       className="flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm font-medium transition-colors">
@@ -277,105 +315,84 @@ export default function CreditosPage() {
                 </div>
               )}
 
-              {/* Planes disponibles */}
+              {/* Card Plan Pro */}
               {(!sub?.activa || sub?.cancel_at_period_end) && (
-                <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
-                  <h2 className="text-sm font-semibold text-white mb-1">Planes disponibles</h2>
-                  <p className="text-xs text-gray-500 mb-4">IVA incluido · Cancela cuando quieras · Hasta 5 usuarios</p>
+                <div className="relative bg-gray-900 border border-indigo-500/60 rounded-xl p-6">
+                  <div className="absolute -top-3 left-5">
+                    <span className="flex items-center gap-1.5 bg-indigo-600 text-white text-xs px-3 py-1 rounded-full font-semibold shadow-lg">
+                      <Star size={11} className="fill-white" />
+                      Plan Pro · Pago único anual
+                    </span>
+                  </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {[
-                      { plan: "PROFESIONAL",  label: "Profesional",   desc: "Personas no obligadas a llevar contabilidad", mensual: 14.99, anual: 129.99, popular: false },
-                      { plan: "EMPRESARIAL", label: "Empresarial",  desc: "Personas obligadas a llevar contabilidad",    mensual: 24.99, anual: 199.99, popular: false },
-                    ].map((p) => (
-                      <div key={p.plan} className={clsx(
-                        "relative border rounded-xl p-5 space-y-3",
-                        p.popular ? "border-indigo-500 bg-indigo-500/5" : "border-gray-700"
-                      )}>
-                        {p.popular && (
-                          <span className="absolute -top-2.5 left-4 bg-indigo-600 text-white text-xs px-2.5 py-0.5 rounded-full font-semibold">
-                            Recomendado
-                          </span>
-                        )}
-                        <div>
-                          <h3 className="text-base font-bold text-white">{p.label}</h3>
-                          <p className="text-xs text-gray-500">{p.desc}</p>
-                        </div>
+                  <div className="mt-3 mb-5">
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-4xl font-extrabold text-white">${PRECIO_PRO_ANUAL.toFixed(2)}</span>
+                      <span className="text-gray-400 text-sm">+ IVA / año</span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      ${PRECIO_CON_IVA} IVA incluido · equivale a ${(PRECIO_CON_IVA / 12).toFixed(2)}/mes
+                    </p>
+                  </div>
 
-                        {/* Mensual */}
-                        <div className="bg-gray-800/60 rounded-lg p-3">
-                          <div className="flex items-baseline justify-between mb-2">
-                            <span className="text-xl font-bold text-white">${p.mensual}<span className="text-xs text-gray-500 font-normal ml-1">/mes</span></span>
-                            <span className="text-xs text-emerald-400/70 font-medium">IVA incluido</span>
-                          </div>
-                          <button onClick={() => iniciarCheckoutSub(p.plan, "MENSUAL")}
-                            disabled={!!pagando || !enProduccion}
-                            className="w-full py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-semibold transition-colors flex items-center justify-center gap-1.5">
-                            {pagando === `${p.plan}_MENSUAL` ? <Loader2 size={12} className="animate-spin" /> : null}
-                            Suscribir mensual
-                          </button>
-                        </div>
-
-                        {/* Anual */}
-                        <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-lg p-3">
-                          <div className="flex items-baseline justify-between mb-1">
-                            <span className="text-xl font-bold text-white">${p.anual}<span className="text-xs text-gray-500 font-normal ml-1">/año</span></span>
-                            <span className="text-xs text-emerald-400 font-medium">
-                              Ahorra ${((p.mensual * 12) - p.anual).toFixed(0)}
-                            </span>
-                          </div>
-                          <p className="text-xs text-gray-500 mb-2">${(p.anual / 12).toFixed(2)}/mes · IVA incluido</p>
-                          <button onClick={() => iniciarCheckoutSub(p.plan, "ANUAL")}
-                            disabled={!!pagando || !enProduccion}
-                            className="w-full py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-semibold transition-colors flex items-center justify-center gap-1.5">
-                            {pagando === `${p.plan}_ANUAL` ? <Loader2 size={12} className="animate-spin" /> : null}
-                            Suscribir anual
-                          </button>
-                        </div>
+                  <div className="space-y-2.5 mb-6">
+                    {FEATURES.map((f, i) => (
+                      <div key={i} className="flex items-start gap-2.5">
+                        <CheckCircle2 size={14} className="text-emerald-400 shrink-0 mt-0.5" />
+                        <p className={clsx(
+                          "text-sm",
+                          f.destacado ? "text-indigo-200" : "text-gray-300"
+                        )}>
+                          {f.texto}
+                        </p>
                       </div>
                     ))}
                   </div>
+
+                  <button
+                    onClick={iniciarCheckout}
+                    disabled={!!pagando || !enProduccion}
+                    className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-bold text-sm transition-colors flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/20">
+                    {pagando === "pro"
+                      ? <Loader2 size={16} className="animate-spin" />
+                      : <CreditCard size={16} />
+                    }
+                    {pagando === "pro" ? "Redirigiendo..." : "Suscribirme ahora"}
+                  </button>
+
+                  {!enProduccion && (
+                    <p className="text-center text-xs text-gray-600 mt-2">
+                      Disponible solo en producción
+                    </p>
+                  )}
                 </div>
               )}
-
-              {/* Qué incluye */}
-              <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Todos los planes incluyen</h3>
-                <div className="space-y-2 mb-4">
-                  {[
-                    "Emisión ilimitada de facturas, liquidaciones, notas de crédito/débito y retenciones (web + API 200/mes)",
-                    "Registro y clasificación fiscal de documentos recibidos",
-                    "Proformas comerciales con descarga en PDF",
-                    "Cuentas por cobrar y cuentas por pagar",
-                    "Reportes de IVA y Renta para declaraciones",
-                    "Hasta 5 usuarios por empresa",
-                    "Soporte por WhatsApp",
-                  ].map((item, i) => (
-                    <div key={i} className="flex items-start gap-2">
-                      <CheckCircle2 size={13} className="text-emerald-400 shrink-0 mt-0.5" />
-                      <p className="text-xs text-gray-400">{item}</p>
-                    </div>
-                  ))}
-                </div>
-                <div className="border-t border-gray-800 pt-3">
-                  <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                    Solo plan Empresarial
-                  </h3>
-                  <div className="flex items-start gap-2">
-                    <CheckCircle2 size={13} className="text-indigo-400 shrink-0 mt-0.5" />
-                    <p className="text-xs text-gray-400">
-                      Reporte ATS (Anexo Transaccional Simplificado) para empresas obligadas a presentarlo al SRI
-                    </p>
-                  </div>
-                </div>
-              </div>
             </div>
           )}
 
-          {/* ── Tab: Créditos API ──────────────────────────────────────────── */}
+          {/* ── Tab: Créditos ──────────────────────────────────────────────── */}
           {tab === "creditos" && (
             <div className="space-y-4">
-              {/* Balance actual */}
+
+              {/* Banner Pro — recordatorio en tab créditos */}
+              {esFree && (
+                <button
+                  onClick={() => setTab("suscripcion")}
+                  className="w-full flex items-center justify-between gap-3 bg-indigo-500/10 border border-indigo-500/20 rounded-xl px-4 py-3 text-left hover:bg-indigo-500/15 transition-colors group">
+                  <div className="flex items-start gap-3">
+                    <Star size={15} className="text-indigo-400 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm text-indigo-300 font-medium">¿Emites frecuentemente?</p>
+                      <p className="text-xs text-indigo-300/70 mt-0.5">
+                        Con Plan Pro a ${PRECIO_PRO_ANUAL}/año + IVA tienes emisión ilimitada sin comprar créditos.
+                      </p>
+                    </div>
+                  </div>
+                  <ArrowRight size={15} className="text-indigo-400 shrink-0 group-hover:translate-x-0.5 transition-transform" />
+                </button>
+              )}
+
+              {/* Balance */}
               <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
                 <div className="flex items-center justify-between">
                   <div>
@@ -388,16 +405,16 @@ export default function CreditosPage() {
                   </div>
                 </div>
                 <div className="mt-4 pt-4 border-t border-gray-800 text-xs text-gray-500 space-y-1">
-                  <p>· 1 crédito = 1 comprobante emitido</p>
+                  <p>· 1 crédito = 1 comprobante emitido (FAC, LIQ, NCR, NDB, RET)</p>
                   <p>· No vencen nunca</p>
-                  <p>· Compatibles con suscripción activa</p>
+                  <p>· {esFree ? "Son tu único acceso para emitir en Plan Free" : "Complementan tu suscripción Pro activa"}</p>
                 </div>
               </div>
 
               {/* Planes de créditos */}
               <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
                 <h2 className="text-sm font-semibold text-white mb-1">Comprar créditos</h2>
-                <p className="text-xs text-gray-500 mb-4">Pago único · Sin suscripción · No vencen · IVA incluido</p>
+                <p className="text-xs text-gray-500 mb-4">Pago único · No vencen · IVA incluido</p>
 
                 {planes.length === 0 ? (
                   <p className="text-sm text-gray-500 text-center py-4">No hay planes disponibles.</p>
@@ -454,9 +471,7 @@ export default function CreditosPage() {
                         <div className="flex items-center gap-3">
                           <div className={clsx(
                             "w-8 h-8 rounded-lg flex items-center justify-center shrink-0",
-                            t.tipo === "BONO" || t.tipo === "RECARGA"
-                              ? "bg-emerald-400/10"
-                              : "bg-red-400/10"
+                            t.tipo === "BONO" || t.tipo === "RECARGA" ? "bg-emerald-400/10" : "bg-red-400/10"
                           )}>
                             {t.tipo === "BONO" || t.tipo === "RECARGA"
                               ? <Zap size={14} className="text-emerald-400" />
@@ -473,10 +488,7 @@ export default function CreditosPage() {
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className={clsx(
-                            "text-sm font-bold",
-                            t.cantidad > 0 ? "text-emerald-400" : "text-red-400"
-                          )}>
+                          <p className={clsx("text-sm font-bold", t.cantidad > 0 ? "text-emerald-400" : "text-red-400")}>
                             {t.cantidad > 0 ? "+" : ""}{t.cantidad}
                           </p>
                           {t.precio_total > 0 && (
@@ -488,15 +500,6 @@ export default function CreditosPage() {
                   </div>
                 </div>
               )}
-
-              {/* Info */}
-              <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 text-xs text-gray-500 space-y-1.5">
-                <p className="font-semibold text-gray-400 mb-2">¿Para qué sirven los créditos?</p>
-                <p>· Para emitir comprobantes desde el panel o vía API REST</p>
-                <p>· Cada comprobante emitido (FAC, LIQ, NCR, NDB, RET) consume 1 crédito</p>
-                <p>· Con suscripción activa, los créditos son adicionales</p>
-                <p>· Sin suscripción, los créditos son tu acceso para emitir</p>
-              </div>
             </div>
           )}
         </>

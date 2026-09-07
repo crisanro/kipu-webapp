@@ -9,18 +9,19 @@ interface Suscripcion {
 }
 
 interface Empresa {
-  id:                 number;
-  ruc:                string;
-  razon_social:       string;
-  nombre_comercial:   string;
-  ambiente:           number;
-  rol:                string;
-  tipo_emisor:        string;
-  firma_ok:           boolean;
-  suscripcion_activa: boolean;
-  suscripcion:        Suscripcion;
-  balance_api:        number;
-  permisos:           Record<string, boolean>; 
+  id:                     number;
+  ruc:                    string;
+  razon_social:           string;
+  nombre_comercial:       string;
+  ambiente:               number;
+  rol:                    string;
+  tipo_emisor:            string;
+  firma_ok:               boolean;
+  suscripcion_activa:     boolean;
+  suscripcion:            Suscripcion;
+  balance_api:            number;
+  permisos:               Record<string, boolean>;
+  obligado_contabilidad:  string | null;  // "SI" | "NO" | null
 }
 
 interface AuthState {

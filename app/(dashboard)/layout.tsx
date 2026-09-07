@@ -30,7 +30,6 @@ const WHATSAPP_NUMBER = "593960585581";
 
 function SoporteWhatsApp({ empresa }: { empresa: any }) {
   const [showQR, setShowQR] = useState(false);
-
   const mensaje = encodeURIComponent(
     `Hola, necesito soporte con Kipu.\nMi correo es: ${empresa?.email ?? ""}\nMi RUC es: ${empresa?.ruc ?? ""}`
   );
@@ -47,7 +46,6 @@ function SoporteWhatsApp({ empresa }: { empresa: any }) {
         <MessageCircle size={16} />
         Soporte
       </button>
-
       {/* Mobile — link directo */}
       <a
         href={waUrl}
@@ -58,7 +56,6 @@ function SoporteWhatsApp({ empresa }: { empresa: any }) {
         <MessageCircle size={16} />
         Soporte WhatsApp
       </a>
-
       {/* QR Popup — solo desktop */}
       {showQR && (
         <>
@@ -73,11 +70,7 @@ function SoporteWhatsApp({ empresa }: { empresa: any }) {
             <p className="text-xs text-gray-400 mb-3 text-center">
               Escanea para chatear por WhatsApp
             </p>
-            <img
-              src={qrUrl}
-              alt="QR Soporte WhatsApp"
-              className="w-full rounded-lg"
-            />
+            <img src={qrUrl} alt="QR Soporte WhatsApp" className="w-full rounded-lg" />
             <a
               href={waUrl}
               target="_blank"
@@ -114,11 +107,11 @@ const NAV_GROUPS = [
     base:     "/documentos/emitir",
     permiso:  "emitir",
     children: [
-      { href: "/documentos/emitir/fac", label: "Factura",           icon: FileText },
-      { href: "/documentos/emitir/liq", label: "Liquidación",       icon: FileText },
-      { href: "/documentos/emitir/ncr", label: "Nota de crédito",   icon: FileText },
-      { href: "/documentos/emitir/ndb", label: "Nota de débito",    icon: FileText },
-      { href: "/documentos/emitir/ret", label: "Retención",          icon: FileText },
+      { href: "/documentos/emitir/fac", label: "Factura",         icon: FileText },
+      { href: "/documentos/emitir/liq", label: "Liquidación",     icon: FileText },
+      { href: "/documentos/emitir/ncr", label: "Nota de crédito", icon: FileText },
+      { href: "/documentos/emitir/ndb", label: "Nota de débito",  icon: FileText },
+      { href: "/documentos/emitir/ret", label: "Retención",       icon: FileText },
     ],
   },
   {
@@ -127,7 +120,7 @@ const NAV_GROUPS = [
     base:     "/documentos",
     permiso:  "descargar",
     children: [
-      { href: "/documentos",            label: "Emitidos",  icon: FileText,  permiso: "descargar"             },
+      { href: "/documentos",           label: "Emitidos",  icon: FileText,  permiso: "descargar"            },
       { href: "/documentos/recibidos", label: "Recibidos", icon: FileInput, permiso: "documentos_recibidos" },
     ],
   },
@@ -141,25 +134,24 @@ const NAV_GROUPS = [
   {
     separator: true,
     items: [
-      { href: "/estructura",     label: "Estructura",     icon: Building2, permiso: "configuracion" },
-      { href: "/planes",         label: "Planes",         icon: CreditCard, permiso: null            },
-      { href: "/reportes",       label: "Reportes",       icon: BarChart3,  permiso: "reportes"      },
-      { href: "/usuarios",       label: "Usuarios",       icon: UserCog,    permiso: "usuarios"      },
-      { href: "/api-keys",       label: "API Keys",       icon: Key,        permiso: "api_keys"      },
-      { href: "/configuracion", label: "Configuración", icon: Settings,   permiso: "configuracion"},
+      { href: "/estructura",    label: "Estructura",    icon: Building2,  permiso: "configuracion" },
+      { href: "/planes",        label: "Planes",        icon: CreditCard, permiso: null            },
+      { href: "/reportes",      label: "Reportes",      icon: BarChart3,  permiso: "reportes"      },
+      { href: "/usuarios",      label: "Usuarios",      icon: UserCog,    permiso: "usuarios"      },
+      { href: "/api-keys",      label: "API Keys",      icon: Key,        permiso: "api_keys"      },
+      { href: "/configuracion", label: "Configuración", icon: Settings,   permiso: "configuracion" },
     ]
   },
 ];
 
-// Helper para verificar permisos
 function tienePermiso(empresa: any, permiso: string | null): boolean {
-  if (!permiso) return true;                         // sin restricción
-  if (empresa?.rol === "admin") return true;          // admin ve todo
+  if (!permiso) return true;
+  if (empresa?.rol === "admin") return true;
   return empresa?.permisos?.[permiso] === true;
 }
 
 // =============================================================================
-// MODALES — sin cambios
+// MODALES
 // =============================================================================
 function ModalLogout({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
   return (
@@ -190,7 +182,7 @@ function ModalLogout({ onConfirm, onCancel }: { onConfirm: () => void; onCancel:
 }
 
 function SelectorEmpresa({ onClose }: { onClose: () => void }) {
-  const router  = useRouter();
+  const router = useRouter();
   const { empresas, empresa, setEmpresa } = useAuthStore();
   const [cambiando, setCambiando] = useState<number | null>(null);
 
@@ -201,19 +193,23 @@ function SelectorEmpresa({ onClose }: { onClose: () => void }) {
       const res  = await api.post("/api/v1/app/usuarios/empresas/cambiar", { emisor_id: e.id });
       const data = res.data.data;
       setEmpresa({
-        id:                 e.id,
-        ruc:                data.ruc,
-        razon_social:       data.razon_social,
-        nombre_comercial:   e.nombre_comercial,
-        ambiente:           data.ambiente,
-        tipo_emisor:        data.tipo_emisor,
-        rol:                data.rol,
-        permisos:           data.permisos,
-        firma_ok:           e.firma_ok,
-        suscripcion_activa: data.suscripcion_activa,
-        suscripcion:        data.suscripcion,
-        balance_api:        data.balance_api,
+        id:                    e.id,
+        ruc:                   data.ruc,
+        razon_social:          data.razon_social,
+        nombre_comercial:      e.nombre_comercial,
+        ambiente:              data.ambiente,
+        tipo_emisor:           data.tipo_emisor,
+        rol:                   data.rol,
+        permisos:              data.permisos,
+        firma_ok:              e.firma_ok,
+        suscripcion_activa:    data.suscripcion_activa,
+        suscripcion:           data.suscripcion,
+        balance_api:           data.balance_api,
+        obligado_contabilidad: data.obligado_contabilidad ?? null,
       });
+      localStorage.setItem("kipu-ext-emisor", String(e.id));
+      localStorage.setItem("kipu-ext-ruc",    data.ruc);
+      localStorage.setItem("kipu-ext-razon",  data.razon_social);
       sessionStorage.clear();
       onClose();
       window.location.href = "/dashboard";
@@ -300,16 +296,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { empresa, empresas, role, logout } = useAuthStore();
   const { activo: sandbox, setSandbox } = useSandboxStore();
 
-  const [sidebarOpen,      setSidebarOpen]      = useState(false);
+  const [sidebarOpen,     setSidebarOpen]     = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showSelectorEmp, setShowSelectorEmp] = useState(false);
   const [drawerOpen,      setDrawerOpen]      = useState(false);
   const [emailVerificado, setEmailVerificado] = useState(true);
 
-  const firmaOk          = empresa?.firma_ok ?? false;
+  const firmaOk         = empresa?.firma_ok ?? false;
   const puedeProduccion = firmaOk && empresa?.ambiente === 2;
 
-  // Verificar email al montar
   useEffect(() => {
     const user = auth.currentUser;
     if (user) setEmailVerificado(user.emailVerified);
@@ -384,6 +379,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const ambienteColor = empresa.ambiente === 2 ? "text-emerald-400" : "text-amber-400";
   const ambienteLabel = empresa.ambiente === 2 ? "Producción" : "Pruebas";
 
+  // ── Helpers plan ──────────────────────────────────────────────────────────
+  const planLabel  = empresa.suscripcion_activa ? (empresa.suscripcion?.plan ?? "Pro") : "Free";
+  const sinCreditos = !empresa.suscripcion_activa && (empresa.balance_api ?? 0) === 0;
+
   return (
     <div className="flex h-screen overflow-hidden">
       {showLogoutModal && (
@@ -401,6 +400,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         onMarcarLeida={marcarLeida}
         onMarcarTodas={marcarTodasLeidas}
       />
+
       {sidebarOpen && (
         <div className="fixed inset-0 bg-black/60 z-20 lg:hidden"
           onClick={() => setSidebarOpen(false)} />
@@ -448,13 +448,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
         </button>
 
-        {/* Nav con permisos */}
+        {/* Nav */}
         <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
           {NAV_GROUPS.map((group, gi) => (
             <div key={gi}>
               {group.separator && <div className="border-t border-gray-800 my-2" />}
               {"children" in group && group.children ? (
-                // Grupos colapsables — mostrar solo si tiene permiso del grupo
                 tienePermiso(empresa, group.permiso ?? null) && (
                   <div>
                     <button
@@ -522,7 +521,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               )}
             </div>
           ))}
-
           {role === "superadmin" && (
             <>
               <div className="border-t border-gray-800 my-2" />
@@ -543,29 +541,43 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* Footer */}
         <div className="px-4 py-4 border-t border-gray-800 space-y-3">
+
+          {/* Plan activo */}
           <Link href="/planes"
             className="block bg-gray-800 hover:bg-gray-700 rounded-lg px-3 py-2.5 transition-colors">
             <p className="text-xs text-gray-500 mb-1">Plan activo</p>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-bold text-white">{empresa.suscripcion?.plan ?? "—"}</p>
+                <p className="text-sm font-bold text-white">{planLabel}</p>
                 <p className="text-xs text-gray-500">
                   {empresa.suscripcion?.estado === "TRIAL"
                     ? "⏳ En prueba"
-                    : empresa.suscripcion_activa ? "✅ Activo" : "❌ Inactivo"}
+                    : empresa.suscripcion_activa
+                      ? "✅ Activo"
+                      : "🆓 Emitiendo con créditos"}
                 </p>
               </div>
-              {empresa.balance_api > 0 && (
+              {empresa.suscripcion_activa && empresa.balance_api > 0 && (
                 <div className="text-right">
-                  <p className="text-xs text-gray-500">Créditos emisión</p>
+                  <p className="text-xs text-gray-500">Créditos</p>
                   <p className="text-sm font-bold text-amber-400">{empresa.balance_api}</p>
                 </div>
               )}
             </div>
-            {!empresa.suscripcion_activa && (
+            {/* Sin créditos Y sin suscripción — ahí sí es urgente */}
+            {sinCreditos && (
               <div className="flex items-center gap-1 mt-1.5">
                 <AlertTriangle size={11} className="text-red-400" />
-                <span className="text-xs text-red-400">Sin suscripción activa</span>
+                <span className="text-xs text-red-400">Sin créditos — activa tu plan</span>
+              </div>
+            )}
+            {/* Tiene créditos pero sin suscripción — info neutral */}
+            {!empresa.suscripcion_activa && !sinCreditos && (
+              <div className="flex items-center gap-1 mt-1.5">
+                <Zap size={11} className="text-yellow-400" />
+                <span className="text-xs text-yellow-400">
+                  {empresa.balance_api} crédito{empresa.balance_api !== 1 ? "s" : ""} disponible{empresa.balance_api !== 1 ? "s" : ""}
+                </span>
               </div>
             )}
           </Link>
@@ -609,7 +621,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
           )}
 
-          {/* Soporte WhatsApp */}
           <SoporteWhatsApp empresa={empresa} />
 
           <button onClick={() => setShowLogoutModal(true)}
@@ -617,7 +628,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <LogOut size={16} />
             Cerrar sesión
           </button>
-
         </div>
       </aside>
 
@@ -667,6 +677,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {children}
         </main>
       </div>
+
       <PWAInstallBanner />
     </div>
   );

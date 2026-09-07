@@ -1,4 +1,3 @@
-// app/providers.tsx
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
@@ -9,7 +8,7 @@ import { SWRProvider } from "@/lib/swrConfig";
 import api from "@/lib/api";
 
 async function cargarEmpresas(token: string) {
-  const res  = await api.get("/api/v1/app/usuarios/empresas", {
+  const res = await api.get("/api/v1/app/usuarios/empresas", {
     headers: { Authorization: `Bearer ${token}` },
   });
   return {
@@ -33,6 +32,9 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
         setListoLocal(true);
         setListo(true);
         localStorage.removeItem("kipu-ext-token");
+        localStorage.removeItem("kipu-ext-emisor");
+        localStorage.removeItem("kipu-ext-ruc");
+        localStorage.removeItem("kipu-ext-razon");
         if (refreshInterval) clearInterval(refreshInterval);
         const rutasProtegidas = ["/dashboard", "/documentos", "/personas",
                                  "/productos", "/configuracion", "/estructura",
@@ -61,8 +63,8 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
           setListo(true);
           return;
         }
-        inicializado.current = true;
 
+        inicializado.current = true;
         const data = await cargarEmpresas(token);
 
         if (data.empresas.length === 0) {
@@ -75,28 +77,36 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
         setUser(user.uid, user.email ?? "", "", data.role);
         setEmpresas(data.empresas);
 
-        // Siempre actualizar la empresa activa con datos frescos del backend
         const empresaActual = empresa
           ? data.empresas.find((e: any) => e.id === empresa.id) ?? data.empresas[0]
           : data.empresas[0];
 
         setEmpresa({
-          id:                 empresaActual.id,
-          ruc:                empresaActual.ruc,
-          razon_social:       empresaActual.razon_social,
-          nombre_comercial:   empresaActual.nombre_comercial,
-          ambiente:           empresaActual.ambiente,
-          tipo_emisor:        empresaActual.tipo_emisor,
-          rol:                empresaActual.rol,
-          permisos:           empresaActual.permisos ?? {},
-          firma_ok:           empresaActual.firma_ok,
-          suscripcion_activa: empresaActual.suscripcion_activa,
-          suscripcion:        empresaActual.suscripcion,
-          balance_api:        empresaActual.balance_api,
+          id:                    empresaActual.id,
+          ruc:                   empresaActual.ruc,
+          razon_social:          empresaActual.razon_social,
+          nombre_comercial:      empresaActual.nombre_comercial,
+          ambiente:              empresaActual.ambiente,
+          tipo_emisor:           empresaActual.tipo_emisor,
+          rol:                   empresaActual.rol,
+          permisos:              empresaActual.permisos ?? {},
+          firma_ok:              empresaActual.firma_ok,
+          suscripcion_activa:    empresaActual.suscripcion_activa,
+          suscripcion:           empresaActual.suscripcion,
+          balance_api:           empresaActual.balance_api,
+          obligado_contabilidad: empresaActual.obligado_contabilidad ?? null,
         });
+
+        localStorage.setItem("kipu-ext-emisor", String(empresaActual.id));
+        localStorage.setItem("kipu-ext-ruc",    empresaActual.ruc);
+        localStorage.setItem("kipu-ext-razon",  empresaActual.razon_social);
+
       } catch (error) {
         console.error("[Auth] Error:", error);
         localStorage.removeItem("kipu-ext-token");
+        localStorage.removeItem("kipu-ext-emisor");
+        localStorage.removeItem("kipu-ext-ruc");
+        localStorage.removeItem("kipu-ext-razon");
         router.replace("/login");
       } finally {
         setListoLocal(true);
