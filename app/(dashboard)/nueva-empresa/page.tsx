@@ -83,6 +83,7 @@ export default function NuevaEmpresaPage() {
           activa: true,
         },
         balance_api:        0,
+        obligado_contabilidad: null,
       };
       addEmpresa(nuevaEmpresa);
       setSuccess(true);
