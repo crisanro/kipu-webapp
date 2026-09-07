@@ -1,3 +1,4 @@
+// app/(dashboard)/cuentas/[id]/page.tsx
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -9,6 +10,7 @@ import {
   ArrowLeft, Loader2, Plus, X, Save, Ban,
   TrendingUp, TrendingDown, CheckCircle2, Clock,
   AlertTriangle, Wallet, User, Calendar, FileText,
+  ArrowUpCircle, ArrowDownCircle,
 } from "lucide-react";
 import { clsx } from "clsx";
 
@@ -25,25 +27,32 @@ const ESTADO_CONFIG = {
 const FORMAS_PAGO = ["EFECTIVO", "TRANSFERENCIA", "CHEQUE", "TARJETA", "OTRO"];
 
 export default function DetalleCuentaPage() {
-  const { id }  = useParams();
-  const router  = useRouter();
-
+  const { id }   = useParams();
+  const router   = useRouter();
   const empresa  = useAuthStore((s) => s.empresa);
   const tieneSub = empresa?.suscripcion_activa ?? false;
 
-  const [data,         setData]         = useState<any>(null);
-  const [loading,      setLoading]      = useState(true);
-  const [showAbono,    setShowAbono]    = useState(false);
-  const [showAnular,   setShowAnular]   = useState(false);
-  const [savingAbono,  setSavingAbono]  = useState(false);
-  const [savingAnular, setSavingAnular] = useState(false);
-  const [error,        setError]        = useState("");
+  const [data,          setData]          = useState<any>(null);
+  const [loading,       setLoading]       = useState(true);
+  const [showAbono,     setShowAbono]     = useState(false);
+  const [showAjuste,    setShowAjuste]    = useState(false);
+  const [showAnular,    setShowAnular]    = useState(false);
+  const [savingAbono,   setSavingAbono]   = useState(false);
+  const [savingAjuste,  setSavingAjuste]  = useState(false);
+  const [savingAnular,  setSavingAnular]  = useState(false);
+  const [error,         setError]         = useState("");
 
   const [abonoForm, setAbonoForm] = useState({
     monto:      "",
     fecha:      hoyEC(),
     forma_pago: "EFECTIVO",
     notas:      "",
+  });
+
+  const [ajusteForm, setAjusteForm] = useState({
+    monto:  "",
+    motivo: "",
+    fecha:  hoyEC(),
   });
 
   const cargar = useCallback(async () => {
@@ -64,7 +73,6 @@ export default function DetalleCuentaPage() {
     setError("");
     const monto = parseFloat(abonoForm.monto);
     if (!monto || monto <= 0) return setError("El monto debe ser mayor a cero.");
-
     setSavingAbono(true);
     try {
       await api.post(`/api/v1/app/cuentas/${id}/abonos`, {
@@ -80,6 +88,28 @@ export default function DetalleCuentaPage() {
       setError(err?.response?.data?.detail ?? "Error al registrar el abono.");
     } finally {
       setSavingAbono(false);
+    }
+  };
+
+  const handleAjuste = async () => {
+    setError("");
+    const monto = parseFloat(ajusteForm.monto);
+    if (!monto || monto <= 0) return setError("El monto del ajuste debe ser mayor a cero.");
+    if (!ajusteForm.motivo.trim()) return setError("El motivo es obligatorio para un ajuste.");
+    setSavingAjuste(true);
+    try {
+      await api.post(`/api/v1/app/cuentas/${id}/ajustes`, {
+        monto,
+        motivo: ajusteForm.motivo.trim(),
+        fecha:  ajusteForm.fecha || null,
+      });
+      await cargar();
+      setShowAjuste(false);
+      setAjusteForm({ monto: "", motivo: "", fecha: hoyEC() });
+    } catch (err: any) {
+      setError(err?.response?.data?.detail ?? "Error al registrar el ajuste.");
+    } finally {
+      setSavingAjuste(false);
     }
   };
 
@@ -102,7 +132,6 @@ export default function DetalleCuentaPage() {
       <Loader2 size={24} className="animate-spin text-indigo-400" />
     </div>
   );
-
   if (!data) return (
     <div className="p-6 text-center">
       <Wallet size={40} className="text-gray-700 mx-auto mb-3" />
@@ -111,17 +140,17 @@ export default function DetalleCuentaPage() {
     </div>
   );
 
-  const { cuenta, abonos } = data;
-  const est    = ESTADO_CONFIG[cuenta.estado as keyof typeof ESTADO_CONFIG] ?? ESTADO_CONFIG.PENDIENTE;
-  const Icon   = est.icon;
-  const activa = cuenta.estado === "PENDIENTE" || cuenta.estado === "PARCIAL";
+  const { cuenta, movimientos = [] } = data;
+  const est        = ESTADO_CONFIG[cuenta.estado as keyof typeof ESTADO_CONFIG] ?? ESTADO_CONFIG.PENDIENTE;
+  const EstIcon    = est.icon;
+  const activa     = cuenta.estado === "PENDIENTE" || cuenta.estado === "PARCIAL";
   const porcentaje = cuenta.monto_total > 0
     ? Math.min(100, (cuenta.monto_pagado / cuenta.monto_total) * 100)
     : 0;
-
   const vencida = cuenta.fecha_vencimiento &&
     new Date(cuenta.fecha_vencimiento) < new Date() && activa;
 
+  // ── Render ────────────────────────────────────────────────────────────────────
   return (
     <div className="p-4 md:p-6 max-w-2xl mx-auto space-y-4">
 
@@ -135,7 +164,7 @@ export default function DetalleCuentaPage() {
         </button>
         <div className="flex-1 min-w-0">
           <h1 className="text-xl font-bold text-white truncate">{cuenta.concepto}</h1>
-          <div className="flex items-center gap-2 mt-0.5">
+          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
             <span className={clsx(
               "text-xs px-2 py-0.5 rounded-full font-medium",
               cuenta.tipo === "COBRAR"
@@ -145,7 +174,7 @@ export default function DetalleCuentaPage() {
               {cuenta.tipo === "COBRAR" ? "Por cobrar" : "Por pagar"}
             </span>
             <span className={clsx("text-xs px-2 py-0.5 rounded-full flex items-center gap-1", est.color)}>
-              <Icon size={10} />
+              <EstIcon size={10} />
               {est.label}
             </span>
             {vencida && (
@@ -160,10 +189,11 @@ export default function DetalleCuentaPage() {
 
       {/* Tarjeta principal */}
       <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+
         {/* Montos */}
         <div className="grid grid-cols-3 gap-4 mb-4">
           <div>
-            <p className="text-xs text-gray-500 mb-1">Total</p>
+            <p className="text-xs text-gray-500 mb-1">Total actual</p>
             <p className="text-lg font-bold text-white">{fmt(cuenta.monto_total)}</p>
           </div>
           <div>
@@ -234,8 +264,15 @@ export default function DetalleCuentaPage() {
               onClick={() => { setShowAbono(true); setError(""); }}
               className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors"
             >
-              <Plus size={14} />
+              <ArrowDownCircle size={14} />
               Registrar abono
+            </button>
+            <button
+              onClick={() => { setShowAjuste(true); setError(""); }}
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-amber-400 text-sm font-medium transition-colors border border-amber-500/20"
+            >
+              <ArrowUpCircle size={14} />
+              Ajustar monto
             </button>
             <button
               onClick={() => setShowAnular(true)}
@@ -245,56 +282,95 @@ export default function DetalleCuentaPage() {
             </button>
           </div>
         )}
+
         {activa && !tieneSub && (
           <div className="mt-5 pt-4 border-t border-gray-800">
             <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20">
               <AlertTriangle size={13} className="text-amber-400 shrink-0" />
-              <p className="text-xs text-amber-300">Requiere suscripción activa para registrar abonos.</p>
+              <p className="text-xs text-amber-300">Requiere suscripción activa para registrar movimientos.</p>
               <Link href="/planes" className="ml-auto text-xs text-amber-400 underline shrink-0">Ver planes</Link>
             </div>
           </div>
         )}
       </div>
 
-      {/* Historial de abonos */}
+      {/* Historial de movimientos (abonos + ajustes unificados) */}
       <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
-        <div className="px-4 py-3 border-b border-gray-800">
+        <div className="px-4 py-3 border-b border-gray-800 flex items-center justify-between">
           <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-            Abonos ({abonos.length})
+            Movimientos ({movimientos.length})
           </h2>
+          {movimientos.length > 0 && (
+            <div className="flex items-center gap-3 text-xs text-gray-600">
+              <span className="flex items-center gap-1">
+                <ArrowDownCircle size={11} className="text-emerald-400" /> Abono
+              </span>
+              <span className="flex items-center gap-1">
+                <ArrowUpCircle size={11} className="text-amber-400" /> Ajuste
+              </span>
+            </div>
+          )}
         </div>
-        {abonos.length === 0 ? (
+
+        {movimientos.length === 0 ? (
           <div className="px-4 py-8 text-center">
-            <p className="text-xs text-gray-600">Sin abonos registrados.</p>
+            <p className="text-xs text-gray-600">Sin movimientos registrados.</p>
           </div>
         ) : (
           <div className="divide-y divide-gray-800">
-            {abonos.map((a: any, i: number) => (
-              <div key={a.id} className="flex items-center gap-3 px-4 py-3">
-                <div className="w-7 h-7 rounded-full bg-emerald-400/10 flex items-center justify-center shrink-0">
-                  <CheckCircle2 size={13} className="text-emerald-400" />
+            {movimientos.map((m: any, i: number) => {
+              const esAjuste = m.tipo === "AJUSTE";
+              return (
+                <div key={m.id} className="flex items-center gap-3 px-4 py-3">
+                  <div className={clsx(
+                    "w-7 h-7 rounded-full flex items-center justify-center shrink-0",
+                    esAjuste ? "bg-amber-400/10" : "bg-emerald-400/10"
+                  )}>
+                    {esAjuste
+                      ? <ArrowUpCircle size={13} className="text-amber-400" />
+                      : <ArrowDownCircle size={13} className="text-emerald-400" />
+                    }
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className={clsx(
+                        "text-sm font-medium",
+                        esAjuste ? "text-amber-400" : "text-emerald-400"
+                      )}>
+                        {esAjuste ? "+" : "-"}{fmt(m.monto)}
+                      </p>
+                      <span className={clsx(
+                        "text-[10px] px-1.5 py-0.5 rounded",
+                        esAjuste
+                          ? "bg-amber-500/10 text-amber-500"
+                          : "bg-emerald-500/10 text-emerald-500"
+                      )}>
+                        {esAjuste ? "ajuste" : "abono"}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      {m.fecha}
+                      {m.forma_pago && ` · ${m.forma_pago}`}
+                      {m.notas && ` · ${m.notas}`}
+                    </p>
+                  </div>
+                  <span className="text-xs text-gray-600 shrink-0">#{i + 1}</span>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-white font-medium">{fmt(a.monto)}</p>
-                  <p className="text-xs text-gray-500">
-                    {a.fecha}
-                    {a.forma_pago && ` · ${a.forma_pago}`}
-                    {a.notas && ` · ${a.notas}`}
-                  </p>
-                </div>
-                <span className="text-xs text-gray-600">#{i + 1}</span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
 
-      {/* Modal abono */}
+      {/* ── Modal abono ────────────────────────────────────────────────────────── */}
       {showAbono && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
           <div className="bg-gray-900 border border-gray-800 rounded-xl w-full max-w-sm">
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-800">
-              <h2 className="text-sm font-semibold text-white">Registrar abono</h2>
+              <div className="flex items-center gap-2">
+                <ArrowDownCircle size={15} className="text-emerald-400" />
+                <h2 className="text-sm font-semibold text-white">Registrar abono</h2>
+              </div>
               <button onClick={() => setShowAbono(false)} className="text-gray-500 hover:text-white">
                 <X size={18} />
               </button>
@@ -330,17 +406,13 @@ export default function DetalleCuentaPage() {
               </div>
               <div>
                 <label className="block text-xs text-gray-500 mb-1.5">Forma de pago</label>
-                <div className="relative">
-                  <select
-                    value={abonoForm.forma_pago}
-                    onChange={(e) => setAbonoForm({ ...abonoForm, forma_pago: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-indigo-500 text-sm appearance-none"
-                  >
-                    {FORMAS_PAGO.map((f) => (
-                      <option key={f} value={f}>{f}</option>
-                    ))}
-                  </select>
-                </div>
+                <select
+                  value={abonoForm.forma_pago}
+                  onChange={(e) => setAbonoForm({ ...abonoForm, forma_pago: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-indigo-500 text-sm appearance-none"
+                >
+                  {FORMAS_PAGO.map((f) => <option key={f} value={f}>{f}</option>)}
+                </select>
               </div>
               <div>
                 <label className="block text-xs text-gray-500 mb-1.5">Notas</label>
@@ -356,7 +428,7 @@ export default function DetalleCuentaPage() {
               )}
               <div className="flex gap-3 pt-1">
                 <button
-                  onClick={() => setShowAbono(false)}
+                  onClick={() => { setShowAbono(false); setError(""); }}
                   className="flex-1 py-2.5 rounded-lg border border-gray-700 text-gray-400 hover:text-white text-sm transition-colors"
                 >
                   Cancelar
@@ -375,7 +447,93 @@ export default function DetalleCuentaPage() {
         </div>
       )}
 
-      {/* Modal anular */}
+      {/* ── Modal ajuste ───────────────────────────────────────────────────────── */}
+      {showAjuste && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
+          <div className="bg-gray-900 border border-gray-800 rounded-xl w-full max-w-sm">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-800">
+              <div className="flex items-center gap-2">
+                <ArrowUpCircle size={15} className="text-amber-400" />
+                <h2 className="text-sm font-semibold text-white">Ajustar monto</h2>
+              </div>
+              <button onClick={() => setShowAjuste(false)} className="text-gray-500 hover:text-white">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="p-5 space-y-3">
+              <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2.5 text-xs text-amber-300">
+                Esto <span className="font-semibold">aumenta el monto total</span> de la deuda. Úsalo para intereses, cargos adicionales o un préstamo extra encima del saldo actual.
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1.5">
+                  Monto a añadir *
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">+$</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={ajusteForm.monto}
+                    onChange={(e) => setAjusteForm({ ...ajusteForm, monto: e.target.value })}
+                    placeholder="0.00"
+                    className="w-full pl-9 pr-4 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-600 focus:outline-none focus:border-amber-500 text-sm"
+                    autoFocus
+                  />
+                </div>
+                {ajusteForm.monto && parseFloat(ajusteForm.monto) > 0 && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Nuevo total: <span className="text-white font-medium">
+                      {fmt(cuenta.monto_total + parseFloat(ajusteForm.monto))}
+                    </span>
+                  </p>
+                )}
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1.5">
+                  Motivo *
+                </label>
+                <input
+                  value={ajusteForm.motivo}
+                  onChange={(e) => setAjusteForm({ ...ajusteForm, motivo: e.target.value })}
+                  placeholder="Ej: Intereses enero, Cargo adicional..."
+                  className="w-full px-3 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-600 focus:outline-none focus:border-amber-500 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1.5">Fecha</label>
+                <input
+                  type="date"
+                  value={ajusteForm.fecha}
+                  onChange={(e) => setAjusteForm({ ...ajusteForm, fecha: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-amber-500 text-sm"
+                />
+              </div>
+              {error && (
+                <p className="text-xs text-red-400 bg-red-400/10 px-3 py-2 rounded-lg">{error}</p>
+              )}
+              <div className="flex gap-3 pt-1">
+                <button
+                  onClick={() => { setShowAjuste(false); setError(""); }}
+                  className="flex-1 py-2.5 rounded-lg border border-gray-700 text-gray-400 hover:text-white text-sm transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleAjuste}
+                  disabled={savingAjuste}
+                  className="flex-1 py-2.5 rounded-lg bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                >
+                  {savingAjuste ? <Loader2 size={14} className="animate-spin" /> : <ArrowUpCircle size={14} />}
+                  Aplicar ajuste
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal anular ───────────────────────────────────────────────────────── */}
       {showAnular && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
           <div className="bg-gray-900 border border-gray-800 rounded-xl w-full max-w-sm p-5 space-y-4">
