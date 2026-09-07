@@ -16,12 +16,12 @@ import DocumentosRecibidos from "./components/DocumentosRecibidos";
 import AccesosRapidos from "./components/AccesosRapidos";
 
 interface DashboardData {
-  health?:              HealthData;
-  resumen?:             any;
-  documentos?:          any[];
+  health?: HealthData;
+  resumen?: any;
+  documentos?: any[];
   recibidos_recientes?: any[];
-  declaracion?:         any;
-  periodo?:             { desde: string; hasta: string };
+  declaracion?: any;
+  periodo?: { desde: string; hasta: string };
 }
 
 const fetcher = (url: string) => api.get(url).then((r) => r.data.data ?? r.data);
@@ -30,28 +30,34 @@ export default function DashboardPage() {
   const empresa = useAuthStore((s) => s.empresa);
   const { activo: sandbox } = useSandboxStore();
 
-  const hoyStr    = new Date().toLocaleDateString("en-CA", { timeZone: "America/Guayaquil" });
+  const hoyStr = new Date().toLocaleDateString("en-CA", { timeZone: "America/Guayaquil" });
   const [anio, mes] = hoyStr.split("-");
   const primerDia = `${anio}-${mes}-01`;
 
-  const { data, isLoading, mutate } = useSWR<DashboardData>(
+  const { data, isLoading, error, mutate } = useSWR<DashboardData>(
     `/api/v1/app/dashboard?fecha_inicio=${primerDia}&fecha_fin=${hoyStr}&sandbox=${sandbox}`,
     fetcher,
     {
-      revalidateOnFocus:     false,
+      revalidateOnFocus: false,
       revalidateOnReconnect: true,
-      revalidateOnMount:     true,
-      dedupingInterval:      5000,
+      revalidateOnMount: true,
+      dedupingInterval: 5000,
+      errorRetryCount: 2,
+      errorRetryInterval: 3000,
+      onErrorRetry: (err, _key, _cfg, revalidate, { retryCount }) => {
+        if (retryCount >= 2) return;
+        setTimeout(() => revalidate({ retryCount }), 3000);
+      },
     }
   );
 
   useEffect(() => {
     mutate();
-  }, [sandbox]);
+  }, [sandbox, mutate]);
 
-  const nombre       = empresa?.nombre_comercial || empresa?.razon_social || "tu empresa";
+  const nombre = empresa?.nombre_comercial || empresa?.razon_social || "tu empresa";
   const esProduccion = empresa?.ambiente === 2;
-  const declaracion  = data?.declaracion;
+  const declaracion = data?.declaracion;
 
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-6xl mx-auto">
@@ -124,6 +130,17 @@ export default function DashboardPage() {
       {isLoading ? (
         <div className="flex items-center justify-center py-20">
           <Loader2 size={28} className="animate-spin text-indigo-400" />
+        </div>
+      ) : error ? (
+        <div className="flex flex-col items-center justify-center py-20 gap-3">
+          <AlertTriangle size={28} className="text-red-400" />
+          <p className="text-sm text-gray-400">Error al cargar el dashboard.</p>
+          <button
+            onClick={() => mutate()}
+            className="text-xs text-indigo-400 underline hover:text-indigo-300"
+          >
+            Reintentar
+          </button>
         </div>
       ) : (
         <div className="space-y-6">
