@@ -65,6 +65,7 @@ export default function BienvenidaPage() {
               suscripcion_activa: e.suscripcion_activa,
               suscripcion:        e.suscripcion,
               balance_api:        e.balance_api,
+              obligado_contabilidad: e.obligado_contabilidad ?? null,
             });
           }
         } catch {}
