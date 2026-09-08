@@ -114,6 +114,24 @@ const PDF_FORMATOS = [
 ] as const;
 
 // =============================================================================
+// FUNCIONES AUXILIARES
+// =============================================================================
+function extraerMensajesSRI(mensajes_sri: any): any[] {
+  if (!mensajes_sri) return [];
+  try {
+    const comprobante = mensajes_sri?.comprobantes?.comprobante;
+    if (comprobante) {
+      const msgs = comprobante?.mensajes?.mensaje;
+      if (!msgs) return [];
+      return Array.isArray(msgs) ? msgs : [msgs];
+    }
+  } catch (_) {}
+  if (Array.isArray(mensajes_sri)) return mensajes_sri;
+  if (mensajes_sri.mensaje || mensajes_sri.identificador) return [mensajes_sri];
+  return [];
+}
+
+// =============================================================================
 // COMPONENTE
 // =============================================================================
 interface Props {
@@ -136,9 +154,9 @@ export default function DetalleShared({ factura, onRecargar, children }: Props) 
   const [copiandoCampo, setCopiandoCampo] = useState<string | null>(null);
 
   // nuevos estados
-  const [showPdfMenu,    setShowPdfMenu]    = useState(false);
-  const [showShareMenu,  setShowShareMenu]  = useState(false);
-  const [compartidoMsg,  setCompartidoMsg]  = useState<string | null>(null);
+  const [showPdfMenu,   setShowPdfMenu]   = useState(false);
+  const [showShareMenu, setShowShareMenu] = useState(false);
+  const [compartidoMsg, setCompartidoMsg] = useState<string | null>(null);
 
   const pdfMenuRef   = useRef<HTMLDivElement>(null);
   const shareMenuRef = useRef<HTMLDivElement>(null);
@@ -161,9 +179,7 @@ export default function DetalleShared({ factura, onRecargar, children }: Props) 
   const Icon   = estado.icon;
   const cobro  = factura.estado_cobro ? COBRO_CONFIG[factura.estado_cobro] : null;
 
-  const errores = factura.mensajes_sri
-    ? (Array.isArray(factura.mensajes_sri) ? factura.mensajes_sri : [factura.mensajes_sri])
-    : [];
+  const errores = extraerMensajesSRI(factura.mensajes_sri);
 
   const infoFac         = factura.datos?.infoFactura || factura.datos?.infoLiquidacionCompra || {};
   const idComprador     = infoFac.identificacionComprador || infoFac.identificacionProveedor || factura.cliente?.identificacion || "";
@@ -252,7 +268,7 @@ export default function DetalleShared({ factura, onRecargar, children }: Props) 
   };
 
   const camposSRI = [
-    { label: "Tipo de comprobante",      valor: TIPO_LABEL[factura.tipo_doc] ?? factura.tipo_doc },
+    { label: "Tipo de comprobante",     valor: TIPO_LABEL[factura.tipo_doc] ?? factura.tipo_doc },
     { label: "Fecha autorización",       valor: formatearFechaSRI(factura.fecha_autorizacion) },
     { label: "Clave de acceso",          valor: factura.clave_acceso },
     { label: "No. Autorización",         valor: factura.clave_acceso },
