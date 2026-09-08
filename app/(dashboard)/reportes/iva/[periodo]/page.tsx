@@ -7,6 +7,7 @@ import {
   Loader2, ArrowLeft, RefreshCw, CheckCircle2, AlertTriangle,
 } from "lucide-react";
 import { clsx } from "clsx";
+import { useAuthStore } from "@/store/auth.store";
 
 import PreguntasSRI        from "../../_components/PreguntasSRI";
 import SeccionVentas       from "../../_components/SeccionVentas";
@@ -20,6 +21,7 @@ const fmt = (n: number = 0) =>
   n.toLocaleString("es-EC", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export default function ReporteIVAPage() {
+  const empresa = useAuthStore((s) => s.empresa);
   const params  = useParams();
   const router  = useRouter();
   const periodo = params.periodo as string;  // "2026-08"
@@ -34,6 +36,9 @@ export default function ReporteIVAPage() {
   const periodoFmt = (() => {
     try {
       const [a, m] = periodo.split("-");
+      if (empresa?.periodo_iva === "SEMESTRAL") {
+        return parseInt(m) <= 6 ? `1er semestre ${a}` : `2do semestre ${a}`;
+      }
       return new Date(parseInt(a), parseInt(m) - 1, 1)
         .toLocaleDateString("es-EC", { month: "long", year: "numeric" });
     } catch { return periodo; }
@@ -44,7 +49,8 @@ export default function ReporteIVAPage() {
     if (regen) setRegenerando(true);
     else setLoading(true);
     try {
-      const url = `/api/v1/app/declaraciones/iva?periodo=${periodo}${regen ? "&regenerar=true" : ""}`;
+      const tipoPeriodo = empresa?.periodo_iva === "SEMESTRAL" ? "SEMESTRAL" : "MENSUAL";
+      const url = `/api/v1/app/declaraciones/iva?periodo=${periodo}&tipo_periodo=${tipoPeriodo}${regen ? "&regenerar=true" : ""}`;
       const res = await api.get(url);
       setData(res.data);
 
@@ -58,7 +64,7 @@ export default function ReporteIVAPage() {
       setLoading(false);
       setRegenerando(false);
     }
-  }, [periodo]);
+  }, [periodo, empresa?.periodo_iva]);
 
   useEffect(() => { cargar(); }, [cargar]);
 

@@ -22,6 +22,7 @@ interface Empresa {
   balance_api:            number;
   permisos:               Record<string, boolean>;
   obligado_contabilidad:  string | null;  // "SI" | "NO" | null
+  periodo_iva:            string | null;  // "MENSUAL" | "SEMESTRAL" | null  ← agregar
 }
 
 interface AuthState {

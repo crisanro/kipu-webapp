@@ -206,6 +206,7 @@ function SelectorEmpresa({ onClose }: { onClose: () => void }) {
         suscripcion:           data.suscripcion,
         balance_api:           data.balance_api,
         obligado_contabilidad: data.obligado_contabilidad ?? null,
+        periodo_iva:           data.periodo_iva ?? null,
       });
       localStorage.setItem("kipu-ext-emisor", String(e.id));
       localStorage.setItem("kipu-ext-ruc",    data.ruc);

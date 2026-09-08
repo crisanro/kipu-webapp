@@ -80,7 +80,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
         const empresaActual = empresa
           ? data.empresas.find((e: any) => e.id === empresa.id) ?? data.empresas[0]
           : data.empresas[0];
-
+          
         setEmpresa({
           id:                    empresaActual.id,
           ruc:                   empresaActual.ruc,
@@ -95,6 +95,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
           suscripcion:           empresaActual.suscripcion,
           balance_api:           empresaActual.balance_api,
           obligado_contabilidad: empresaActual.obligado_contabilidad ?? null,
+          periodo_iva:           empresaActual.periodo_iva ?? null,  // ← agregar
         });
 
         localStorage.setItem("kipu-ext-emisor", String(empresaActual.id));

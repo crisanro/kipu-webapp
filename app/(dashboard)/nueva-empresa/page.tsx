@@ -65,25 +65,26 @@ export default function NuevaEmpresaPage() {
       const res = await api.post("/api/v1/app/emisor/onboarding", form);
       // Agregar la nueva empresa al store con las propiedades requeridas por el tipo Empresa
       const nuevaEmpresa = {
-        id:                 res.data.emisor_id,
-        ruc:                form.ruc,
-        razon_social:       form.razon_social.toUpperCase(),
-        nombre_comercial:   form.nombre_comercial.toUpperCase() || "",
-        ambiente:           1,
-        rol:                "admin",
-        permisos:           {},
-        balance_emision:    10,
-        balance_recepcion:  0,
-        firma_ok:           false,
-        tipo_emisor:        "NAT", // Ajusta según tu lógica (ej: "NAT" o "SOC")
-        suscripcion_activa: true,
+        id:                    res.data.emisor_id,
+        ruc:                   form.ruc,
+        razon_social:          form.razon_social.toUpperCase(),
+        nombre_comercial:      form.nombre_comercial.toUpperCase() || "",
+        ambiente:              1,
+        rol:                   "admin",
+        permisos:              {},
+        balance_emision:       10,
+        balance_recepcion:     0,
+        firma_ok:              false,
+        tipo_emisor:           "NAT",
+        suscripcion_activa:    true,
         suscripcion: {
-          plan:     "gratis",
-          estado:   "activo",
+          plan:   "gratis",
+          estado: "activo",
           activa: true,
         },
-        balance_api:        0,
+        balance_api:           0,
         obligado_contabilidad: null,
+        periodo_iva:           null,  // ← agregar
       };
       addEmpresa(nuevaEmpresa);
       setSuccess(true);

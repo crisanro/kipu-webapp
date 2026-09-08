@@ -53,19 +53,20 @@ export default function BienvenidaPage() {
             setEmpresas(data);
             const e = data[0];
             setEmpresa({
-              id:                 e.id,
-              ruc:                e.ruc,
-              razon_social:       e.razon_social,
-              nombre_comercial:   e.nombre_comercial,
-              ambiente:           e.ambiente,
-              tipo_emisor:        e.tipo_emisor,
-              rol:                e.rol,
-              permisos:           e.permisos ?? {},
-              firma_ok:           e.firma_ok,
-              suscripcion_activa: e.suscripcion_activa,
-              suscripcion:        e.suscripcion,
-              balance_api:        e.balance_api,
+              id:                    e.id,
+              ruc:                   e.ruc,
+              razon_social:          e.razon_social,
+              nombre_comercial:      e.nombre_comercial,
+              ambiente:              e.ambiente,
+              tipo_emisor:           e.tipo_emisor,
+              rol:                   e.rol,
+              permisos:              e.permisos ?? {},
+              firma_ok:              e.firma_ok,
+              suscripcion_activa:    e.suscripcion_activa,
+              suscripcion:           e.suscripcion,
+              balance_api:           e.balance_api,
               obligado_contabilidad: e.obligado_contabilidad ?? null,
+              periodo_iva:           e.periodo_iva ?? null,  // ← agregar
             });
           }
         } catch {}

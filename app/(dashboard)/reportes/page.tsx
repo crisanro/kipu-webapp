@@ -45,9 +45,9 @@ interface ReporteRow {
 }
 
 const TAB_CONFIG = {
-  IVA:   { label: "IVA 104",    color: "bg-indigo-600 text-white", inactive: "text-gray-400 hover:text-white" },
+  IVA:   { label: "IVA 104",   color: "bg-indigo-600 text-white", inactive: "text-gray-400 hover:text-white" },
   RENTA: { label: "Renta 102",  color: "bg-purple-600 text-white", inactive: "text-gray-400 hover:text-white" },
-  ATS:   { label: "ATS",        color: "bg-cyan-600 text-white",   inactive: "text-gray-400 hover:text-white" },
+  ATS:   { label: "ATS",       color: "bg-cyan-600 text-white",   inactive: "text-gray-400 hover:text-white" },
 };
 
 const DEMO_CARDS: Record<Tab, { periodo: string; estado: string; monto?: string; saldo?: string }[]> = {
@@ -67,10 +67,15 @@ const DEMO_CARDS: Record<Tab, { periodo: string; estado: string; monto?: string;
   ],
 };
 
-function periodoFmt(periodo: string, tipo: Tab): string {
+function periodoFmt(periodo: string, tipo: Tab, periodoIva: string = "MENSUAL"): string {
   try {
     if (tipo === "RENTA") return `Año ${periodo.split("-")[0]}`;
     const [a, m] = periodo.split("-");
+    if (periodoIva === "SEMESTRAL") {
+      return parseInt(m) <= 6
+        ? `1er semestre ${a}`
+        : `2do semestre ${a}`;
+    }
     return new Date(parseInt(a), parseInt(m) - 1, 1).toLocaleDateString("es-EC", {
       month: "long", year: "numeric",
     });
@@ -184,19 +189,23 @@ export default function ReportesPage() {
   useEffect(() => { cargar(); }, [cargar]);
 
 
+  const periodoIva = empresa?.periodo_iva ?? "MENSUAL";
   const items = declaraciones.map((decl) => {
-    const key     = periodoKey(decl, tab);
+    const key   = periodoKey(decl, tab);
     const reporte = reportes.find((r) => r.periodo.startsWith(key));
-    const hoy     = new Date();
+    const hoy   = new Date();
     const venc    = new Date(decl.vencimiento);
     const dias    = Math.ceil((venc.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
     const esActual =
       tab === "RENTA"
         ? parseInt(key) === hoy.getFullYear()
-        : key === `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, "0")}`;
+        : periodoIva === "SEMESTRAL"
+          ? (key === `${hoy.getFullYear()}-01` && hoy.getMonth() < 6) ||
+            (key === `${hoy.getFullYear()}-07` && hoy.getMonth() >= 6)
+          : key === `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, "0")}`;
     return {
       periodo:      key,
-      periodoFmt:   periodoFmt(decl.periodo, tab),
+      periodoFmt:   periodoFmt(decl.periodo, tab, periodoIva),
       estado:       estadoFromDecl(decl) as EstadoReporte,
       diasRestantes: dias,
       vencimiento:  decl.vencimiento,
@@ -250,7 +259,7 @@ export default function ReportesPage() {
                 <div className="flex flex-wrap gap-2 mb-4">
                   {[
                     { label: "IVA 104 mensual",        color: "indigo" },
-                    { label: "Renta 102 anual",         color: "purple" },
+                    { label: "Renta 102 anual",          color: "purple" },
                     { label: "ATS mensual (obligados)", color: "cyan"   },
                     { label: "Trazabilidad auditoría",  color: "emerald"},
                   ].map(({ label, color }) => (
@@ -378,9 +387,13 @@ export default function ReportesPage() {
                 tab === "RENTA" ? "bg-purple-500/5 border-purple-500/20 text-purple-300" :
                                   "bg-cyan-500/5   border-cyan-500/20   text-cyan-300"
               )}>
-                {tab === "IVA"   && "Declaración mensual del IVA — Formulario 104. Vence según el noveno dígito del RUC."}
+                {tab === "IVA" && (
+                  periodoIva === "SEMESTRAL"
+                    ? "Declaración semestral del IVA — Formulario 104. Enero–junio y julio–diciembre. Vence según el noveno dígito del RUC."
+                    : "Declaración mensual del IVA — Formulario 104. Vence según el noveno dígito del RUC."
+                )}
                 {tab === "RENTA" && "Declaración anual del Impuesto a la Renta — Formulario 102. Vence entre marzo y abril del año siguiente."}
-                {tab === "ATS"   && "Anexo Transaccional Simplificado — Detalle mensual de todas tus compras y ventas. Solo obligados a contabilidad."}
+                {tab === "ATS"   && "Anexo Transaccional Simplificado — Detalle de todas tus compras y ventas. Solo obligados a contabilidad."}
               </div>
 
               {loading ? (
@@ -411,7 +424,7 @@ export default function ReportesPage() {
                       enCurso={item.enCurso}
                       generadoAt={item.generadoAt}
                       resumen={item.resumen ? {
-                        ivaAPagar:        item.resumen?.resultado?.a_pagar          ?? item.resumen?.casilleros?.["859"] ?? 0,
+                        ivaAPagar:        item.resumen?.resultado?.a_pagar         ?? item.resumen?.casilleros?.["859"] ?? 0,
                         saldoFavor:       item.resumen?.resultado?.saldo_favor       ?? 0,
                         impuestoCausado:  item.resumen?.resultado?.impuesto_causado  ?? 0,
                         totalDocs:        item.totalDocs,

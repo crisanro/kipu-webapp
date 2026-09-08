@@ -1,13 +1,10 @@
-// components/configuracion/TabEmpresa.tsx
 "use client";
-
 import { useState } from "react";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Loader2 } from "lucide-react";
 import api from "@/lib/api";
 import Checklist, { HealthData } from "@/components/Checklist";
 import PinInput from "@/components/PinInput";
 import { useAuthStore } from "@/store/auth.store";
-
 
 interface Props {
   legal:        any;
@@ -18,13 +15,37 @@ interface Props {
 export default function TabEmpresa({ legal, health, onActualizar }: Props) {
   const [prodMsg,       setProdMsg]       = useState("");
   const [showProdModal, setShowProdModal] = useState(false);
+  const [periodoIva,    setPeriodoIva]    = useState<string>(legal?.periodo_iva ?? "MENSUAL");
+  const [guardando,     setGuardando]     = useState(false);
+  const [msgPeriodo,    setMsgPeriodo]    = useState("");
+
   const email = useAuthStore((s) => s.email) ?? "";
 
   if (!legal) return null;
 
+  // Los obligados a llevar contabilidad siempre son mensuales — no pueden cambiar
+  const esObligado        = legal.obligado_contabilidad === "SI";
+  const periodoEfectivo   = esObligado ? "MENSUAL" : periodoIva;
+  const puedeEditarPeriodo = !esObligado;
+
+  const guardarPeriodo = async (nuevo: string) => {
+    if (nuevo === legal.periodo_iva) return;
+    setGuardando(true);
+    setMsgPeriodo("");
+    try {
+      await api.patch("/api/v1/app/emisor/config", { periodo_iva: nuevo });
+      setMsgPeriodo("✅ Guardado correctamente.");
+      onActualizar();
+    } catch {
+      setMsgPeriodo("❌ Error al guardar. Intenta de nuevo.");
+      setPeriodoIva(legal.periodo_iva ?? "MENSUAL");
+    } finally {
+      setGuardando(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
-
       {/* Checklist */}
       {health && !health.listo_produccion && (
         <Checklist health={health} />
@@ -51,7 +72,68 @@ export default function TabEmpresa({ legal, health, onActualizar }: Props) {
         </div>
       </div>
 
-      {/* Activar producción — solo si checklist completo y aún en pruebas */}
+      {/* Período de declaración IVA */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+        <h2 className="text-sm font-semibold text-white mb-1">Período de declaración IVA</h2>
+        <p className="text-xs text-gray-500 mb-4">
+          {esObligado
+            ? "Los obligados a llevar contabilidad declaran mensualmente."
+            : "Selecciona tu período según lo indicado en tu RUC en el SRI."}
+        </p>
+
+        <div className="flex gap-3">
+          {/* Mensual */}
+          <button
+            disabled={!puedeEditarPeriodo || guardando}
+            onClick={() => {
+              setPeriodoIva("MENSUAL");
+              guardarPeriodo("MENSUAL");
+            }}
+            className={`flex-1 rounded-lg border px-4 py-3 text-sm font-medium transition-colors
+              ${periodoEfectivo === "MENSUAL"
+                ? "bg-indigo-600/20 border-indigo-500 text-indigo-300"
+                : "border-gray-700 text-gray-400 hover:border-gray-600 hover:text-white"}
+              ${!puedeEditarPeriodo ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}
+            `}
+          >
+            <div className="font-semibold">Mensual</div>
+            <div className="text-xs mt-0.5 opacity-70">Declara cada mes</div>
+          </button>
+
+          {/* Semestral */}
+          <button
+            disabled={!puedeEditarPeriodo || guardando}
+            onClick={() => {
+              setPeriodoIva("SEMESTRAL");
+              guardarPeriodo("SEMESTRAL");
+            }}
+            className={`flex-1 rounded-lg border px-4 py-3 text-sm font-medium transition-colors
+              ${periodoEfectivo === "SEMESTRAL"
+                ? "bg-indigo-600/20 border-indigo-500 text-indigo-300"
+                : "border-gray-700 text-gray-400 hover:border-gray-600 hover:text-white"}
+              ${!puedeEditarPeriodo ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}
+            `}
+          >
+            <div className="font-semibold">Semestral</div>
+            <div className="text-xs mt-0.5 opacity-70">Enero–Jun / Jul–Dic</div>
+          </button>
+        </div>
+
+        {/* Feedback */}
+        <div className="mt-2 min-h-[20px]">
+          {guardando && (
+            <div className="flex items-center gap-1.5 text-xs text-gray-400">
+              <Loader2 size={12} className="animate-spin" />
+              Guardando...
+            </div>
+          )}
+          {!guardando && msgPeriodo && (
+            <p className="text-xs text-gray-400">{msgPeriodo}</p>
+          )}
+        </div>
+      </div>
+
+      {/* Activar producción */}
       {health?.listo_produccion && legal.ambiente !== 2 && (
         <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-5">
           <div className="flex items-start gap-3">
@@ -81,7 +163,7 @@ export default function TabEmpresa({ legal, health, onActualizar }: Props) {
           <div className="bg-gray-900 border border-gray-800 rounded-xl w-full max-w-sm p-5">
             <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3 mb-4">
               <p className="text-xs text-emerald-300">
-                🎉 Al activar producción podrás emitir documentos reales ante el SRI. 
+                🎉 Al activar producción podrás emitir documentos reales ante el SRI.
                 Seguirás teniendo acceso al modo sandbox para pruebas.
               </p>
             </div>
