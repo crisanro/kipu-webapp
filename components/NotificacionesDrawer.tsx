@@ -1,6 +1,4 @@
-// components/NotificacionesDrawer.tsx
 "use client";
-
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
@@ -57,22 +55,28 @@ function tiempoRelativo(fecha: string): string {
 const fetcher = (url: string) => api.get(url).then(r => r.data);
 
 export function useNotificaciones(authLoading: boolean = false) {
-  const listo = useAuthStore((s) => s.listo);
+  const listo   = useAuthStore((s) => s.listo);
+  const empresa = useAuthStore((s) => s.empresa);
+
+  // Incluir emisor_id en la key para que SWR recargue al cambiar empresa
+  const swrKey = !authLoading && listo && empresa?.id
+    ? `/api/v1/app/notificaciones?e=${empresa.id}`
+    : null;
 
   const { data, mutate } = useSWR(
-    !authLoading && listo ? "/api/v1/app/notificaciones" : null,
+    swrKey,
     fetcher,
     {
       revalidateOnFocus:     false,
       revalidateOnReconnect: false,
       revalidateIfStale:     false,
-      dedupingInterval:      300000, // 5 min
+      dedupingInterval:      60000, // 1 min
     }
   );
 
   const notificaciones: Notificacion[] = data?.notificaciones ?? [];
   const noLeidas:        number        = data?.no_leidas       ?? 0;
-  const loading                        = !data && listo;
+  const loading                        = !data;
 
   const marcarLeida = useCallback(async (id: number) => {
     try {
@@ -170,21 +174,14 @@ export function NotificacionesDrawer({
 
   return (
     <>
-      {/* Overlay */}
       {open && (
-        <div
-          className="fixed inset-0 bg-black/50 z-40"
-          onClick={onClose}
-        />
+        <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose} />
       )}
-
-      {/* Drawer */}
       <div className={clsx(
         "fixed top-0 right-0 h-full w-full sm:w-96 bg-gray-900 border-l border-gray-800",
         "z-50 flex flex-col transition-transform duration-300 ease-in-out",
         open ? "translate-x-0" : "translate-x-full"
       )}>
-
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-4 border-b border-gray-800">
           <div className="flex items-center gap-2">
@@ -222,7 +219,11 @@ export function NotificacionesDrawer({
 
         {/* Lista */}
         <div className="flex-1 overflow-y-auto">
-          {notificaciones.length === 0 ? (
+          {loading ? (
+            <div className="flex items-center justify-center h-full">
+              <Loader2 size={24} className="animate-spin text-indigo-400" />
+            </div>
+          ) : notificaciones.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-center px-6">
               <Bell size={36} className="text-gray-700 mb-3" />
               <p className="text-gray-500 text-sm">Sin notificaciones</p>
@@ -260,7 +261,6 @@ export function NotificacionesDrawer({
                       {notif.description}
                     </p>
                   </div>
-                  {/* Punto azul si no leída */}
                   {!notif.is_read && (
                     <div className="w-2 h-2 rounded-full bg-indigo-400 shrink-0 mt-1.5" />
                   )}
