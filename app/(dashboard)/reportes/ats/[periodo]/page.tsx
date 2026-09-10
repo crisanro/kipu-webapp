@@ -1,13 +1,11 @@
-// app/(dashboard)/reportes/ats/[periodo]/page.tsx
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import api from "@/lib/api";
 import {
-  Loader2, ArrowLeft, RefreshCw, AlertTriangle,
-  FileText, Download, ChevronDown, ChevronUp,
+  ArrowLeft, RefreshCw, AlertTriangle,
+  FileText, ChevronDown, ChevronUp,
 } from "lucide-react";
-import { clsx } from "clsx";
 
 import PreguntasSRI        from "../../_components/PreguntasSRI";
 import SeccionRetenciones  from "../../_components/SeccionRetenciones";
@@ -31,15 +29,24 @@ function TablaDetalle({ titulo, rows, columnas, color = "indigo" }: {
 
   if (rows.length === 0) return null;
 
+  const iconColor = color === "emerald" ? "var(--kipu-success)" : "var(--kipu-accent)";
+
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
-      <div className="px-4 py-3 border-b border-gray-800 flex items-center justify-between">
+    <div
+      className="rounded-xl overflow-hidden"
+      style={{
+        background: "var(--kipu-surface)",
+        border: "1px solid var(--kipu-border)",
+      }}
+    >
+      <div
+        className="px-4 py-3 flex items-center justify-between"
+        style={{ borderBottom: "1px solid var(--kipu-border)" }}
+      >
         <div className="flex items-center gap-2">
-          <FileText size={14} className={clsx(
-            color === "emerald" ? "text-emerald-400" : "text-indigo-400"
-          )} />
-          <p className="text-sm font-semibold text-white">{titulo}</p>
-          <span className="text-xs text-gray-500">({fmtN(rows.length)})</span>
+          <FileText size={14} style={{ color: iconColor }} />
+          <p className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>{titulo}</p>
+          <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>({fmtN(rows.length)})</span>
         </div>
       </div>
 
@@ -47,27 +54,32 @@ function TablaDetalle({ titulo, rows, columnas, color = "indigo" }: {
       <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-xs">
           <thead>
-            <tr className="border-b border-gray-800 text-[10px] text-gray-500 uppercase tracking-wider">
+            <tr
+              className="text-[10px] uppercase tracking-wider"
+              style={{
+                borderBottom: "1px solid var(--kipu-border)",
+                color: "var(--kipu-subtle)",
+              }}
+            >
               {columnas.map(c => (
-                <th key={c.key} className={clsx(
-                  "px-4 py-2 font-medium",
-                  c.right ? "text-right" : "text-left"
-                )}>
+                <th key={c.key} className={`px-4 py-2 font-medium ${c.right ? "text-right" : "text-left"}`}>
                   {c.label}
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-800">
+          <tbody style={{ borderTop: "1px solid var(--kipu-border)" }}>
             {visibles.map((row, idx) => (
-              <tr key={idx} className="hover:bg-gray-800/30 transition-colors">
+              <tr
+                key={idx}
+                className="transition-colors"
+                style={{ borderBottom: idx < visibles.length - 1 ? "1px solid var(--kipu-border)" : "none" }}
+                onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 4%, transparent)"}
+                onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+              >
                 {columnas.map(c => (
-                  <td key={c.key} className={clsx(
-                    "px-4 py-2.5",
-                    c.right ? "text-right" : "",
-                    c.mono  ? "font-mono"  : ""
-                  )}>
-                    <span className="text-gray-300">{row[c.key] ?? "—"}</span>
+                  <td key={c.key} className={`px-4 py-2.5 ${c.right ? "text-right" : ""} ${c.mono ? "font-mono" : ""}`}>
+                    <span style={{ color: "var(--kipu-text)" }}>{row[c.key] ?? "—"}</span>
                   </td>
                 ))}
               </tr>
@@ -77,16 +89,17 @@ function TablaDetalle({ titulo, rows, columnas, color = "indigo" }: {
       </div>
 
       {/* Mobile */}
-      <div className="md:hidden divide-y divide-gray-800">
+      <div className="md:hidden">
         {visibles.map((row, idx) => (
-          <div key={idx} className="px-4 py-3 space-y-1">
+          <div
+            key={idx}
+            className="px-4 py-3 space-y-1"
+            style={{ borderTop: idx > 0 ? "1px solid var(--kipu-border)" : "none" }}
+          >
             {columnas.slice(0, 3).map(c => (
               <div key={c.key} className="flex justify-between gap-2">
-                <span className="text-[10px] text-gray-500">{c.label}</span>
-                <span className={clsx(
-                  "text-xs text-gray-300",
-                  c.mono ? "font-mono" : ""
-                )}>
+                <span className="text-[10px]" style={{ color: "var(--kipu-subtle)" }}>{c.label}</span>
+                <span className={`text-xs ${c.mono ? "font-mono" : ""}`} style={{ color: "var(--kipu-text)" }}>
                   {row[c.key] ?? "—"}
                 </span>
               </div>
@@ -98,13 +111,28 @@ function TablaDetalle({ titulo, rows, columnas, color = "indigo" }: {
       {/* Ver más */}
       {rows.length > MAX_VISIBLE && (
         <button
+          type="button"
           onClick={() => setExpandido(!expandido)}
-          className="w-full flex items-center justify-center gap-1.5 px-4 py-2.5 border-t border-gray-800 text-xs text-gray-500 hover:text-white transition-colors"
+          className="w-full flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs transition-colors"
+          style={{
+            borderTop: "1px solid var(--kipu-border)",
+            color: "var(--kipu-subtle)",
+            background: "transparent",
+          }}
+          onMouseEnter={e => {
+            e.currentTarget.style.color = "var(--kipu-text)";
+            e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 4%, transparent)";
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.color = "var(--kipu-subtle)";
+            e.currentTarget.style.background = "transparent";
+          }}
         >
-          {expandido
-            ? <><ChevronUp size={13} /> Ver menos</>
-            : <><ChevronDown size={13} /> Ver {rows.length - MAX_VISIBLE} más</>
-          }
+          {expandido ? (
+            <><ChevronUp size={13} /> Ver menos</>
+          ) : (
+            <><ChevronDown size={13} /> Ver {rows.length - MAX_VISIBLE} más</>
+          )}
         </button>
       )}
     </div>
@@ -151,8 +179,11 @@ export default function ReporteATSPage() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center space-y-3">
-          <Loader2 size={28} className="animate-spin text-cyan-400 mx-auto" />
-          <p className="text-sm text-gray-500">Generando Anexo Transaccional...</p>
+          <div
+            className="w-7 h-7 border-2 border-t-transparent rounded-full animate-spin mx-auto"
+            style={{ borderColor: "#22d3ee", borderTopColor: "transparent" }}
+          />
+          <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>Generando Anexo Transaccional...</p>
         </div>
       </div>
     );
@@ -161,9 +192,15 @@ export default function ReporteATSPage() {
   if (error && !data) {
     return (
       <div className="p-6 max-w-2xl mx-auto">
-        <div className="flex items-start gap-3 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
-          <AlertTriangle size={16} className="text-red-400 shrink-0 mt-0.5" />
-          <p className="text-sm text-red-400">{error}</p>
+        <div
+          className="flex items-start gap-3 rounded-xl px-4 py-3"
+          style={{
+            background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
+            border: "1px solid color-mix(in srgb, var(--kipu-danger) 20%, transparent)",
+          }}
+        >
+          <AlertTriangle size={16} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-danger)" }} />
+          <p className="text-sm" style={{ color: "var(--kipu-danger)" }}>{error}</p>
         </div>
       </div>
     );
@@ -179,18 +216,17 @@ export default function ReporteATSPage() {
 
   const ventas           = reporte?.ventas   ?? {};
   const compras          = reporte?.compras  ?? {};
-  const resumen          = reporte?.resumen  ?? {};
   const totalesVentas    = ventas.totales    ?? {};
   const totalesCompras   = compras.totales   ?? {};
   const detalleVentas    = ventas.detalle    ?? [];
   const detalleCompras   = compras.detalle   ?? [];
-  const retEmitidas      = ventas.retenciones  ?? [];
+  const retEmitidas      = ventas.retenciones   ?? [];
   const retRecibidas     = compras.retenciones ?? [];
 
   // Columnas tabla ventas
   const colVentas = [
-    { key: "numero_doc",    label: "Número",      mono: true  },
-    { key: "fecha_emision", label: "Fecha"                    },
+    { key: "numero_doc",    label: "Número",     mono: true  },
+    { key: "fecha_emision", label: "Fecha"                   },
     { key: "identificacion",label: "Identificación", mono: true },
     { key: "razon_social",  label: "Cliente"                  },
     { key: "base_iva_nz",   label: "Base IVA",    right: true },
@@ -230,26 +266,50 @@ export default function ReporteATSPage() {
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-3">
-          <button onClick={() => router.push("/reportes")}
-            className="p-2 rounded-lg border border-gray-700 text-gray-400 hover:text-white transition-colors mt-0.5">
+          <button
+            type="button"
+            onClick={() => router.push("/reportes")}
+            className="p-2 rounded-lg transition-colors mt-0.5"
+            style={{
+              border: "1px solid var(--kipu-border)",
+              color: "var(--kipu-subtle)",
+              background: "transparent",
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.color = "var(--kipu-text)";
+              e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 5%, transparent)";
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.color = "var(--kipu-subtle)";
+              e.currentTarget.style.background = "transparent";
+            }}
+          >
             <ArrowLeft size={16} />
           </button>
           <div>
             <div className="flex items-center gap-2 flex-wrap mb-1">
-              <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-cyan-600/20 text-cyan-400 border border-cyan-500/20">
+              <span
+                className="text-xs font-bold px-2 py-0.5 rounded-full"
+                style={{
+                  background: "color-mix(in srgb, #06b6d4 20%, transparent)",
+                  color: "#22d3ee",
+                  border: "1px solid color-mix(in srgb, #06b6d4 20%, transparent)",
+                }}
+              >
                 ATS
               </span>
-              <h1 className="text-xl font-bold text-white capitalize">{periodoFmt}</h1>
+              <h1 className="text-xl font-bold capitalize" style={{ color: "var(--kipu-text)" }}>{periodoFmt}</h1>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
-              {enCurso
-                ? <EstadoBadge estado="EN_CURSO"  size="sm" />
-                : cached
-                  ? <EstadoBadge estado="DECLARADO" size="sm" />
-                  : <EstadoBadge estado="PENDIENTE" size="sm" />
-              }
+              {enCurso ? (
+                <EstadoBadge estado="EN_CURSO" size="sm" />
+              ) : cached ? (
+                <EstadoBadge estado="DECLARADO" size="sm" />
+              ) : (
+                <EstadoBadge estado="PENDIENTE" size="sm" />
+              )}
               {enCurso && (
-                <span className="text-[10px] text-amber-400">
+                <span className="text-[10px]" style={{ color: "var(--kipu-warning)" }}>
                   · Período en curso
                 </span>
               )}
@@ -258,35 +318,67 @@ export default function ReporteATSPage() {
         </div>
         <div className="flex items-center gap-2">
           <button
+            type="button"
             onClick={() => cargar(true)}
             disabled={regenerando}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-700 text-gray-400 hover:text-white text-xs transition-colors disabled:opacity-40"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs transition-colors disabled:opacity-40 font-medium"
+            style={{
+              border: "1px solid var(--kipu-border)",
+              color: "var(--kipu-muted)",
+              background: "transparent",
+            }}
+            onMouseEnter={e => {
+              if (!regenerando) e.currentTarget.style.color = "var(--kipu-text)";
+            }}
+            onMouseLeave={e => {
+              if (!regenerando) e.currentTarget.style.color = "var(--kipu-muted)";
+            }}
           >
-            <RefreshCw size={13} className={regenerando ? "animate-spin" : ""} />
+            {regenerando ? (
+              <div
+                className="w-3.5 h-3.5 border-2 border-t-transparent rounded-full animate-spin"
+                style={{ borderColor: "currentColor", borderTopColor: "transparent" }}
+              />
+            ) : (
+              <RefreshCw size={13} />
+            )}
             {regenerando ? "Generando..." : "Regenerar"}
           </button>
         </div>
       </div>
 
       {error && (
-        <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2.5">
-          <AlertTriangle size={14} className="text-red-400 shrink-0 mt-0.5" />
-          <p className="text-sm text-red-400">{error}</p>
+        <div
+          className="flex items-start gap-2 rounded-lg px-3 py-2.5"
+          style={{
+            background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
+            border: "1px solid color-mix(in srgb, var(--kipu-danger) 20%, transparent)",
+          }}
+        >
+          <AlertTriangle size={14} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-danger)" }} />
+          <p className="text-sm" style={{ color: "var(--kipu-danger)" }}>{error}</p>
         </div>
       )}
 
       {/* Resumen rápido */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: "Ventas",      value: fmtN(totalesVentas.num_docs  ?? 0), sub: `$${fmt(totalesVentas.total  ?? 0)}`, color: "indigo"  },
-          { label: "Compras",     value: fmtN(totalesCompras.num_docs ?? 0), sub: `$${fmt(totalesCompras.total ?? 0)}`, color: "emerald" },
-          { label: "Ret. emit.",  value: fmtN(retEmitidas.length),           sub: "comprobantes",                       color: "yellow"  },
-          { label: "Ret. recib.", value: fmtN(retRecibidas.length),          sub: "comprobantes",                       color: "blue"    },
+          { label: "Ventas",      value: fmtN(totalesVentas.num_docs  ?? 0), sub: `$${fmt(totalesVentas.total  ?? 0)}`, color: "var(--kipu-accent)" },
+          { label: "Compras",     value: fmtN(totalesCompras.num_docs ?? 0), sub: `$${fmt(totalesCompras.total ?? 0)}`, color: "var(--kipu-success)" },
+          { label: "Ret. emit.",  value: fmtN(retEmitidas.length),           sub: "comprobantes",                       color: "var(--kipu-warning)" },
+          { label: "Ret. recib.", value: fmtN(retRecibidas.length),          sub: "comprobantes",                       color: "#60a5fa" },
         ].map(({ label, value, sub, color }) => (
-          <div key={label} className="bg-gray-900 border border-gray-800 rounded-xl p-3 text-center">
-            <p className="text-xs text-gray-500 mb-1">{label}</p>
-            <p className="text-xl font-bold text-white">{value}</p>
-            <p className="text-[10px] text-gray-500 mt-0.5">{sub}</p>
+          <div
+            key={label}
+            className="rounded-xl p-3 text-center"
+            style={{
+              background: "var(--kipu-surface)",
+              border: "1px solid var(--kipu-border)",
+            }}
+          >
+            <p className="text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>{label}</p>
+            <p className="text-xl font-bold" style={{ color: "var(--kipu-text)" }}>{value}</p>
+            <p className="text-[10px] mt-0.5" style={{ color: "var(--kipu-subtle)" }}>{sub}</p>
           </div>
         ))}
       </div>
@@ -297,11 +389,17 @@ export default function ReporteATSPage() {
       )}
 
       {/* Info ATS */}
-      <div className="bg-cyan-500/5 border border-cyan-500/20 rounded-xl p-4">
-        <p className="text-xs font-semibold text-cyan-300 mb-1">
+      <div
+        className="rounded-xl p-4"
+        style={{
+          background: "color-mix(in srgb, #06b6d4 5%, transparent)",
+          border: "1px solid color-mix(in srgb, #06b6d4 20%, transparent)",
+        }}
+      >
+        <p className="text-xs font-semibold mb-1" style={{ color: "#22d3ee" }}>
           ¿Qué es el ATS?
         </p>
-        <p className="text-xs text-cyan-400/70">
+        <p className="text-xs" style={{ color: "#67e8f9" }}>
           El Anexo Transaccional Simplificado es un reporte mensual que detalla todas
           tus compras y ventas. Debes subirlo al portal del SRI en Línea antes del
           vencimiento. Aquí tienes el resumen completo listo para revisión.
@@ -310,20 +408,27 @@ export default function ReporteATSPage() {
 
       {/* Detalle ventas */}
       <div>
-        <p className="text-sm font-semibold text-white mb-2">
+        <p className="text-sm font-semibold mb-2" style={{ color: "var(--kipu-text)" }}>
           Comprobantes emitidos — ventas
         </p>
 
         {/* Totales ventas */}
         <div className="grid grid-cols-3 gap-2 mb-3">
           {[
-            { label: "Base IVA ≠ 0", value: totalesVentas.base_iva_diferente_0 ?? 0, color: "text-indigo-400" },
-            { label: "Base 0%",      value: totalesVentas.base_iva_0            ?? 0, color: "text-gray-400"   },
-            { label: "IVA generado", value: totalesVentas.iva                   ?? 0, color: "text-indigo-400" },
+            { label: "Base IVA ≠ 0", value: totalesVentas.base_iva_diferente_0 ?? 0, color: "var(--kipu-accent)" },
+            { label: "Base 0%",      value: totalesVentas.base_iva_0            ?? 0, color: "var(--kipu-subtle)" },
+            { label: "IVA generado", value: totalesVentas.iva                   ?? 0, color: "var(--kipu-accent)" },
           ].map(({ label, value, color }) => (
-            <div key={label} className="bg-gray-900 border border-gray-800 rounded-lg px-3 py-2">
-              <p className="text-[10px] text-gray-500">{label}</p>
-              <p className={clsx("text-sm font-bold", color)}>${fmt(value)}</p>
+            <div
+              key={label}
+              className="rounded-lg px-3 py-2"
+              style={{
+                background: "var(--kipu-surface)",
+                border: "1px solid var(--kipu-border)",
+              }}
+            >
+              <p className="text-[10px]" style={{ color: "var(--kipu-subtle)" }}>{label}</p>
+              <p className="text-sm font-bold" style={{ color: color }}>${fmt(value)}</p>
             </div>
           ))}
         </div>
@@ -338,20 +443,27 @@ export default function ReporteATSPage() {
 
       {/* Detalle compras */}
       <div>
-        <p className="text-sm font-semibold text-white mb-2">
+        <p className="text-sm font-semibold mb-2" style={{ color: "var(--kipu-text)" }}>
           Comprobantes recibidos — compras
         </p>
 
         {/* Totales compras */}
         <div className="grid grid-cols-3 gap-2 mb-3">
           {[
-            { label: "Base IVA ≠ 0",    value: totalesCompras.base_iva_diferente_0 ?? 0, color: "text-emerald-400" },
-            { label: "IVA con crédito",  value: totalesCompras.iva_con_credito       ?? 0, color: "text-emerald-400" },
-            { label: "IVA sin crédito",  value: totalesCompras.iva_sin_credito       ?? 0, color: "text-gray-400"    },
+            { label: "Base IVA ≠ 0",    value: totalesCompras.base_iva_diferente_0 ?? 0, color: "var(--kipu-success)" },
+            { label: "IVA con crédito",  value: totalesCompras.iva_con_credito       ?? 0, color: "var(--kipu-success)" },
+            { label: "IVA sin crédito",  value: totalesCompras.iva_sin_credito       ?? 0, color: "var(--kipu-subtle)" },
           ].map(({ label, value, color }) => (
-            <div key={label} className="bg-gray-900 border border-gray-800 rounded-lg px-3 py-2">
-              <p className="text-[10px] text-gray-500">{label}</p>
-              <p className={clsx("text-sm font-bold", color)}>${fmt(value)}</p>
+            <div
+              key={label}
+              className="rounded-lg px-3 py-2"
+              style={{
+                background: "var(--kipu-surface)",
+                border: "1px solid var(--kipu-border)",
+              }}
+            >
+              <p className="text-[10px]" style={{ color: "var(--kipu-subtle)" }}>{label}</p>
+              <p className="text-sm font-bold" style={{ color: color }}>${fmt(value)}</p>
             </div>
           ))}
         </div>
@@ -366,7 +478,7 @@ export default function ReporteATSPage() {
 
       {/* Retenciones */}
       <div>
-        <p className="text-sm font-semibold text-white mb-2">Retenciones</p>
+        <p className="text-sm font-semibold mb-2" style={{ color: "var(--kipu-text)" }}>Retenciones</p>
         <SeccionRetenciones
           modo="ATS"
           detalleEmitidas={retEmitidas}
@@ -393,10 +505,16 @@ export default function ReporteATSPage() {
 
       {/* Notas */}
       {reporte?.notas?.length > 0 && (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 space-y-1.5">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Notas</p>
+        <div
+          className="rounded-xl p-4 space-y-1.5"
+          style={{
+            background: "var(--kipu-surface)",
+            border: "1px solid var(--kipu-border)",
+          }}
+        >
+          <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: "var(--kipu-subtle)" }}>Notas</p>
           {reporte.notas.map((nota: string, i: number) => (
-            <p key={i} className="text-xs text-gray-500">· {nota}</p>
+            <p key={i} className="text-xs" style={{ color: "var(--kipu-subtle)" }}>· {nota}</p>
           ))}
         </div>
       )}

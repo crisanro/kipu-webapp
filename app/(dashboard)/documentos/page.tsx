@@ -7,11 +7,10 @@ import { usePermiso } from "@/hooks/usePermiso";
 import SinAcceso from "@/components/SinAcceso";
 import api from "@/lib/api";
 import {
-  Search, Plus, FileText, Loader2, CheckCircle2, Clock,
+  Search, Plus, FileText, CheckCircle2, Clock,
   XCircle, AlertTriangle, RefreshCw, ChevronDown, ChevronUp,
   TrendingUp, FlaskConical, Ban  
 } from "lucide-react";
-import { clsx } from "clsx";
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 interface Documento {
@@ -29,29 +28,32 @@ interface Documento {
 }
 
 // ── Configs ───────────────────────────────────────────────────────────────────
-const ESTADO_CONFIG: Record<string, { label: string; color: string; icon: any }> = {
-  AUTORIZADO: { label: "Autorizado", color: "text-emerald-400 bg-emerald-400/10", icon: CheckCircle2 },
-  RECIBIDA:   { label: "En proceso", color: "text-indigo-400 bg-indigo-400/10",    icon: Clock },
-  FIRMADO:    { label: "En cola",    color: "text-blue-400 bg-blue-400/10",        icon: Clock },
-  DEVUELTA:   { label: "Devuelto",   color: "text-amber-400 bg-amber-400/10",      icon: AlertTriangle },
-  RECHAZADO:  { label: "Rechazado",  color: "text-red-400 bg-red-400/10",          icon: XCircle },
-  ANULADO:    { label: "Anulado",    color: "text-gray-500 bg-gray-500/10",        icon: Ban },  // ← añadir
-  PENDIENTE:  { label: "Pendiente",  color: "text-gray-400 bg-gray-400/10",        icon: Clock },
-  SANDBOX:    { label: "Prueba",     color: "text-cyan-400 bg-cyan-400/10",        icon: FlaskConical },
+const ESTADO_CONFIG: Record<string, { label: string; color: string; bg: string; icon: any }> = {
+  AUTORIZADO: { label: "Autorizado", color: "var(--kipu-success)", bg: "color-mix(in srgb, var(--kipu-success) 10%, transparent)", icon: CheckCircle2 },
+  RECIBIDA:   { label: "En proceso", color: "#818cf8", bg: "color-mix(in srgb, #818cf8 10%, transparent)", icon: Clock },
+  FIRMADO:    { label: "En cola",    color: "#60a5fa", bg: "color-mix(in srgb, #60a5fa 10%, transparent)", icon: Clock },
+  DEVUELTA:   { label: "Devuelto",   color: "var(--kipu-warning)", bg: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)", icon: AlertTriangle },
+  RECHAZADO:  { label: "Rechazado",  color: "var(--kipu-danger)", bg: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)", icon: XCircle },
+  ANULADO:    { label: "Anulado",    color: "var(--kipu-muted)", bg: "color-mix(in srgb, var(--kipu-muted) 10%, transparent)", icon: Ban },
+  PENDIENTE:  { label: "Pendiente",  color: "var(--kipu-subtle)", bg: "color-mix(in srgb, var(--kipu-subtle) 10%, transparent)", icon: Clock },
+  SANDBOX:    { label: "Prueba",     color: "#22d3ee", bg: "color-mix(in srgb, #22d3ee 10%, transparent)", icon: FlaskConical },
 };
-const TIPO_COMPROBANTE: Record<string, { label: string; color: string }> = {
-  FAC: { label: "Factura",          color: "text-gray-400 bg-gray-400/10"      },
-  NCR: { label: "Nota de Crédito",  color: "text-purple-400 bg-purple-400/10" },
-  NDB: { label: "Nota de Débito",   color: "text-orange-400 bg-orange-400/10" },
-  RET: { label: "Retención",        color: "text-yellow-400 bg-yellow-400/10" },
-  LIQ: { label: "Liquidación",      color: "text-cyan-400 bg-cyan-400/10"      },
+
+const TIPO_COMPROBANTE: Record<string, { label: string; color: string; bg: string }> = {
+  FAC: { label: "Factura",          color: "var(--kipu-muted)", bg: "color-mix(in srgb, var(--kipu-muted) 10%, transparent)" },
+  NCR: { label: "Nota de Crédito",  color: "#c084fc", bg: "color-mix(in srgb, #c084fc 10%, transparent)" },
+  NDB: { label: "Nota de Débito",   color: "#fb923c", bg: "color-mix(in srgb, #fb923c 10%, transparent)" },
+  RET: { label: "Retención",        color: "#facc15", bg: "color-mix(in srgb, #facc15 10%, transparent)" },
+  LIQ: { label: "Liquidación",      color: "#22d3ee", bg: "color-mix(in srgb, #22d3ee 10%, transparent)" },
 };
+
 const COBRO_CONFIG: Record<string, { label: string; color: string }> = {
-  PENDIENTE: { label: "Por cobrar", color: "text-amber-400"   },
-  PAGADO:    { label: "Cobrado",    color: "text-emerald-400" },
-  PARCIAL:   { label: "Parcial",    color: "text-blue-400"    },
-  ANULADO:   { label: "Anulado",    color: "text-red-400"     },
+  PENDIENTE: { label: "Por cobrar", color: "var(--kipu-warning)" },
+  PAGADO:    { label: "Cobrado",    color: "var(--kipu-success)" },
+  PARCIAL:   { label: "Parcial",    color: "#60a5fa" },
+  ANULADO:   { label: "Anulado",    color: "var(--kipu-danger)" },
 };
+
 const fmt = (n: any) => parseFloat(n ?? 0).toFixed(2);
 
 // ── Storage helpers ────────────────────────────────────────────────────────────
@@ -70,13 +72,14 @@ function guardarFecha(key: string, val: string) {
 }
 
 // ── Componente ResumenTipoCard ─────────────────────────────────────────────────
-const COLOR_MAP: Record<string, { badge: string; total: string }> = {
-  indigo: { badge: "bg-indigo-400/10 text-indigo-400", total: "text-indigo-400" },
-  cyan:   { badge: "bg-cyan-400/10 text-cyan-400",     total: "text-cyan-400"   },
-  purple: { badge: "bg-purple-400/10 text-purple-400", total: "text-purple-400" },
-  amber:  { badge: "bg-amber-400/10 text-amber-400",   total: "text-amber-400"  },
-  yellow: { badge: "bg-yellow-400/10 text-yellow-400", total: "text-yellow-400" },
+const COLOR_MAP: Record<string, { color: string; bg: string }> = {
+  indigo: { color: "#818cf8", bg: "color-mix(in srgb, #818cf8 10%, transparent)" },
+  cyan:   { color: "#22d3ee", bg: "color-mix(in srgb, #22d3ee 10%, transparent)" },
+  purple: { color: "#c084fc", bg: "color-mix(in srgb, #c084fc 10%, transparent)" },
+  amber:  { color: "#fb923c", bg: "color-mix(in srgb, #fb923c 10%, transparent)" },
+  yellow: { color: "#facc15", bg: "color-mix(in srgb, #facc15 10%, transparent)" },
 };
+
 function ResumenTipoCard({ tipo, label, color, data }: {
   tipo:  string;
   label: string;
@@ -85,28 +88,37 @@ function ResumenTipoCard({ tipo, label, color, data }: {
 }) {
   const c = COLOR_MAP[color] ?? COLOR_MAP.indigo;
   return (
-    <div className="bg-gray-950/60 border border-gray-800 rounded-xl p-4">
+    <div
+      className="rounded-xl p-4"
+      style={{
+        background: "color-mix(in srgb, var(--kipu-surface) 60%, transparent)",
+        border: "1px solid var(--kipu-border)",
+      }}
+    >
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <span className={clsx("text-[10px] px-2 py-0.5 rounded-full font-bold", c.badge)}>
+          <span
+            className="text-[10px] px-2 py-0.5 rounded-full font-bold"
+            style={{ color: c.color, background: c.bg }}
+          >
             {tipo}
           </span>
-          <h3 className="text-xs font-semibold text-white">{label}</h3>
+          <h3 className="text-xs font-semibold" style={{ color: "var(--kipu-text)" }}>{label}</h3>
         </div>
-        <span className="text-[10px] text-gray-500">{data.num_docs} docs</span>
+        <span className="text-[10px]" style={{ color: "var(--kipu-subtle)" }}>{data.num_docs} docs</span>
       </div>
       <div className="space-y-1.5">
         {data.desglose_iva.length === 0 ? (
-          <p className="text-xs text-gray-600">Sin desglose disponible</p>
+          <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Sin desglose disponible</p>
         ) : (
           data.desglose_iva.map((imp, i) => (
             <div key={i} className="space-y-0.5">
-              <div className="flex justify-between text-xs text-gray-400">
+              <div className="flex justify-between text-xs" style={{ color: "var(--kipu-muted)" }}>
                 <span>Subtotal {imp.tarifa}%</span>
                 <span>${fmt(imp.subtotal)}</span>
               </div>
               {imp.iva > 0 && (
-                <div className="flex justify-between text-xs text-gray-600 pl-3">
+                <div className="flex justify-between text-xs pl-3" style={{ color: "var(--kipu-subtle)" }}>
                   <span>IVA {imp.tarifa}%</span>
                   <span>${fmt(imp.iva)}</span>
                 </div>
@@ -114,9 +126,12 @@ function ResumenTipoCard({ tipo, label, color, data }: {
             </div>
           ))
         )}
-        <div className="flex justify-between font-bold text-xs pt-2 border-t border-gray-800/60 mt-2">
-          <span className="text-gray-400">Total</span>
-          <span className={c.total}>${fmt(data.total)}</span>
+        <div
+          className="flex justify-between font-bold text-xs pt-2 mt-2"
+          style={{ borderTop: "1px solid var(--kipu-border)" }}
+        >
+          <span style={{ color: "var(--kipu-muted)" }}>Total</span>
+          <span style={{ color: c.color }}>${fmt(data.total)}</span>
         </div>
       </div>
     </div>
@@ -215,18 +230,28 @@ export default function HistorialPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-white">Comprobantes Emitidos</h1>
-          <p className="text-sm text-gray-500">{documentos.length} comprobantes encontrados</p>
+          <h1 className="text-xl font-bold" style={{ color: "var(--kipu-text)" }}>Comprobantes Emitidos</h1>
+          <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>{documentos.length} comprobantes encontrados</p>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setSandbox(!sandbox)}
-            className={clsx(
-              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border",
-              sandbox
-                ? "bg-cyan-500/20 text-cyan-400 border-cyan-500/30"
-                : "bg-gray-900 text-gray-400 border-gray-800 hover:text-white"
-            )}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+            style={{
+              background: sandbox
+                ? "color-mix(in srgb, #22d3ee 20%, transparent)"
+                : "var(--kipu-surface)",
+              color: sandbox ? "#22d3ee" : "var(--kipu-muted)",
+              border: sandbox
+                ? "1px solid color-mix(in srgb, #22d3ee 30%, transparent)"
+                : "1px solid var(--kipu-border)",
+            }}
+            onMouseEnter={e => {
+              if (!sandbox) e.currentTarget.style.color = "var(--kipu-text)";
+            }}
+            onMouseLeave={e => {
+              if (!sandbox) e.currentTarget.style.color = "var(--kipu-muted)";
+            }}
           >
             <FlaskConical size={14} />
             {sandbox ? "Sandbox" : "Producción"}
@@ -234,12 +259,24 @@ export default function HistorialPage() {
           <button
             onClick={() => { cargar(); cargarResumen(); }}
             disabled={diasRango > 45}
-            className="p-2 rounded-lg border border-gray-800 bg-gray-900 text-gray-400 hover:text-white transition-colors disabled:opacity-40"
+            className="p-2 rounded-lg transition-colors disabled:opacity-40"
+            style={{
+              background: "var(--kipu-surface)",
+              border: "1px solid var(--kipu-border)",
+              color: "var(--kipu-muted)",
+            }}
+            onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
+            onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-muted)"}
           >
             <RefreshCw size={16} />
           </button>
-          <Link href="/documentos/emitir/fac"
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors">
+          <Link
+            href="/documentos/emitir/fac"
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors"
+            style={{ background: "var(--kipu-accent)" }}
+            onMouseEnter={e => e.currentTarget.style.background = "var(--kipu-accent-h)"}
+            onMouseLeave={e => e.currentTarget.style.background = "var(--kipu-accent)"}
+          >
             <Plus size={15} /> Nueva
           </Link>
         </div>
@@ -248,60 +285,100 @@ export default function HistorialPage() {
       {/* Filtros */}
       <div className="flex flex-col md:flex-row gap-3">
         <div className="relative flex-1">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--kipu-subtle)" }} />
           <input
             value={query}
             onChange={e => setQuery(e.target.value)}
             placeholder="Buscar por cliente, RUC o número..."
-            className="w-full pl-9 pr-4 py-2.5 rounded-lg bg-gray-900 border border-gray-800 text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 text-sm"
+            className="w-full pl-9 pr-4 py-2.5 rounded-lg text-sm transition-colors focus:outline-none"
+            style={{
+              background: "var(--kipu-surface)",
+              border: "1px solid var(--kipu-border)",
+              color: "var(--kipu-text)",
+            }}
+            onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+            onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
           />
         </div>
         <div className="flex gap-2 items-center shrink-0">
-          <input type="date" value={fechaInicio} onChange={e => setFechaInicio(e.target.value)}
-            className="px-3 py-2 rounded-lg bg-gray-900 border border-gray-800 text-white text-sm focus:outline-none focus:border-indigo-500" />
-          <span className="text-gray-600 text-xs">—</span>
-          <input type="date" value={fechaFin} onChange={e => setFechaFin(e.target.value)}
-            className="px-3 py-2 rounded-lg bg-gray-900 border border-gray-800 text-white text-sm focus:outline-none focus:border-indigo-500" />
+          <input
+            type="date"
+            value={fechaInicio}
+            onChange={e => setFechaInicio(e.target.value)}
+            className="px-3 py-2 rounded-lg text-sm focus:outline-none transition-colors"
+            style={{
+              background: "var(--kipu-surface)",
+              border: "1px solid var(--kipu-border)",
+              color: "var(--kipu-text)",
+            }}
+            onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+            onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+          />
+          <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>—</span>
+          <input
+            type="date"
+            value={fechaFin}
+            onChange={e => setFechaFin(e.target.value)}
+            className="px-3 py-2 rounded-lg text-sm focus:outline-none transition-colors"
+            style={{
+              background: "var(--kipu-surface)",
+              border: "1px solid var(--kipu-border)",
+              color: "var(--kipu-text)",
+            }}
+            onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+            onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+          />
         </div>
       </div>
 
       {diasRango > 45 && (
-        <p className="text-xs text-amber-400 font-medium">El rango máximo es de 45 días.</p>
+        <p className="text-xs font-medium" style={{ color: "var(--kipu-warning)" }}>El rango máximo es de 45 días.</p>
       )}
 
       {/* Resumen fiscal */}
       {!sandbox && tieneResumen && (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <div
+          className="rounded-xl overflow-hidden"
+          style={{
+            background: "var(--kipu-surface)",
+            border: "1px solid var(--kipu-border)",
+          }}
+        >
           <button
             onClick={() => setResumenOpen(!resumenOpen)}
-            className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-800/50 transition-colors"
+            className="w-full flex items-center justify-between px-4 py-3 transition-colors"
+            onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 4%, transparent)"}
+            onMouseLeave={e => e.currentTarget.style.background = "transparent"}
           >
             <div className="flex items-center gap-2">
-              <TrendingUp size={15} className="text-indigo-400" />
-              <span className="text-sm font-semibold text-white">Resumen fiscal</span>
-              <span className="text-xs text-gray-500">
+              <TrendingUp size={15} style={{ color: "var(--kipu-accent)" }} />
+              <span className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>Resumen fiscal</span>
+              <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
                 {resumen.periodo?.desde} → {resumen.periodo?.hasta}
               </span>
             </div>
             <div className="flex items-center gap-3">
               {resumen.por_tipo?.FAC && (
-                <span className="text-xs text-gray-400 hidden sm:block">
-                  FAC <span className="text-white font-medium">${fmt(resumen.por_tipo.FAC.total)}</span>
+                <span className="text-xs hidden sm:block" style={{ color: "var(--kipu-muted)" }}>
+                  FAC <span className="font-medium" style={{ color: "var(--kipu-text)" }}>${fmt(resumen.por_tipo.FAC.total)}</span>
                 </span>
               )}
               {resumen.retenciones?.num_docs > 0 && (
-                <span className="text-xs text-gray-400 hidden sm:block">
-                  RET <span className="text-yellow-400 font-medium">${fmt(resumen.retenciones.total)}</span>
+                <span className="text-xs hidden sm:block" style={{ color: "var(--kipu-muted)" }}>
+                  RET <span className="font-medium" style={{ color: "var(--kipu-warning)" }}>${fmt(resumen.retenciones.total)}</span>
                 </span>
               )}
               {resumenOpen
-                ? <ChevronUp size={16} className="text-gray-500" />
-                : <ChevronDown size={16} className="text-gray-500" />
+                ? <ChevronUp size={16} style={{ color: "var(--kipu-subtle)" }} />
+                : <ChevronDown size={16} style={{ color: "var(--kipu-subtle)" }} />
               }
             </div>
           </button>
           {resumenOpen && (
-            <div className="px-4 pb-4 space-y-3 border-t border-gray-800">
+            <div
+              className="px-4 pb-4 space-y-3"
+              style={{ borderTop: "2px solid var(--kipu-border)" }}
+            >
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 pt-3">
                 {resumen.por_tipo?.FAC && (
                   <ResumenTipoCard tipo="FAC" label="Facturas Emitidas"        color="indigo" data={resumen.por_tipo.FAC} />
@@ -316,32 +393,47 @@ export default function HistorialPage() {
                   <ResumenTipoCard tipo="NDB" label="Notas de Débito"          color="amber"  data={resumen.por_tipo.NDB} />
                 )}
                 {resumen.retenciones?.num_docs > 0 && (
-                  <div className="bg-gray-950/60 border border-gray-800 rounded-xl p-4">
+                  <div
+                    className="rounded-xl p-4"
+                    style={{
+                      background: "color-mix(in srgb, var(--kipu-surface) 60%, transparent)",
+                      border: "1px solid var(--kipu-border)",
+                    }}
+                  >
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-yellow-400/10 text-yellow-400">
+                        <span
+                          className="text-[10px] px-2 py-0.5 rounded-full font-bold"
+                          style={{
+                            color: "#facc15",
+                            background: "color-mix(in srgb, #facc15 10%, transparent)",
+                          }}
+                        >
                           RET
                         </span>
-                        <h3 className="text-xs font-semibold text-white">Retenciones Emitidas</h3>
+                        <h3 className="text-xs font-semibold" style={{ color: "var(--kipu-text)" }}>Retenciones Emitidas</h3>
                       </div>
-                      <span className="text-[10px] text-gray-500">{resumen.retenciones.num_docs} docs</span>
+                      <span className="text-[10px]" style={{ color: "var(--kipu-subtle)" }}>{resumen.retenciones.num_docs} docs</span>
                     </div>
                     <div className="space-y-1.5">
                       {Object.entries(resumen.retenciones.por_tipo).map(([tipo, data]: [string, any]) => (
                         <div key={tipo} className="space-y-0.5">
-                          <div className="flex justify-between text-xs text-gray-400">
+                          <div className="flex justify-between text-xs" style={{ color: "var(--kipu-muted)" }}>
                             <span>Retención {tipo}</span>
-                            <span className="text-white">${fmt(data.valor_retenido)}</span>
+                            <span style={{ color: "var(--kipu-text)" }}>${fmt(data.valor_retenido)}</span>
                           </div>
-                          <div className="flex justify-between text-xs text-gray-600 pl-3">
+                          <div className="flex justify-between text-xs pl-3" style={{ color: "var(--kipu-subtle)" }}>
                             <span>Base imponible</span>
                             <span>${fmt(data.base)}</span>
                           </div>
                         </div>
                       ))}
-                      <div className="flex justify-between font-bold text-xs pt-2 border-t border-gray-800/60 mt-2">
-                        <span className="text-gray-400">Total retenido</span>
-                        <span className="text-yellow-400">${fmt(resumen.retenciones.total)}</span>
+                      <div
+                        className="flex justify-between font-bold text-xs pt-2 mt-2"
+                        style={{ borderTop: "1px solid var(--kipu-border)" }}
+                      >
+                        <span style={{ color: "var(--kipu-muted)" }}>Total retenido</span>
+                        <span style={{ color: "var(--kipu-warning)" }}>${fmt(resumen.retenciones.total)}</span>
                       </div>
                     </div>
                   </div>
@@ -355,60 +447,112 @@ export default function HistorialPage() {
       {/* Filtros por estado y tipo */}
       <div className="space-y-2">
         <div className="flex gap-2 flex-wrap">
-          {["TODOS", "AUTORIZADO", "RECIBIDA", "DEVUELTA", "RECHAZADO", "ANULADO"].map(estado => (
-            <button key={estado} onClick={() => setFiltroEstado(estado)}
-              className={clsx(
-                "px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
-                filtroEstado === estado
-                  ? "bg-indigo-600 text-white"
-                  : "bg-gray-900 border border-gray-800 text-gray-400 hover:text-white"
-              )}>
-              {estado === "TODOS" ? "Todos" : ESTADO_CONFIG[estado]?.label ?? estado}
-            </button>
-          ))}
+          {["TODOS", "AUTORIZADO", "RECIBIDA", "DEVUELTA", "RECHAZADO", "ANULADO"].map(estado => {
+            const isSelected = filtroEstado === estado;
+            return (
+              <button
+                key={estado}
+                onClick={() => setFiltroEstado(estado)}
+                className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                style={{
+                  background: isSelected ? "var(--kipu-accent)" : "var(--kipu-surface)",
+                  color: isSelected ? "#FFFFFF" : "var(--kipu-muted)",
+                  border: isSelected ? "1px solid var(--kipu-accent)" : "1px solid var(--kipu-border)",
+                }}
+                onMouseEnter={e => {
+                  if (!isSelected) {
+                    e.currentTarget.style.color = "var(--kipu-text)";
+                  }
+                }}
+                onMouseLeave={e => {
+                  if (!isSelected) {
+                    e.currentTarget.style.color = "var(--kipu-muted)";
+                  }
+                }}
+              >
+                {estado === "TODOS" ? "Todos" : ESTADO_CONFIG[estado]?.label ?? estado}
+              </button>
+            );
+          })}
         </div>
         <div className="flex gap-2 flex-wrap">
-          {["TODOS", "FAC", "NCR", "NDB", "RET", "LIQ"].map(tipo => (
-            <button key={tipo} onClick={() => setFiltroTipo(tipo)}
-              className={clsx(
-                "px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
-                filtroTipo === tipo
-                  ? "bg-indigo-600 text-white"
-                  : "bg-gray-900 border border-gray-800 text-gray-400 hover:text-white"
-              )}>
-              {tipo === "TODOS" ? "Todos los tipos" : TIPO_COMPROBANTE[tipo]?.label ?? tipo}
-            </button>
-          ))}
+          {["TODOS", "FAC", "NCR", "NDB", "RET", "LIQ"].map(tipo => {
+            const isSelected = filtroTipo === tipo;
+            return (
+              <button
+                key={tipo}
+                onClick={() => setFiltroTipo(tipo)}
+                className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                style={{
+                  background: isSelected ? "var(--kipu-accent)" : "var(--kipu-surface)",
+                  color: isSelected ? "#FFFFFF" : "var(--kipu-muted)",
+                  border: isSelected ? "1px solid var(--kipu-accent)" : "1px solid var(--kipu-border)",
+                }}
+                onMouseEnter={e => {
+                  if (!isSelected) {
+                    e.currentTarget.style.color = "var(--kipu-text)";
+                  }
+                }}
+                onMouseLeave={e => {
+                  if (!isSelected) {
+                    e.currentTarget.style.color = "var(--kipu-muted)";
+                  }
+                }}
+              >
+                {tipo === "TODOS" ? "Todos los tipos" : TIPO_COMPROBANTE[tipo]?.label ?? tipo}
+              </button>
+            );
+          })}
         </div>
       </div>
 
       {/* Lista */}
       {loading ? (
         <div className="flex items-center justify-center py-20">
-          <Loader2 size={24} className="animate-spin text-indigo-400" />
+          <div
+            className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin"
+            style={{ borderColor: "var(--kipu-accent)", borderTopColor: "transparent" }}
+          />
         </div>
       ) : filtrados.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
-          <FileText size={40} className="text-gray-700 mb-3" />
-          <p className="text-gray-500 text-sm">
+          <FileText size={40} className="mb-3" style={{ color: "var(--kipu-subtle)" }} />
+          <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>
             {query || filtroEstado !== "TODOS" || filtroTipo !== "TODOS"
               ? "No hay comprobantes que coincidan."
               : `Sin comprobantes de ${sandbox ? "prueba (Sandbox)" : "producción"} en este rango.`}
           </p>
           {!query && filtroEstado === "TODOS" && (
-            <Link href="/documentos/emitir/fac"
-              className="mt-4 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors">
+            <Link
+              href="/documentos/emitir/fac"
+              className="mt-4 px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors"
+              style={{ background: "var(--kipu-accent)" }}
+              onMouseEnter={e => e.currentTarget.style.background = "var(--kipu-accent-h)"}
+              onMouseLeave={e => e.currentTarget.style.background = "var(--kipu-accent)"}
+            >
               Emitir primer comprobante
             </Link>
           )}
         </div>
       ) : (
-        <div className="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+        <div
+          className="rounded-xl overflow-hidden"
+          style={{
+            background: "var(--kipu-surface)",
+            border: "1px solid var(--kipu-border)",
+          }}
+        >
           {/* Desktop */}
           <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-800 text-xs text-gray-500">
+                <tr
+                  className="text-xs"
+                  style={{
+                    color: "var(--kipu-subtle)",
+                    borderBottom: "2px solid var(--kipu-border)",
+                  }}
+                >
                   <th className="text-left px-4 py-3 font-medium">Número</th>
                   <th className="text-left px-4 py-3 font-medium">Tipo</th>
                   <th className="text-left px-4 py-3 font-medium">Cliente</th>
@@ -418,44 +562,63 @@ export default function HistorialPage() {
                   <th className="text-right px-4 py-3 font-medium">Total</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-800">
-                {filtrados.map((d) => {
+              <tbody>
+                {filtrados.map((d, index) => {
                   const estado = ESTADO_CONFIG[d.estado_sri] ?? ESTADO_CONFIG.PENDIENTE;
                   const tipo   = TIPO_COMPROBANTE[d.tipo_doc] ?? TIPO_COMPROBANTE.FAC;
                   const cobro  = d.estado_cobro ? COBRO_CONFIG[d.estado_cobro] : null;
                   const Icon   = estado.icon;
                   return (
-                    <tr key={d.id} className="hover:bg-gray-800/50 transition-colors">
+                    <tr
+                      key={d.id}
+                      className="transition-colors"
+                      style={{
+                        borderTop: index > 0 ? "1px solid var(--kipu-border)" : "none",
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 4%, transparent)"}
+                      onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                    >
                       <td className="px-4 py-3">
-                        <Link href={`/documentos/${d.id}`}
-                          className="font-mono text-xs text-indigo-400 hover:text-indigo-300 hover:underline underline-offset-2">
+                        <Link
+                          href={`/documentos/${d.id}`}
+                          className="font-mono text-xs transition-colors hover:underline underline-offset-2"
+                          style={{ color: "var(--kipu-accent)" }}
+                          onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent-h)"}
+                          onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-accent)"}
+                        >
                           {d.numero_doc ?? "—"}
                         </Link>
                       </td>
                       <td className="px-4 py-3">
-                        <span className={clsx("inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium", tipo.color)}>
+                        <span
+                          className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
+                          style={{ color: tipo.color, background: tipo.bg }}
+                        >
                           {tipo.label}
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        <p className="text-white font-medium truncate max-w-[160px]">{d.razon_social}</p>
-                        <p className="text-xs text-gray-500">{d.identificacion}</p>
+                        <p className="font-medium truncate max-w-[160px]" style={{ color: "var(--kipu-text)" }}>{d.razon_social}</p>
+                        <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>{d.identificacion}</p>
                       </td>
-                      <td className="px-4 py-3 text-gray-400 text-xs">{d.fecha_emision}</td>
+                      <td className="px-4 py-3 text-xs" style={{ color: "var(--kipu-muted)" }}>{d.fecha_emision}</td>
                       <td className="px-4 py-3">
-                        <span className={clsx("inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium", estado.color)}>
+                        <span
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium"
+                          style={{ color: estado.color, background: estado.bg }}
+                        >
                           <Icon size={11} />
                           {estado.label}
                         </span>
                       </td>
                       <td className="px-4 py-3">
                         {cobro && ["FAC", "LIQ"].includes(d.tipo_doc) && (
-                          <span className={clsx("text-xs font-medium", cobro.color)}>
+                          <span className="text-xs font-medium" style={{ color: cobro.color }}>
                             {cobro.label}
                           </span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-right font-semibold text-white">
+                      <td className="px-4 py-3 text-right font-semibold" style={{ color: "var(--kipu-text)" }}>
                         ${fmt(d.importe_total)}
                       </td>
                     </tr>
@@ -465,32 +628,49 @@ export default function HistorialPage() {
             </table>
           </div>
           {/* Móvil */}
-          <div className="md:hidden divide-y divide-gray-800">
-            {filtrados.map((d) => {
+          <div className="md:hidden">
+            {filtrados.map((d, index) => {
               const estado = ESTADO_CONFIG[d.estado_sri] ?? ESTADO_CONFIG.PENDIENTE;
               const tipo   = TIPO_COMPROBANTE[d.tipo_doc] ?? TIPO_COMPROBANTE.FAC;
               const Icon   = estado.icon;
               return (
-                <div key={d.id} className="px-4 py-3 space-y-1.5">
+                <div
+                  key={d.id}
+                  className="px-4 py-3 space-y-1.5"
+                  style={{
+                    borderTop: index > 0 ? "1px solid var(--kipu-border)" : "none",
+                  }}
+                >
                   <div className="flex items-center justify-between gap-2">
-                    <Link href={`/documentos/${d.id}`}
-                      className="font-mono text-xs text-indigo-400 hover:text-indigo-300">
+                    <Link
+                      href={`/documentos/${d.id}`}
+                      className="font-mono text-xs transition-colors"
+                      style={{ color: "var(--kipu-accent)" }}
+                      onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent-h)"}
+                      onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-accent)"}
+                    >
                       {d.numero_doc ?? "—"}
                     </Link>
                     <div className="flex items-center gap-1.5">
-                      <span className={clsx("px-1.5 py-0.5 rounded text-[10px] font-medium", tipo.color)}>
+                      <span
+                        className="px-1.5 py-0.5 rounded text-[10px] font-medium"
+                        style={{ color: tipo.color, background: tipo.bg }}
+                      >
                         {tipo.label}
                       </span>
-                      <span className={clsx("inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium", estado.color)}>
+                      <span
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium"
+                        style={{ color: estado.color, background: estado.bg }}
+                      >
                         <Icon size={10} />
                         {estado.label}
                       </span>
                     </div>
                   </div>
-                  <p className="text-sm font-medium text-white">{d.razon_social}</p>
+                  <p className="text-sm font-medium" style={{ color: "var(--kipu-text)" }}>{d.razon_social}</p>
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-500">{d.fecha_emision}</span>
-                    <span className="text-sm font-bold text-white">${fmt(d.importe_total)}</span>
+                    <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>{d.fecha_emision}</span>
+                    <span className="text-sm font-bold" style={{ color: "var(--kipu-text)" }}>${fmt(d.importe_total)}</span>
                   </div>
                 </div>
               );

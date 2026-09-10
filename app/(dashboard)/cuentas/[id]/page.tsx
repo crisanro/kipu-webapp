@@ -1,4 +1,3 @@
-// app/(dashboard)/cuentas/[id]/page.tsx
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -7,21 +6,20 @@ import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
 import { hoyEC } from "@/lib/fecha";
 import {
-  ArrowLeft, Loader2, Plus, X, Save, Ban,
-  TrendingUp, TrendingDown, CheckCircle2, Clock,
+  ArrowLeft, Save, Ban,
+  CheckCircle2, Clock,
   AlertTriangle, Wallet, User, Calendar, FileText,
-  ArrowUpCircle, ArrowDownCircle,
+  ArrowUpCircle, ArrowDownCircle, X
 } from "lucide-react";
-import { clsx } from "clsx";
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 const fmt = (n: number) => `$${n.toFixed(2)}`;
 
 const ESTADO_CONFIG = {
-  PENDIENTE: { label: "Pendiente", color: "text-amber-400 bg-amber-400/10",    icon: Clock         },
-  PARCIAL:   { label: "Parcial",   color: "text-blue-400 bg-blue-400/10",      icon: AlertTriangle },
-  PAGADO:    { label: "Pagado",    color: "text-emerald-400 bg-emerald-400/10", icon: CheckCircle2  },
-  ANULADO:   { label: "Anulado",   color: "text-gray-500 bg-gray-500/10",      icon: Ban           },
+  PENDIENTE: { label: "Pendiente", color: "var(--kipu-warning)", bg: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)", icon: Clock },
+  PARCIAL:   { label: "Parcial",   color: "#60a5fa",           bg: "color-mix(in srgb, #60a5fa 10%, transparent)",           icon: AlertTriangle },
+  PAGADO:    { label: "Pagado",    color: "var(--kipu-success)", bg: "color-mix(in srgb, var(--kipu-success) 10%, transparent)", icon: CheckCircle2 },
+  ANULADO:   { label: "Anulado",   color: "var(--kipu-subtle)",  bg: "color-mix(in srgb, var(--kipu-subtle) 10%, transparent)",  icon: Ban },
 };
 
 const FORMAS_PAGO = ["EFECTIVO", "TRANSFERENCIA", "CHEQUE", "TARJETA", "OTRO"];
@@ -33,14 +31,14 @@ export default function DetalleCuentaPage() {
   const tieneSub = empresa?.suscripcion_activa ?? false;
 
   const [data,          setData]          = useState<any>(null);
-  const [loading,       setLoading]       = useState(true);
-  const [showAbono,     setShowAbono]     = useState(false);
-  const [showAjuste,    setShowAjuste]    = useState(false);
-  const [showAnular,    setShowAnular]    = useState(false);
-  const [savingAbono,   setSavingAbono]   = useState(false);
-  const [savingAjuste,  setSavingAjuste]  = useState(false);
-  const [savingAnular,  setSavingAnular]  = useState(false);
-  const [error,         setError]         = useState("");
+  const [loading,        setLoading]        = useState(true);
+  const [showAbono,      setShowAbono]      = useState(false);
+  const [showAjuste,     setShowAjuste]     = useState(false);
+  const [showAnular,     setShowAnular]     = useState(false);
+  const [savingAbono,   setSavingAbono]    = useState(false);
+  const [savingAjuste,  setSavingAjuste]   = useState(false);
+  const [savingAnular,  setSavingAnular]   = useState(false);
+  const [error,         setError]          = useState("");
 
   const [abonoForm, setAbonoForm] = useState({
     monto:      "",
@@ -129,14 +127,25 @@ export default function DetalleCuentaPage() {
   // ── Loading / error ──────────────────────────────────────────────────────────
   if (loading) return (
     <div className="flex items-center justify-center h-64">
-      <Loader2 size={24} className="animate-spin text-indigo-400" />
+      <div
+        className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin"
+        style={{ borderColor: "var(--kipu-accent)", borderTopColor: "transparent" }}
+      />
     </div>
   );
   if (!data) return (
     <div className="p-6 text-center">
-      <Wallet size={40} className="text-gray-700 mx-auto mb-3" />
-      <p className="text-gray-500">Cuenta no encontrada.</p>
-      <button onClick={() => router.back()} className="mt-4 text-indigo-400 text-sm">Volver</button>
+      <Wallet size={40} className="mx-auto mb-3" style={{ color: "var(--kipu-subtle)" }} />
+      <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>Cuenta no encontrada.</p>
+      <button
+        onClick={() => router.back()}
+        className="mt-4 text-sm transition-colors"
+        style={{ color: "var(--kipu-accent)" }}
+        onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent-h)"}
+        onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-accent)"}
+      >
+        Volver
+      </button>
     </div>
   );
 
@@ -158,27 +167,51 @@ export default function DetalleCuentaPage() {
       <div className="flex items-center gap-3">
         <button
           onClick={() => router.back()}
-          className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
+          className="p-2 rounded-lg transition-colors"
+          style={{ color: "var(--kipu-muted)" }}
+          onMouseEnter={e => {
+            e.currentTarget.style.color = "var(--kipu-text)";
+            e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 5%, transparent)";
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.color = "var(--kipu-muted)";
+            e.currentTarget.style.background = "transparent";
+          }}
         >
           <ArrowLeft size={18} />
         </button>
         <div className="flex-1 min-w-0">
-          <h1 className="text-xl font-bold text-white truncate">{cuenta.concepto}</h1>
+          <h1 className="text-xl font-bold truncate" style={{ color: "var(--kipu-text)" }}>{cuenta.concepto}</h1>
           <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-            <span className={clsx(
-              "text-xs px-2 py-0.5 rounded-full font-medium",
-              cuenta.tipo === "COBRAR"
-                ? "bg-emerald-400/10 text-emerald-400"
-                : "bg-red-400/10 text-red-400"
-            )}>
+            <span
+              className="text-xs px-2 py-0.5 rounded-full font-medium"
+              style={{
+                background: cuenta.tipo === "COBRAR"
+                  ? "color-mix(in srgb, var(--kipu-success) 10%, transparent)"
+                  : "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
+                color: cuenta.tipo === "COBRAR" ? "var(--kipu-success)" : "var(--kipu-danger)",
+              }}
+            >
               {cuenta.tipo === "COBRAR" ? "Por cobrar" : "Por pagar"}
             </span>
-            <span className={clsx("text-xs px-2 py-0.5 rounded-full flex items-center gap-1", est.color)}>
+            <span
+              className="text-xs px-2 py-0.5 rounded-full flex items-center gap-1 font-medium"
+              style={{
+                background: est.bg,
+                color: est.color,
+              }}
+            >
               <EstIcon size={10} />
               {est.label}
             </span>
             {vencida && (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 flex items-center gap-1">
+              <span
+                className="text-xs px-2 py-0.5 rounded-full flex items-center gap-1 font-medium"
+                style={{
+                  background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
+                  color: "var(--kipu-danger)",
+                }}
+              >
                 <AlertTriangle size={10} />
                 Vencida
               </span>
@@ -188,60 +221,75 @@ export default function DetalleCuentaPage() {
       </div>
 
       {/* Tarjeta principal */}
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+      <div
+        className="rounded-xl p-5"
+        style={{
+          background: "var(--kipu-surface)",
+          border: "1px solid var(--kipu-border)",
+        }}
+      >
 
         {/* Montos */}
         <div className="grid grid-cols-3 gap-4 mb-4">
           <div>
-            <p className="text-xs text-gray-500 mb-1">Total actual</p>
-            <p className="text-lg font-bold text-white">{fmt(cuenta.monto_total)}</p>
+            <p className="text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>Total actual</p>
+            <p className="text-lg font-bold" style={{ color: "var(--kipu-text)" }}>{fmt(cuenta.monto_total)}</p>
           </div>
           <div>
-            <p className="text-xs text-gray-500 mb-1">Pagado</p>
-            <p className="text-lg font-bold text-emerald-400">{fmt(cuenta.monto_pagado)}</p>
+            <p className="text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>Pagado</p>
+            <p className="text-lg font-bold" style={{ color: "var(--kipu-success)" }}>{fmt(cuenta.monto_pagado)}</p>
           </div>
           <div>
-            <p className="text-xs text-gray-500 mb-1">Pendiente</p>
-            <p className="text-lg font-bold text-amber-400">{fmt(cuenta.saldo_pendiente)}</p>
+            <p className="text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>Pendiente</p>
+            <p className="text-lg font-bold" style={{ color: "var(--kipu-warning)" }}>{fmt(cuenta.saldo_pendiente)}</p>
           </div>
         </div>
 
         {/* Barra de progreso */}
-        <div className="w-full h-2 bg-gray-800 rounded-full overflow-hidden mb-4">
+        <div
+          className="w-full h-2 rounded-full overflow-hidden mb-4"
+          style={{ background: "color-mix(in srgb, var(--kipu-text) 8%, transparent)" }}
+        >
           <div
-            className={clsx(
-              "h-full rounded-full transition-all",
-              cuenta.estado === "PAGADO" ? "bg-emerald-500" : "bg-indigo-500"
-            )}
-            style={{ width: `${porcentaje}%` }}
+            className="h-full rounded-full transition-all"
+            style={{
+              width: `${porcentaje}%`,
+              background: cuenta.estado === "PAGADO" ? "var(--kipu-success)" : "var(--kipu-accent)",
+            }}
           />
         </div>
 
         {/* Datos */}
         <div className="space-y-2.5 text-sm">
           <div className="flex justify-between">
-            <span className="text-gray-500 flex items-center gap-2">
+            <span className="flex items-center gap-2" style={{ color: "var(--kipu-subtle)" }}>
               <User size={13} /> Persona
             </span>
             <Link
               href={`/personas/${cuenta.cliente_id}`}
-              className="text-indigo-400 hover:text-indigo-300 font-medium truncate max-w-[60%] text-right"
+              className="font-medium truncate max-w-[60%] text-right transition-colors"
+              style={{ color: "var(--kipu-accent)" }}
+              onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent-h)"}
+              onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-accent)"}
             >
               {cuenta.razon_social}
             </Link>
           </div>
           <div className="flex justify-between">
-            <span className="text-gray-500 flex items-center gap-2">
+            <span className="flex items-center gap-2" style={{ color: "var(--kipu-subtle)" }}>
               <Calendar size={13} /> Fecha
             </span>
-            <span className="text-white">{cuenta.fecha_emision}</span>
+            <span style={{ color: "var(--kipu-text)" }}>{cuenta.fecha_emision}</span>
           </div>
           {cuenta.fecha_vencimiento && (
             <div className="flex justify-between">
-              <span className="text-gray-500 flex items-center gap-2">
+              <span className="flex items-center gap-2" style={{ color: "var(--kipu-subtle)" }}>
                 <Calendar size={13} /> Vencimiento
               </span>
-              <span className={clsx("font-medium", vencida ? "text-red-400" : "text-white")}>
+              <span
+                className="font-medium"
+                style={{ color: vencida ? "var(--kipu-danger)" : "var(--kipu-text)" }}
+              >
                 {cuenta.fecha_vencimiento}
                 {vencida && " ⚠️"}
               </span>
@@ -249,34 +297,59 @@ export default function DetalleCuentaPage() {
           )}
           {cuenta.notas && (
             <div className="flex justify-between gap-4">
-              <span className="text-gray-500 flex items-center gap-2 shrink-0">
+              <span className="flex items-center gap-2 shrink-0" style={{ color: "var(--kipu-subtle)" }}>
                 <FileText size={13} /> Notas
               </span>
-              <span className="text-white text-right">{cuenta.notas}</span>
+              <span className="text-right" style={{ color: "var(--kipu-text)" }}>{cuenta.notas}</span>
             </div>
           )}
         </div>
 
         {/* Acciones */}
         {activa && tieneSub && (
-          <div className="flex gap-2 mt-5 pt-4 border-t border-gray-800">
+          <div
+            className="flex gap-2 mt-5 pt-4"
+            style={{ borderTop: "1px solid var(--kipu-border)" }}
+          >
             <button
               onClick={() => { setShowAbono(true); setError(""); }}
-              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors"
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-white text-sm font-medium transition-colors"
+              style={{ background: "var(--kipu-accent)" }}
+              onMouseEnter={e => e.currentTarget.style.background = "var(--kipu-accent-h)"}
+              onMouseLeave={e => e.currentTarget.style.background = "var(--kipu-accent)"}
             >
               <ArrowDownCircle size={14} />
               Registrar abono
             </button>
             <button
               onClick={() => { setShowAjuste(true); setError(""); }}
-              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-amber-400 text-sm font-medium transition-colors border border-amber-500/20"
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-colors"
+              style={{
+                background: "var(--kipu-surface)",
+                color: "var(--kipu-warning)",
+                border: "1px solid color-mix(in srgb, var(--kipu-warning) 20%, transparent)",
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-warning) 10%, transparent)"}
+              onMouseLeave={e => e.currentTarget.style.background = "var(--kipu-surface)"}
             >
               <ArrowUpCircle size={14} />
               Ajustar monto
             </button>
             <button
               onClick={() => setShowAnular(true)}
-              className="px-4 py-2.5 rounded-lg border border-gray-700 text-gray-400 hover:text-red-400 hover:border-red-500/50 text-sm transition-colors"
+              className="px-4 py-2.5 rounded-lg text-sm transition-colors"
+              style={{
+                border: "1px solid var(--kipu-border)",
+                color: "var(--kipu-muted)",
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.color = "var(--kipu-danger)";
+                e.currentTarget.style.borderColor = "color-mix(in srgb, var(--kipu-danger) 50%, transparent)";
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.color = "var(--kipu-muted)";
+                e.currentTarget.style.borderColor = "var(--kipu-border)";
+              }}
             >
               <Ban size={14} />
             </button>
@@ -284,29 +357,47 @@ export default function DetalleCuentaPage() {
         )}
 
         {activa && !tieneSub && (
-          <div className="mt-5 pt-4 border-t border-gray-800">
-            <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20">
-              <AlertTriangle size={13} className="text-amber-400 shrink-0" />
-              <p className="text-xs text-amber-300">Requiere suscripción activa para registrar movimientos.</p>
-              <Link href="/planes" className="ml-auto text-xs text-amber-400 underline shrink-0">Ver planes</Link>
+          <div
+            className="mt-5 pt-4"
+            style={{ borderTop: "1px solid var(--kipu-border)" }}
+          >
+            <div
+              className="flex items-center gap-2 px-3 py-2.5 rounded-lg"
+              style={{
+                background: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)",
+                border: "1px solid color-mix(in srgb, var(--kipu-warning) 20%, transparent)",
+              }}
+            >
+              <AlertTriangle size={13} className="shrink-0" style={{ color: "var(--kipu-warning)" }} />
+              <p className="text-xs" style={{ color: "var(--kipu-warning)" }}>Requiere suscripción activa para registrar movimientos.</p>
+              <Link href="/planes" className="ml-auto text-xs underline shrink-0" style={{ color: "var(--kipu-warning)" }}>Ver planes</Link>
             </div>
           </div>
         )}
       </div>
 
       {/* Historial de movimientos (abonos + ajustes unificados) */}
-      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
-        <div className="px-4 py-3 border-b border-gray-800 flex items-center justify-between">
-          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+      <div
+        className="rounded-xl overflow-hidden"
+        style={{
+          background: "var(--kipu-surface)",
+          border: "1px solid var(--kipu-border)",
+        }}
+      >
+        <div
+          className="px-4 py-3 flex items-center justify-between"
+          style={{ borderBottom: "1px solid var(--kipu-border)" }}
+        >
+          <h2 className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--kipu-subtle)" }}>
             Movimientos ({movimientos.length})
           </h2>
           {movimientos.length > 0 && (
-            <div className="flex items-center gap-3 text-xs text-gray-600">
+            <div className="flex items-center gap-3 text-xs" style={{ color: "var(--kipu-subtle)" }}>
               <span className="flex items-center gap-1">
-                <ArrowDownCircle size={11} className="text-emerald-400" /> Abono
+                <ArrowDownCircle size={11} style={{ color: "var(--kipu-success)" }} /> Abono
               </span>
               <span className="flex items-center gap-1">
-                <ArrowUpCircle size={11} className="text-amber-400" /> Ajuste
+                <ArrowUpCircle size={11} style={{ color: "var(--kipu-warning)" }} /> Ajuste
               </span>
             </div>
           )}
@@ -314,47 +405,60 @@ export default function DetalleCuentaPage() {
 
         {movimientos.length === 0 ? (
           <div className="px-4 py-8 text-center">
-            <p className="text-xs text-gray-600">Sin movimientos registrados.</p>
+            <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Sin movimientos registrados.</p>
           </div>
         ) : (
-          <div className="divide-y divide-gray-800">
+          <div>
             {movimientos.map((m: any, i: number) => {
               const esAjuste = m.tipo === "AJUSTE";
               return (
-                <div key={m.id} className="flex items-center gap-3 px-4 py-3">
-                  <div className={clsx(
-                    "w-7 h-7 rounded-full flex items-center justify-center shrink-0",
-                    esAjuste ? "bg-amber-400/10" : "bg-emerald-400/10"
-                  )}>
+                <div
+                  key={m.id}
+                  className="flex items-center gap-3 px-4 py-3"
+                  style={{
+                    borderTop: i > 0 ? "1px solid var(--kipu-border)" : "none",
+                  }}
+                >
+                  <div
+                    className="w-7 h-7 rounded-full flex items-center justify-center shrink-0"
+                    style={{
+                      background: esAjuste
+                        ? "color-mix(in srgb, var(--kipu-warning) 10%, transparent)"
+                        : "color-mix(in srgb, var(--kipu-success) 10%, transparent)",
+                    }}
+                  >
                     {esAjuste
-                      ? <ArrowUpCircle size={13} className="text-amber-400" />
-                      : <ArrowDownCircle size={13} className="text-emerald-400" />
+                      ? <ArrowUpCircle size={13} style={{ color: "var(--kipu-warning)" }} />
+                      : <ArrowDownCircle size={13} style={{ color: "var(--kipu-success)" }} />
                     }
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <p className={clsx(
-                        "text-sm font-medium",
-                        esAjuste ? "text-amber-400" : "text-emerald-400"
-                      )}>
+                      <p
+                        className="text-sm font-medium"
+                        style={{ color: esAjuste ? "var(--kipu-warning)" : "var(--kipu-success)" }}
+                      >
                         {esAjuste ? "+" : "-"}{fmt(m.monto)}
                       </p>
-                      <span className={clsx(
-                        "text-[10px] px-1.5 py-0.5 rounded",
-                        esAjuste
-                          ? "bg-amber-500/10 text-amber-500"
-                          : "bg-emerald-500/10 text-emerald-500"
-                      )}>
+                      <span
+                        className="text-[10px] px-1.5 py-0.5 rounded font-medium"
+                        style={{
+                          background: esAjuste
+                            ? "color-mix(in srgb, var(--kipu-warning) 10%, transparent)"
+                            : "color-mix(in srgb, var(--kipu-success) 10%, transparent)",
+                          color: esAjuste ? "var(--kipu-warning)" : "var(--kipu-success)",
+                        }}
+                      >
                         {esAjuste ? "ajuste" : "abono"}
                       </span>
                     </div>
-                    <p className="text-xs text-gray-500 mt-0.5">
+                    <p className="text-xs mt-0.5" style={{ color: "var(--kipu-subtle)" }}>
                       {m.fecha}
                       {m.forma_pago && ` · ${m.forma_pago}`}
                       {m.notas && ` · ${m.notas}`}
                     </p>
                   </div>
-                  <span className="text-xs text-gray-600 shrink-0">#{i + 1}</span>
+                  <span className="text-xs shrink-0" style={{ color: "var(--kipu-subtle)" }}>#{i + 1}</span>
                 </div>
               );
             })}
@@ -365,24 +469,45 @@ export default function DetalleCuentaPage() {
       {/* ── Modal abono ────────────────────────────────────────────────────────── */}
       {showAbono && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-          <div className="bg-gray-900 border border-gray-800 rounded-xl w-full max-w-sm">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-800">
+          <div
+            className="rounded-xl w-full max-w-sm"
+            style={{
+              background: "var(--kipu-surface)",
+              border: "1px solid var(--kipu-border)",
+            }}
+          >
+            <div
+              className="flex items-center justify-between px-5 py-4"
+              style={{ borderBottom: "1px solid var(--kipu-border)" }}
+            >
               <div className="flex items-center gap-2">
-                <ArrowDownCircle size={15} className="text-emerald-400" />
-                <h2 className="text-sm font-semibold text-white">Registrar abono</h2>
+                <ArrowDownCircle size={15} style={{ color: "var(--kipu-success)" }} />
+                <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>Registrar abono</h2>
               </div>
-              <button onClick={() => setShowAbono(false)} className="text-gray-500 hover:text-white">
+              <button
+                onClick={() => setShowAbono(false)}
+                className="transition-colors"
+                style={{ color: "var(--kipu-subtle)" }}
+                onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
+                onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-subtle)"}
+              >
                 <X size={18} />
               </button>
             </div>
             <div className="p-5 space-y-3">
-              <div className="bg-gray-800 rounded-lg px-3 py-2 text-xs text-gray-400">
-                Saldo pendiente: <span className="text-amber-400 font-semibold">{fmt(cuenta.saldo_pendiente)}</span>
+              <div
+                className="rounded-lg px-3 py-2 text-xs"
+                style={{
+                  background: "color-mix(in srgb, var(--kipu-text) 5%, transparent)",
+                  color: "var(--kipu-subtle)",
+                }}
+              >
+                Saldo pendiente: <span className="font-semibold" style={{ color: "var(--kipu-warning)" }}>{fmt(cuenta.saldo_pendiente)}</span>
               </div>
               <div>
-                <label className="block text-xs text-gray-500 mb-1.5">Monto *</label>
+                <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Monto *</label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">$</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm" style={{ color: "var(--kipu-subtle)" }}>$</span>
                   <input
                     type="number"
                     min="0"
@@ -390,55 +515,113 @@ export default function DetalleCuentaPage() {
                     value={abonoForm.monto}
                     onChange={(e) => setAbonoForm({ ...abonoForm, monto: e.target.value })}
                     placeholder="0.00"
-                    className="w-full pl-7 pr-4 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 text-sm"
+                    className="w-full pl-7 pr-4 py-2 rounded-lg text-sm transition-colors focus:outline-none"
+                    style={{
+                      background: "var(--kipu-surface)",
+                      border: "1px solid var(--kipu-border)",
+                      color: "var(--kipu-text)",
+                    }}
+                    onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                    onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
                     autoFocus
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-xs text-gray-500 mb-1.5">Fecha</label>
+                <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Fecha</label>
                 <input
                   type="date"
                   value={abonoForm.fecha}
                   onChange={(e) => setAbonoForm({ ...abonoForm, fecha: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-indigo-500 text-sm"
+                  className="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none"
+                  style={{
+                    background: "var(--kipu-surface)",
+                    border: "1px solid var(--kipu-border)",
+                    color: "var(--kipu-text)",
+                  }}
+                  onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                  onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
                 />
               </div>
               <div>
-                <label className="block text-xs text-gray-500 mb-1.5">Forma de pago</label>
+                <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Forma de pago</label>
                 <select
                   value={abonoForm.forma_pago}
                   onChange={(e) => setAbonoForm({ ...abonoForm, forma_pago: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-indigo-500 text-sm appearance-none"
+                  className="w-full px-3 py-2 rounded-lg text-sm appearance-none transition-colors focus:outline-none"
+                  style={{
+                    background: "var(--kipu-surface)",
+                    border: "1px solid var(--kipu-border)",
+                    color: "var(--kipu-text)",
+                  }}
+                  onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                  onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
                 >
                   {FORMAS_PAGO.map((f) => <option key={f} value={f}>{f}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-gray-500 mb-1.5">Notas</label>
+                <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Notas</label>
                 <input
                   value={abonoForm.notas}
                   onChange={(e) => setAbonoForm({ ...abonoForm, notas: e.target.value })}
                   placeholder="Opcional..."
-                  className="w-full px-3 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 text-sm"
+                  className="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none"
+                  style={{
+                    background: "var(--kipu-surface)",
+                    border: "1px solid var(--kipu-border)",
+                    color: "var(--kipu-text)",
+                  }}
+                  onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                  onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
                 />
               </div>
               {error && (
-                <p className="text-xs text-red-400 bg-red-400/10 px-3 py-2 rounded-lg">{error}</p>
+                <p
+                  className="text-xs px-3 py-2 rounded-lg"
+                  style={{
+                    color: "var(--kipu-danger)",
+                    background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
+                  }}
+                >
+                  {error}
+                </p>
               )}
               <div className="flex gap-3 pt-1">
                 <button
+                  type="button"
                   onClick={() => { setShowAbono(false); setError(""); }}
-                  className="flex-1 py-2.5 rounded-lg border border-gray-700 text-gray-400 hover:text-white text-sm transition-colors"
+                  className="flex-1 py-2.5 rounded-lg text-sm transition-colors"
+                  style={{
+                    border: "1px solid var(--kipu-border)",
+                    color: "var(--kipu-muted)",
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
+                  onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-muted)"}
                 >
                   Cancelar
                 </button>
                 <button
+                  type="button"
                   onClick={handleAbono}
                   disabled={savingAbono}
-                  className="flex-1 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                  className="flex-1 py-2.5 rounded-lg text-white text-sm font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                  style={{ background: "var(--kipu-accent)" }}
+                  onMouseEnter={e => {
+                    if (!savingAbono) e.currentTarget.style.background = "var(--kipu-accent-h)";
+                  }}
+                  onMouseLeave={e => {
+                    if (!savingAbono) e.currentTarget.style.background = "var(--kipu-accent)";
+                  }}
                 >
-                  {savingAbono ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                  {savingAbono ? (
+                    <div
+                      className="w-3.5 h-3.5 border-2 border-t-transparent rounded-full animate-spin"
+                      style={{ borderColor: "#FFFFFF", borderTopColor: "transparent" }}
+                    />
+                  ) : (
+                    <Save size={14} />
+                  )}
                   Guardar
                 </button>
               </div>
@@ -450,26 +633,48 @@ export default function DetalleCuentaPage() {
       {/* ── Modal ajuste ───────────────────────────────────────────────────────── */}
       {showAjuste && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-          <div className="bg-gray-900 border border-gray-800 rounded-xl w-full max-w-sm">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-800">
+          <div
+            className="rounded-xl w-full max-w-sm"
+            style={{
+              background: "var(--kipu-surface)",
+              border: "1px solid var(--kipu-border)",
+            }}
+          >
+            <div
+              className="flex items-center justify-between px-5 py-4"
+              style={{ borderBottom: "1px solid var(--kipu-border)" }}
+            >
               <div className="flex items-center gap-2">
-                <ArrowUpCircle size={15} className="text-amber-400" />
-                <h2 className="text-sm font-semibold text-white">Ajustar monto</h2>
+                <ArrowUpCircle size={15} style={{ color: "var(--kipu-warning)" }} />
+                <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>Ajustar monto</h2>
               </div>
-              <button onClick={() => setShowAjuste(false)} className="text-gray-500 hover:text-white">
+              <button
+                onClick={() => setShowAjuste(false)}
+                className="transition-colors"
+                style={{ color: "var(--kipu-subtle)" }}
+                onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
+                onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-subtle)"}
+              >
                 <X size={18} />
               </button>
             </div>
             <div className="p-5 space-y-3">
-              <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2.5 text-xs text-amber-300">
+              <div
+                className="rounded-lg px-3 py-2.5 text-xs"
+                style={{
+                  background: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)",
+                  border: "1px solid color-mix(in srgb, var(--kipu-warning) 20%, transparent)",
+                  color: "var(--kipu-warning)",
+                }}
+              >
                 Esto <span className="font-semibold">aumenta el monto total</span> de la deuda. Úsalo para intereses, cargos adicionales o un préstamo extra encima del saldo actual.
               </div>
               <div>
-                <label className="block text-xs text-gray-500 mb-1.5">
+                <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>
                   Monto a añadir *
                 </label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">+$</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm" style={{ color: "var(--kipu-subtle)" }}>+$</span>
                   <input
                     type="number"
                     min="0"
@@ -477,54 +682,99 @@ export default function DetalleCuentaPage() {
                     value={ajusteForm.monto}
                     onChange={(e) => setAjusteForm({ ...ajusteForm, monto: e.target.value })}
                     placeholder="0.00"
-                    className="w-full pl-9 pr-4 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-600 focus:outline-none focus:border-amber-500 text-sm"
+                    className="w-full pl-9 pr-4 py-2 rounded-lg text-sm transition-colors focus:outline-none"
+                    style={{
+                      background: "var(--kipu-surface)",
+                      border: "1px solid var(--kipu-border)",
+                      color: "var(--kipu-text)",
+                    }}
+                    onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-warning)"}
+                    onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
                     autoFocus
                   />
                 </div>
                 {ajusteForm.monto && parseFloat(ajusteForm.monto) > 0 && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    Nuevo total: <span className="text-white font-medium">
+                  <p className="text-xs mt-1" style={{ color: "var(--kipu-subtle)" }}>
+                    Nuevo total: <span className="font-medium" style={{ color: "var(--kipu-text)" }}>
                       {fmt(cuenta.monto_total + parseFloat(ajusteForm.monto))}
                     </span>
                   </p>
                 )}
               </div>
               <div>
-                <label className="block text-xs text-gray-500 mb-1.5">
+                <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>
                   Motivo *
                 </label>
                 <input
                   value={ajusteForm.motivo}
                   onChange={(e) => setAjusteForm({ ...ajusteForm, motivo: e.target.value })}
                   placeholder="Ej: Intereses enero, Cargo adicional..."
-                  className="w-full px-3 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-600 focus:outline-none focus:border-amber-500 text-sm"
+                  className="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none"
+                  style={{
+                    background: "var(--kipu-surface)",
+                    border: "1px solid var(--kipu-border)",
+                    color: "var(--kipu-text)",
+                  }}
+                  onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-warning)"}
+                  onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
                 />
               </div>
               <div>
-                <label className="block text-xs text-gray-500 mb-1.5">Fecha</label>
+                <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Fecha</label>
                 <input
                   type="date"
                   value={ajusteForm.fecha}
                   onChange={(e) => setAjusteForm({ ...ajusteForm, fecha: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-amber-500 text-sm"
+                  className="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none"
+                  style={{
+                    background: "var(--kipu-surface)",
+                    border: "1px solid var(--kipu-border)",
+                    color: "var(--kipu-text)",
+                  }}
+                  onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-warning)"}
+                  onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
                 />
               </div>
               {error && (
-                <p className="text-xs text-red-400 bg-red-400/10 px-3 py-2 rounded-lg">{error}</p>
+                <p
+                  className="text-xs px-3 py-2 rounded-lg"
+                  style={{
+                    color: "var(--kipu-danger)",
+                    background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
+                  }}
+                >
+                  {error}
+                </p>
               )}
               <div className="flex gap-3 pt-1">
                 <button
+                  type="button"
                   onClick={() => { setShowAjuste(false); setError(""); }}
-                  className="flex-1 py-2.5 rounded-lg border border-gray-700 text-gray-400 hover:text-white text-sm transition-colors"
+                  className="flex-1 py-2.5 rounded-lg text-sm transition-colors"
+                  style={{
+                    border: "1px solid var(--kipu-border)",
+                    color: "var(--kipu-muted)",
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
+                  onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-muted)"}
                 >
                   Cancelar
                 </button>
                 <button
+                  type="button"
                   onClick={handleAjuste}
                   disabled={savingAjuste}
-                  className="flex-1 py-2.5 rounded-lg bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                  className="flex-1 py-2.5 rounded-lg text-white text-sm font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                  style={{ background: "var(--kipu-warning)" }}
                 >
-                  {savingAjuste ? <Loader2 size={14} className="animate-spin" /> : <ArrowUpCircle size={14} />}
+                  {savingAjuste ? (
+                    <div
+                      className="w-3.5 h-3.5 border-2 border-t-transparent rounded-full animate-spin"
+                      style={{ borderColor: "#FFFFFF", borderTopColor: "transparent" }}
+                    />
+                  ) : (
+                    <ArrowUpCircle size={14} />
+                  )}
                   Aplicar ajuste
                 </button>
               </div>
@@ -536,34 +786,69 @@ export default function DetalleCuentaPage() {
       {/* ── Modal anular ───────────────────────────────────────────────────────── */}
       {showAnular && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-          <div className="bg-gray-900 border border-gray-800 rounded-xl w-full max-w-sm p-5 space-y-4">
+          <div
+            className="rounded-xl w-full max-w-sm p-5 space-y-4"
+            style={{
+              background: "var(--kipu-surface)",
+              border: "1px solid var(--kipu-border)",
+            }}
+          >
             <div className="flex items-start gap-3">
-              <div className="w-9 h-9 rounded-full bg-red-500/20 flex items-center justify-center shrink-0">
-                <Ban size={16} className="text-red-400" />
+              <div
+                className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
+                style={{
+                  background: "color-mix(in srgb, var(--kipu-danger) 20%, transparent)",
+                }}
+              >
+                <Ban size={16} style={{ color: "var(--kipu-danger)" }} />
               </div>
               <div>
-                <p className="text-white font-semibold text-sm">¿Anular esta cuenta?</p>
-                <p className="text-gray-400 text-xs mt-1">
+                <p className="font-semibold text-sm" style={{ color: "var(--kipu-text)" }}>¿Anular esta cuenta?</p>
+                <p className="text-xs mt-1" style={{ color: "var(--kipu-subtle)" }}>
                   Esta acción no se puede deshacer. La cuenta quedará marcada como anulada.
                 </p>
               </div>
             </div>
             {error && (
-              <p className="text-xs text-red-400 bg-red-400/10 px-3 py-2 rounded-lg">{error}</p>
+              <p
+                className="text-xs px-3 py-2 rounded-lg"
+                style={{
+                  color: "var(--kipu-danger)",
+                  background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
+                }}
+              >
+                {error}
+              </p>
             )}
             <div className="flex gap-2">
               <button
+                type="button"
                 onClick={() => setShowAnular(false)}
-                className="flex-1 py-2 rounded-lg border border-gray-700 text-gray-400 hover:text-white text-sm transition-colors"
+                className="flex-1 py-2 rounded-lg text-sm transition-colors"
+                style={{
+                  border: "1px solid var(--kipu-border)",
+                  color: "var(--kipu-muted)",
+                }}
+                onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
+                onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-muted)"}
               >
                 Cancelar
               </button>
               <button
+                type="button"
                 onClick={handleAnular}
                 disabled={savingAnular}
-                className="flex-1 py-2 rounded-lg bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                className="flex-1 py-2 rounded-lg text-white text-sm font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                style={{ background: "var(--kipu-danger)" }}
               >
-                {savingAnular ? <Loader2 size={14} className="animate-spin" /> : <Ban size={14} />}
+                {savingAnular ? (
+                  <div
+                    className="w-3.5 h-3.5 border-2 border-t-transparent rounded-full animate-spin"
+                    style={{ borderColor: "#FFFFFF", borderTopColor: "transparent" }}
+                  />
+                ) : (
+                  <Ban size={14} />
+                )}
                 Anular
               </button>
             </div>

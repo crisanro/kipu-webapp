@@ -1,9 +1,8 @@
-// app/(dashboard)/documentos/[id]/page.tsx
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Loader2, FileText } from "lucide-react";
+import { FileText } from "lucide-react";
 import api from "@/lib/api";
 import DetalleShared  from "./components/DetalleShared";
 import DetalleFactura from "./components/DetalleFactura";
@@ -34,7 +33,10 @@ export default function DetalleDocumentoPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 size={24} className="animate-spin text-indigo-400" />
+        <div
+          className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin"
+          style={{ borderColor: "var(--kipu-accent)", borderTopColor: "transparent" }}
+        />
       </div>
     );
   }
@@ -42,9 +44,17 @@ export default function DetalleDocumentoPage() {
   if (!documento) {
     return (
       <div className="p-6 text-center">
-        <FileText size={40} className="text-gray-700 mx-auto mb-3" />
-        <p className="text-gray-500">Comprobante no encontrado.</p>
-        <button onClick={() => router.back()} className="mt-4 text-indigo-400 text-sm">
+        <FileText size={40} className="mx-auto mb-3" style={{ color: "var(--kipu-subtle)" }} />
+        <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>
+          Comprobante no encontrado.
+        </p>
+        <button
+          onClick={() => router.back()}
+          className="mt-4 text-sm transition-colors"
+          style={{ color: "var(--kipu-accent)" }}
+          onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent-h)"}
+          onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-accent)"}
+        >
           Volver
         </button>
       </div>
@@ -72,7 +82,7 @@ export default function DetalleDocumentoPage() {
     doc_origen_recibido_id:  documento.doc_origen_recibido_id,
     documentos_derivados:    documento.documentos_derivados ?? [],
     doc_origen_emitido:      documento.doc_origen_emitido  ?? null,
-    doc_origen_recibido:     documento.doc_origen_recibido ?? null,
+    doc_origen_recibido:      documento.doc_origen_recibido ?? null,
     cliente:                 documento.cliente ?? {},
   };
 

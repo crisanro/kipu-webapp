@@ -1,4 +1,3 @@
-// app/(dashboard)/documentos/emitir/fac/components/CamposAdicionales.tsx
 "use client";
 
 import { Plus, Trash2 } from "lucide-react";
@@ -27,13 +26,24 @@ export default function CamposAdicionales({ campos, onChange }: Props) {
   };
 
   return (
-    <div className="bg-gray-900 rounded-xl border border-gray-800 p-4">
+    <div
+      className="rounded-xl p-4"
+      style={{
+        background: "var(--kipu-surface)",
+        border: "1px solid var(--kipu-border)",
+      }}
+    >
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-sm font-semibold text-white">Información adicional</h2>
+        <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>
+          Información adicional
+        </h2>
         <button
           type="button"
           onClick={agregar}
-          className="flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
+          className="flex items-center gap-1 text-xs transition-colors"
+          style={{ color: "var(--kipu-accent)" }}
+          onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent-h)"}
+          onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-accent)"}
         >
           <Plus size={13} />
           Agregar campo
@@ -41,7 +51,7 @@ export default function CamposAdicionales({ campos, onChange }: Props) {
       </div>
 
       {campos.length === 0 ? (
-        <p className="text-xs text-gray-600 text-center py-2">
+        <p className="text-xs text-center py-2" style={{ color: "var(--kipu-subtle)" }}>
           Opcional — email, teléfono, número de orden, observaciones, etc.
         </p>
       ) : (
@@ -52,18 +62,35 @@ export default function CamposAdicionales({ campos, onChange }: Props) {
                 value={c.nombre}
                 onChange={(e) => editar(i, "nombre", e.target.value)}
                 placeholder="Nombre (ej: Email)"
-                className="flex-1 px-2.5 py-1.5 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 text-xs"
+                className="flex-1 px-2.5 py-1.5 rounded-lg text-xs transition-colors focus:outline-none"
+                style={{
+                  background: "var(--kipu-surface)",
+                  border: "1px solid var(--kipu-border)",
+                  color: "var(--kipu-text)",
+                }}
+                onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
               />
               <input
                 value={c.valor}
                 onChange={(e) => editar(i, "valor", e.target.value)}
                 placeholder="Valor"
-                className="flex-1 px-2.5 py-1.5 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 text-xs"
+                className="flex-1 px-2.5 py-1.5 rounded-lg text-xs transition-colors focus:outline-none"
+                style={{
+                  background: "var(--kipu-surface)",
+                  border: "1px solid var(--kipu-border)",
+                  color: "var(--kipu-text)",
+                }}
+                onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
               />
               <button
                 type="button"
                 onClick={() => eliminar(i)}
-                className="p-1.5 text-gray-500 hover:text-red-400 transition-colors"
+                className="p-1.5 transition-colors"
+                style={{ color: "var(--kipu-subtle)" }}
+                onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-danger)"}
+                onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-subtle)"}
               >
                 <Trash2 size={13} />
               </button>

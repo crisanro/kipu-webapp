@@ -1,17 +1,16 @@
-// app/(dashboard)/reportes/_components/PreguntasSRI.tsx
 "use client";
+
 import { CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
-import { clsx } from "clsx";
 
 interface Preguntas {
-  requiere_informar?:        boolean;
+  requiere_informar?:         boolean;
   credito_tributario_renta?: boolean;
   comercio_exterior?:        boolean;
   notas_credito?:            boolean;
   tarifa_turismo?:           boolean;
   ha_realizado_ventas?:      boolean;
   ventas_tarifa_0?:          boolean;
-  ventas_activos_fijos?:     boolean;
+  ventas_activos_fijos?:      boolean;
   ventas_tarifa_nz?:         boolean;
   ha_realizado_compras?:     boolean;
   importaciones?:            boolean;
@@ -66,11 +65,11 @@ const LABELS_RENTA: Record<string, string> = {
 };
 
 const LABELS_ATS: Record<string, string> = {
-  tiene_ventas:                  "¿Realizó ventas en el período?",
-  tiene_compras:                 "¿Realizó compras en el período?",
-  tiene_retenciones_emitidas:    "¿Emitió comprobantes de retención?",
-  tiene_retenciones_recibidas:   "¿Le realizaron retenciones?",
-  obligado_contabilidad:         "¿Es obligado a llevar contabilidad?",
+  tiene_ventas:                "¿Realizó ventas en el período?",
+  tiene_compras:               "¿Realizó compras en el período?",
+  tiene_retenciones_emitidas:  "¿Emitió comprobantes de retención?",
+  tiene_retenciones_recibidas: "¿Le realizaron retenciones?",
+  obligado_contabilidad:       "¿Es obligado a llevar contabilidad?",
 };
 
 const LABELS: Record<string, Record<string, string>> = {
@@ -81,10 +80,10 @@ const LABELS: Record<string, Record<string, string>> = {
 
 // Preguntas que requieren acción manual si son true
 const REQUIERE_MANUAL: Record<string, string> = {
-  comercio_exterior:     "Completa los casilleros de activos fijos e importaciones manualmente.",
-  ventas_activos_fijos:  "Completa los casilleros 402/412/422 manualmente.",
-  compras_activos_fijos: "Completa los casilleros 501/511/521 manualmente.",
-  importaciones:         "Completa los casilleros 504/514/524 manualmente.",
+  comercio_exterior:       "Completa los casilleros de activos fijos e importaciones manualmente.",
+  ventas_activos_fijos:    "Completa los casilleros 402/412/422 manualmente.",
+  compras_activos_fijos:   "Completa los casilleros 501/511/521 manualmente.",
+  importaciones:            "Completa los casilleros 504/514/524 manualmente.",
   materiales_construccion: "Consulta con tu contador para el tratamiento correcto.",
 };
 
@@ -97,47 +96,63 @@ export default function PreguntasSRI({ preguntas, tipo }: Props) {
   );
 
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+    <div
+      className="rounded-xl overflow-hidden"
+      style={{
+        background: "var(--kipu-surface)",
+        border: "1px solid var(--kipu-border)",
+      }}
+    >
       {/* Header */}
-      <div className="px-4 py-3 border-b border-gray-800 flex items-center gap-2">
-        <span className="text-sm font-semibold text-white">
+      <div
+        className="px-4 py-3 flex items-center gap-2"
+        style={{ borderBottom: "1px solid var(--kipu-border)" }}
+      >
+        <span className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>
           Preguntas previas SRI
         </span>
-        <span className="text-xs text-gray-500">
+        <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
           — respondidas automáticamente con tus documentos
         </span>
       </div>
 
       {/* Lista */}
-      <div className="divide-y divide-gray-800/60">
-        {entries.map(([key, label]) => {
+      <div>
+        {entries.map(([key, label], idx) => {
           const valor = preguntas[key];
           if (valor === undefined) return null;
 
           return (
-            <div key={key} className="flex items-start gap-3 px-4 py-2.5">
-              {valor
-                ? <CheckCircle2 size={15} className="text-emerald-400 shrink-0 mt-0.5" />
-                : <XCircle     size={15} className="text-gray-600    shrink-0 mt-0.5" />
-              }
+            <div
+              key={key}
+              className="flex items-start gap-3 px-4 py-2.5"
+              style={{
+                borderTop: idx > 0 ? "1px solid var(--kipu-border)" : "none",
+              }}
+            >
+              {valor ? (
+                <CheckCircle2 size={15} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-success)" }} />
+              ) : (
+                <XCircle size={15} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-subtle)" }} />
+              )}
               <div className="flex-1 min-w-0">
-                <p className={clsx(
-                  "text-xs",
-                  valor ? "text-white" : "text-gray-500"
-                )}>
+                <p
+                  className="text-xs font-medium"
+                  style={{ color: valor ? "var(--kipu-text)" : "var(--kipu-subtle)" }}
+                >
                   {label}
                 </p>
                 {valor && REQUIERE_MANUAL[key] && (
-                  <p className="text-[10px] text-amber-400 mt-0.5 flex items-center gap-1">
+                  <p className="text-[10px] mt-0.5 flex items-center gap-1 font-medium" style={{ color: "var(--kipu-warning)" }}>
                     <AlertTriangle size={10} />
                     {REQUIERE_MANUAL[key]}
                   </p>
                 )}
               </div>
-              <span className={clsx(
-                "text-xs font-bold shrink-0",
-                valor ? "text-emerald-400" : "text-gray-600"
-              )}>
+              <span
+                className="text-xs font-bold shrink-0"
+                style={{ color: valor ? "var(--kipu-success)" : "var(--kipu-subtle)" }}
+              >
                 {valor ? "SÍ" : "NO"}
               </span>
             </div>
@@ -147,12 +162,18 @@ export default function PreguntasSRI({ preguntas, tipo }: Props) {
 
       {/* Advertencias */}
       {conAdvertencia.length > 0 && (
-        <div className="px-4 py-3 border-t border-amber-500/20 bg-amber-500/5">
-          <p className="text-xs font-semibold text-amber-400 mb-1 flex items-center gap-1.5">
+        <div
+          className="px-4 py-3"
+          style={{
+            borderTop: "1px solid color-mix(in srgb, var(--kipu-warning) 20%, transparent)",
+            background: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)",
+          }}
+        >
+          <p className="text-xs font-semibold mb-1 flex items-center gap-1.5" style={{ color: "var(--kipu-warning)" }}>
             <AlertTriangle size={12} />
             Campos que requieren tu atención manual
           </p>
-          <p className="text-xs text-amber-400/70">
+          <p className="text-xs" style={{ color: "var(--kipu-warning)" }}>
             Algunos casilleros no se pueden calcular automáticamente.
             Revísalos antes de declarar en el portal del SRI.
           </p>

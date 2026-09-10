@@ -5,15 +5,19 @@ import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { auth } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
+import Image from "next/image";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
-import { Zap, Building2, Plus, Loader2, CheckCircle2, ArrowRight,MessageCircle, LogOut } from "lucide-react";
+import { Building2, Plus, Loader2, CheckCircle2, ArrowRight, MessageCircle, LogOut } from "lucide-react";
+import { useTheme } from "next-themes";
 
 export default function BienvenidaPage() {
   const router       = useRouter();
   const searchParams = useSearchParams();
   const empresaParam = searchParams.get("empresa");
   const { setEmpresa, setEmpresas, setUser, logout } = useAuthStore();
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
 
   const [loading,        setLoading]        = useState(false);
   const [loadingEmpresa, setLoadingEmpresa] = useState(false);
@@ -22,7 +26,8 @@ export default function BienvenidaPage() {
   const [unido,          setUnido]          = useState(false);
   const [confirmDelete,  setConfirmDelete]  = useState(false);
 
-  // Si viene con ?empresa= cargar el nombre
+  useEffect(() => setMounted(true), []);
+
   useEffect(() => {
     if (!empresaParam) return;
     setLoadingEmpresa(true);
@@ -41,7 +46,6 @@ export default function BienvenidaPage() {
         rol:       "emisor",
       });
       setUnido(true);
-      // Recargar empresas y redirigir
       setTimeout(async () => {
         try {
           const token = await auth.currentUser?.getIdToken(true);
@@ -66,7 +70,7 @@ export default function BienvenidaPage() {
               suscripcion:           e.suscripcion,
               balance_api:           e.balance_api,
               obligado_contabilidad: e.obligado_contabilidad ?? null,
-              periodo_iva:           e.periodo_iva ?? null,  // ← agregar
+              periodo_iva:           e.periodo_iva ?? null,
             });
           }
         } catch {}
@@ -98,61 +102,99 @@ export default function BienvenidaPage() {
   // ── Éxito ────────────────────────────────────────────────────────────────
   if (unido) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-950">
+      <div
+        className="min-h-screen flex items-center justify-center"
+        style={{ background: "var(--kipu-bg)" }}
+      >
         <div className="text-center">
-          <CheckCircle2 size={48} className="text-emerald-400 mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-white">¡Te uniste exitosamente!</h2>
-          <p className="text-gray-500 mt-1 text-sm">Redirigiendo al panel...</p>
+          <div
+            className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
+            style={{ background: "color-mix(in srgb, var(--kipu-success) 15%, transparent)" }}
+          >
+            <CheckCircle2 size={32} style={{ color: "var(--kipu-success)" }} />
+          </div>
+          <h2 className="text-xl font-bold" style={{ color: "var(--kipu-text)" }}>
+            ¡Te uniste exitosamente!
+          </h2>
+          <p className="text-sm mt-1" style={{ color: "var(--kipu-muted)" }}>
+            Redirigiendo al panel...
+          </p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 bg-gray-950">
+    <div
+      className="min-h-screen flex items-center justify-center px-4 py-10"
+      style={{ background: "var(--kipu-bg)" }}
+    >
       <div className="w-full max-w-sm">
 
         {/* Logo */}
-        <div className="flex flex-col items-center mb-8">
-          <div className="w-12 h-12 rounded-2xl bg-indigo-600 flex items-center justify-center mb-4">
-            <Zap size={24} className="text-white" />
-          </div>
-          <h1 className="text-2xl font-bold text-white">¡Bienvenido a Kipu!</h1>
-          <p className="text-sm text-gray-500 mt-1">¿Cómo quieres empezar?</p>
+        <div className="flex flex-col items-center mb-8 min-h-[68px] justify-end">
+          {mounted ? (
+            <Image
+              src={resolvedTheme === "dark" ? "/images/logo-dark.svg" : "/images/logo.svg"}
+              alt="Kipu"
+              width={200}
+              height={40}
+              priority
+            />
+          ) : (
+            <div className="w-[200px] h-[40px]" />
+          )}
         </div>
 
         <div className="space-y-3">
 
           {/* Opción 1 — Unirse a empresa invitada */}
           {empresaParam && (
-            <div className="bg-gray-900 border border-indigo-500/30 rounded-xl p-4">
+            <div
+              className="rounded-xl p-4"
+              style={{
+                background: "var(--kipu-surface)",
+                border:     "1px solid color-mix(in srgb, var(--kipu-accent) 30%, transparent)",
+              }}
+            >
               <div className="flex items-center gap-2 mb-3">
-                <Building2 size={16} className="text-indigo-400" />
-                <span className="text-sm font-medium text-indigo-400">Tienes una invitación</span>
+                <Building2 size={16} style={{ color: "var(--kipu-accent)" }} />
+                <span className="text-sm font-medium" style={{ color: "var(--kipu-accent)" }}>
+                  Tienes una invitación
+                </span>
               </div>
 
               {loadingEmpresa ? (
-                <div className="flex items-center gap-2 text-gray-500 text-sm">
+                <div className="flex items-center gap-2 text-sm" style={{ color: "var(--kipu-muted)" }}>
                   <Loader2 size={14} className="animate-spin" />
                   Cargando...
                 </div>
               ) : empresa ? (
                 <>
-                  <p className="text-white font-semibold mb-1">
+                  <p className="font-semibold mb-1" style={{ color: "var(--kipu-text)" }}>
                     {empresa.nombre_comercial || empresa.razon_social}
                   </p>
-                  <p className="text-xs text-gray-500 mb-4">
+                  <p className="text-xs mb-4" style={{ color: "var(--kipu-muted)" }}>
                     Fuiste invitado a unirte a esta empresa.
                   </p>
                   {error && (
-                    <p className="text-xs text-red-400 bg-red-400/10 px-3 py-2 rounded-lg mb-3">
+                    <p
+                      className="text-xs px-3 py-2 rounded-lg mb-3"
+                      style={{
+                        color:      "var(--kipu-danger)",
+                        background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
+                      }}
+                    >
                       {error}
                     </p>
                   )}
                   <button
                     onClick={handleUnirse}
                     disabled={loading}
-                    className="w-full py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-medium text-sm transition-colors flex items-center justify-center gap-2"
+                    className="w-full py-2.5 rounded-lg font-medium text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                    style={{ background: "var(--kipu-accent)", color: "#ffffff" }}
+                    onMouseEnter={e => !loading && (e.currentTarget.style.background = "var(--kipu-accent-h)")}
+                    onMouseLeave={e => !loading && (e.currentTarget.style.background = "var(--kipu-accent)")}
                   >
                     {loading
                       ? <><Loader2 size={14} className="animate-spin" /> Uniéndome...</>
@@ -161,7 +203,9 @@ export default function BienvenidaPage() {
                   </button>
                 </>
               ) : (
-                <p className="text-xs text-red-400">{error || "Empresa no encontrada."}</p>
+                <p className="text-xs" style={{ color: "var(--kipu-danger)" }}>
+                  {error || "Empresa no encontrada."}
+                </p>
               )}
             </div>
           )}
@@ -169,37 +213,57 @@ export default function BienvenidaPage() {
           {/* Separador */}
           {empresaParam && (
             <div className="flex items-center gap-3">
-              <div className="flex-1 h-px bg-gray-800" />
-              <span className="text-xs text-gray-600">o</span>
-              <div className="flex-1 h-px bg-gray-800" />
+              <div className="flex-1 h-px" style={{ background: "var(--kipu-border)" }} />
+              <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>o</span>
+              <div className="flex-1 h-px" style={{ background: "var(--kipu-border)" }} />
             </div>
           )}
 
           {/* Opción 2 — Crear empresa propia */}
           <button
             onClick={() => router.push("/onboarding")}
-            className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl bg-gray-900 border border-gray-800 hover:border-gray-700 text-left transition-colors group"
+            className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-left transition-colors group"
+            style={{
+              background: "var(--kipu-surface)",
+              border:     "1px solid var(--kipu-border)",
+            }}
+            onMouseEnter={e => e.currentTarget.style.borderColor = "var(--kipu-muted)"}
+            onMouseLeave={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
           >
-            <div className="w-9 h-9 rounded-lg bg-gray-800 group-hover:bg-gray-700 flex items-center justify-center shrink-0 transition-colors">
-              <Plus size={16} className="text-gray-400" />
+            <div
+              className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 transition-colors"
+              style={{ background: "var(--kipu-border)" }}
+            >
+              <Plus size={16} style={{ color: "var(--kipu-muted)" }} />
             </div>
             <div className="flex-1">
-              <p className="text-sm font-medium text-white">Crear mi empresa</p>
-              <p className="text-xs text-gray-500">Registra tu RUC y empieza a facturar</p>
+              <p className="text-sm font-medium" style={{ color: "var(--kipu-text)" }}>
+                Crear mi empresa
+              </p>
+              <p className="text-xs" style={{ color: "var(--kipu-muted)" }}>
+                Registra tu RUC y empieza a facturar
+              </p>
             </div>
-            <ArrowRight size={14} className="text-gray-600 group-hover:text-gray-400 transition-colors" />
+            <ArrowRight size={14} style={{ color: "var(--kipu-subtle)" }} />
           </button>
 
         </div>
 
         {/* Botones de acción */}
         <div className="mt-8 space-y-3">
+
           {/* Soporte */}
           <a
             href={`https://wa.me/593960585581?text=${encodeURIComponent("Hola, necesito soporte con Kipu.")}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg border border-green-500/30 text-green-400 hover:bg-green-500/10 text-sm font-medium transition-colors"
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-colors"
+            style={{
+              border: "1px solid color-mix(in srgb, var(--kipu-success) 30%, transparent)",
+              color:  "var(--kipu-success)",
+            }}
+            onMouseEnter={e => (e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-success) 10%, transparent)")}
+            onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
           >
             <MessageCircle size={15} />
             Contactar soporte
@@ -208,34 +272,53 @@ export default function BienvenidaPage() {
           {/* Cerrar sesión */}
           <button
             onClick={handleCerrarSesion}
-            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg border border-gray-700 text-gray-400 hover:text-white hover:border-gray-600 text-sm font-medium transition-colors"
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-colors"
+            style={{
+              border: "1px solid var(--kipu-border)",
+              color:  "var(--kipu-muted)",
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.borderColor = "var(--kipu-muted)";
+              e.currentTarget.style.color = "var(--kipu-text)";
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.borderColor = "var(--kipu-border)";
+              e.currentTarget.style.color = "var(--kipu-muted)";
+            }}
           >
             <LogOut size={15} />
             Cerrar sesión
           </button>
 
-          {/* Eliminar cuenta — discreto */}
+          {/* Eliminar cuenta */}
           <div className="flex justify-center pt-1">
             {!confirmDelete ? (
               <button
                 onClick={() => setConfirmDelete(true)}
-                className="text-xs text-gray-700 hover:text-red-500 transition-colors"
+                className="text-xs transition-colors"
+                style={{ color: "var(--kipu-subtle)" }}
+                onMouseEnter={e => (e.currentTarget.style.color = "var(--kipu-danger)")}
+                onMouseLeave={e => (e.currentTarget.style.color = "var(--kipu-subtle)")}
               >
                 Eliminar mi cuenta
               </button>
             ) : (
               <div className="text-center space-y-2">
-                <p className="text-xs text-red-400">¿Estás seguro? Esta acción no se puede deshacer.</p>
+                <p className="text-xs" style={{ color: "var(--kipu-danger)" }}>
+                  ¿Estás seguro? Esta acción no se puede deshacer.
+                </p>
                 <div className="flex gap-3 justify-center">
                   <button
                     onClick={() => setConfirmDelete(false)}
-                    className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+                    className="text-xs transition-colors"
+                    style={{ color: "var(--kipu-muted)" }}
                   >
                     Cancelar
                   </button>
                   <button
                     onClick={handleEliminarCuenta}
-                    className="text-xs text-red-500 hover:text-red-400 transition-colors font-medium"
+                    className="text-xs font-medium transition-colors"
+                    style={{ color: "var(--kipu-danger)" }}
                   >
                     Sí, eliminar
                   </button>
@@ -243,8 +326,8 @@ export default function BienvenidaPage() {
               </div>
             )}
           </div>
-        </div>
 
+        </div>
       </div>
     </div>
   );

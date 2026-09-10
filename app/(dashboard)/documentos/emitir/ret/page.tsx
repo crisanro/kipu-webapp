@@ -1,4 +1,3 @@
-// app/(dashboard)/documentos/emitir/ret/page.tsx
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -6,8 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
-import { CheckCircle2, AlertTriangle, Loader2, Plus, Trash2, Calendar } from "lucide-react";
-import { clsx } from "clsx";
+import { CheckCircle2, AlertTriangle, Plus, Trash2, Calendar } from "lucide-react";
 import PuntoEmision    from "../components/PuntoEmision";
 import CamposAdicionales, { CampoAdicional } from "../components/CamposAdicionales";
 import DocOrigenSelector, { DocOrigen } from "../components/DocOrigenSelector";
@@ -334,7 +332,7 @@ export default function NuevaRetPage() {
 
       const payload: any = {
         establecimiento: estabSelected,
-        punto_emision:    ptoSelected,
+        punto_emision:   ptoSelected,
         periodo_fiscal:  periodoFiscal,
         impuestos: impuestos.map(i => ({
           codigo:            i.codigo,
@@ -393,23 +391,52 @@ export default function NuevaRetPage() {
 
   if (resultado) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6 bg-gray-950">
+      <div
+        className="min-h-screen flex items-center justify-center p-6"
+        style={{ background: "var(--kipu-bg)" }}
+      >
         <div className="w-full max-w-sm text-center">
-          <div className="w-16 h-16 rounded-full bg-indigo-500/20 flex items-center justify-center mx-auto mb-4">
-            <CheckCircle2 size={32} className="text-indigo-400" />
+          <div
+            className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
+            style={{
+              background: "color-mix(in srgb, #818cf8 20%, transparent)",
+            }}
+          >
+            <CheckCircle2 size={32} style={{ color: "#818cf8" }} />
           </div>
-          <h2 className="text-xl font-bold text-white mb-1">Retención emitida</h2>
-          <p className="text-sm text-gray-500 mb-2">{resultado.claveAcceso}</p>
-          <span className="inline-block px-3 py-1 rounded-full text-xs font-medium mb-6 bg-indigo-500/20 text-indigo-400">
+          <h2 className="text-xl font-bold mb-1" style={{ color: "var(--kipu-text)" }}>
+            Retención emitida
+          </h2>
+          <p className="text-sm mb-2" style={{ color: "var(--kipu-subtle)" }}>{resultado.claveAcceso}</p>
+          <span
+            className="inline-block px-3 py-1 rounded-full text-xs font-medium mb-6"
+            style={{
+              background: "color-mix(in srgb, #818cf8 20%, transparent)",
+              color: "#818cf8",
+            }}
+          >
             {resultado.estado}
           </span>
           <div className="flex gap-3">
-            <button onClick={reset}
-              className="flex-1 py-2.5 rounded-lg border border-gray-700 text-gray-400 hover:text-white text-sm transition-colors">
+            <button
+              onClick={reset}
+              className="flex-1 py-2.5 rounded-lg text-sm transition-colors"
+              style={{
+                border: "1px solid var(--kipu-border)",
+                color: "var(--kipu-muted)",
+              }}
+              onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
+              onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-muted)"}
+            >
               Nueva RET
             </button>
-            <button onClick={() => router.push("/documentos")}
-              className="flex-1 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors">
+            <button
+              onClick={() => router.push("/documentos")}
+              className="flex-1 py-2.5 rounded-lg text-white text-sm font-medium transition-colors"
+              style={{ background: "var(--kipu-accent)" }}
+              onMouseEnter={e => e.currentTarget.style.background = "var(--kipu-accent-h)"}
+              onMouseLeave={e => e.currentTarget.style.background = "var(--kipu-accent)"}
+            >
               Ver documentos
             </button>
           </div>
@@ -423,19 +450,29 @@ export default function NuevaRetPage() {
   return (
     <div className="p-4 md:p-6 max-w-4xl mx-auto space-y-6">
       <div>
-        <h1 className="text-xl font-bold text-white">
-          Nueva Retención <span className="text-gray-500 text-base font-normal">RET</span>
+        <h1 className="text-xl font-bold" style={{ color: "var(--kipu-text)" }}>
+          Nueva Retención{" "}
+          <span className="text-base font-normal" style={{ color: "var(--kipu-subtle)" }}>
+            RET
+          </span>
         </h1>
-        <p className="text-sm text-gray-500">
+        <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>
           {empresa?.razon_social} · {empresa?.ambiente === 2 ? "Producción" : "Pruebas"}
         </p>
       </div>
 
       {empresa && !empresa.suscripcion_activa && empresa.balance_api === 0 && (
-        <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3">
-          <AlertTriangle size={16} className="text-red-400 shrink-0" />
-          <p className="text-sm text-red-300">
-            Sin acceso para emitir. <a href="/planes" className="underline">Ver opciones</a>
+        <div
+          className="flex items-center gap-2 rounded-lg px-4 py-3"
+          style={{
+            background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
+            border: "1px solid color-mix(in srgb, var(--kipu-danger) 20%, transparent)",
+          }}
+        >
+          <AlertTriangle size={16} className="shrink-0" style={{ color: "var(--kipu-danger)" }} />
+          <p className="text-sm" style={{ color: "var(--kipu-danger)" }}>
+            Sin acceso para emitir.{" "}
+            <a href="/planes" className="underline">Ver opciones</a>
           </p>
         </div>
       )}
@@ -445,28 +482,64 @@ export default function NuevaRetPage() {
 
           <div className="lg:hidden">
             <PuntoEmision
-              establecimientos={establecimientos} estabSelected={estabSelected}
-              ptoSelected={ptoSelected} puntos={puntos}
-              onEstabChange={handleEstabChange} onPtoChange={setPtoSelected}
+              establecimientos={establecimientos}
+              estabSelected={estabSelected}
+              ptoSelected={ptoSelected}
+              puntos={puntos}
+              onEstabChange={handleEstabChange}
+              onPtoChange={setPtoSelected}
             />
           </div>
 
           {/* Toggle tipo de origen */}
-          <div className="bg-gray-900 rounded-xl border border-gray-800 p-4 space-y-3">
-            <h2 className="text-sm font-semibold text-white">Tipo de documento sustento</h2>
+          <div
+            className="rounded-xl p-4 space-y-3"
+            style={{
+              background: "var(--kipu-surface)",
+              border: "1px solid var(--kipu-border)",
+            }}
+          >
+            <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>
+              Tipo de documento sustento
+            </h2>
             <div className="grid grid-cols-3 gap-2">
-              {(Object.entries(ORIGEN_CONFIG) as [OrigenRet, typeof ORIGEN_CONFIG[OrigenRet]][]).map(([key, cfg]) => (
-                <button key={key} onClick={() => cambiarOrigen(key)}
-                  className={clsx(
-                    "flex flex-col items-center gap-1 px-3 py-2.5 rounded-lg border text-center transition-colors",
-                    origenTipo === key
-                      ? "border-indigo-500 bg-indigo-500/10 text-indigo-300"
-                      : "border-gray-700 text-gray-400 hover:border-gray-600 hover:text-white"
-                  )}>
-                  <span className="text-xs font-bold">{cfg.label}</span>
-                  <span className="text-[10px] text-gray-500 leading-tight">{cfg.sublabel}</span>
-                </button>
-              ))}
+              {(Object.entries(ORIGEN_CONFIG) as [OrigenRet, typeof ORIGEN_CONFIG[OrigenRet]][]).map(([key, cfg]) => {
+                const isSelected = origenTipo === key;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => cambiarOrigen(key)}
+                    className="flex flex-col items-center gap-1 px-3 py-2.5 rounded-lg text-center transition-colors"
+                    style={{
+                      background: isSelected
+                        ? "color-mix(in srgb, #818cf8 10%, transparent)"
+                        : "var(--kipu-surface)",
+                      border: isSelected
+                        ? "1px solid #818cf8"
+                        : "1px solid var(--kipu-border)",
+                      color: isSelected ? "#818cf8" : "var(--kipu-muted)",
+                    }}
+                    onMouseEnter={e => {
+                      if (!isSelected) {
+                        e.currentTarget.style.color = "var(--kipu-text)";
+                        e.currentTarget.style.borderColor = "color-mix(in srgb, var(--kipu-text) 20%, transparent)";
+                      }
+                    }}
+                    onMouseLeave={e => {
+                      if (!isSelected) {
+                        e.currentTarget.style.color = "var(--kipu-muted)";
+                        e.currentTarget.style.borderColor = "var(--kipu-border)";
+                      }
+                    }}
+                  >
+                    <span className="text-xs font-bold">{cfg.label}</span>
+                    <span className="text-[10px] leading-tight" style={{ color: "var(--kipu-subtle)" }}>
+                      {cfg.sublabel}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -542,55 +615,136 @@ export default function NuevaRetPage() {
           />
 
           {/* Período fiscal */}
-          <div className="bg-gray-900 rounded-xl border border-gray-800 p-4">
+          <div
+            className="rounded-xl p-4"
+            style={{
+              background: "var(--kipu-surface)",
+              border: "1px solid var(--kipu-border)",
+            }}
+          >
             <div className="flex items-center gap-2 mb-3">
-              <Calendar size={15} className="text-indigo-400" />
-              <h2 className="text-sm font-semibold text-white">Período fiscal</h2>
+              <Calendar size={15} style={{ color: "var(--kipu-accent)" }} />
+              <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>
+                Período fiscal
+              </h2>
             </div>
             <input
               value={periodoFiscal}
               onChange={e => setPeriodoFiscal(e.target.value)}
               placeholder="MM/YYYY"
               maxLength={7}
-              className="w-40 px-3 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 text-sm"
+              className="w-40 px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none"
+              style={{
+                background: "var(--kipu-surface)",
+                border: "1px solid var(--kipu-border)",
+                color: "var(--kipu-text)",
+              }}
+              onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+              onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
             />
-            <p className="text-xs text-gray-500 mt-1">Formato: MM/YYYY · ej: 08/2026</p>
+            <p className="text-xs mt-1" style={{ color: "var(--kipu-subtle)" }}>
+              Formato: MM/YYYY · ej: 08/2026
+            </p>
           </div>
 
           {/* Impuestos retenidos */}
-          <div className="bg-gray-900 rounded-xl border border-gray-800 p-4 space-y-3">
+          <div
+            className="rounded-xl p-4 space-y-3"
+            style={{
+              background: "var(--kipu-surface)",
+              border: "1px solid var(--kipu-border)",
+            }}
+          >
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-white">Impuestos retenidos</h2>
-              <button onClick={addImpuesto}
-                className="flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-300 transition-colors">
+              <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>
+                Impuestos retenidos
+              </h2>
+              <button
+                type="button"
+                onClick={addImpuesto}
+                className="flex items-center gap-1 text-xs transition-colors"
+                style={{ color: "var(--kipu-accent)" }}
+                onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent-h)"}
+                onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-accent)"}
+              >
                 <Plus size={13} /> Agregar
               </button>
             </div>
             {impuestos.map((imp, idx) => {
               const opciones = getOpciones(imp.codigo);
               return (
-                <div key={imp._id} className="p-3 bg-gray-950/60 border border-gray-800 rounded-xl space-y-3">
+                <div
+                  key={imp._id}
+                  className="p-3 rounded-xl space-y-3"
+                  style={{
+                    background: "color-mix(in srgb, var(--kipu-surface) 60%, transparent)",
+                    border: "1px solid var(--kipu-border)",
+                  }}
+                >
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-500 font-medium">Retención #{idx + 1}</span>
-                    <button onClick={() => removeImpuesto(imp._id)} disabled={impuestos.length === 1}
-                      className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg disabled:opacity-20 transition-colors">
+                    <span className="text-xs font-medium" style={{ color: "var(--kipu-subtle)" }}>
+                      Retención #{idx + 1}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => removeImpuesto(imp._id)}
+                      disabled={impuestos.length === 1}
+                      className="p-1.5 rounded-lg transition-colors disabled:opacity-20"
+                      style={{ color: "var(--kipu-subtle)" }}
+                      onMouseEnter={e => {
+                        if (impuestos.length > 1) {
+                          e.currentTarget.style.color = "var(--kipu-danger)";
+                          e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-danger) 10%, transparent)";
+                        }
+                      }}
+                      onMouseLeave={e => {
+                        if (impuestos.length > 1) {
+                          e.currentTarget.style.color = "var(--kipu-subtle)";
+                          e.currentTarget.style.background = "transparent";
+                        }
+                      }}
+                    >
                       <Trash2 size={13} />
                     </button>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-1">
-                      <label className="text-[10px] uppercase font-semibold tracking-wider text-gray-500">Tipo</label>
-                      <select value={imp.codigo} onChange={e => editImpuesto(imp._id, "codigo", e.target.value)}
-                        className="w-full px-2.5 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-indigo-500 text-sm">
+                      <label className="text-[10px] uppercase font-semibold tracking-wider" style={{ color: "var(--kipu-subtle)" }}>
+                        Tipo
+                      </label>
+                      <select
+                        value={imp.codigo}
+                        onChange={e => editImpuesto(imp._id, "codigo", e.target.value)}
+                        className="w-full px-2.5 py-2 rounded-lg text-sm transition-colors focus:outline-none"
+                        style={{
+                          background: "var(--kipu-surface)",
+                          border: "1px solid var(--kipu-border)",
+                          color: "var(--kipu-text)",
+                        }}
+                        onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                        onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+                      >
                         {TIPOS_IMPUESTO.map(t => (
                           <option key={t.value} value={t.value}>{t.label}</option>
                         ))}
                       </select>
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[10px] uppercase font-semibold tracking-wider text-gray-500">Código / Concepto</label>
-                      <select value={imp.codigoRetencion} onChange={e => editImpuesto(imp._id, "codigoRetencion", e.target.value)}
-                        className="w-full px-2.5 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-indigo-500 text-sm">
+                      <label className="text-[10px] uppercase font-semibold tracking-wider" style={{ color: "var(--kipu-subtle)" }}>
+                        Código / Concepto
+                      </label>
+                      <select
+                        value={imp.codigoRetencion}
+                        onChange={e => editImpuesto(imp._id, "codigoRetencion", e.target.value)}
+                        className="w-full px-2.5 py-2 rounded-lg text-sm transition-colors focus:outline-none"
+                        style={{
+                          background: "var(--kipu-surface)",
+                          border: "1px solid var(--kipu-border)",
+                          color: "var(--kipu-text)",
+                        }}
+                        onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                        onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+                      >
                         {opciones.map(o => (
                           <option key={o.cod} value={o.cod}>{o.cod} · {o.label}</option>
                         ))}
@@ -599,42 +753,85 @@ export default function NuevaRetPage() {
                   </div>
                   <div className="grid grid-cols-3 gap-2">
                     <div className="space-y-1">
-                      <label className="text-[10px] uppercase font-semibold tracking-wider text-gray-500">Base imponible</label>
+                      <label className="text-[10px] uppercase font-semibold tracking-wider" style={{ color: "var(--kipu-subtle)" }}>
+                        Base imponible
+                      </label>
                       <div className="relative">
-                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500 text-sm">$</span>
-                        <input type="number" value={imp.baseImponible}
+                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-sm" style={{ color: "var(--kipu-subtle)" }}>$</span>
+                        <input
+                          type="number"
+                          value={imp.baseImponible}
                           onChange={e => editImpuesto(imp._id, "baseImponible", parseFloat(e.target.value) || 0)}
-                          min={0} step={0.01}
-                          className="w-full pl-6 pr-2 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-indigo-500 text-sm text-right" />
+                          min={0}
+                          step={0.01}
+                          className="w-full pl-6 pr-2 py-2 rounded-lg text-sm text-right transition-colors focus:outline-none"
+                          style={{
+                            background: "var(--kipu-surface)",
+                            border: "1px solid var(--kipu-border)",
+                            color: "var(--kipu-text)",
+                          }}
+                          onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                          onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+                        />
                       </div>
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[10px] uppercase font-semibold tracking-wider text-gray-500">% Retener</label>
+                      <label className="text-[10px] uppercase font-semibold tracking-wider" style={{ color: "var(--kipu-subtle)" }}>
+                        % Retener
+                      </label>
                       <div className="relative">
-                        <input type="number" value={imp.porcentajeRetener}
+                        <input
+                          type="number"
+                          value={imp.porcentajeRetener}
                           onChange={e => editImpuesto(imp._id, "porcentajeRetener", parseFloat(e.target.value) || 0)}
-                          min={0} max={100} step={0.01}
-                          className="w-full px-2 pr-6 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-indigo-500 text-sm text-center" />
-                        <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 text-sm">%</span>
+                          min={0}
+                          max={100}
+                          step={0.01}
+                          className="w-full px-2 pr-6 py-2 rounded-lg text-sm text-center transition-colors focus:outline-none"
+                          style={{
+                            background: "var(--kipu-surface)",
+                            border: "1px solid var(--kipu-border)",
+                            color: "var(--kipu-text)",
+                          }}
+                          onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                          onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+                        />
+                        <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-sm" style={{ color: "var(--kipu-subtle)" }}>%</span>
                       </div>
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[10px] uppercase font-semibold tracking-wider text-gray-500">Valor retenido</label>
+                      <label className="text-[10px] uppercase font-semibold tracking-wider" style={{ color: "var(--kipu-subtle)" }}>
+                        Valor retenido
+                      </label>
                       <div className="relative">
-                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500 text-sm">$</span>
-                        <input type="number" value={imp.valorRetenido}
+                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-sm" style={{ color: "var(--kipu-subtle)" }}>$</span>
+                        <input
+                          type="number"
+                          value={imp.valorRetenido}
                           onChange={e => editImpuesto(imp._id, "valorRetenido", parseFloat(e.target.value) || 0)}
-                          min={0} step={0.01}
-                          className="w-full pl-6 pr-2 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-indigo-500 text-sm text-right" />
+                          min={0}
+                          step={0.01}
+                          className="w-full pl-6 pr-2 py-2 rounded-lg text-sm text-right transition-colors focus:outline-none"
+                          style={{
+                            background: "var(--kipu-surface)",
+                            border: "1px solid var(--kipu-border)",
+                            color: "var(--kipu-text)",
+                          }}
+                          onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                          onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+                        />
                       </div>
                     </div>
                   </div>
                 </div>
               );
             })}
-            <div className="flex justify-between text-sm pt-2 border-t border-gray-800 px-1">
-              <span className="text-gray-400">Total retenido</span>
-              <span className="text-white font-bold">${fmt(totalRetenido)}</span>
+            <div
+              className="flex justify-between text-sm pt-2 px-1"
+              style={{ borderTop: "1px solid var(--kipu-border)" }}
+            >
+              <span style={{ color: "var(--kipu-muted)" }}>Total retenido</span>
+              <span className="font-bold" style={{ color: "var(--kipu-text)" }}>${fmt(totalRetenido)}</span>
             </div>
           </div>
 
@@ -645,56 +842,112 @@ export default function NuevaRetPage() {
         <div className="space-y-4">
           <div className="hidden lg:block">
             <PuntoEmision
-              establecimientos={establecimientos} estabSelected={estabSelected}
-              ptoSelected={ptoSelected} puntos={puntos}
-              onEstabChange={handleEstabChange} onPtoChange={setPtoSelected}
+              establecimientos={establecimientos}
+              estabSelected={estabSelected}
+              ptoSelected={ptoSelected}
+              puntos={puntos}
+              onEstabChange={handleEstabChange}
+              onPtoChange={setPtoSelected}
             />
           </div>
 
-          <div className="bg-gray-900 rounded-xl border border-gray-800 p-4 sticky top-4">
-            <h2 className="text-sm font-semibold text-white mb-4">Resumen</h2>
+          <div
+            className="rounded-xl p-4 sticky top-4"
+            style={{
+              background: "var(--kipu-surface)",
+              border: "1px solid var(--kipu-border)",
+            }}
+          >
+            <h2 className="text-sm font-semibold mb-4" style={{ color: "var(--kipu-text)" }}>Resumen</h2>
             <div className="space-y-2 text-sm">
               {impuestos.map((imp, idx) => (
-                <div key={imp._id} className="flex justify-between text-gray-400">
+                <div key={imp._id} className="flex justify-between" style={{ color: "var(--kipu-muted)" }}>
                   <span>RET {idx + 1} · {imp.porcentajeRetener}%</span>
                   <span>${fmt(imp.valorRetenido)}</span>
                 </div>
               ))}
-              <div className="border-t border-gray-800 pt-2 flex justify-between font-bold text-white text-base">
+              <div
+                className="pt-2 flex justify-between font-bold text-base"
+                style={{
+                  borderTop: "1px solid var(--kipu-border)",
+                  color: "var(--kipu-text)",
+                }}
+              >
                 <span>Total retenido</span>
                 <span>${fmt(totalRetenido)}</span>
               </div>
             </div>
 
             {empresa?.suscripcion_activa || (empresa?.balance_api ?? 0) > 0 ? (
-              <div className={`mt-3 px-3 py-2 rounded-lg text-xs ${
-                !empresa?.suscripcion_activa
-                  ? "bg-amber-500/10 border border-amber-500/20 text-amber-300"
-                  : "bg-emerald-500/10 border border-emerald-500/20 text-emerald-300"
-              }`}>
+              <div
+                className="mt-3 px-3 py-2 rounded-lg text-xs"
+                style={{
+                  background: !empresa?.suscripcion_activa
+                    ? "color-mix(in srgb, var(--kipu-warning) 10%, transparent)"
+                    : "color-mix(in srgb, var(--kipu-success) 10%, transparent)",
+                  border: !empresa?.suscripcion_activa
+                    ? "1px solid color-mix(in srgb, var(--kipu-warning) 20%, transparent)"
+                    : "1px solid color-mix(in srgb, var(--kipu-success) 20%, transparent)",
+                  color: !empresa?.suscripcion_activa ? "var(--kipu-warning)" : "var(--kipu-success)",
+                }}
+              >
                 {!empresa?.suscripcion_activa
                   ? `Consumirá 1 crédito API · Disponibles: ${empresa?.balance_api}`
                   : "✅ Incluido en tu suscripción"
                 }
               </div>
             ) : (
-              <div className="mt-3 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
-                <AlertTriangle size={12} className="text-red-400" />
-                <span className="text-xs text-red-400 font-medium ml-1.5">Sin acceso para emitir</span>
+              <div
+                className="mt-3 rounded-lg px-3 py-2 flex items-center"
+                style={{
+                  background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
+                  border: "1px solid color-mix(in srgb, var(--kipu-danger) 20%, transparent)",
+                }}
+              >
+                <AlertTriangle size={12} style={{ color: "var(--kipu-danger)" }} />
+                <span className="text-xs font-medium ml-1.5" style={{ color: "var(--kipu-danger)" }}>Sin acceso para emitir</span>
               </div>
             )}
 
             {error && (
-              <p className="mt-3 text-xs text-red-400 bg-red-400/10 px-3 py-2 rounded-lg">{error}</p>
+              <p
+                className="mt-3 text-xs px-3 py-2 rounded-lg"
+                style={{
+                  color: "var(--kipu-danger)",
+                  background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
+                }}
+              >
+                {error}
+              </p>
             )}
 
-            <button onClick={emitir}
+            <button
+              onClick={emitir}
               disabled={submitting || (!empresa?.suscripcion_activa && (empresa?.balance_api ?? 0) === 0)}
-              className="mt-4 w-full py-3 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2">
-              {submitting
-                ? <><Loader2 size={16} className="animate-spin" /> Emitiendo...</>
-                : `Emitir retención · $${fmt(totalRetenido)}`
-              }
+              className="mt-4 w-full py-3 rounded-lg text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ background: "var(--kipu-accent)" }}
+              onMouseEnter={e => {
+                if (!submitting && (empresa?.suscripcion_activa || (empresa?.balance_api ?? 0) > 0)) {
+                  e.currentTarget.style.background = "var(--kipu-accent-h)";
+                }
+              }}
+              onMouseLeave={e => {
+                if (!submitting && (empresa?.suscripcion_activa || (empresa?.balance_api ?? 0) > 0)) {
+                  e.currentTarget.style.background = "var(--kipu-accent)";
+                }
+              }}
+            >
+              {submitting ? (
+                <>
+                  <div
+                    className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin"
+                    style={{ borderColor: "#FFFFFF", borderTopColor: "transparent" }}
+                  />
+                  Emitiendo...
+                </>
+              ) : (
+                `Emitir retención · $${fmt(totalRetenido)}`
+              )}
             </button>
           </div>
         </div>

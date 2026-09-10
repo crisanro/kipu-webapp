@@ -1,4 +1,3 @@
-// app/(dashboard)/documentos/emitir/liq/page.tsx
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -6,8 +5,7 @@ import { useRouter } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
-import { CheckCircle2, AlertTriangle, User, Search, Loader2, X } from "lucide-react";
-import { clsx } from "clsx";
+import { CheckCircle2, AlertTriangle, User, Search, X } from "lucide-react";
 import PuntoEmision from "../components/PuntoEmision";
 import ItemsEditor, { Item, calcItem, genId, EMPTY_ITEM } from "../components/ItemsEditor";
 import PagosMixtos, { PagoItem, PAGO_INICIAL } from "../components/PagosMixtos";
@@ -17,7 +15,6 @@ import ResumenTotales from "../components/ResumenTotales";
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const r2  = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 const fmt = (n: number) => r2(n).toFixed(2);
-const IVA_RATES: Record<string, number> = { "0": 0, "5": 0.05, "15": 0.15 };
 
 function calcTotales(items: Item[]) {
   const base = items.reduce(
@@ -40,20 +37,20 @@ function calcTotales(items: Item[]) {
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 interface Proveedor {
-  id:                     string;
-  razon_social:           string;
-  identificacion:         string;
+  id:                      string;
+  razon_social:            string;
+  identificacion:          string;
   tipo_identificacion_sri: string;
-  email:                  string;
-  direccion:              string;
+  email:                   string;
+  direccion:               string;
 }
 
 interface ProveedorNuevo {
   tipo_identificacion_sri: string;
-  identificacion:         string;
-  razon_social:           string;
-  email:                  string;
-  direccion:              string;
+  identificacion:          string;
+  razon_social:            string;
+  email:                   string;
+  direccion:               string;
 }
 
 interface Establecimiento {
@@ -206,9 +203,9 @@ export default function NuevaLiqPage() {
         "/api/v1/app/documentos/emit/LIQ",
         {
           establecimiento: estabSelected,
-          punto_emision:    ptoSelected,
+          punto_emision:   ptoSelected,
           cliente_id:      proveedorNuevo ? undefined : proveedorSelected?.id,
-          cliente:          proveedorNuevo ? {
+          cliente:         proveedorNuevo ? {
             tipo_id:        proveedorNuevo.tipo_identificacion_sri,
             nombre:         proveedorNuevo.razon_social,
             identificacion: proveedorNuevo.identificacion,
@@ -257,23 +254,52 @@ export default function NuevaLiqPage() {
   // Pantalla resultado
   if (resultado) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6 bg-gray-950">
+      <div
+        className="min-h-screen flex items-center justify-center p-6"
+        style={{ background: "var(--kipu-bg)" }}
+      >
         <div className="w-full max-w-sm text-center">
-          <div className="w-16 h-16 rounded-full bg-emerald-500/20 flex items-center justify-center mx-auto mb-4">
-            <CheckCircle2 size={32} className="text-emerald-400" />
+          <div
+            className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
+            style={{
+              background: "color-mix(in srgb, var(--kipu-success) 20%, transparent)",
+            }}
+          >
+            <CheckCircle2 size={32} style={{ color: "var(--kipu-success)" }} />
           </div>
-          <h2 className="text-xl font-bold text-white mb-1">Liquidación emitida</h2>
-          <p className="text-sm text-gray-500 mb-2">{resultado.claveAcceso}</p>
-          <span className="inline-block px-3 py-1 rounded-full text-xs font-medium mb-6 bg-emerald-500/20 text-emerald-400">
+          <h2 className="text-xl font-bold mb-1" style={{ color: "var(--kipu-text)" }}>
+            Liquidación emitida
+          </h2>
+          <p className="text-sm mb-2" style={{ color: "var(--kipu-subtle)" }}>{resultado.claveAcceso}</p>
+          <span
+            className="inline-block px-3 py-1 rounded-full text-xs font-medium mb-6"
+            style={{
+              background: "color-mix(in srgb, var(--kipu-success) 20%, transparent)",
+              color: "var(--kipu-success)",
+            }}
+          >
             {resultado.estado}
           </span>
           <div className="flex gap-3">
-            <button onClick={reset}
-              className="flex-1 py-2.5 rounded-lg border border-gray-700 text-gray-400 hover:text-white text-sm transition-colors">
+            <button
+              onClick={reset}
+              className="flex-1 py-2.5 rounded-lg text-sm transition-colors"
+              style={{
+                border: "1px solid var(--kipu-border)",
+                color: "var(--kipu-muted)",
+              }}
+              onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
+              onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-muted)"}
+            >
               Nueva LIQ
             </button>
-            <button onClick={() => router.push("/documentos")}
-              className="flex-1 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors">
+            <button
+              onClick={() => router.push("/documentos")}
+              className="flex-1 py-2.5 rounded-lg text-white text-sm font-medium transition-colors"
+              style={{ background: "var(--kipu-accent)" }}
+              onMouseEnter={e => e.currentTarget.style.background = "var(--kipu-accent-h)"}
+              onMouseLeave={e => e.currentTarget.style.background = "var(--kipu-accent)"}
+            >
               Ver documentos
             </button>
           </div>
@@ -285,19 +311,29 @@ export default function NuevaLiqPage() {
   return (
     <div className="p-4 md:p-6 max-w-4xl mx-auto space-y-6">
       <div>
-        <h1 className="text-xl font-bold text-white">
-          Nueva Liquidación de Compra <span className="text-gray-500 text-base font-normal">LIQ</span>
+        <h1 className="text-xl font-bold" style={{ color: "var(--kipu-text)" }}>
+          Nueva Liquidación de Compra{" "}
+          <span className="text-base font-normal" style={{ color: "var(--kipu-subtle)" }}>
+            LIQ
+          </span>
         </h1>
-        <p className="text-sm text-gray-500">
+        <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>
           {empresa?.razon_social} · {empresa?.ambiente === 2 ? "Producción" : "Pruebas"}
         </p>
       </div>
 
       {empresa && !empresa.suscripcion_activa && empresa.balance_api === 0 && (
-        <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3">
-          <AlertTriangle size={16} className="text-red-400 shrink-0" />
-          <p className="text-sm text-red-300">
-            Sin acceso para emitir. <a href="/planes" className="underline">Ver opciones</a>
+        <div
+          className="flex items-center gap-2 rounded-lg px-4 py-3"
+          style={{
+            background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
+            border: "1px solid color-mix(in srgb, var(--kipu-danger) 20%, transparent)",
+          }}
+        >
+          <AlertTriangle size={16} className="shrink-0" style={{ color: "var(--kipu-danger)" }} />
+          <p className="text-sm" style={{ color: "var(--kipu-danger)" }}>
+            Sin acceso para emitir.{" "}
+            <a href="/planes" className="underline">Ver opciones</a>
           </p>
         </div>
       )}
@@ -307,62 +343,124 @@ export default function NuevaLiqPage() {
 
           <div className="lg:hidden">
             <PuntoEmision
-              establecimientos={establecimientos} estabSelected={estabSelected}
-              ptoSelected={ptoSelected} puntos={puntos}
-              onEstabChange={handleEstabChange} onPtoChange={setPtoSelected}
+              establecimientos={establecimientos}
+              estabSelected={estabSelected}
+              ptoSelected={ptoSelected}
+              puntos={puntos}
+              onEstabChange={handleEstabChange}
+              onPtoChange={setPtoSelected}
             />
           </div>
 
           {/* Selector proveedor */}
-          <div className="bg-gray-900 rounded-xl border border-gray-800 p-4">
+          <div
+            className="rounded-xl p-4"
+            style={{
+              background: "var(--kipu-surface)",
+              border: "1px solid var(--kipu-border)",
+            }}
+          >
             <div className="flex items-center gap-2 mb-3">
-              <User size={15} className="text-indigo-400" />
-              <h2 className="text-sm font-semibold text-white">Proveedor</h2>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
+              <User size={15} style={{ color: "var(--kipu-accent)" }} />
+              <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>
+                Proveedor
+              </h2>
+              <span
+                className="text-[10px] px-2 py-0.5 rounded-full"
+                style={{
+                  color: "var(--kipu-warning)",
+                  background: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)",
+                  border: "1px solid color-mix(in srgb, var(--kipu-warning) 20%, transparent)",
+                }}
+              >
                 Solo cédula / pasaporte / exterior
               </span>
             </div>
 
             <div className="relative">
-              <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+              <Search
+                size={15}
+                className="absolute left-3 top-1/2 -translate-y-1/2"
+                style={{ color: "var(--kipu-subtle)" }}
+              />
               <input
                 value={query}
-                onChange={e => { setQuery(e.target.value); setProveedorSelected(null);setProveedorNuevo(null); setShowDrop(true); }}
-                onFocus={() => { if (query.length >= 2) setShowDrop(true); }}
+                onChange={e => {
+                  setQuery(e.target.value);
+                  setProveedorSelected(null);
+                  setProveedorNuevo(null);
+                  setShowDrop(true);
+                }}
+                onFocus={(e) => {
+                  if (query.length >= 2) setShowDrop(true);
+                  e.currentTarget.style.borderColor = "var(--kipu-accent)";
+                }}
+                onBlur={(e) => e.currentTarget.style.borderColor = "var(--kipu-border)"}
                 placeholder="Buscar por nombre o cédula..."
-                className="w-full pl-9 pr-4 py-2.5 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 text-sm"
+                className="w-full pl-9 pr-4 py-2.5 rounded-lg text-sm transition-colors focus:outline-none"
+                style={{
+                  background: "var(--kipu-surface)",
+                  border: "1px solid var(--kipu-border)",
+                  color: "var(--kipu-text)",
+                }}
               />
-              {loading && <Loader2 size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 animate-spin" />}
+              {loading && (
+                <div
+                  className="w-3.5 h-3.5 border-2 border-t-transparent rounded-full animate-spin absolute right-3 top-1/2 -translate-y-1/2"
+                  style={{ borderColor: "var(--kipu-accent)", borderTopColor: "transparent" }}
+                />
+              )}
 
               {showDrop && query.length >= 2 && (
-                <div className="absolute z-10 w-full mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-xl overflow-hidden max-h-60 overflow-y-auto">
+                <div
+                  className="absolute z-10 w-full mt-1 rounded-lg shadow-xl overflow-hidden max-h-60 overflow-y-auto"
+                  style={{
+                    background: "var(--kipu-surface)",
+                    border: "1px solid var(--kipu-border)",
+                  }}
+                >
                   {results.map(p => (
-                    <button key={p.id} onClick={() => seleccionar(p)}
-                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-700 text-left border-b border-gray-700/50 last:border-0">
-                      <div className="w-7 h-7 rounded-full bg-indigo-600/30 flex items-center justify-center shrink-0">
-                        <span className="text-xs text-indigo-400 font-bold">{p.razon_social[0]}</span>
+                    <button
+                      type="button"
+                      key={p.id}
+                      onClick={() => seleccionar(p)}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors"
+                      style={{ borderBottom: "1px solid var(--kipu-border)" }}
+                      onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 5%, transparent)"}
+                      onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                    >
+                      <div
+                        className="w-7 h-7 rounded-full flex items-center justify-center shrink-0"
+                        style={{ background: "color-mix(in srgb, var(--kipu-accent) 20%, transparent)" }}
+                      >
+                        <span className="text-xs font-bold" style={{ color: "var(--kipu-accent)" }}>
+                          {p.razon_social[0]}
+                        </span>
                       </div>
                       <div>
-                        <p className="text-sm text-white">{p.razon_social}</p>
-                        <p className="text-xs text-gray-500">{p.identificacion}</p>
+                        <p className="text-sm" style={{ color: "var(--kipu-text)" }}>{p.razon_social}</p>
+                        <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>{p.identificacion}</p>
                       </div>
                     </button>
                   ))}
                   {results.length === 0 && (
                     <div className="px-4 py-3 space-y-2">
-                      <p className="text-xs text-gray-500">No encontrado.</p>
-                      <button type="button"
+                      <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>No encontrado.</p>
+                      <button
+                        type="button"
                         onClick={() => {
                           setShowDrop(false);
                           setProveedorNuevo({
                             tipo_identificacion_sri: "05",
-                            identificacion:         query,
+                            identificacion:          query,
                             razon_social:            "",
                             email:                   "",
                             direccion:               "",
                           });
                         }}
-                        className="text-xs text-indigo-400 underline text-left">
+                        className="text-xs underline text-left block"
+                        style={{ color: "var(--kipu-accent)" }}
+                      >
                         + Registrar "{query}" como nuevo proveedor
                       </button>
                     </div>
@@ -373,13 +471,28 @@ export default function NuevaLiqPage() {
 
             {/* Formulario proveedor nuevo */}
             {proveedorNuevo && (
-              <div className="mt-3 bg-gray-800 rounded-lg p-3 space-y-2 border border-indigo-500/30">
-                <p className="text-xs text-indigo-400 font-medium">Nuevo proveedor</p>
+              <div
+                className="mt-3 rounded-lg p-3 space-y-2"
+                style={{
+                  background: "color-mix(in srgb, var(--kipu-surface) 60%, transparent)",
+                  border: "1px solid color-mix(in srgb, var(--kipu-accent) 30%, transparent)",
+                }}
+              >
+                <p className="text-xs font-medium" style={{ color: "var(--kipu-accent)" }}>
+                  Nuevo proveedor
+                </p>
                 <div className="grid grid-cols-2 gap-2">
                   <select
                     value={proveedorNuevo.tipo_identificacion_sri}
                     onChange={e => setProveedorNuevo({ ...proveedorNuevo, tipo_identificacion_sri: e.target.value })}
-                    className="px-2 py-1.5 rounded-lg bg-gray-700 border border-gray-600 text-white text-xs focus:outline-none focus:border-indigo-500"
+                    className="px-2 py-1.5 rounded-lg text-xs transition-colors focus:outline-none"
+                    style={{
+                      background: "var(--kipu-surface)",
+                      border: "1px solid var(--kipu-border)",
+                      color: "var(--kipu-text)",
+                    }}
+                    onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                    onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
                   >
                     <option value="05">Cédula</option>
                     <option value="06">Pasaporte</option>
@@ -389,29 +502,63 @@ export default function NuevaLiqPage() {
                     value={proveedorNuevo.identificacion}
                     onChange={e => setProveedorNuevo({ ...proveedorNuevo, identificacion: e.target.value })}
                     placeholder="Identificación"
-                    className="px-2 py-1.5 rounded-lg bg-gray-700 border border-gray-600 text-white placeholder-gray-500 text-xs focus:outline-none focus:border-indigo-500"
+                    className="px-2 py-1.5 rounded-lg text-xs transition-colors focus:outline-none"
+                    style={{
+                      background: "var(--kipu-surface)",
+                      border: "1px solid var(--kipu-border)",
+                      color: "var(--kipu-text)",
+                    }}
+                    onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                    onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
                   />
                 </div>
                 <input
                   value={proveedorNuevo.razon_social}
                   onChange={e => setProveedorNuevo({ ...proveedorNuevo, razon_social: e.target.value })}
                   placeholder="Nombre completo *"
-                  className="w-full px-2 py-1.5 rounded-lg bg-gray-700 border border-gray-600 text-white placeholder-gray-500 text-xs focus:outline-none focus:border-indigo-500"
+                  className="w-full px-2 py-1.5 rounded-lg text-xs transition-colors focus:outline-none"
+                  style={{
+                    background: "var(--kipu-surface)",
+                    border: "1px solid var(--kipu-border)",
+                    color: "var(--kipu-text)",
+                  }}
+                  onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                  onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
                 />
                 <input
                   value={proveedorNuevo.direccion}
                   onChange={e => setProveedorNuevo({ ...proveedorNuevo, direccion: e.target.value })}
                   placeholder="Dirección (opcional)"
-                  className="w-full px-2 py-1.5 rounded-lg bg-gray-700 border border-gray-600 text-white placeholder-gray-500 text-xs focus:outline-none focus:border-indigo-500"
+                  className="w-full px-2 py-1.5 rounded-lg text-xs transition-colors focus:outline-none"
+                  style={{
+                    background: "var(--kipu-surface)",
+                    border: "1px solid var(--kipu-border)",
+                    color: "var(--kipu-text)",
+                  }}
+                  onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                  onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
                 />
                 <input
                   value={proveedorNuevo.email}
                   onChange={e => setProveedorNuevo({ ...proveedorNuevo, email: e.target.value })}
                   placeholder="Email (opcional)"
-                  className="w-full px-2 py-1.5 rounded-lg bg-gray-700 border border-gray-600 text-white placeholder-gray-500 text-xs focus:outline-none focus:border-indigo-500"
+                  className="w-full px-2 py-1.5 rounded-lg text-xs transition-colors focus:outline-none"
+                  style={{
+                    background: "var(--kipu-surface)",
+                    border: "1px solid var(--kipu-border)",
+                    color: "var(--kipu-text)",
+                  }}
+                  onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                  onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
                 />
-                <button type="button" onClick={() => setProveedorNuevo(null)}
-                  className="text-xs text-gray-500 hover:text-white transition-colors">
+                <button
+                  type="button"
+                  onClick={() => setProveedorNuevo(null)}
+                  className="text-xs transition-colors"
+                  style={{ color: "var(--kipu-subtle)" }}
+                  onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
+                  onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-subtle)"}
+                >
                   Cancelar
                 </button>
               </div>
@@ -419,15 +566,34 @@ export default function NuevaLiqPage() {
 
             {/* Proveedor seleccionado */}
             {proveedorSelected && (
-              <div className="mt-3 flex items-center gap-3 bg-gray-800 rounded-lg px-3 py-2.5">
-                <div className="w-7 h-7 rounded-full bg-indigo-600/30 flex items-center justify-center shrink-0">
-                  <User size={13} className="text-indigo-400" />
+              <div
+                className="mt-3 flex items-center gap-3 rounded-lg px-3 py-2.5"
+                style={{
+                  background: "color-mix(in srgb, var(--kipu-text) 5%, transparent)",
+                }}
+              >
+                <div
+                  className="w-7 h-7 rounded-full flex items-center justify-center shrink-0"
+                  style={{ background: "color-mix(in srgb, var(--kipu-accent) 20%, transparent)" }}
+                >
+                  <User size={13} style={{ color: "var(--kipu-accent)" }} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm text-white font-medium truncate">{proveedorSelected.razon_social}</p>
-                  <p className="text-xs text-gray-500">{proveedorSelected.identificacion}</p>
+                  <p className="text-sm font-medium truncate" style={{ color: "var(--kipu-text)" }}>
+                    {proveedorSelected.razon_social}
+                  </p>
+                  <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+                    {proveedorSelected.identificacion}
+                  </p>
                 </div>
-                <button onClick={limpiar} className="text-gray-500 hover:text-white p-1 transition-colors">
+                <button
+                  type="button"
+                  onClick={limpiar}
+                  className="p-1 transition-colors"
+                  style={{ color: "var(--kipu-subtle)" }}
+                  onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
+                  onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-subtle)"}
+                >
                   <X size={16} />
                 </button>
               </div>
@@ -453,9 +619,12 @@ export default function NuevaLiqPage() {
         <div className="space-y-4">
           <div className="hidden lg:block">
             <PuntoEmision
-              establecimientos={establecimientos} estabSelected={estabSelected}
-              ptoSelected={ptoSelected} puntos={puntos}
-              onEstabChange={handleEstabChange} onPtoChange={setPtoSelected}
+              establecimientos={establecimientos}
+              estabSelected={estabSelected}
+              ptoSelected={ptoSelected}
+              puntos={puntos}
+              onEstabChange={handleEstabChange}
+              onPtoChange={setPtoSelected}
             />
           </div>
           <ResumenTotales

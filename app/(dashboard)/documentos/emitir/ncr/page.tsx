@@ -1,4 +1,3 @@
-// app/(dashboard)/documentos/emitir/ncr/page.tsx
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -7,7 +6,6 @@ import { v4 as uuidv4 } from "uuid";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
 import { CheckCircle2, AlertTriangle } from "lucide-react";
-import { clsx } from "clsx";
 import PuntoEmision from "../components/PuntoEmision";
 import CamposAdicionales, { CampoAdicional } from "../components/CamposAdicionales";
 import ItemsEditor, { Item, calcItem, genId, EMPTY_ITEM } from "../components/ItemsEditor";
@@ -186,7 +184,7 @@ export default function NuevaNcrPage() {
     try {
       const payload: any = {
         establecimiento: estabSelected,
-        punto_emision:    ptoSelected,
+        punto_emision:   ptoSelected,
         motivo:          motivoFinal,
         items: items.map(i => {
           const c = calcItem(i);
@@ -239,23 +237,52 @@ export default function NuevaNcrPage() {
   // Pantalla resultado
   if (resultado) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6 bg-gray-950">
+      <div
+        className="min-h-screen flex items-center justify-center p-6"
+        style={{ background: "var(--kipu-bg)" }}
+      >
         <div className="w-full max-w-sm text-center">
-          <div className="w-16 h-16 rounded-full bg-emerald-500/20 flex items-center justify-center mx-auto mb-4">
-            <CheckCircle2 size={32} className="text-emerald-400" />
+          <div
+            className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
+            style={{
+              background: "color-mix(in srgb, var(--kipu-success) 20%, transparent)",
+            }}
+          >
+            <CheckCircle2 size={32} style={{ color: "var(--kipu-success)" }} />
           </div>
-          <h2 className="text-xl font-bold text-white mb-1">Nota de crédito emitida</h2>
-          <p className="text-sm text-gray-500 mb-2">{resultado.claveAcceso}</p>
-          <span className="inline-block px-3 py-1 rounded-full text-xs font-medium mb-6 bg-emerald-500/20 text-emerald-400">
+          <h2 className="text-xl font-bold mb-1" style={{ color: "var(--kipu-text)" }}>
+            Nota de crédito emitida
+          </h2>
+          <p className="text-sm mb-2" style={{ color: "var(--kipu-subtle)" }}>{resultado.claveAcceso}</p>
+          <span
+            className="inline-block px-3 py-1 rounded-full text-xs font-medium mb-6"
+            style={{
+              background: "color-mix(in srgb, var(--kipu-success) 20%, transparent)",
+              color: "var(--kipu-success)",
+            }}
+          >
             {resultado.estado}
           </span>
           <div className="flex gap-3">
-            <button onClick={reset}
-              className="flex-1 py-2.5 rounded-lg border border-gray-700 text-gray-400 hover:text-white text-sm transition-colors">
+            <button
+              onClick={reset}
+              className="flex-1 py-2.5 rounded-lg text-sm transition-colors"
+              style={{
+                border: "1px solid var(--kipu-border)",
+                color: "var(--kipu-muted)",
+              }}
+              onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
+              onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-muted)"}
+            >
               Nueva NCR
             </button>
-            <button onClick={() => router.push("/documentos")}
-              className="flex-1 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors">
+            <button
+              onClick={() => router.push("/documentos")}
+              className="flex-1 py-2.5 rounded-lg text-white text-sm font-medium transition-colors"
+              style={{ background: "var(--kipu-accent)" }}
+              onMouseEnter={e => e.currentTarget.style.background = "var(--kipu-accent-h)"}
+              onMouseLeave={e => e.currentTarget.style.background = "var(--kipu-accent)"}
+            >
               Ver documentos
             </button>
           </div>
@@ -268,16 +295,30 @@ export default function NuevaNcrPage() {
     <div className="p-4 md:p-6 max-w-4xl mx-auto space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-xl font-bold text-white">Nueva Nota de Crédito <span className="text-gray-500 text-base font-normal">NCR</span></h1>
-        <p className="text-sm text-gray-500">
+        <h1 className="text-xl font-bold" style={{ color: "var(--kipu-text)" }}>
+          Nueva Nota de Crédito{" "}
+          <span className="text-base font-normal" style={{ color: "var(--kipu-subtle)" }}>
+            NCR
+          </span>
+        </h1>
+        <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>
           {empresa?.razon_social} · {empresa?.ambiente === 2 ? "Producción" : "Pruebas"}
         </p>
       </div>
 
       {empresa && !empresa.suscripcion_activa && empresa.balance_api === 0 && (
-        <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3">
-          <AlertTriangle size={16} className="text-red-400 shrink-0" />
-          <p className="text-sm text-red-300">Sin acceso para emitir. <a href="/planes" className="underline">Ver opciones</a></p>
+        <div
+          className="flex items-center gap-2 rounded-lg px-4 py-3"
+          style={{
+            background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
+            border: "1px solid color-mix(in srgb, var(--kipu-danger) 20%, transparent)",
+          }}
+        >
+          <AlertTriangle size={16} className="shrink-0" style={{ color: "var(--kipu-danger)" }} />
+          <p className="text-sm" style={{ color: "var(--kipu-danger)" }}>
+            Sin acceso para emitir.{" "}
+            <a href="/planes" className="underline">Ver opciones</a>
+          </p>
         </div>
       )}
 
@@ -306,20 +347,51 @@ export default function NuevaNcrPage() {
           />
 
           {/* Motivo */}
-          <div className="bg-gray-900 rounded-xl border border-gray-800 p-4">
-            <h2 className="text-sm font-semibold text-white mb-3">Motivo</h2>
+          <div
+            className="rounded-xl p-4"
+            style={{
+              background: "var(--kipu-surface)",
+              border: "1px solid var(--kipu-border)",
+            }}
+          >
+            <h2 className="text-sm font-semibold mb-3" style={{ color: "var(--kipu-text)" }}>
+              Motivo
+            </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {MOTIVOS.map(m => (
-                <button key={m} onClick={() => { setMotivo(m); setMotivoPersonalizado(""); }}
-                  className={clsx(
-                    "px-3 py-2.5 rounded-lg border text-xs font-medium text-left transition-colors",
-                    motivo === m
-                      ? "border-indigo-500 bg-indigo-500/10 text-indigo-300"
-                      : "border-gray-700 text-gray-400 hover:border-gray-600 hover:text-white"
-                  )}>
-                  {m}
-                </button>
-              ))}
+              {MOTIVOS.map(m => {
+                const isSelected = motivo === m;
+                return (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => { setMotivo(m); setMotivoPersonalizado(""); }}
+                    className="px-3 py-2.5 rounded-lg text-xs font-medium text-left transition-colors"
+                    style={{
+                      background: isSelected
+                        ? "color-mix(in srgb, var(--kipu-accent) 10%, transparent)"
+                        : "var(--kipu-surface)",
+                      border: isSelected
+                        ? "1px solid var(--kipu-accent)"
+                        : "1px solid var(--kipu-border)",
+                      color: isSelected ? "var(--kipu-accent)" : "var(--kipu-muted)",
+                    }}
+                    onMouseEnter={e => {
+                      if (!isSelected) {
+                        e.currentTarget.style.color = "var(--kipu-text)";
+                        e.currentTarget.style.borderColor = "color-mix(in srgb, var(--kipu-text) 20%, transparent)";
+                      }
+                    }}
+                    onMouseLeave={e => {
+                      if (!isSelected) {
+                        e.currentTarget.style.color = "var(--kipu-muted)";
+                        e.currentTarget.style.borderColor = "var(--kipu-border)";
+                      }
+                    }}
+                  >
+                    {m}
+                  </button>
+                );
+              })}
             </div>
 
             {/* Input para OTROS */}
@@ -330,10 +402,17 @@ export default function NuevaNcrPage() {
                   onChange={e => setMotivoPersonalizado(e.target.value.toUpperCase())}
                   placeholder="Describe el motivo..."
                   maxLength={300}
-                  className="w-full px-3 py-2.5 rounded-lg bg-gray-800 border border-indigo-500/50 text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 text-sm"
+                  className="w-full px-3 py-2.5 rounded-lg text-sm transition-colors focus:outline-none"
+                  style={{
+                    background: "var(--kipu-surface)",
+                    border: "1px solid color-mix(in srgb, var(--kipu-accent) 50%, transparent)",
+                    color: "var(--kipu-text)",
+                  }}
+                  onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                  onBlur={e => e.currentTarget.style.borderColor = "color-mix(in srgb, var(--kipu-accent) 50%, transparent)"}
                   autoFocus
                 />
-                <p className="text-[10px] text-gray-600 mt-1 text-right">
+                <p className="text-[10px] mt-1 text-right" style={{ color: "var(--kipu-subtle)" }}>
                   {motivoPersonalizado.length}/300
                 </p>
               </div>

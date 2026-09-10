@@ -1,13 +1,11 @@
-// app/(dashboard)/reportes/renta/[anio]/page.tsx
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import api from "@/lib/api";
 import {
-  Loader2, ArrowLeft, RefreshCw,
+  ArrowLeft, RefreshCw,
   CheckCircle2, AlertTriangle, TrendingUp, TrendingDown,
 } from "lucide-react";
-import { clsx } from "clsx";
 
 import PreguntasSRI        from "../../_components/PreguntasSRI";
 import ResumenImpositivo   from "../../_components/ResumenImpositivo";
@@ -65,8 +63,11 @@ export default function ReporteRentaPage() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center space-y-3">
-          <Loader2 size={28} className="animate-spin text-purple-400 mx-auto" />
-          <p className="text-sm text-gray-500">Calculando impuesto a la renta...</p>
+          <div
+            className="w-7 h-7 border-2 border-t-transparent rounded-full animate-spin mx-auto"
+            style={{ borderColor: "#c084fc", borderTopColor: "transparent" }}
+          />
+          <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>Calculando impuesto a la renta...</p>
         </div>
       </div>
     );
@@ -75,9 +76,15 @@ export default function ReporteRentaPage() {
   if (error && !data) {
     return (
       <div className="p-6 max-w-2xl mx-auto">
-        <div className="flex items-start gap-3 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
-          <AlertTriangle size={16} className="text-red-400 shrink-0 mt-0.5" />
-          <p className="text-sm text-red-400">{error}</p>
+        <div
+          className="flex items-start gap-3 rounded-xl px-4 py-3"
+          style={{
+            background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
+            border: "1px solid color-mix(in srgb, var(--kipu-danger) 20%, transparent)",
+          }}
+        >
+          <AlertTriangle size={16} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-danger)" }} />
+          <p className="text-sm" style={{ color: "var(--kipu-danger)" }}>{error}</p>
         </div>
       </div>
     );
@@ -103,26 +110,50 @@ export default function ReporteRentaPage() {
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-3">
-          <button onClick={() => router.push("/reportes")}
-            className="p-2 rounded-lg border border-gray-700 text-gray-400 hover:text-white transition-colors mt-0.5">
+          <button
+            type="button"
+            onClick={() => router.push("/reportes")}
+            className="p-2 rounded-lg transition-colors mt-0.5"
+            style={{
+              border: "1px solid var(--kipu-border)",
+              color: "var(--kipu-subtle)",
+              background: "transparent",
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.color = "var(--kipu-text)";
+              e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 5%, transparent)";
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.color = "var(--kipu-subtle)";
+              e.currentTarget.style.background = "transparent";
+            }}
+          >
             <ArrowLeft size={16} />
           </button>
           <div>
             <div className="flex items-center gap-2 flex-wrap mb-1">
-              <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-purple-600/20 text-purple-400 border border-purple-500/20">
+              <span
+                className="text-xs font-bold px-2 py-0.5 rounded-full"
+                style={{
+                  background: "color-mix(in srgb, #a855f7 20%, transparent)",
+                  color: "#c084fc",
+                  border: "1px solid color-mix(in srgb, #a855f7 20%, transparent)",
+                }}
+              >
                 Renta 102
               </span>
-              <h1 className="text-xl font-bold text-white">Año {anio}</h1>
+              <h1 className="text-xl font-bold" style={{ color: "var(--kipu-text)" }}>Año {anio}</h1>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
-              {declarado
-                ? <EstadoBadge estado="DECLARADO" size="sm" />
-                : enCurso
-                  ? <EstadoBadge estado="EN_CURSO"  size="sm" />
-                  : <EstadoBadge estado="PENDIENTE" size="sm" />
-              }
+              {declarado ? (
+                <EstadoBadge estado="DECLARADO" size="sm" />
+              ) : enCurso ? (
+                <EstadoBadge estado="EN_CURSO" size="sm" />
+              ) : (
+                <EstadoBadge estado="PENDIENTE" size="sm" />
+              )}
               {enCurso && (
-                <span className="text-[10px] text-amber-400">
+                <span className="text-[10px]" style={{ color: "var(--kipu-warning)" }}>
                   · Año en curso — valores preliminares
                 </span>
               )}
@@ -130,48 +161,97 @@ export default function ReporteRentaPage() {
           </div>
         </div>
         <button
+          type="button"
           onClick={() => cargar(true)}
           disabled={regenerando}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-700 text-gray-400 hover:text-white text-xs transition-colors disabled:opacity-40 shrink-0"
+          className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs transition-colors disabled:opacity-40 shrink-0 font-medium"
+          style={{
+            border: "1px solid var(--kipu-border)",
+            color: "var(--kipu-muted)",
+            background: "transparent",
+          }}
+          onMouseEnter={e => {
+            if (!regenerando) e.currentTarget.style.color = "var(--kipu-text)";
+          }}
+          onMouseLeave={e => {
+            if (!regenerando) e.currentTarget.style.color = "var(--kipu-muted)";
+          }}
         >
-          <RefreshCw size={13} className={regenerando ? "animate-spin" : ""} />
+          {regenerando ? (
+            <div
+              className="w-3.5 h-3.5 border-2 border-t-transparent rounded-full animate-spin"
+              style={{ borderColor: "currentColor", borderTopColor: "transparent" }}
+            />
+          ) : (
+            <RefreshCw size={13} />
+          )}
           {regenerando ? "Calculando..." : "Regenerar"}
         </button>
       </div>
 
       {error && (
-        <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2.5">
-          <AlertTriangle size={14} className="text-red-400 shrink-0 mt-0.5" />
-          <p className="text-sm text-red-400">{error}</p>
+        <div
+          className="flex items-start gap-2 rounded-lg px-3 py-2.5"
+          style={{
+            background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
+            border: "1px solid color-mix(in srgb, var(--kipu-danger) 20%, transparent)",
+          }}
+        >
+          <AlertTriangle size={14} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-danger)" }} />
+          <p className="text-sm" style={{ color: "var(--kipu-danger)" }}>{error}</p>
         </div>
       )}
 
       {/* Resumen rápido top */}
       <div className="grid grid-cols-3 gap-3">
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-3 text-center">
-          <p className="text-xs text-gray-500 mb-1">Ingresos netos</p>
-          <p className="text-base font-bold text-white">${fmt(ingresos.netos ?? 0)}</p>
+        <div
+          className="rounded-xl p-3 text-center"
+          style={{
+            background: "var(--kipu-surface)",
+            border: "1px solid var(--kipu-border)",
+          }}
+        >
+          <p className="text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>Ingresos netos</p>
+          <p className="text-base font-bold" style={{ color: "var(--kipu-text)" }}>${fmt(ingresos.netos ?? 0)}</p>
         </div>
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-3 text-center">
-          <p className="text-xs text-gray-500 mb-1">Gastos deducibles</p>
-          <p className="text-base font-bold text-white">${fmt(gastos.deducibles ?? 0)}</p>
+        <div
+          className="rounded-xl p-3 text-center"
+          style={{
+            background: "var(--kipu-surface)",
+            border: "1px solid var(--kipu-border)",
+          }}
+        >
+          <p className="text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>Gastos deducibles</p>
+          <p className="text-base font-bold" style={{ color: "var(--kipu-text)" }}>${fmt(gastos.deducibles ?? 0)}</p>
         </div>
-        <div className={clsx(
-          "rounded-xl p-3 text-center border",
-          resultado.a_pagar > 0
-            ? "bg-red-500/10 border-red-500/20"
-            : resultado.saldo_favor > 0
-              ? "bg-emerald-500/10 border-emerald-500/20"
-              : "bg-gray-900 border-gray-800"
-        )}>
-          <p className="text-xs text-gray-500 mb-1">
+        <div
+          className="rounded-xl p-3 text-center"
+          style={{
+            background: resultado.a_pagar > 0
+              ? "color-mix(in srgb, var(--kipu-danger) 10%, transparent)"
+              : resultado.saldo_favor > 0
+                ? "color-mix(in srgb, var(--kipu-success) 10%, transparent)"
+                : "var(--kipu-surface)",
+            border: resultado.a_pagar > 0
+              ? "1px solid color-mix(in srgb, var(--kipu-danger) 20%, transparent)"
+              : resultado.saldo_favor > 0
+                ? "1px solid color-mix(in srgb, var(--kipu-success) 20%, transparent)"
+                : "1px solid var(--kipu-border)",
+          }}
+        >
+          <p className="text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>
             {resultado.a_pagar > 0 ? "A pagar" : resultado.saldo_favor > 0 ? "Saldo favor" : "Impuesto"}
           </p>
-          <p className={clsx(
-            "text-base font-bold",
-            resultado.a_pagar > 0    ? "text-red-400"     :
-            resultado.saldo_favor > 0 ? "text-emerald-400" : "text-gray-400"
-          )}>
+          <p
+            className="text-base font-bold"
+            style={{
+              color: resultado.a_pagar > 0
+                ? "var(--kipu-danger)"
+                : resultado.saldo_favor > 0
+                  ? "var(--kipu-success)"
+                  : "var(--kipu-text)",
+            }}
+          >
             ${fmt(resultado.a_pagar > 0 ? resultado.a_pagar : resultado.saldo_favor ?? 0)}
           </p>
         </div>
@@ -183,54 +263,96 @@ export default function ReporteRentaPage() {
       )}
 
       {/* Ingresos */}
-      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
-        <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-800">
-          <div className="w-7 h-7 rounded-lg bg-indigo-600/20 flex items-center justify-center">
-            <TrendingUp size={14} className="text-indigo-400" />
+      <div
+        className="rounded-xl overflow-hidden"
+        style={{
+          background: "var(--kipu-surface)",
+          border: "1px solid var(--kipu-border)",
+        }}
+      >
+        <div
+          className="flex items-center gap-2 px-4 py-3"
+          style={{ borderBottom: "1px solid var(--kipu-border)" }}
+        >
+          <div
+            className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+            style={{ background: "color-mix(in srgb, var(--kipu-accent) 20%, transparent)" }}
+          >
+            <TrendingUp size={14} style={{ color: "var(--kipu-accent)" }} />
           </div>
           <div>
-            <p className="text-sm font-semibold text-white">Ingresos del año</p>
-            <p className="text-xs text-gray-500">Ventas autorizadas FAC + LIQ</p>
+            <p className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>Ingresos del año</p>
+            <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Ventas autorizadas FAC + LIQ</p>
           </div>
         </div>
         <div className="p-4 space-y-1">
           {[
-            { num: "501", label: "Ingresos brutos en actividad económica", value: ingresos.brutos ?? 0 },
-            { num: "502", label: "Devoluciones y notas de crédito",        value: ingresos.ncr    ?? 0, resta: true },
-            { num: "503", label: "Ingresos netos",                         value: ingresos.netos  ?? 0, highlight: true },
+            { num: "501", label: "Ingresos brutos en actividad económica", value: ingresos.brutos ?? 0, resta: false, highlight: false },
+            { num: "502", label: "Devoluciones y notas de crédito",        value: ingresos.ncr    ?? 0, resta: true,  highlight: false },
+            { num: "503", label: "Ingresos netos",                          value: ingresos.netos  ?? 0, resta: false, highlight: true },
           ].map(({ num, label, value, resta, highlight }) => (
-            <div key={num} className={clsx(
-              "flex items-center justify-between gap-3 px-4 py-2.5 rounded-lg",
-              highlight ? "bg-indigo-600/10 border border-indigo-500/20" : "hover:bg-gray-800/40"
-            )}>
+            <div
+              key={num}
+              className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-lg transition-colors"
+              style={{
+                background: highlight
+                  ? "color-mix(in srgb, var(--kipu-accent) 10%, transparent)"
+                  : "transparent",
+                border: highlight
+                  ? "1px solid color-mix(in srgb, var(--kipu-accent) 20%, transparent)"
+                  : "none",
+              }}
+              onMouseEnter={e => {
+                if (!highlight) e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 4%, transparent)";
+              }}
+              onMouseLeave={e => {
+                if (!highlight) e.currentTarget.style.background = "transparent";
+              }}
+            >
               <div className="flex items-center gap-3 min-w-0">
-                <span className={clsx(
-                  "text-[10px] font-bold px-2 py-0.5 rounded shrink-0",
-                  highlight ? "bg-indigo-600 text-white" : "bg-gray-800 text-gray-400"
-                )}>
+                <span
+                  className="text-[10px] font-bold px-2 py-0.5 rounded shrink-0"
+                  style={{
+                    background: highlight
+                      ? "var(--kipu-accent)"
+                      : "color-mix(in srgb, var(--kipu-text) 8%, transparent)",
+                    color: highlight ? "#FFFFFF" : "var(--kipu-subtle)",
+                  }}
+                >
                   {num}
                 </span>
-                <span className={clsx(
-                  "text-xs truncate",
-                  highlight ? "text-white font-medium" : "text-gray-400"
-                )}>
+                <span
+                  className={`text-xs truncate ${highlight ? "font-medium" : ""}`}
+                  style={{ color: highlight ? "var(--kipu-text)" : "var(--kipu-subtle)" }}
+                >
                   {resta && value > 0 ? "(−) " : ""}{label}
                 </span>
               </div>
-              <span className={clsx(
-                "text-sm font-bold shrink-0 tabular-nums",
-                highlight ? "text-indigo-400" :
-                resta     ? "text-red-400"    : "text-white"
-              )}>
+              <span
+                className="text-sm font-bold shrink-0 tabular-nums"
+                style={{
+                  color: highlight
+                    ? "var(--kipu-accent)"
+                    : resta
+                      ? "var(--kipu-danger)"
+                      : "var(--kipu-text)",
+                }}
+              >
                 {resta && value > 0 ? "-" : ""}${fmt(value)}
               </span>
             </div>
           ))}
 
           {/* Alerta ingresos adicionales */}
-          <div className="flex items-start gap-2 bg-amber-500/5 border border-amber-500/20 rounded-lg px-3 py-2.5 mt-2">
-            <AlertTriangle size={13} className="text-amber-400 shrink-0 mt-0.5" />
-            <p className="text-xs text-amber-300">
+          <div
+            className="flex items-start gap-2 rounded-lg px-3 py-2.5 mt-2"
+            style={{
+              background: "color-mix(in srgb, var(--kipu-warning) 5%, transparent)",
+              border: "1px solid color-mix(in srgb, var(--kipu-warning) 20%, transparent)",
+            }}
+          >
+            <AlertTriangle size={13} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-warning)" }} />
+            <p className="text-xs" style={{ color: "var(--kipu-warning)" }}>
               <span className="font-semibold">Casillero 504:</span> Si tienes otros ingresos
               (arrendamientos, intereses, relación de dependencia), agrégalos manualmente en el SRI.
             </p>
@@ -239,32 +361,59 @@ export default function ReporteRentaPage() {
       </div>
 
       {/* Gastos deducibles */}
-      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
-        <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-800">
-          <div className="w-7 h-7 rounded-lg bg-emerald-600/20 flex items-center justify-center">
-            <TrendingDown size={14} className="text-emerald-400" />
+      <div
+        className="rounded-xl overflow-hidden"
+        style={{
+          background: "var(--kipu-surface)",
+          border: "1px solid var(--kipu-border)",
+        }}
+      >
+        <div
+          className="flex items-center gap-2 px-4 py-3"
+          style={{ borderBottom: "1px solid var(--kipu-border)" }}
+        >
+          <div
+            className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+            style={{ background: "color-mix(in srgb, var(--kipu-success) 20%, transparent)" }}
+          >
+            <TrendingDown size={14} style={{ color: "var(--kipu-success)" }} />
           </div>
           <div>
-            <p className="text-sm font-semibold text-white">Gastos deducibles</p>
-            <p className="text-xs text-gray-500">Compras marcadas como deducibles de renta</p>
+            <p className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>Gastos deducibles</p>
+            <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Compras marcadas como deducibles de renta</p>
           </div>
         </div>
         <div className="p-4 space-y-1">
-          <div className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-lg bg-emerald-600/10 border border-emerald-500/20">
+          <div
+            className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-lg"
+            style={{
+              background: "color-mix(in srgb, var(--kipu-success) 10%, transparent)",
+              border: "1px solid color-mix(in srgb, var(--kipu-success) 20%, transparent)",
+            }}
+          >
             <div className="flex items-center gap-3">
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-600 text-white shrink-0">
+              <span
+                className="text-[10px] font-bold px-2 py-0.5 rounded text-white shrink-0"
+                style={{ background: "var(--kipu-success)" }}
+              >
                 601
               </span>
-              <span className="text-xs text-white font-medium">Total gastos deducibles</span>
+              <span className="text-xs font-medium" style={{ color: "var(--kipu-text)" }}>Total gastos deducibles</span>
             </div>
-            <span className="text-sm font-bold text-emerald-400 tabular-nums">
+            <span className="text-sm font-bold tabular-nums" style={{ color: "var(--kipu-success)" }}>
               ${fmt(gastos.deducibles ?? 0)}
             </span>
           </div>
 
-          <div className="flex items-start gap-2 bg-amber-500/5 border border-amber-500/20 rounded-lg px-3 py-2.5 mt-2">
-            <AlertTriangle size={13} className="text-amber-400 shrink-0 mt-0.5" />
-            <p className="text-xs text-amber-300">
+          <div
+            className="flex items-start gap-2 rounded-lg px-3 py-2.5 mt-2"
+            style={{
+              background: "color-mix(in srgb, var(--kipu-warning) 5%, transparent)",
+              border: "1px solid color-mix(in srgb, var(--kipu-warning) 20%, transparent)",
+            }}
+          >
+            <AlertTriangle size={13} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-warning)" }} />
+            <p className="text-xs" style={{ color: "var(--kipu-warning)" }}>
               <span className="font-semibold">Casillero 602:</span> Los gastos personales
               (salud, educación, alimentación, vivienda, vestimenta) deben agregarse manualmente.
               El SRI tiene un límite según tu fracción básica.
@@ -274,30 +423,39 @@ export default function ReporteRentaPage() {
       </div>
 
       {/* Base imponible */}
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+      <div
+        className="rounded-xl p-4"
+        style={{
+          background: "var(--kipu-surface)",
+          border: "1px solid var(--kipu-border)",
+        }}
+      >
+        <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "var(--kipu-subtle)" }}>
           Base imponible
         </p>
         <div className="space-y-2">
           <div className="flex justify-between text-sm">
-            <span className="text-gray-400">Ingresos netos [503]</span>
-            <span className="text-white">${fmt(ingresos.netos ?? 0)}</span>
+            <span style={{ color: "var(--kipu-subtle)" }}>Ingresos netos [503]</span>
+            <span style={{ color: "var(--kipu-text)" }}>${fmt(ingresos.netos ?? 0)}</span>
           </div>
           <div className="flex justify-between text-sm">
-            <span className="text-gray-400">Gastos deducibles [601]</span>
-            <span className="text-red-400">-${fmt(gastos.deducibles ?? 0)}</span>
+            <span style={{ color: "var(--kipu-subtle)" }}>Gastos deducibles [601]</span>
+            <span style={{ color: "var(--kipu-danger)" }}>-${fmt(gastos.deducibles ?? 0)}</span>
           </div>
-          <div className="border-t border-gray-800 pt-2 flex justify-between">
+          <div
+            className="pt-2 flex justify-between"
+            style={{ borderTop: "1px solid var(--kipu-border)" }}
+          >
             <div>
-              <span className="text-sm font-semibold text-white">Base imponible [699]</span>
+              <span className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>Base imponible [699]</span>
               {tabla.tramo && (
-                <p className="text-xs text-gray-500 mt-0.5">
+                <p className="text-xs mt-0.5" style={{ color: "var(--kipu-subtle)" }}>
                   Tramo: ${fmt(tabla.tramo.desde)} – {tabla.tramo.hasta === Infinity ? "+" : `$${fmt(tabla.tramo.hasta)}`}
                   {" · "}{tabla.tramo.porcentaje}%
                 </p>
               )}
             </div>
-            <span className="text-lg font-bold text-purple-400">
+            <span className="text-lg font-bold" style={{ color: "#c084fc" }}>
               ${fmt(reporte?.base_imponible ?? 0)}
             </span>
           </div>
@@ -305,8 +463,8 @@ export default function ReporteRentaPage() {
 
         {/* Tabla IR info */}
         {tabla.tabla_anio && (
-          <div className="mt-3 pt-3 border-t border-gray-800">
-            <p className="text-[10px] text-gray-600">
+          <div className="mt-3 pt-3" style={{ borderTop: "1px solid var(--kipu-border)" }}>
+            <p className="text-[10px]" style={{ color: "var(--kipu-subtle)" }}>
               ℹ️ Tabla IR {tabla.tabla_anio} — personas naturales.
               {tabla.nota && ` ${tabla.nota}.`}
             </p>
@@ -316,20 +474,32 @@ export default function ReporteRentaPage() {
 
       {/* Retenciones en la fuente */}
       {(resultado.retenciones ?? 0) > 0 && (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+        <div
+          className="rounded-xl p-4"
+          style={{
+            background: "var(--kipu-surface)",
+            border: "1px solid var(--kipu-border)",
+          }}
+        >
+          <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "var(--kipu-subtle)" }}>
             Crédito tributario renta
           </p>
-          <div className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-lg bg-blue-600/10 border border-blue-500/20">
+          <div
+            className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-lg"
+            style={{
+              background: "color-mix(in srgb, #60a5fa 10%, transparent)",
+              border: "1px solid color-mix(in srgb, #60a5fa 20%, transparent)",
+            }}
+          >
             <div className="flex items-center gap-3">
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-600 text-white shrink-0">
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded text-white shrink-0" style={{ background: "#3b82f6" }}>
                 841
               </span>
-              <span className="text-xs text-white font-medium">
+              <span className="text-xs font-medium text-white">
                 Retenciones en la fuente recibidas
               </span>
             </div>
-            <span className="text-sm font-bold text-blue-400 tabular-nums">
+            <span className="text-sm font-bold tabular-nums" style={{ color: "#60a5fa" }}>
               ${fmt(resultado.retenciones ?? 0)}
             </span>
           </div>
@@ -356,39 +526,68 @@ export default function ReporteRentaPage() {
 
       {/* Notas */}
       {reporte?.notas?.length > 0 && (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 space-y-1.5">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Notas</p>
+        <div
+          className="rounded-xl p-4 space-y-1.5"
+          style={{
+            background: "var(--kipu-surface)",
+            border: "1px solid var(--kipu-border)",
+          }}
+        >
+          <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: "var(--kipu-subtle)" }}>Notas</p>
           {reporte.notas.map((nota: string, i: number) => (
-            <p key={i} className="text-xs text-gray-500">· {nota}</p>
+            <p key={i} className="text-xs" style={{ color: "var(--kipu-subtle)" }}>· {nota}</p>
           ))}
         </div>
       )}
 
       {/* Marcar declarado */}
       {!declarado && !enCurso && (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-          <p className="text-sm text-white font-medium mb-1">¿Ya declaraste en el SRI?</p>
-          <p className="text-xs text-gray-500 mb-3">
+        <div
+          className="rounded-xl p-4"
+          style={{
+            background: "var(--kipu-surface)",
+            border: "1px solid var(--kipu-border)",
+          }}
+        >
+          <p className="text-sm font-medium mb-1" style={{ color: "var(--kipu-text)" }}>¿Ya declaraste en el SRI?</p>
+          <p className="text-xs mb-3" style={{ color: "var(--kipu-subtle)" }}>
             Marca el año {anio} como declarado. Esto no declara por ti —
             solo registra que ya lo hiciste en el portal del SRI.
           </p>
           <button
+            type="button"
             onClick={marcarDeclarado}
             disabled={marcando}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-sm font-medium transition-colors"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-white text-sm font-medium transition-colors disabled:opacity-50"
+            style={{ background: "var(--kipu-success)" }}
           >
-            {marcando
-              ? <><Loader2 size={14} className="animate-spin" /> Marcando...</>
-              : <><CheckCircle2 size={14} /> Marcar año {anio} como declarado</>
-            }
+            {marcando ? (
+              <>
+                <div
+                  className="w-3.5 h-3.5 border-2 border-t-transparent rounded-full animate-spin"
+                  style={{ borderColor: "#FFFFFF", borderTopColor: "transparent" }}
+                />
+                Marcando...
+              </>
+            ) : (
+              <>
+                <CheckCircle2 size={14} /> Marcar año {anio} como declarado
+              </>
+            )}
           </button>
         </div>
       )}
 
       {declarado && (
-        <div className="flex items-center gap-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-4 py-3">
-          <CheckCircle2 size={16} className="text-emerald-400 shrink-0" />
-          <p className="text-sm text-emerald-300 font-medium">
+        <div
+          className="flex items-center gap-3 rounded-xl px-4 py-3"
+          style={{
+            background: "color-mix(in srgb, var(--kipu-success) 10%, transparent)",
+            border: "1px solid color-mix(in srgb, var(--kipu-success) 20%, transparent)",
+          }}
+        >
+          <CheckCircle2 size={16} className="shrink-0" style={{ color: "var(--kipu-success)" }} />
+          <p className="text-sm font-medium" style={{ color: "var(--kipu-success)" }}>
             Renta {anio} declarada ante el SRI ✓
           </p>
         </div>

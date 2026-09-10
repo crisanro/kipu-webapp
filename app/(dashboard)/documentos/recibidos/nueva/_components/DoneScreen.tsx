@@ -1,4 +1,3 @@
-// app/(dashboard)/documentos/recibidos/nueva/_components/DoneScreen.tsx
 "use client";
 import { useRouter } from "next/navigation";
 import { CheckCircle2 } from "lucide-react";
@@ -19,20 +18,47 @@ const TIPO_LABEL: Record<string, string> = {
 export default function DoneScreen({ titulo, subtitulo, onOtro }: Props) {
   const router = useRouter();
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-gray-950">
+    <div
+      className="min-h-screen flex items-center justify-center p-6"
+      style={{ background: "var(--kipu-bg)" }}
+    >
       <div className="w-full max-w-sm text-center">
-        <div className="w-16 h-16 rounded-full bg-emerald-500/20 flex items-center justify-center mx-auto mb-4">
-          <CheckCircle2 size={32} className="text-emerald-400" />
+        <div
+          className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
+          style={{
+            background: "color-mix(in srgb, var(--kipu-success) 20%, transparent)",
+          }}
+        >
+          <CheckCircle2 size={32} style={{ color: "var(--kipu-success)" }} />
         </div>
-        <h2 className="text-xl font-bold text-white mb-1">{titulo}</h2>
-        <p className="text-sm text-gray-500 mb-6">{subtitulo}</p>
+        <h2 className="text-xl font-bold mb-1" style={{ color: "var(--kipu-text)" }}>
+          {titulo}
+        </h2>
+        <p className="text-sm mb-6" style={{ color: "var(--kipu-subtle)" }}>
+          {subtitulo}
+        </p>
         <div className="flex gap-3">
-          <button onClick={onOtro}
-            className="flex-1 py-2.5 rounded-lg border border-gray-700 text-gray-400 hover:text-white text-sm transition-colors">
+          <button
+            type="button"
+            onClick={onOtro}
+            className="flex-1 py-2.5 rounded-lg text-sm transition-colors"
+            style={{
+              border: "1px solid var(--kipu-border)",
+              color: "var(--kipu-muted)",
+            }}
+            onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
+            onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-muted)"}
+          >
             Registrar otro
           </button>
-          <button onClick={() => router.push("/documentos/recibidos")}
-            className="flex-1 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors">
+          <button
+            type="button"
+            onClick={() => router.push("/documentos/recibidos")}
+            className="flex-1 py-2.5 rounded-lg text-white text-sm font-medium transition-colors"
+            style={{ background: "var(--kipu-accent)" }}
+            onMouseEnter={e => e.currentTarget.style.background = "var(--kipu-accent-h)"}
+            onMouseLeave={e => e.currentTarget.style.background = "var(--kipu-accent)"}
+          >
             Ver historial
           </button>
         </div>

@@ -1,10 +1,8 @@
-// app/(dashboard)/documentos/recibidos/nueva/page.tsx
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/auth.store";
 import { AlertTriangle, FileText, FileImage, Download } from "lucide-react";
-import { clsx } from "clsx";
 
 import TabXML              from "./_components/TabXML";
 import TabFisico           from "./_components/TabFisico";
@@ -80,46 +78,88 @@ export default function NuevaRecibidaPage() {
 
       {/* Header */}
       <div>
-        <h1 className="text-xl font-bold text-white">Registrar documento recibido</h1>
-        <p className="text-sm text-gray-500">XML electrónico o documento físico</p>
+        <h1 className="text-xl font-bold" style={{ color: "var(--kipu-text)" }}>
+          Registrar documento recibido
+        </h1>
+        <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>
+          XML electrónico o documento físico
+        </p>
       </div>
 
       {/* Alerta suscripción */}
       {!suscripcionActiva && (
-        <div className="flex items-start gap-3 bg-amber-500/10 border border-amber-500/20 rounded-lg px-4 py-3">
-          <AlertTriangle size={16} className="text-amber-400 shrink-0 mt-0.5" />
-          <p className="text-sm text-amber-300">Se requiere suscripción activa para registrar documentos.</p>
+        <div
+          className="flex items-start gap-3 rounded-lg px-4 py-3"
+          style={{
+            background: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)",
+            border: "1px solid color-mix(in srgb, var(--kipu-warning) 20%, transparent)",
+          }}
+        >
+          <AlertTriangle size={16} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-warning)" }} />
+          <p className="text-sm" style={{ color: "var(--kipu-warning)" }}>
+            Se requiere suscripción activa para registrar documentos.
+          </p>
         </div>
       )}
 
       {/* Tabs */}
-      <div className="flex gap-2 bg-gray-900 border border-gray-800 rounded-xl p-1">
+      <div
+        className="flex gap-2 rounded-xl p-1"
+        style={{
+          background: "var(--kipu-surface)",
+          border: "1px solid var(--kipu-border)",
+        }}
+      >
         <button
+          type="button"
           onClick={() => { setTab("xml"); setError(""); }}
-          className={clsx(
-            "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-colors",
-            tab === "xml" ? "bg-indigo-600 text-white" : "text-gray-400 hover:text-white"
-          )}
+          className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-colors"
+          style={{
+            background: tab === "xml" ? "var(--kipu-accent)" : "transparent",
+            color: tab === "xml" ? "#FFFFFF" : "var(--kipu-subtle)",
+          }}
+          onMouseEnter={e => {
+            if (tab !== "xml") e.currentTarget.style.color = "var(--kipu-text)";
+          }}
+          onMouseLeave={e => {
+            if (tab !== "xml") e.currentTarget.style.color = "var(--kipu-subtle)";
+          }}
         >
           <FileText size={15} />
           XML Electrónico
         </button>
         <button
+          type="button"
           onClick={() => { setTab("fisico"); setError(""); }}
-          className={clsx(
-            "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-colors",
-            tab === "fisico" ? "bg-indigo-600 text-white" : "text-gray-400 hover:text-white"
-          )}
+          className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-colors"
+          style={{
+            background: tab === "fisico" ? "var(--kipu-accent)" : "transparent",
+            color: tab === "fisico" ? "#FFFFFF" : "var(--kipu-subtle)",
+          }}
+          onMouseEnter={e => {
+            if (tab !== "fisico") e.currentTarget.style.color = "var(--kipu-text)";
+          }}
+          onMouseLeave={e => {
+            if (tab !== "fisico") e.currentTarget.style.color = "var(--kipu-subtle)";
+          }}
         >
           <FileImage size={15} />
           Documento Físico
         </button>
         <button
+          type="button"
           onClick={() => { setTab("sri"); setError(""); }}
-          className={clsx(
-            "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-colors",
-            tab === "sri" ? "bg-indigo-600 text-white" : "text-gray-400 hover:text-white"
-          )}
+          className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-colors"
+          style={{
+            background: tab === "sri" ? "var(--kipu-accent)" : "transparent",
+            color: tab === "sri" ? "#FFFFFF" : "var(--kipu-subtle)",
+          }}
+          onMouseEnter={e => {
+            if (tab !== "sri") e.currentTarget.style.color = "var(--kipu-text)";
+          }}
+          onMouseLeave={e => {
+            if (tab !== "sri") e.currentTarget.style.color = "var(--kipu-subtle)";
+          }}
         >
           <Download size={15} />
           SRI Masivo
@@ -128,9 +168,15 @@ export default function NuevaRecibidaPage() {
 
       {/* Error compartido */}
       {error && (
-        <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2.5">
-          <AlertTriangle size={14} className="text-red-400 shrink-0 mt-0.5" />
-          <p className="text-sm text-red-400">{error}</p>
+        <div
+          className="flex items-start gap-2 rounded-lg px-3 py-2.5"
+          style={{
+            background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
+            border: "1px solid color-mix(in srgb, var(--kipu-danger) 20%, transparent)",
+          }}
+        >
+          <AlertTriangle size={14} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-danger)" }} />
+          <p className="text-sm" style={{ color: "var(--kipu-danger)" }}>{error}</p>
         </div>
       )}
 
@@ -162,8 +208,14 @@ export default function NuevaRecibidaPage() {
 
       {/* Link historial */}
       <div className="flex justify-end">
-        <button onClick={() => router.push("/documentos/recibidos")}
-          className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors">
+        <button
+          type="button"
+          onClick={() => router.push("/documentos/recibidos")}
+          className="text-xs transition-colors"
+          style={{ color: "var(--kipu-accent)" }}
+          onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent-h)"}
+          onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-accent)"}
+        >
           Ver historial →
         </button>
       </div>

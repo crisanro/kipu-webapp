@@ -1,19 +1,42 @@
-// app/(dashboard)/dashboard/components/UltimosDocumentos.tsx
 "use client";
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, Clock, AlertTriangle, XCircle } from "lucide-react";
-import { clsx } from "clsx";
 
 interface Props {
   documentos: any[];
 }
 
 const ESTADO_CONFIG: Record<string, { label: string; color: string; bg: string; icon: any }> = {
-  AUTORIZADO: { label: "Autorizado", color: "text-emerald-400", bg: "bg-emerald-400/10", icon: CheckCircle2 },
-  RECIBIDA:   { label: "En proceso", color: "text-indigo-400",  bg: "bg-indigo-400/10",  icon: Clock },
-  FIRMADO:    { label: "En cola",    color: "text-blue-400",    bg: "bg-blue-400/10",    icon: Clock },
-  DEVUELTA:   { label: "Devuelto",   color: "text-amber-400",   bg: "bg-amber-400/10",   icon: AlertTriangle },
-  RECHAZADO:  { label: "Rechazado",  color: "text-red-400",     bg: "bg-red-400/10",     icon: XCircle },
+  AUTORIZADO: {
+    label: "Autorizado",
+    color: "var(--kipu-success)",
+    bg: "color-mix(in srgb, var(--kipu-success) 10%, transparent)",
+    icon: CheckCircle2,
+  },
+  RECIBIDA: {
+    label: "En proceso",
+    color: "#818cf8",
+    bg: "color-mix(in srgb, #818cf8 10%, transparent)",
+    icon: Clock,
+  },
+  FIRMADO: {
+    label: "En cola",
+    color: "#60a5fa",
+    bg: "color-mix(in srgb, #60a5fa 10%, transparent)",
+    icon: Clock,
+  },
+  DEVUELTA: {
+    label: "Devuelto",
+    color: "var(--kipu-warning)",
+    bg: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)",
+    icon: AlertTriangle,
+  },
+  RECHAZADO: {
+    label: "Rechazado",
+    color: "var(--kipu-danger)",
+    bg: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
+    icon: XCircle,
+  },
 };
 
 const TIPO_LABEL: Record<string, string> = {
@@ -26,15 +49,31 @@ export default function UltimosDocumentos({ documentos }: Props) {
   const recientes = documentos.slice(0, 6);
 
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
-      <div className="flex items-center justify-between px-5 py-4 border-b border-gray-800">
+    <div
+      className="rounded-xl overflow-hidden"
+      style={{
+        background: "var(--kipu-surface)",
+        border: "1px solid var(--kipu-border)",
+      }}
+    >
+      <div
+        className="flex items-center justify-between px-5 py-4"
+        style={{ borderBottom: "2px solid var(--kipu-border)" }}
+      >
         <div>
-          <h2 className="text-sm font-semibold text-white">Últimos emitidos</h2>
-          <p className="text-xs text-gray-500 mt-0.5">Comprobantes recientes</p>
+          <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>
+            Últimos emitidos
+          </h2>
+          <p className="text-xs mt-0.5" style={{ color: "var(--kipu-subtle)" }}>
+            Comprobantes recientes
+          </p>
         </div>
         <Link
           href="/documentos"
-          className="flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
+          className="flex items-center gap-1 text-xs transition-colors"
+          style={{ color: "var(--kipu-accent)" }}
+          onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent-h)"}
+          onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-accent)"}
         >
           Ver todos <ArrowRight size={12} />
         </Link>
@@ -43,49 +82,81 @@ export default function UltimosDocumentos({ documentos }: Props) {
       {recientes.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 text-center">
           <span className="text-3xl mb-2">📄</span>
-          <p className="text-sm text-gray-500">Sin comprobantes este mes</p>
+          <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>
+            Sin comprobantes este mes
+          </p>
           <Link
             href="/documentos/nueva"
-            className="mt-3 text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
+            className="mt-3 text-xs transition-colors"
+            style={{ color: "var(--kipu-accent)" }}
+            onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent-h)"}
+            onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-accent)"}
           >
             Emitir primero →
           </Link>
         </div>
       ) : (
-        <div className="divide-y divide-gray-800/60">
-          {recientes.map((d: any) => {
+        <div>
+          {recientes.map((d: any, index: number) => {
             const estado = ESTADO_CONFIG[d.estado] ?? ESTADO_CONFIG.FIRMADO;
             const Icon   = estado.icon;
             return (
               <Link
                 key={d.id}
                 href={`/documentos/${d.id}`}
-                className="flex items-center gap-3 px-5 py-3.5 hover:bg-gray-800/40 transition-colors group"
+                className="flex items-center gap-3 px-5 py-3.5 transition-colors group"
+                style={{
+                  borderTop: index > 0 ? "1px solid var(--kipu-border)" : "none",
+                }}
+                onMouseEnter={e =>
+                  (e.currentTarget.style.background =
+                    "color-mix(in srgb, var(--kipu-text) 4%, transparent)")
+                }
+                onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
               >
-                <div className={clsx(
-                  "w-8 h-8 rounded-lg flex items-center justify-center shrink-0",
-                  estado.bg
-                )}>
-                  <Icon size={14} className={estado.color} />
+                <div
+                  className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                  style={{ background: estado.bg }}
+                >
+                  <Icon size={14} style={{ color: estado.color }} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <p className="text-sm text-white font-medium truncate">
+                    <p
+                      className="text-sm font-medium truncate"
+                      style={{ color: "var(--kipu-text)" }}
+                    >
                       {d.cliente_nombre || "—"}
                     </p>
                     {d.tipo_doc !== "FAC" && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-800 text-gray-400 shrink-0">
+                      <span
+                        className="text-[10px] px-1.5 py-0.5 rounded shrink-0"
+                        style={{
+                          background: "color-mix(in srgb, var(--kipu-text) 8%, transparent)",
+                          color: "var(--kipu-muted)",
+                        }}
+                      >
                         {TIPO_LABEL[d.tipo_doc] ?? d.tipo_doc}
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-gray-500 mt-0.5">
+                  <p
+                    className="text-xs mt-0.5"
+                    style={{ color: "var(--kipu-subtle)" }}
+                  >
                     {d.numero ?? d.numero_doc} · {String(d.fecha ?? "").slice(0, 10)}
                   </p>
                 </div>
                 <div className="text-right shrink-0">
-                  <p className="text-sm font-bold text-white">${fmt(d.total)}</p>
-                  <p className={clsx("text-xs", estado.color)}>{estado.label}</p>
+                  <p
+                    className="text-sm font-bold"
+                    style={{ color: "var(--kipu-text)" }}
+                  >
+                    ${fmt(d.total)}
+                  </p>
+                  <p className="text-xs" style={{ color: estado.color }}>
+                    {estado.label}
+                  </p>
                 </div>
               </Link>
             );

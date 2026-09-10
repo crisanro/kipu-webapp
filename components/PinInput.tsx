@@ -1,9 +1,8 @@
-// components/PinInput.tsx
 "use client";
 
 import { useState, useEffect, useRef } from "react";
 import api from "@/lib/api";
-import { Loader2, Mail, CheckCircle2, RefreshCw } from "lucide-react";
+import { Mail, CheckCircle2, RefreshCw } from "lucide-react";
 
 interface Props {
   tipoAccion:  string;
@@ -29,7 +28,7 @@ export default function PinInput({ tipoAccion, email, onConfirmar, onCancelar, l
     timerRef.current = setInterval(() => {
       setCountdown(prev => {
         if (prev <= 1) {
-          clearInterval(timerRef.current!);
+          if (timerRef.current) clearInterval(timerRef.current);
           return 0;
         }
         return prev - 1;
@@ -89,40 +88,75 @@ export default function PinInput({ tipoAccion, email, onConfirmar, onCancelar, l
       {/* Paso 1 — Enviar PIN */}
       {!enviado ? (
         <div className="text-center space-y-3">
-          <div className="w-12 h-12 rounded-full bg-indigo-600/20 flex items-center justify-center mx-auto">
-            <Mail size={20} className="text-indigo-400" />
+          <div
+            className="w-12 h-12 rounded-full flex items-center justify-center mx-auto"
+            style={{ background: "color-mix(in srgb, var(--kipu-accent) 20%, transparent)" }}
+          >
+            <Mail size={20} style={{ color: "var(--kipu-accent)" }} />
           </div>
           <div>
-            <p className="text-sm text-white font-medium">Verificación por email</p>
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-sm font-medium" style={{ color: "var(--kipu-text)" }}>Verificación por email</p>
+            <p className="text-xs mt-1" style={{ color: "var(--kipu-subtle)" }}>
               {label
                 ? `Para ${label}, necesitamos verificar tu identidad.`
                 : "Necesitamos verificar tu identidad."
               }
             </p>
-            <p className="text-xs text-indigo-400 mt-1">{email}</p>
+            <p className="text-xs mt-1" style={{ color: "var(--kipu-accent)" }}>{email}</p>
           </div>
 
           {error && (
-            <p className="text-xs text-red-400 bg-red-400/10 px-3 py-2 rounded-lg">{error}</p>
+            <p
+              className="text-xs px-3 py-2 rounded-lg"
+              style={{
+                color: "var(--kipu-danger)",
+                background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
+              }}
+            >
+              {error}
+            </p>
           )}
 
           <div className="flex gap-3">
             <button
+              type="button"
               onClick={onCancelar}
-              className="flex-1 py-2.5 rounded-lg border border-gray-700 text-gray-400 text-sm transition-colors"
+              className="flex-1 py-2.5 rounded-lg text-sm transition-colors"
+              style={{
+                border: "1px solid var(--kipu-border)",
+                color: "var(--kipu-muted)",
+              }}
+              onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
+              onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-muted)"}
             >
               Cancelar
             </button>
             <button
+              type="button"
               onClick={enviarPin}
               disabled={enviando}
-              className="flex-1 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm font-medium transition-colors flex items-center justify-center gap-2"
+              className="flex-1 py-2.5 rounded-lg text-white text-sm font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+              style={{ background: "var(--kipu-accent)" }}
+              onMouseEnter={e => {
+                if (!enviando) e.currentTarget.style.background = "var(--kipu-accent-h)";
+              }}
+              onMouseLeave={e => {
+                if (!enviando) e.currentTarget.style.background = "var(--kipu-accent)";
+              }}
             >
-              {enviando
-                ? <><Loader2 size={14} className="animate-spin" /> Enviando...</>
-                : <><Mail size={14} /> Enviar código</>
-              }
+              {enviando ? (
+                <>
+                  <div
+                    className="w-3.5 h-3.5 border-2 border-t-transparent rounded-full animate-spin"
+                    style={{ borderColor: "#FFFFFF", borderTopColor: "transparent" }}
+                  />
+                  Enviando...
+                </>
+              ) : (
+                <>
+                  <Mail size={14} /> Enviar código
+                </>
+              )}
             </button>
           </div>
         </div>
@@ -130,20 +164,23 @@ export default function PinInput({ tipoAccion, email, onConfirmar, onCancelar, l
         /* Paso 2 — Ingresar PIN */
         <div className="space-y-4">
           <div className="text-center">
-            <div className="w-12 h-12 rounded-full bg-emerald-600/20 flex items-center justify-center mx-auto mb-3">
-              <CheckCircle2 size={20} className="text-emerald-400" />
+            <div
+              className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3"
+              style={{ background: "color-mix(in srgb, var(--kipu-success) 20%, transparent)" }}
+            >
+              <CheckCircle2 size={20} style={{ color: "var(--kipu-success)" }} />
             </div>
-            <p className="text-sm text-white font-medium">Código enviado</p>
-            <p className="text-xs text-gray-500 mt-1">
-              Revisa tu correo <span className="text-indigo-400">{email}</span>
+            <p className="text-sm font-medium" style={{ color: "var(--kipu-text)" }}>Código enviado</p>
+            <p className="text-xs mt-1" style={{ color: "var(--kipu-subtle)" }}>
+              Revisa tu correo <span style={{ color: "var(--kipu-accent)" }}>{email}</span>
             </p>
-            <p className="text-xs text-gray-600 mt-1">
-            ¿No lo ves? Busca un correo de <strong className="text-gray-400">no-reply@kipu.ec</strong> en tu carpeta de <strong>spam o no deseado</strong>.
+            <p className="text-xs mt-1" style={{ color: "var(--kipu-subtle)" }}>
+              ¿No lo ves? Busca un correo de <strong style={{ color: "var(--kipu-muted)" }}>no-reply@kipu.ec</strong> en tu carpeta de <strong>spam o no deseado</strong>.
             </p>
           </div>
 
           <div>
-            <label className="block text-xs text-gray-500 mb-1.5 text-center">
+            <label className="block text-xs mb-1.5 text-center" style={{ color: "var(--kipu-subtle)" }}>
               Ingresa el código de 6 dígitos
             </label>
             <input
@@ -158,50 +195,104 @@ export default function PinInput({ tipoAccion, email, onConfirmar, onCancelar, l
               onKeyDown={(e) => { if (e.key === "Enter" && pin.length === 6) confirmar(); }}
               placeholder="• • • • • •"
               maxLength={6}
-              className="w-full px-4 py-3 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 text-xl text-center tracking-[0.5em] font-mono"
+              className="w-full px-4 py-3 rounded-lg text-xl text-center tracking-[0.5em] font-mono transition-colors focus:outline-none"
+              style={{
+                background: "var(--kipu-surface)",
+                border: "1px solid var(--kipu-border)",
+                color: "var(--kipu-text)",
+              }}
+              onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+              onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
             />
           </div>
 
           {error && (
-            <p className="text-xs text-red-400 bg-red-400/10 px-3 py-2 rounded-lg text-center">{error}</p>
+            <p
+              className="text-xs px-3 py-2 rounded-lg text-center"
+              style={{
+                color: "var(--kipu-danger)",
+                background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
+              }}
+            >
+              {error}
+            </p>
           )}
 
           {/* Reenviar */}
           <div className="text-center">
             {countdown > 0 ? (
-              <p className="text-xs text-gray-500">
-                Reenviar en <span className="text-white font-mono">{countdown}s</span>
+              <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+                Reenviar en <span className="font-mono" style={{ color: "var(--kipu-text)" }}>{countdown}s</span>
               </p>
             ) : (
               <button
+                type="button"
                 onClick={enviarPin}
                 disabled={enviando}
-                className="flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 disabled:opacity-50 transition-colors mx-auto"
+                className="flex items-center gap-1.5 text-xs disabled:opacity-50 transition-colors mx-auto"
+                style={{ color: "var(--kipu-accent)" }}
+                onMouseEnter={e => {
+                  if (!enviando) e.currentTarget.style.color = "var(--kipu-accent-h)";
+                }}
+                onMouseLeave={e => {
+                  if (!enviando) e.currentTarget.style.color = "var(--kipu-accent)";
+                }}
               >
-                {enviando
-                  ? <><Loader2 size={12} className="animate-spin" /> Enviando...</>
-                  : <><RefreshCw size={12} /> Reenviar código</>
-                }
+                {enviando ? (
+                  <>
+                    <div
+                      className="w-3 h-3 border-2 border-t-transparent rounded-full animate-spin"
+                      style={{ borderColor: "currentColor", borderTopColor: "transparent" }}
+                    />
+                    Enviando...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw size={12} /> Reenviar código
+                  </>
+                )}
               </button>
             )}
           </div>
 
           <div className="flex gap-3">
             <button
+              type="button"
               onClick={onCancelar}
-              className="flex-1 py-2.5 rounded-lg border border-gray-700 text-gray-400 text-sm transition-colors"
+              className="flex-1 py-2.5 rounded-lg text-sm transition-colors"
+              style={{
+                border: "1px solid var(--kipu-border)",
+                color: "var(--kipu-muted)",
+              }}
+              onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
+              onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-muted)"}
             >
               Cancelar
             </button>
             <button
+              type="button"
               onClick={confirmar}
               disabled={confirmando || pin.length !== 6}
-              className="flex-1 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm font-medium transition-colors flex items-center justify-center gap-2"
+              className="flex-1 py-2.5 rounded-lg text-white text-sm font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+              style={{ background: "var(--kipu-accent)" }}
+              onMouseEnter={e => {
+                if (!confirmando && pin.length === 6) e.currentTarget.style.background = "var(--kipu-accent-h)";
+              }}
+              onMouseLeave={e => {
+                if (!confirmando && pin.length === 6) e.currentTarget.style.background = "var(--kipu-accent)";
+              }}
             >
-              {confirmando
-                ? <><Loader2 size={14} className="animate-spin" /> Verificando...</>
-                : "Confirmar"
-              }
+              {confirmando ? (
+                <>
+                  <div
+                    className="w-3.5 h-3.5 border-2 border-t-transparent rounded-full animate-spin"
+                    style={{ borderColor: "#FFFFFF", borderTopColor: "transparent" }}
+                  />
+                  Verificando...
+                </>
+              ) : (
+                "Confirmar"
+              )}
             </button>
           </div>
         </div>

@@ -1,17 +1,15 @@
-// app/(dashboard)/documentos/recibidos/nueva/_components/TabFisico.tsx
 "use client";
 import { useState, useRef } from "react";
 import api from "@/lib/api";
 import {
-  Camera, X, Loader2, AlertTriangle, Plus, Trash2,
+  Camera, X, AlertTriangle, Plus, Trash2,
 } from "lucide-react";
 import { hoyEC } from "@/lib/fecha";
-import { clsx } from "clsx";
 
 interface LineaRetencion {
-  tipo:           string; // "1"=Renta "2"=IVA "6"=ISD
+  tipo:            string; // "1"=Renta "2"=IVA "6"=ISD
   base_imponible: string;
-  porcentaje:     string;
+  porcentaje:      string;
   valor_retenido: string;
 }
 
@@ -21,13 +19,6 @@ interface Props {
 }
 
 const fmt = (n: any) => parseFloat(String(n ?? 0)).toFixed(2);
-
-const TIPO_COLOR: Record<string, string> = {
-  FAC: "bg-gray-400/10 text-gray-400",
-  NCR: "bg-purple-400/10 text-purple-400",
-  NDB: "bg-amber-400/10 text-amber-400",
-  RET: "bg-blue-400/10 text-blue-400",
-};
 
 // ── Optimizar imagen ──────────────────────────────────────────────────────────
 async function optimizarImagen(file: File): Promise<Blob> {
@@ -71,7 +62,7 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
   const [fechaEmision,          setFechaEmision]          = useState(hoyEC());
   const [notas,                 setNotas]                 = useState("");
   const [deducibleRenta,        setDeducibleRenta]        = useState(true);
-  const [creditoTributarioIva,  setCreditoTributarioIva]  = useState(false);
+  const [creditoTributarioIva, setCreditoTributarioIva]  = useState(false);
 
   // Campos FAC / NCR / NDB
   const [subtotal0,    setSubtotal0]    = useState("");
@@ -210,119 +201,260 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
 
       {/* Tipo */}
       <div>
-        <label className="block text-xs font-medium text-gray-400 mb-2">Tipo de documento</label>
+        <label className="block text-xs font-medium mb-2" style={{ color: "var(--kipu-subtle)" }}>Tipo de documento</label>
         <div className="grid grid-cols-4 gap-1.5">
-          {["FAC","NCR","NDB","RET"].map(tipo => (
-            <button key={tipo} onClick={() => setTipoDoc(tipo)}
-              className={clsx(
-                "py-2.5 rounded-lg text-xs font-bold transition-colors border",
-                tipoDoc === tipo
-                  ? "bg-indigo-600 border-indigo-600 text-white"
-                  : "bg-gray-900 border-gray-800 text-gray-400 hover:text-white"
-              )}>
-              <span className="block">{tipo}</span>
-              <span className="block text-[9px] font-normal mt-0.5 opacity-70">
-                {tipo === "FAC" ? "Factura" : tipo === "NCR" ? "Nota Crédito" : tipo === "NDB" ? "Nota Débito" : "Retención"}
-              </span>
-            </button>
-          ))}
+          {["FAC","NCR","NDB","RET"].map(tipo => {
+            const isSelected = tipoDoc === tipo;
+            return (
+              <button
+                key={tipo}
+                type="button"
+                onClick={() => setTipoDoc(tipo)}
+                className="py-2.5 rounded-lg text-xs font-bold transition-colors"
+                style={{
+                  background: isSelected ? "var(--kipu-accent)" : "var(--kipu-surface)",
+                  border: isSelected ? "1px solid var(--kipu-accent)" : "1px solid var(--kipu-border)",
+                  color: isSelected ? "#FFFFFF" : "var(--kipu-subtle)",
+                }}
+                onMouseEnter={e => {
+                  if (!isSelected) e.currentTarget.style.color = "var(--kipu-text)";
+                }}
+                onMouseLeave={e => {
+                  if (!isSelected) e.currentTarget.style.color = "var(--kipu-subtle)";
+                }}
+              >
+                <span className="block">{tipo}</span>
+                <span className="block text-[9px] font-normal mt-0.5 opacity-70">
+                  {tipo === "FAC" ? "Factura" : tipo === "NCR" ? "Nota Crédito" : tipo === "NDB" ? "Nota Débito" : "Retención"}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
       {/* Proveedor */}
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 space-y-3">
-        <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Proveedor</h2>
+      <div
+        className="rounded-xl p-4 space-y-3"
+        style={{
+          background: "var(--kipu-surface)",
+          border: "1px solid var(--kipu-border)",
+        }}
+      >
+        <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--kipu-subtle)" }}>Proveedor</h2>
         <div>
-          <label className="block text-xs text-gray-500 mb-1">RUC / Identificación *</label>
-          <input value={rucProveedor} onChange={e => setRucProveedor(e.target.value)}
+          <label className="block text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>RUC / Identificación *</label>
+          <input
+            value={rucProveedor}
+            onChange={e => setRucProveedor(e.target.value)}
             placeholder="1234567890001"
-            className="w-full px-3 py-2.5 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 text-sm font-mono" />
+            className="w-full px-3 py-2.5 rounded-lg text-sm font-mono transition-colors focus:outline-none"
+            style={{
+              background: "var(--kipu-surface)",
+              border: "1px solid var(--kipu-border)",
+              color: "var(--kipu-text)",
+            }}
+            onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+            onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+          />
         </div>
         <div>
-          <label className="block text-xs text-gray-500 mb-1">Razón social *</label>
-          <input value={razonSocial} onChange={e => setRazonSocial(e.target.value)}
+          <label className="block text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>Razón social *</label>
+          <input
+            value={razonSocial}
+            onChange={e => setRazonSocial(e.target.value)}
             placeholder="EMPRESA PROVEEDORA S.A."
-            className="w-full px-3 py-2.5 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 text-sm" />
+            className="w-full px-3 py-2.5 rounded-lg text-sm transition-colors focus:outline-none"
+            style={{
+              background: "var(--kipu-surface)",
+              border: "1px solid var(--kipu-border)",
+              color: "var(--kipu-text)",
+            }}
+            onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+            onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+          />
         </div>
       </div>
 
       {/* Documento */}
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 space-y-3">
-        <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Documento</h2>
+      <div
+        className="rounded-xl p-4 space-y-3"
+        style={{
+          background: "var(--kipu-surface)",
+          border: "1px solid var(--kipu-border)",
+        }}
+      >
+        <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--kipu-subtle)" }}>Documento</h2>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Número *</label>
-            <input value={numeroDoc} onChange={e => setNumeroDoc(e.target.value)}
+            <label className="block text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>Número *</label>
+            <input
+              value={numeroDoc}
+              onChange={e => setNumeroDoc(e.target.value)}
               placeholder="001-001-000000001"
-              className="w-full px-3 py-2.5 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 text-sm font-mono" />
+              className="w-full px-3 py-2.5 rounded-lg text-sm font-mono transition-colors focus:outline-none"
+              style={{
+                background: "var(--kipu-surface)",
+                border: "1px solid var(--kipu-border)",
+                color: "var(--kipu-text)",
+              }}
+              onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+              onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+            />
           </div>
           <div>
-            <label className="block text-xs text-gray-500 mb-1">Fecha emisión *</label>
-            <input type="date" value={fechaEmision} onChange={e => setFechaEmision(e.target.value)}
-              className="w-full px-3 py-2.5 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-indigo-500 text-sm" />
+            <label className="block text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>Fecha emisión *</label>
+            <input
+              type="date"
+              value={fechaEmision}
+              onChange={e => setFechaEmision(e.target.value)}
+              className="w-full px-3 py-2.5 rounded-lg text-sm transition-colors focus:outline-none"
+              style={{
+                background: "var(--kipu-surface)",
+                border: "1px solid var(--kipu-border)",
+                color: "var(--kipu-text)",
+              }}
+              onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+              onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+            />
           </div>
         </div>
       </div>
 
       {/* ── Totales FAC / NCR / NDB ───────────────────────────────────────── */}
       {tipoDoc !== "RET" && (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 space-y-3">
-          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Totales</h2>
+        <div
+          className="rounded-xl p-4 space-y-3"
+          style={{
+            background: "var(--kipu-surface)",
+            border: "1px solid var(--kipu-border)",
+          }}
+        >
+          <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--kipu-subtle)" }}>Totales</h2>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Subtotal 0%</label>
-              <input type="number" step="0.01" min="0" value={subtotal0}
+              <label className="block text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>Subtotal 0%</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={subtotal0}
                 onChange={e => { setSubtotal0(e.target.value); recalcularTotal(e.target.value, subtotalIva, valorIva); }}
                 placeholder="0.00"
-                className="w-full px-3 py-2.5 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 text-sm" />
+                className="w-full px-3 py-2.5 rounded-lg text-sm transition-colors focus:outline-none"
+                style={{
+                  background: "var(--kipu-surface)",
+                  border: "1px solid var(--kipu-border)",
+                  color: "var(--kipu-text)",
+                }}
+                onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+              />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Tarifa IVA</label>
-              <select value={tarifaIva}
+              <label className="block text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>Tarifa IVA</label>
+              <select
+                value={tarifaIva}
                 onChange={e => { setTarifaIva(e.target.value); calcularIVA(subtotalIva, e.target.value); }}
-                className="w-full px-3 py-2.5 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-indigo-500 text-sm">
+                className="w-full px-3 py-2.5 rounded-lg text-sm transition-colors focus:outline-none"
+                style={{
+                  background: "var(--kipu-surface)",
+                  border: "1px solid var(--kipu-border)",
+                  color: "var(--kipu-text)",
+                }}
+                onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+              >
                 <option value="0">0%</option>
                 <option value="15">15%</option>
               </select>
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Base gravada {tarifaIva}%</label>
-              <input type="number" step="0.01" min="0" value={subtotalIva}
+              <label className="block text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>Base gravada {tarifaIva}%</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={subtotalIva}
                 onChange={e => { setSubtotalIva(e.target.value); calcularIVA(e.target.value, tarifaIva); }}
                 placeholder="0.00"
-                className="w-full px-3 py-2.5 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 text-sm" />
+                className="w-full px-3 py-2.5 rounded-lg text-sm transition-colors focus:outline-none"
+                style={{
+                  background: "var(--kipu-surface)",
+                  border: "1px solid var(--kipu-border)",
+                  color: "var(--kipu-text)",
+                }}
+                onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+              />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Valor IVA</label>
-              <input type="number" step="0.01" min="0" value={valorIva}
+              <label className="block text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>Valor IVA</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={valorIva}
                 onChange={e => { setValorIva(e.target.value); recalcularTotal(subtotal0, subtotalIva, e.target.value); }}
                 placeholder="0.00"
-                className="w-full px-3 py-2.5 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 text-sm" />
+                className="w-full px-3 py-2.5 rounded-lg text-sm transition-colors focus:outline-none"
+                style={{
+                  background: "var(--kipu-surface)",
+                  border: "1px solid var(--kipu-border)",
+                  color: "var(--kipu-text)",
+                }}
+                onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+              />
             </div>
           </div>
-          <div className="pt-2 border-t border-gray-800">
-            <label className="block text-xs text-gray-500 mb-1">Total *</label>
-            <input type="number" step="0.01" min="0" value={importeTotal}
+          <div className="pt-2" style={{ borderTop: "1px solid var(--kipu-border)" }}>
+            <label className="block text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>Total *</label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              value={importeTotal}
               onChange={e => setImporteTotal(e.target.value)}
               placeholder="0.00"
-              className="w-full px-3 py-2.5 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 text-sm font-bold" />
+              className="w-full px-3 py-2.5 rounded-lg text-sm font-bold transition-colors focus:outline-none"
+              style={{
+                background: "var(--kipu-surface)",
+                border: "1px solid var(--kipu-border)",
+                color: "var(--kipu-text)",
+              }}
+              onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+              onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+            />
           </div>
         </div>
       )}
 
       {/* ── Líneas de retención ───────────────────────────────────────────── */}
       {tipoDoc === "RET" && (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 space-y-3">
+        <div
+          className="rounded-xl p-4 space-y-3"
+          style={{
+            background: "var(--kipu-surface)",
+            border: "1px solid var(--kipu-border)",
+          }}
+        >
           <div className="flex items-center justify-between">
-            <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Retenciones</h2>
-            <button onClick={addLineaRet}
-              className="flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-300 transition-colors">
+            <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--kipu-subtle)" }}>Retenciones</h2>
+            <button
+              type="button"
+              onClick={addLineaRet}
+              className="flex items-center gap-1 text-xs transition-colors"
+              style={{ color: "var(--kipu-accent)" }}
+              onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent-h)"}
+              onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-accent)"}
+            >
               <Plus size={13} /> Agregar línea
             </button>
           </div>
 
           {/* Header */}
-          <div className="grid grid-cols-12 gap-2 text-[10px] uppercase font-semibold tracking-wider text-gray-600 px-1">
+          <div className="grid grid-cols-12 gap-2 text-[10px] uppercase font-semibold tracking-wider px-1" style={{ color: "var(--kipu-subtle)" }}>
             <div className="col-span-3">Tipo</div>
             <div className="col-span-3">Base</div>
             <div className="col-span-2">%</div>
@@ -333,35 +465,87 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
           {lineasRet.map((linea, idx) => (
             <div key={idx} className="grid grid-cols-12 gap-2 items-center">
               <div className="col-span-3">
-                <select value={linea.tipo} onChange={e => updateLineaRet(idx, "tipo", e.target.value)}
-                  className="w-full px-2 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-indigo-500 text-xs">
+                <select
+                  value={linea.tipo}
+                  onChange={e => updateLineaRet(idx, "tipo", e.target.value)}
+                  className="w-full px-2 py-2 rounded-lg text-xs transition-colors focus:outline-none"
+                  style={{
+                    background: "var(--kipu-surface)",
+                    border: "1px solid var(--kipu-border)",
+                    color: "var(--kipu-text)",
+                  }}
+                  onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                  onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+                >
                   <option value="1">Renta</option>
                   <option value="2">IVA</option>
                   <option value="6">ISD</option>
                 </select>
               </div>
               <div className="col-span-3">
-                <input type="number" step="0.01" min="0" value={linea.base_imponible}
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={linea.base_imponible}
                   onChange={e => updateLineaRet(idx, "base_imponible", e.target.value)}
                   placeholder="0.00"
-                  className="w-full px-2 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 text-xs" />
+                  className="w-full px-2 py-2 rounded-lg text-xs transition-colors focus:outline-none"
+                  style={{
+                    background: "var(--kipu-surface)",
+                    border: "1px solid var(--kipu-border)",
+                    color: "var(--kipu-text)",
+                  }}
+                  onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                  onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+                />
               </div>
               <div className="col-span-2">
-                <input type="number" step="0.01" min="0" value={linea.porcentaje}
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={linea.porcentaje}
                   onChange={e => updateLineaRet(idx, "porcentaje", e.target.value)}
                   placeholder="%"
-                  className="w-full px-2 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 text-xs" />
+                  className="w-full px-2 py-2 rounded-lg text-xs transition-colors focus:outline-none"
+                  style={{
+                    background: "var(--kipu-surface)",
+                    border: "1px solid var(--kipu-border)",
+                    color: "var(--kipu-text)",
+                  }}
+                  onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                  onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+                />
               </div>
               <div className="col-span-3">
-                <input type="number" step="0.01" min="0" value={linea.valor_retenido}
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={linea.valor_retenido}
                   onChange={e => updateLineaRet(idx, "valor_retenido", e.target.value)}
                   placeholder="0.00"
-                  className="w-full px-2 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 text-xs" />
+                  className="w-full px-2 py-2 rounded-lg text-xs transition-colors focus:outline-none"
+                  style={{
+                    background: "var(--kipu-surface)",
+                    border: "1px solid var(--kipu-border)",
+                    color: "var(--kipu-text)",
+                  }}
+                  onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                  onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+                />
               </div>
               <div className="col-span-1 flex justify-center">
                 {lineasRet.length > 1 && (
-                  <button onClick={() => removeLineaRet(idx)}
-                    className="text-gray-600 hover:text-red-400 transition-colors p-1">
+                  <button
+                    type="button"
+                    onClick={() => removeLineaRet(idx)}
+                    className="transition-colors p-1"
+                    style={{ color: "var(--kipu-subtle)" }}
+                    onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-danger)"}
+                    onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-subtle)"}
+                  >
                     <Trash2 size={13} />
                   </button>
                 )}
@@ -369,36 +553,64 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
             </div>
           ))}
 
-          <div className="flex justify-between items-center pt-2 border-t border-gray-800">
-            <span className="text-xs text-gray-500">Total retenido</span>
-            <span className="text-sm font-bold text-blue-400">${fmt(totalRetenido)}</span>
+          <div className="flex justify-between items-center pt-2" style={{ borderTop: "1px solid var(--kipu-border)" }}>
+            <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Total retenido</span>
+            <span className="text-sm font-bold" style={{ color: "#60a5fa" }}>${fmt(totalRetenido)}</span>
           </div>
         </div>
       )}
 
       {/* ── Clasificación fiscal (FAC / NCR / NDB) ────────────────────────── */}
       {tipoDoc !== "RET" && (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 space-y-3">
-          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Clasificación fiscal</h2>
+        <div
+          className="rounded-xl p-4 space-y-3"
+          style={{
+            background: "var(--kipu-surface)",
+            border: "1px solid var(--kipu-border)",
+          }}
+        >
+          <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--kipu-subtle)" }}>Clasificación fiscal</h2>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-white">Deducible de renta</p>
-              <p className="text-xs text-gray-500">El gasto reduce la base imponible</p>
+              <p className="text-sm" style={{ color: "var(--kipu-text)" }}>Deducible de renta</p>
+              <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>El gasto reduce la base imponible</p>
             </div>
-            <button onClick={() => setDeducibleRenta(!deducibleRenta)}
-              className={clsx("w-10 h-5 rounded-full transition-colors relative", deducibleRenta ? "bg-emerald-600" : "bg-gray-700")}>
-              <span className={clsx("absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all", deducibleRenta ? "left-5" : "left-0.5")} />
+            <button
+              type="button"
+              onClick={() => setDeducibleRenta(!deducibleRenta)}
+              className="w-10 h-5 rounded-full transition-colors relative"
+              style={{
+                background: deducibleRenta
+                  ? "var(--kipu-success)"
+                  : "color-mix(in srgb, var(--kipu-text) 15%, transparent)",
+              }}
+            >
+              <span
+                className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all"
+                style={{ left: deducibleRenta ? "20px" : "2px" }}
+              />
             </button>
           </div>
           {parseFloat(valorIva) > 0 && (
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-white">Crédito tributario IVA</p>
-                <p className="text-xs text-gray-500">El IVA se usa como crédito</p>
+                <p className="text-sm" style={{ color: "var(--kipu-text)" }}>Crédito tributario IVA</p>
+                <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>El IVA se usa como crédito</p>
               </div>
-              <button onClick={() => setCreditoTributarioIva(!creditoTributarioIva)}
-                className={clsx("w-10 h-5 rounded-full transition-colors relative", creditoTributarioIva ? "bg-indigo-600" : "bg-gray-700")}>
-                <span className={clsx("absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all", creditoTributarioIva ? "left-5" : "left-0.5")} />
+              <button
+                type="button"
+                onClick={() => setCreditoTributarioIva(!creditoTributarioIva)}
+                className="w-10 h-5 rounded-full transition-colors relative"
+                style={{
+                  background: creditoTributarioIva
+                    ? "var(--kipu-accent)"
+                    : "color-mix(in srgb, var(--kipu-text) 15%, transparent)",
+                }}
+              >
+                <span
+                  className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all"
+                  style={{ left: creditoTributarioIva ? "20px" : "2px" }}
+                />
               </button>
             </div>
           )}
@@ -407,9 +619,15 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
 
       {/* ── Info RET ─────────────────────────────────────────────────────── */}
       {tipoDoc === "RET" && (
-        <div className="flex items-start gap-2 bg-blue-500/10 border border-blue-500/20 rounded-lg px-3 py-2.5">
-          <span className="text-blue-400 text-xs mt-0.5">ℹ️</span>
-          <p className="text-xs text-blue-300">
+        <div
+          className="flex items-start gap-2 rounded-lg px-3 py-2.5"
+          style={{
+            background: "color-mix(in srgb, #60a5fa 10%, transparent)",
+            border: "1px solid color-mix(in srgb, #60a5fa 20%, transparent)",
+          }}
+        >
+          <span className="text-xs mt-0.5" style={{ color: "#60a5fa" }}>ℹ️</span>
+          <p className="text-xs" style={{ color: "#93c5fd" }}>
             Las retenciones de IVA generan crédito tributario automáticamente.
             Las de Renta no son deducibles — ya son un pago anticipado de impuesto.
           </p>
@@ -417,60 +635,127 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
       )}
 
       {/* Imagen */}
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 space-y-3">
+      <div
+        className="rounded-xl p-4 space-y-3"
+        style={{
+          background: "var(--kipu-surface)",
+          border: "1px solid var(--kipu-border)",
+        }}
+      >
         <div className="flex items-center justify-between">
-          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Foto del documento</h2>
-          <span className="text-xs text-gray-600">opcional · se optimiza automáticamente</span>
+          <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--kipu-subtle)" }}>Foto del documento</h2>
+          <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>opcional · se optimiza automáticamente</span>
         </div>
         {imagenPreview ? (
           <div className="relative">
             <img src={imagenPreview} alt="Vista previa" className="w-full rounded-lg max-h-48 object-cover" />
-            <button onClick={() => { setImagenFile(null); setImagenPreview(null); }}
-              className="absolute top-2 right-2 p-1.5 rounded-full bg-gray-900/80 text-gray-400 hover:text-white transition-colors">
+            <button
+              type="button"
+              onClick={() => { setImagenFile(null); setImagenPreview(null); }}
+              className="absolute top-2 right-2 p-1.5 rounded-full transition-colors"
+              style={{
+                background: "color-mix(in srgb, var(--kipu-bg) 80%, transparent)",
+                color: "var(--kipu-subtle)",
+              }}
+              onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
+              onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-subtle)"}
+            >
               <X size={14} />
             </button>
             {imagenFile && (
-              <p className="text-xs text-gray-500 mt-1 text-center">
+              <p className="text-xs mt-1 text-center" style={{ color: "var(--kipu-subtle)" }}>
                 {(imagenFile.size / 1024).toFixed(0)} KB optimizado
               </p>
             )}
           </div>
         ) : (
-          <button onClick={() => imagenRef.current?.click()}
-            className="w-full flex flex-col items-center gap-3 py-8 border-2 border-dashed border-gray-700 rounded-xl hover:border-indigo-500/50 hover:bg-indigo-500/5 transition-colors cursor-pointer">
-            <Camera size={24} className="text-gray-600" />
+          <button
+            type="button"
+            onClick={() => imagenRef.current?.click()}
+            className="w-full flex flex-col items-center gap-3 py-8 border-2 border-dashed rounded-xl transition-colors cursor-pointer"
+            style={{ borderColor: "var(--kipu-border)" }}
+            onMouseEnter={e => {
+              e.currentTarget.style.borderColor = "color-mix(in srgb, var(--kipu-accent) 50%, transparent)";
+              e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-accent) 5%, transparent)";
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.borderColor = "var(--kipu-border)";
+              e.currentTarget.style.background = "transparent";
+            }}
+          >
+            <Camera size={24} style={{ color: "var(--kipu-subtle)" }} />
             <div className="text-center">
-              <p className="text-sm text-gray-400">Tomar foto o seleccionar imagen</p>
-              <p className="text-xs text-gray-600 mt-0.5">JPG, PNG o WEBP</p>
+              <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>Tomar foto o seleccionar imagen</p>
+              <p className="text-xs mt-0.5" style={{ color: "var(--kipu-subtle)" }}>JPG, PNG o WEBP</p>
             </div>
           </button>
         )}
-        <input ref={imagenRef} type="file" accept="image/*" capture="environment"
+        <input
+          ref={imagenRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
           onChange={e => { const f = e.target.files?.[0]; if (f) seleccionarImagen(f); }}
-          className="hidden" />
+          className="hidden"
+        />
       </div>
 
       {/* Notas */}
       <div>
-        <label className="block text-xs text-gray-500 mb-1.5">Notas (opcional)</label>
-        <textarea value={notas} onChange={e => setNotas(e.target.value)}
-          placeholder="Observaciones, referencia interna, etc." rows={2}
-          className="w-full px-3 py-2 rounded-lg bg-gray-900 border border-gray-800 text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 text-sm resize-none" />
+        <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Notas (opcional)</label>
+        <textarea
+          value={notas}
+          onChange={e => setNotas(e.target.value)}
+          placeholder="Observaciones, referencia interna, etc."
+          rows={2}
+          className="w-full px-3 py-2 rounded-lg text-sm resize-none transition-colors focus:outline-none"
+          style={{
+            background: "var(--kipu-surface)",
+            border: "1px solid var(--kipu-border)",
+            color: "var(--kipu-text)",
+          }}
+          onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+          onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+        />
       </div>
 
       {error && (
-        <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2.5">
-          <AlertTriangle size={14} className="text-red-400 shrink-0 mt-0.5" />
-          <p className="text-sm text-red-400">{error}</p>
+        <div
+          className="flex items-start gap-2 rounded-lg px-3 py-2.5"
+          style={{
+            background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
+            border: "1px solid color-mix(in srgb, var(--kipu-danger) 20%, transparent)",
+          }}
+        >
+          <AlertTriangle size={14} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-danger)" }} />
+          <p className="text-sm" style={{ color: "var(--kipu-danger)" }}>{error}</p>
         </div>
       )}
 
-      <button onClick={guardar} disabled={saving || !suscripcionActiva}
-        className="w-full py-3 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2">
-        {saving
-          ? <><Loader2 size={16} className="animate-spin" /> Guardando...</>
-          : `Registrar ${tipoDoc === "RET" ? `Retención · $${fmt(totalRetenido)}` : tipoDoc === "FAC" ? "Factura" : tipoDoc === "NCR" ? "Nota de Crédito" : "Nota de Débito"}${tipoDoc !== "RET" && importeTotal ? ` · $${fmt(importeTotal)}` : ""}`
-        }
+      <button
+        type="button"
+        onClick={guardar}
+        disabled={saving || !suscripcionActiva}
+        className="w-full py-3 rounded-lg text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+        style={{ background: "var(--kipu-accent)" }}
+        onMouseEnter={e => {
+          if (!saving && suscripcionActiva) e.currentTarget.style.background = "var(--kipu-accent-h)";
+        }}
+        onMouseLeave={e => {
+          if (!saving && suscripcionActiva) e.currentTarget.style.background = "var(--kipu-accent)";
+        }}
+      >
+        {saving ? (
+          <>
+            <div
+              className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin"
+              style={{ borderColor: "#FFFFFF", borderTopColor: "transparent" }}
+            />
+            Guardando...
+          </>
+        ) : (
+          `Registrar ${tipoDoc === "RET" ? `Retención · $${fmt(totalRetenido)}` : tipoDoc === "FAC" ? "Factura" : tipoDoc === "NCR" ? "Nota de Crédito" : "Nota de Débito"}${tipoDoc !== "RET" && importeTotal ? ` · $${fmt(importeTotal)}` : ""}`
+        )}
       </button>
     </div>
   );

@@ -1,8 +1,7 @@
-// app/(dashboard)/documentos/emitir/fac/components/ClienteSelector.tsx
 "use client";
 import { useRef, useEffect, useCallback, useState } from "react";
 import api from "@/lib/api";
-import { Search, Loader2, User, X, Check, AlertCircle } from "lucide-react";
+import { Search, User, X, Check, AlertCircle } from "lucide-react";
 
 interface Cliente {
   id:                      string;
@@ -206,38 +205,61 @@ export default function ClienteSelector({
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="bg-gray-900 rounded-xl border border-gray-800 p-4">
+    <div
+      className="rounded-xl p-4"
+      style={{
+        background: "var(--kipu-surface)",
+        border: "1px solid var(--kipu-border)",
+      }}
+    >
       <div className="flex items-center gap-2 mb-3">
-        <User size={15} className="text-indigo-400" />
-        <h2 className="text-sm font-semibold text-white">Cliente</h2>
+        <User size={15} style={{ color: "var(--kipu-accent)" }} />
+        <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>Cliente</h2>
       </div>
 
       {/* ── Chip cliente confirmado ── */}
       {(clienteSelected || esConsumidorFinal || (clienteNuevo && confirmado)) ? (
-        <div className="flex items-center gap-3 bg-gray-800 rounded-lg px-3 py-2.5">
-          <div className="w-7 h-7 rounded-full bg-indigo-600/30 flex items-center justify-center shrink-0">
-            <User size={13} className="text-indigo-400" />
+        <div
+          className="flex items-center gap-3 rounded-lg px-3 py-2.5"
+          style={{
+            background: "color-mix(in srgb, var(--kipu-text) 5%, transparent)",
+          }}
+        >
+          <div
+            className="w-7 h-7 rounded-full flex items-center justify-center shrink-0"
+            style={{
+              background: "color-mix(in srgb, var(--kipu-accent) 20%, transparent)",
+            }}
+          >
+            <User size={13} style={{ color: "var(--kipu-accent)" }} />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm text-white font-medium truncate">
+            <p className="text-sm font-medium truncate" style={{ color: "var(--kipu-text)" }}>
               {esConsumidorFinal
                 ? "CONSUMIDOR FINAL"
                 : clienteSelected
                   ? clienteSelected.razon_social
                   : clienteNuevo?.razon_social.toUpperCase()}
             </p>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
               {esConsumidorFinal
                 ? "9999999999999"
                 : clienteSelected
                   ? clienteSelected.identificacion
                   : clienteNuevo?.identificacion || "Sin identificación"}
               {clienteNuevo && confirmado && !clienteSelected && !esConsumidorFinal && (
-                <span className="ml-2 text-indigo-400">· se creará al emitir</span>
+                <span className="ml-2" style={{ color: "var(--kipu-accent)" }}>· se creará al emitir</span>
               )}
             </p>
           </div>
-          <button type="button" onClick={limpiar} className="text-gray-500 hover:text-white p-1 transition-colors">
+          <button
+            type="button"
+            onClick={limpiar}
+            className="p-1 transition-colors"
+            style={{ color: "var(--kipu-subtle)" }}
+            onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
+            onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-subtle)"}
+          >
             <X size={16} />
           </button>
         </div>
@@ -245,43 +267,70 @@ export default function ClienteSelector({
         /* ── Buscador ── */
         <div className="relative" ref={wrapRef}>
           <div className="relative">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--kipu-subtle)" }} />
             <input
               value={query}
               onChange={(e) => handleInputChange(e.target.value)}
-              onFocus={() => { if (query.length >= 2) setShowDrop(true); }}
+              onFocus={(e) => {
+                if (query.length >= 2) setShowDrop(true);
+                e.currentTarget.style.borderColor = "var(--kipu-accent)";
+              }}
+              onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
               placeholder="Buscar por nombre, RUC o cédula..."
-              className="w-full pl-9 pr-4 py-2.5 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 text-sm"
+              className="w-full pl-9 pr-4 py-2.5 rounded-lg text-sm transition-colors focus:outline-none"
+              style={{
+                background: "var(--kipu-surface)",
+                border: "1px solid var(--kipu-border)",
+                color: "var(--kipu-text)",
+              }}
             />
             {loading && (
-              <Loader2 size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 animate-spin" />
+              <div
+                className="w-3.5 h-3.5 border-2 border-t-transparent rounded-full animate-spin absolute right-3 top-1/2 -translate-y-1/2"
+                style={{ borderColor: "var(--kipu-accent)", borderTopColor: "transparent" }}
+              />
             )}
           </div>
 
           <button
             type="button"
             onClick={seleccionarConsumidorFinal}
-            className="mt-2 text-xs text-gray-500 hover:text-white transition-colors block"
+            className="mt-2 text-xs transition-colors block"
+            style={{ color: "var(--kipu-subtle)" }}
+            onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
+            onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-subtle)"}
           >
             ¿Sin RUC? →{" "}
-            <span className="text-indigo-400 underline">Consumidor Final</span>
-            <span className="text-gray-600 ml-1">(máx. $50)</span>
+            <span className="underline" style={{ color: "var(--kipu-accent)" }}>Consumidor Final</span>
+            <span className="ml-1" style={{ color: "var(--kipu-muted)" }}>(máx. $50)</span>
           </button>
 
           {/* Dropdown */}
           {showDrop && query.length >= 2 && (
-            <div className="absolute z-10 w-full mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-xl overflow-hidden">
+            <div
+              className="absolute z-10 w-full mt-1 rounded-lg shadow-xl overflow-hidden"
+              style={{
+                background: "var(--kipu-surface)",
+                border: "1px solid var(--kipu-border)",
+              }}
+            >
               <button
                 type="button"
                 onClick={seleccionarConsumidorFinal}
-                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-700 text-left border-b border-gray-700"
+                className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors"
+                style={{ borderBottom: "1px solid var(--kipu-border)" }}
+                onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 5%, transparent)"}
+                onMouseLeave={e => e.currentTarget.style.background = "transparent"}
               >
-                <div className="w-7 h-7 rounded-full bg-gray-600 flex items-center justify-center shrink-0">
-                  <User size={13} className="text-gray-400" />
+                <div
+                  className="w-7 h-7 rounded-full flex items-center justify-center shrink-0"
+                  style={{ background: "color-mix(in srgb, var(--kipu-text) 10%, transparent)" }}
+                >
+                  <User size={13} style={{ color: "var(--kipu-subtle)" }} />
                 </div>
                 <div>
-                  <p className="text-sm text-white font-medium">Consumidor Final</p>
-                  <p className="text-xs text-gray-500">9999999999999 · Máx. $50</p>
+                  <p className="text-sm font-medium" style={{ color: "var(--kipu-text)" }}>Consumidor Final</p>
+                  <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>9999999999999 · Máx. $50</p>
                 </div>
               </button>
 
@@ -290,14 +339,20 @@ export default function ClienteSelector({
                   type="button"
                   key={c.id}
                   onClick={() => seleccionar(c)}
-                  className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-700 text-left border-b border-gray-700/50 last:border-0"
+                  className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors"
+                  style={{ borderBottom: "1px solid var(--kipu-border)" }}
+                  onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 5%, transparent)"}
+                  onMouseLeave={e => e.currentTarget.style.background = "transparent"}
                 >
-                  <div className="w-7 h-7 rounded-full bg-indigo-600/30 flex items-center justify-center shrink-0">
-                    <span className="text-xs text-indigo-400 font-bold">{c.razon_social[0]}</span>
+                  <div
+                    className="w-7 h-7 rounded-full flex items-center justify-center shrink-0"
+                    style={{ background: "color-mix(in srgb, var(--kipu-accent) 20%, transparent)" }}
+                  >
+                    <span className="text-xs font-bold" style={{ color: "var(--kipu-accent)" }}>{c.razon_social[0]}</span>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-white truncate">{c.razon_social}</p>
-                    <p className="text-xs text-gray-500">{c.identificacion}</p>
+                    <p className="text-sm truncate" style={{ color: "var(--kipu-text)" }}>{c.razon_social}</p>
+                    <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>{c.identificacion}</p>
                   </div>
                 </button>
               ))}
@@ -315,14 +370,20 @@ export default function ClienteSelector({
                     email:                   "",
                   });
                 }}
-                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-700 text-left border-t border-gray-700"
+                className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors"
+                style={{ borderTop: "1px solid var(--kipu-border)" }}
+                onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 5%, transparent)"}
+                onMouseLeave={e => e.currentTarget.style.background = "transparent"}
               >
-                <div className="w-7 h-7 rounded-full bg-indigo-600/20 flex items-center justify-center shrink-0">
-                  <span className="text-xs text-indigo-400 font-bold">+</span>
+                <div
+                  className="w-7 h-7 rounded-full flex items-center justify-center shrink-0"
+                  style={{ background: "color-mix(in srgb, var(--kipu-accent) 20%, transparent)" }}
+                >
+                  <span className="text-xs font-bold" style={{ color: "var(--kipu-accent)" }}>+</span>
                 </div>
                 <div>
-                  <p className="text-sm text-indigo-400">Registrar nuevo cliente</p>
-                  <p className="text-xs text-gray-500">"{query}"</p>
+                  <p className="text-sm" style={{ color: "var(--kipu-accent)" }}>Registrar nuevo cliente</p>
+                  <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>"{query}"</p>
                 </div>
               </button>
             </div>
@@ -332,14 +393,27 @@ export default function ClienteSelector({
 
       {/* ── Form cliente nuevo (no confirmado aún) ── */}
       {clienteNuevo && !confirmado && (
-        <div className="mt-3 bg-gray-800 rounded-lg p-3 space-y-2 border border-indigo-500/30">
-          <p className="text-xs text-indigo-400 font-medium">Nuevo cliente</p>
+        <div
+          className="mt-3 rounded-lg p-3 space-y-2"
+          style={{
+            background: "color-mix(in srgb, var(--kipu-surface) 60%, transparent)",
+            border: "1px solid color-mix(in srgb, var(--kipu-accent) 30%, transparent)",
+          }}
+        >
+          <p className="text-xs font-medium" style={{ color: "var(--kipu-accent)" }}>Nuevo cliente</p>
 
           <div className="grid grid-cols-2 gap-2">
             <select
               value={clienteNuevo.tipo_identificacion_sri}
               onChange={(e) => onClienteNuevo({ ...clienteNuevo, tipo_identificacion_sri: e.target.value, identificacion: "" })}
-              className="px-2 py-1.5 rounded-lg bg-gray-700 border border-gray-600 text-white text-xs focus:outline-none focus:border-indigo-500"
+              className="px-2 py-1.5 rounded-lg text-xs focus:outline-none transition-colors"
+              style={{
+                background: "var(--kipu-surface)",
+                border: "1px solid var(--kipu-border)",
+                color: "var(--kipu-text)",
+              }}
+              onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+              onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
             >
               <option value="04">RUC</option>
               <option value="05">Cédula</option>
@@ -361,19 +435,30 @@ export default function ClienteSelector({
                   "Número de pasaporte"
                 }
                 maxLength={clienteNuevo.tipo_identificacion_sri === "04" ? 13 : clienteNuevo.tipo_identificacion_sri === "05" ? 10 : 20}
-                className={`w-full px-2 py-1.5 rounded-lg bg-gray-700 border text-white placeholder-gray-500 text-xs focus:outline-none focus:border-indigo-500 ${
-                  validacion.error ? "border-red-500/70" : "border-gray-600"
-                }`}
+                className="w-full px-2 py-1.5 rounded-lg text-xs focus:outline-none transition-colors"
+                style={{
+                  background: "var(--kipu-surface)",
+                  border: validacion.error
+                    ? "1px solid color-mix(in srgb, var(--kipu-danger) 70%, transparent)"
+                    : "1px solid var(--kipu-border)",
+                  color: "var(--kipu-text)",
+                }}
+                onFocus={e => {
+                  if (!validacion.error) e.currentTarget.style.borderColor = "var(--kipu-accent)";
+                }}
+                onBlur={e => {
+                  if (!validacion.error) e.currentTarget.style.borderColor = "var(--kipu-border)";
+                }}
               />
               {validacion.ok && clienteNuevo.identificacion && (
-                <Check size={11} className="absolute right-2 top-1/2 -translate-y-1/2 text-emerald-400" />
+                <Check size={11} className="absolute right-2 top-1/2 -translate-y-1/2" style={{ color: "var(--kipu-success)" }} />
               )}
             </div>
           </div>
 
           {/* Error de validación */}
           {validacion.error && (
-            <div className="flex items-center gap-1.5 text-red-400">
+            <div className="flex items-center gap-1.5" style={{ color: "var(--kipu-danger)" }}>
               <AlertCircle size={11} />
               <p className="text-xs">{validacion.error}</p>
             </div>
@@ -383,7 +468,14 @@ export default function ClienteSelector({
             value={clienteNuevo.razon_social}
             onChange={(e) => onClienteNuevo({ ...clienteNuevo, razon_social: e.target.value.toUpperCase() })}
             placeholder="Nombre / Razón Social *"
-            className="w-full px-2 py-1.5 rounded-lg bg-gray-700 border border-gray-600 text-white placeholder-gray-500 text-xs focus:outline-none focus:border-indigo-500"
+            className="w-full px-2 py-1.5 rounded-lg text-xs focus:outline-none transition-colors"
+            style={{
+              background: "var(--kipu-surface)",
+              border: "1px solid var(--kipu-border)",
+              color: "var(--kipu-text)",
+            }}
+            onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+            onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
           />
 
           <input
@@ -392,17 +484,26 @@ export default function ClienteSelector({
             onBlur={(e) => {
               const val = e.target.value.trim().toLowerCase();
               onClienteNuevo({ ...clienteNuevo, email: val });
+              e.currentTarget.style.borderColor = "var(--kipu-border)";
             }}
             placeholder="Email (opcional)"
             type="email"
-            className={`w-full px-2 py-1.5 rounded-lg bg-gray-700 border text-white placeholder-gray-500 text-xs focus:outline-none focus:border-indigo-500 ${
-              clienteNuevo.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clienteNuevo.email)
-                ? "border-red-500/70"
-                : "border-gray-600"
-            }`}
+            className="w-full px-2 py-1.5 rounded-lg text-xs focus:outline-none transition-colors"
+            style={{
+              background: "var(--kipu-surface)",
+              border: clienteNuevo.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clienteNuevo.email)
+                ? "1px solid color-mix(in srgb, var(--kipu-danger) 70%, transparent)"
+                : "1px solid var(--kipu-border)",
+              color: "var(--kipu-text)",
+            }}
+            onFocus={e => {
+              if (!(clienteNuevo.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clienteNuevo.email))) {
+                e.currentTarget.style.borderColor = "var(--kipu-accent)";
+              }
+            }}
           />
           {clienteNuevo.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clienteNuevo.email) && (
-            <div className="flex items-center gap-1.5 text-red-400">
+            <div className="flex items-center gap-1.5" style={{ color: "var(--kipu-danger)" }}>
               <AlertCircle size={11} />
               <p className="text-xs">Email inválido.</p>
             </div>
@@ -413,7 +514,14 @@ export default function ClienteSelector({
               type="button"
               onClick={confirmarClienteNuevo}
               disabled={!puedeConfirmar}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-medium transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{ background: "var(--kipu-accent)" }}
+              onMouseEnter={e => {
+                if (puedeConfirmar) e.currentTarget.style.background = "var(--kipu-accent-h)";
+              }}
+              onMouseLeave={e => {
+                if (puedeConfirmar) e.currentTarget.style.background = "var(--kipu-accent)";
+              }}
             >
               <Check size={12} />
               Confirmar
@@ -421,7 +529,10 @@ export default function ClienteSelector({
             <button
               type="button"
               onClick={() => onClienteNuevo(null)}
-              className="text-xs text-gray-500 hover:text-white transition-colors"
+              className="text-xs transition-colors"
+              style={{ color: "var(--kipu-subtle)" }}
+              onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
+              onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-subtle)"}
             >
               Cancelar
             </button>

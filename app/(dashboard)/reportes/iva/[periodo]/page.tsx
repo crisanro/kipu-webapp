@@ -1,12 +1,10 @@
-// app/(dashboard)/reportes/iva/[periodo]/page.tsx
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import api from "@/lib/api";
 import {
-  Loader2, ArrowLeft, RefreshCw, CheckCircle2, AlertTriangle,
+  ArrowLeft, RefreshCw, CheckCircle2, AlertTriangle,
 } from "lucide-react";
-import { clsx } from "clsx";
 import { useAuthStore } from "@/store/auth.store";
 
 import PreguntasSRI        from "../../_components/PreguntasSRI";
@@ -26,12 +24,12 @@ export default function ReporteIVAPage() {
   const router  = useRouter();
   const periodo = params.periodo as string;  // "2026-08"
 
-  const [data,         setData]         = useState<any>(null);
-  const [loading,      setLoading]      = useState(true);
-  const [regenerando,  setRegenerando]  = useState(false);
-  const [marcando,     setMarcando]     = useState(false);
-  const [error,        setError]        = useState("");
-  const [declarado,    setDeclarado]    = useState(false);
+  const [data,        setData]        = useState<any>(null);
+  const [loading,     setLoading]     = useState(true);
+  const [regenerando, setRegenerando] = useState(false);
+  const [marcando,    setMarcando]    = useState(false);
+  const [error,       setError]       = useState("");
+  const [declarado,   setDeclarado]   = useState(false);
 
   const periodoFmt = (() => {
     try {
@@ -68,7 +66,6 @@ export default function ReporteIVAPage() {
 
   useEffect(() => { cargar(); }, [cargar]);
 
-  // Agregar después de cargar() en ReporteIVAPage:
   const guardarCamposManuales = async (valores: Record<string, number>) => {
     await api.patch(
       `/api/v1/app/declaraciones/iva/campos-manuales?periodo=${periodo}`,
@@ -90,8 +87,11 @@ export default function ReporteIVAPage() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center space-y-3">
-          <Loader2 size={28} className="animate-spin text-indigo-400 mx-auto" />
-          <p className="text-sm text-gray-500">Calculando casilleros...</p>
+          <div
+            className="w-7 h-7 border-2 border-t-transparent rounded-full animate-spin mx-auto"
+            style={{ borderColor: "var(--kipu-accent)", borderTopColor: "transparent" }}
+          />
+          <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>Calculando casilleros...</p>
         </div>
       </div>
     );
@@ -100,9 +100,15 @@ export default function ReporteIVAPage() {
   if (error && !data) {
     return (
       <div className="p-6 max-w-2xl mx-auto">
-        <div className="flex items-start gap-3 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
-          <AlertTriangle size={16} className="text-red-400 shrink-0 mt-0.5" />
-          <p className="text-sm text-red-400">{error}</p>
+        <div
+          className="flex items-start gap-3 rounded-xl px-4 py-3"
+          style={{
+            background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
+            border: "1px solid color-mix(in srgb, var(--kipu-danger) 20%, transparent)",
+          }}
+        >
+          <AlertTriangle size={16} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-danger)" }} />
+          <p className="text-sm" style={{ color: "var(--kipu-danger)" }}>{error}</p>
         </div>
       </div>
     );
@@ -131,31 +137,55 @@ export default function ReporteIVAPage() {
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-3">
-          <button onClick={() => router.push("/reportes")}
-            className="p-2 rounded-lg border border-gray-700 text-gray-400 hover:text-white transition-colors mt-0.5">
+          <button
+            type="button"
+            onClick={() => router.push("/reportes")}
+            className="p-2 rounded-lg transition-colors mt-0.5"
+            style={{
+              border: "1px solid var(--kipu-border)",
+              color: "var(--kipu-subtle)",
+              background: "transparent",
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.color = "var(--kipu-text)";
+              e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 5%, transparent)";
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.color = "var(--kipu-subtle)";
+              e.currentTarget.style.background = "transparent";
+            }}
+          >
             <ArrowLeft size={16} />
           </button>
           <div>
             <div className="flex items-center gap-2 flex-wrap mb-1">
-              <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-indigo-600/20 text-indigo-400 border border-indigo-500/20">
+              <span
+                className="text-xs font-bold px-2 py-0.5 rounded-full"
+                style={{
+                  background: "color-mix(in srgb, var(--kipu-accent) 20%, transparent)",
+                  color: "var(--kipu-accent)",
+                  border: "1px solid color-mix(in srgb, var(--kipu-accent) 20%, transparent)",
+                }}
+              >
                 IVA 104
               </span>
-              <h1 className="text-xl font-bold text-white capitalize">{periodoFmt}</h1>
+              <h1 className="text-xl font-bold capitalize" style={{ color: "var(--kipu-text)" }}>{periodoFmt}</h1>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
-              {declarado
-                ? <EstadoBadge estado="DECLARADO" size="sm" />
-                : enCurso
-                  ? <EstadoBadge estado="EN_CURSO" size="sm" />
-                  : <EstadoBadge estado="PENDIENTE" size="sm" />
-              }
+              {declarado ? (
+                <EstadoBadge estado="DECLARADO" size="sm" />
+              ) : enCurso ? (
+                <EstadoBadge estado="EN_CURSO" size="sm" />
+              ) : (
+                <EstadoBadge estado="PENDIENTE" size="sm" />
+              )}
               {cached && (
-                <span className="text-[10px] text-gray-500">
+                <span className="text-[10px]" style={{ color: "var(--kipu-subtle)" }}>
                   · Reporte guardado
                 </span>
               )}
               {enCurso && (
-                <span className="text-[10px] text-amber-400">
+                <span className="text-[10px]" style={{ color: "var(--kipu-warning)" }}>
                   · Período en curso — valores preliminares
                 </span>
               )}
@@ -165,49 +195,98 @@ export default function ReporteIVAPage() {
 
         {/* Regenerar */}
         <button
+          type="button"
           onClick={() => cargar(true)}
           disabled={regenerando}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-700 text-gray-400 hover:text-white text-xs transition-colors disabled:opacity-40 shrink-0"
+          className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs transition-colors disabled:opacity-40 shrink-0 font-medium"
+          style={{
+            border: "1px solid var(--kipu-border)",
+            color: "var(--kipu-muted)",
+            background: "transparent",
+          }}
+          onMouseEnter={e => {
+            if (!regenerando) e.currentTarget.style.color = "var(--kipu-text)";
+          }}
+          onMouseLeave={e => {
+            if (!regenerando) e.currentTarget.style.color = "var(--kipu-muted)";
+          }}
         >
-          <RefreshCw size={13} className={regenerando ? "animate-spin" : ""} />
+          {regenerando ? (
+            <div
+              className="w-3.5 h-3.5 border-2 border-t-transparent rounded-full animate-spin"
+              style={{ borderColor: "currentColor", borderTopColor: "transparent" }}
+            />
+          ) : (
+            <RefreshCw size={13} />
+          )}
           {regenerando ? "Calculando..." : "Regenerar"}
         </button>
       </div>
 
       {/* Alerta error */}
       {error && (
-        <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2.5">
-          <AlertTriangle size={14} className="text-red-400 shrink-0 mt-0.5" />
-          <p className="text-sm text-red-400">{error}</p>
+        <div
+          className="flex items-start gap-2 rounded-lg px-3 py-2.5"
+          style={{
+            background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
+            border: "1px solid color-mix(in srgb, var(--kipu-danger) 20%, transparent)",
+          }}
+        >
+          <AlertTriangle size={14} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-danger)" }} />
+          <p className="text-sm" style={{ color: "var(--kipu-danger)" }}>{error}</p>
         </div>
       )}
 
       {/* Resumen rápido top */}
       <div className="grid grid-cols-3 gap-3">
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-3 text-center">
-          <p className="text-xs text-gray-500 mb-1">Ventas netas</p>
-          <p className="text-base font-bold text-white">${fmt(casVentas["419"] ?? 0)}</p>
+        <div
+          className="rounded-xl p-3 text-center"
+          style={{
+            background: "var(--kipu-surface)",
+            border: "1px solid var(--kipu-border)",
+          }}
+        >
+          <p className="text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>Ventas netas</p>
+          <p className="text-base font-bold" style={{ color: "var(--kipu-text)" }}>${fmt(casVentas["419"] ?? 0)}</p>
         </div>
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-3 text-center">
-          <p className="text-xs text-gray-500 mb-1">Compras netas</p>
-          <p className="text-base font-bold text-white">${fmt(casCompras["519"] ?? 0)}</p>
+        <div
+          className="rounded-xl p-3 text-center"
+          style={{
+            background: "var(--kipu-surface)",
+            border: "1px solid var(--kipu-border)",
+          }}
+        >
+          <p className="text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>Compras netas</p>
+          <p className="text-base font-bold" style={{ color: "var(--kipu-text)" }}>${fmt(casCompras["519"] ?? 0)}</p>
         </div>
-        <div className={clsx(
-          "rounded-xl p-3 text-center border",
-          ivaAPagar > 0
-            ? "bg-red-500/10 border-red-500/20"
-            : saldoFavor > 0
-              ? "bg-emerald-500/10 border-emerald-500/20"
-              : "bg-gray-900 border-gray-800"
-        )}>
-          <p className="text-xs text-gray-500 mb-1">
+        <div
+          className="rounded-xl p-3 text-center"
+          style={{
+            background: ivaAPagar > 0
+              ? "color-mix(in srgb, var(--kipu-danger) 10%, transparent)"
+              : saldoFavor > 0
+                ? "color-mix(in srgb, var(--kipu-success) 10%, transparent)"
+                : "var(--kipu-surface)",
+            border: ivaAPagar > 0
+              ? "1px solid color-mix(in srgb, var(--kipu-danger) 20%, transparent)"
+              : saldoFavor > 0
+                ? "1px solid color-mix(in srgb, var(--kipu-success) 20%, transparent)"
+                : "1px solid var(--kipu-border)",
+          }}
+        >
+          <p className="text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>
             {ivaAPagar > 0 ? "A pagar" : saldoFavor > 0 ? "Saldo favor" : "IVA neto"}
           </p>
-          <p className={clsx(
-            "text-base font-bold",
-            ivaAPagar > 0  ? "text-red-400"     :
-            saldoFavor > 0 ? "text-emerald-400" : "text-white"
-          )}>
+          <p
+            className="text-base font-bold"
+            style={{
+              color: ivaAPagar > 0
+                ? "var(--kipu-danger)"
+                : saldoFavor > 0
+                  ? "var(--kipu-success)"
+                  : "var(--kipu-text)",
+            }}
+          >
             ${fmt(ivaAPagar > 0 ? ivaAPagar : saldoFavor > 0 ? saldoFavor : 0)}
           </p>
         </div>
@@ -252,8 +331,8 @@ export default function ReporteIVAPage() {
           tipo="IVA"
           casilleros={reporte.resumen.casilleros ?? {}}
           camposManuales={reporte.resumen.campos_manuales ?? []}
-          valoresGuardados={data?.campos_manuales_valores ?? {}}  // ← nuevo
-          onGuardar={guardarCamposManuales}                       // ← nuevo
+          valoresGuardados={data?.campos_manuales_valores ?? {}}
+          onGuardar={guardarCamposManuales}
         />
       )}
 
@@ -269,42 +348,71 @@ export default function ReporteIVAPage() {
 
       {/* Notas */}
       {reporte?.notas?.length > 0 && (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 space-y-1.5">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+        <div
+          className="rounded-xl p-4 space-y-1.5"
+          style={{
+            background: "var(--kipu-surface)",
+            border: "1px solid var(--kipu-border)",
+          }}
+        >
+          <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: "var(--kipu-subtle)" }}>
             Notas
           </p>
           {reporte.notas.map((nota: string, i: number) => (
-            <p key={i} className="text-xs text-gray-500">· {nota}</p>
+            <p key={i} className="text-xs" style={{ color: "var(--kipu-subtle)" }}>· {nota}</p>
           ))}
         </div>
       )}
 
       {/* Botón marcar declarado */}
       {!declarado && !enCurso && (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-          <p className="text-sm text-white font-medium mb-1">¿Ya declaraste en el SRI?</p>
-          <p className="text-xs text-gray-500 mb-3">
+        <div
+          className="rounded-xl p-4"
+          style={{
+            background: "var(--kipu-surface)",
+            border: "1px solid var(--kipu-border)",
+          }}
+        >
+          <p className="text-sm font-medium mb-1" style={{ color: "var(--kipu-text)" }}>¿Ya declaraste en el SRI?</p>
+          <p className="text-xs mb-3" style={{ color: "var(--kipu-subtle)" }}>
             Marca este período como declarado para mantener tu historial al día.
             Esto no declara por ti — solo registra que ya lo hiciste en el portal del SRI.
           </p>
           <button
+            type="button"
             onClick={marcarDeclarado}
             disabled={marcando}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-sm font-medium transition-colors"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-white text-sm font-medium transition-colors disabled:opacity-50"
+            style={{ background: "var(--kipu-success)" }}
           >
-            {marcando
-              ? <><Loader2 size={14} className="animate-spin" /> Marcando...</>
-              : <><CheckCircle2 size={14} /> Marcar como declarado</>
-            }
+            {marcando ? (
+              <>
+                <div
+                  className="w-3.5 h-3.5 border-2 border-t-transparent rounded-full animate-spin"
+                  style={{ borderColor: "#FFFFFF", borderTopColor: "transparent" }}
+                />
+                Marcando...
+              </>
+            ) : (
+              <>
+                <CheckCircle2 size={14} /> Marcar como declarado
+              </>
+            )}
           </button>
         </div>
       )}
 
       {/* Ya declarado */}
       {declarado && (
-        <div className="flex items-center gap-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-4 py-3">
-          <CheckCircle2 size={16} className="text-emerald-400 shrink-0" />
-          <p className="text-sm text-emerald-300 font-medium">
+        <div
+          className="flex items-center gap-3 rounded-xl px-4 py-3"
+          style={{
+            background: "color-mix(in srgb, var(--kipu-success) 10%, transparent)",
+            border: "1px solid color-mix(in srgb, var(--kipu-success) 20%, transparent)",
+          }}
+        >
+          <CheckCircle2 size={16} className="shrink-0" style={{ color: "var(--kipu-success)" }} />
+          <p className="text-sm font-medium" style={{ color: "var(--kipu-success)" }}>
             Período declarado ante el SRI ✓
           </p>
         </div>

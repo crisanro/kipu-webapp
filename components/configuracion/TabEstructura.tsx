@@ -1,12 +1,10 @@
-// components/configuracion/TabEstructura.tsx
 "use client";
 
 import { useState } from "react";
 import api from "@/lib/api";
 import {
-  Plus, X, Save, Loader2, Power, Pencil, AlertTriangle
+  Plus, X, Save, Power, Pencil, AlertTriangle
 } from "lucide-react";
-import { clsx } from "clsx";
 
 interface Props {
   estructura:   any[];
@@ -19,10 +17,26 @@ function Modal({ title, onClose, children }: {
 }) {
   return (
     <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-      <div className="bg-gray-900 border border-gray-800 rounded-xl w-full max-w-sm">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-800">
-          <h2 className="text-sm font-semibold text-white">{title}</h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-white">
+      <div
+        className="rounded-xl w-full max-w-sm"
+        style={{
+          background: "var(--kipu-surface)",
+          border: "1px solid var(--kipu-border)",
+        }}
+      >
+        <div
+          className="flex items-center justify-between px-5 py-4"
+          style={{ borderBottom: "1px solid var(--kipu-border)" }}
+        >
+          <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>{title}</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="transition-colors"
+            style={{ color: "var(--kipu-subtle)" }}
+            onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
+            onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-subtle)"}
+          >
             <X size={18} />
           </button>
         </div>
@@ -36,14 +50,23 @@ function Modal({ title, onClose, children }: {
 function Campo({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="block text-xs text-gray-500 mb-1.5">{label}</label>
+      <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>{label}</label>
       {children}
     </div>
   );
 }
 
-const inputCls = "w-full px-3 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 text-sm";
-const inputDisCls = "w-full px-3 py-2 rounded-lg bg-gray-700 border border-gray-600 text-gray-400 text-sm";
+const inputStyle = {
+  background: "var(--kipu-surface)",
+  border: "1px solid var(--kipu-border)",
+  color: "var(--kipu-text)",
+};
+
+const inputDisStyle = {
+  background: "color-mix(in srgb, var(--kipu-text) 5%, transparent)",
+  border: "1px solid var(--kipu-border)",
+  color: "var(--kipu-subtle)",
+};
 
 export default function TabEstructura({ estructura, onActualizar }: Props) {
 
@@ -137,10 +160,12 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
   };
 
   // ── Botones de acción ────────────────────────────────────────────────────────
-  const BtnAccion = ({ onClick, color, title, children }: any) => (
+  const BtnAccion = ({ onClick, style, title, children }: any) => (
     <button
+      type="button"
       onClick={onClick}
-      className={clsx("p-1.5 rounded-lg transition-colors", color)}
+      className="p-1.5 rounded-lg transition-colors flex items-center justify-center"
+      style={style}
       title={title}
     >
       {children}
@@ -152,43 +177,71 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
     <div className="space-y-4">
 
       {/* Lista establecimientos */}
-      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-800">
-          <h2 className="text-sm font-semibold text-white">Establecimientos</h2>
+      <div
+        className="rounded-xl overflow-hidden"
+        style={{
+          background: "var(--kipu-surface)",
+          border: "1px solid var(--kipu-border)",
+        }}
+      >
+        <div
+          className="flex items-center justify-between px-5 py-4"
+          style={{ borderBottom: "1px solid var(--kipu-border)" }}
+        >
+          <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>Establecimientos</h2>
           <button
+            type="button"
             onClick={() => { setEstabForm({ codigo: "001", nombre_comercial: "", direccion: "" }); setModal({ tipo: "crearEstab" }); }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-medium transition-colors"
+            style={{ background: "var(--kipu-accent)" }}
+            onMouseEnter={e => e.currentTarget.style.background = "var(--kipu-accent-h)"}
+            onMouseLeave={e => e.currentTarget.style.background = "var(--kipu-accent)"}
           >
             <Plus size={13} /> Agregar
           </button>
         </div>
 
         {estructura.length === 0 ? (
-          <p className="text-sm text-gray-500 text-center py-8">
+          <p className="text-sm text-center py-8" style={{ color: "var(--kipu-subtle)" }}>
             Sin establecimientos. Crea uno para poder facturar.
           </p>
         ) : (
-          <div className="divide-y divide-gray-800">
-            {estructura.map((estab: any) => (
-              <div key={estab.id} className="px-5 py-4">
+          <div>
+            {estructura.map((estab: any, idx: number) => (
+              <div
+                key={estab.id}
+                className="px-5 py-4"
+                style={{ borderTop: idx > 0 ? "1px solid var(--kipu-border)" : "none" }}
+              >
 
                 {/* Header establecimiento */}
                 <div className="flex items-center justify-between mb-1">
                   <div className="flex items-center gap-2">
-                    <span className="font-mono text-xs bg-gray-800 px-2 py-0.5 rounded text-gray-300">
+                    <span
+                      className="font-mono text-xs px-2 py-0.5 rounded"
+                      style={{
+                        background: "color-mix(in srgb, var(--kipu-text) 6%, transparent)",
+                        color: "var(--kipu-muted)",
+                      }}
+                    >
                       {estab.codigo}
                     </span>
-                    <span className="text-sm font-medium text-white">
+                    <span className="text-sm font-medium" style={{ color: "var(--kipu-text)" }}>
                       {estab.nombre_comercial || "Sin nombre"}
                     </span>
                   </div>
                   <div className="flex items-center gap-1">
-                    <span className={clsx(
-                      "text-xs px-2 py-0.5 rounded-full",
-                      estab.is_active
-                        ? "bg-emerald-500/20 text-emerald-400"
-                        : "bg-gray-700 text-gray-500"
-                    )}>
+                    <span
+                      className="text-xs px-2 py-0.5 rounded-full font-medium"
+                      style={{
+                        background: estab.is_active
+                          ? "color-mix(in srgb, var(--kipu-success) 20%, transparent)"
+                          : "color-mix(in srgb, var(--kipu-text) 10%, transparent)",
+                        color: estab.is_active
+                          ? "var(--kipu-success)"
+                          : "var(--kipu-subtle)",
+                      }}
+                    >
                       {estab.is_active ? "Activo" : "Inactivo"}
                     </span>
                     <BtnAccion
@@ -196,38 +249,56 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
                         setEditEstab({ nombre_comercial: estab.nombre_comercial || "", direccion: estab.direccion || "" });
                         setModal({ tipo: "editarEstab", estab });
                       }}
-                      color="text-gray-400 hover:text-white hover:bg-gray-700"
+                      style={{ color: "var(--kipu-subtle)" }}
                       title="Editar"
                     >
                       <Pencil size={13} />
                     </BtnAccion>
                     <BtnAccion
                       onClick={() => toggleEstab(estab.id, estab.is_active)}
-                      color={estab.is_active ? "text-red-400 hover:bg-red-500/10" : "text-emerald-400 hover:bg-emerald-500/10"}
+                      style={{ color: estab.is_active ? "var(--kipu-danger)" : "var(--kipu-success)" }}
                       title={estab.is_active ? "Desactivar" : "Activar"}
                     >
-                      {toggling === estab.id
-                        ? <Loader2 size={13} className="animate-spin" />
-                        : <Power size={13} />
-                      }
+                      {toggling === estab.id ? (
+                        <div
+                          className="w-3.5 h-3.5 border-2 border-t-transparent rounded-full animate-spin"
+                          style={{ borderColor: "currentColor", borderTopColor: "transparent" }}
+                        />
+                      ) : (
+                        <Power size={13} />
+                      )}
                     </BtnAccion>
                   </div>
                 </div>
 
-                <p className="text-xs text-gray-500 mb-3">{estab.direccion}</p>
+                <p className="text-xs mb-3" style={{ color: "var(--kipu-subtle)" }}>{estab.direccion}</p>
 
                 {/* Puntos de emisión */}
-                <div className="space-y-2 pl-2 border-l border-gray-800">
+                <div
+                  className="space-y-2 pl-2"
+                  style={{ borderLeft: "1px solid var(--kipu-border)" }}
+                >
                   {estab.puntos_emision?.map((punto: any) => (
-                    <div key={punto.id} className="flex items-center gap-2 bg-gray-800/50 rounded-lg px-3 py-2">
-                      <span className="font-mono text-xs text-gray-400 shrink-0">{punto.codigo}</span>
-                      <span className="text-xs text-white flex-1 truncate">{punto.nombre}</span>
+                    <div
+                      key={punto.id}
+                      className="flex items-center gap-2 rounded-lg px-3 py-2"
+                      style={{ background: "color-mix(in srgb, var(--kipu-text) 4%, transparent)" }}
+                    >
+                      <span className="font-mono text-xs shrink-0" style={{ color: "var(--kipu-subtle)" }}>{punto.codigo}</span>
+                      <span className="text-xs flex-1 truncate" style={{ color: "var(--kipu-text)" }}>{punto.nombre}</span>
 
                       {/* Desglose de secuenciales por tipo */}
                       <div className="flex gap-1 shrink-0">
                         {punto.secuenciales?.produccion && Object.entries(punto.secuenciales.produccion).map(([tipo, sec]: [string, any]) => (
                           (sec as number) > 0 && (
-                            <span key={tipo} className="text-[10px] font-mono text-gray-400 bg-gray-800 px-1.5 py-0.5 rounded">
+                            <span
+                              key={tipo}
+                              className="text-[10px] font-mono px-1.5 py-0.5 rounded"
+                              style={{
+                                background: "color-mix(in srgb, var(--kipu-text) 6%, transparent)",
+                                color: "var(--kipu-subtle)",
+                              }}
+                            >
                               {tipo}:{sec}
                             </span>
                           )
@@ -235,19 +306,34 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
                       </div>
 
                       {punto.es_canal_whatsapp && (
-                        <span className="text-xs bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded shrink-0">WS</span>
+                        <span
+                          className="text-xs px-1.5 py-0.5 rounded shrink-0 font-medium"
+                          style={{
+                            background: "color-mix(in srgb, var(--kipu-success) 20%, transparent)",
+                            color: "var(--kipu-success)",
+                          }}
+                        >
+                          WS
+                        </span>
                       )}
-                      <span className={clsx(
-                        "text-xs px-1.5 py-0.5 rounded-full shrink-0",
-                        punto.is_active ? "bg-emerald-500/20 text-emerald-400" : "bg-gray-700 text-gray-500"
-                      )}>
+                      <span
+                        className="text-xs px-1.5 py-0.5 rounded-full shrink-0 font-medium"
+                        style={{
+                          background: punto.is_active
+                            ? "color-mix(in srgb, var(--kipu-success) 20%, transparent)"
+                            : "color-mix(in srgb, var(--kipu-text) 10%, transparent)",
+                          color: punto.is_active
+                            ? "var(--kipu-success)"
+                            : "var(--kipu-subtle)",
+                        }}
+                      >
                         {punto.is_active ? "Activo" : "Inactivo"}
                       </span>
 
                       {/* Editar nombre */}
                       <BtnAccion
                         onClick={() => { setEditPunto({ nombre: punto.nombre || "" }); setModal({ tipo: "editarPunto", punto }); }}
-                        color="text-gray-500 hover:text-white hover:bg-gray-700"
+                        style={{ color: "var(--kipu-subtle)" }}
                         title="Editar"
                       >
                         <Pencil size={12} />
@@ -256,7 +342,7 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
                       {/* Editar secuencial */}
                       <BtnAccion
                         onClick={() => { setModal({ tipo: "secuencial", punto }); }}
-                        color="text-gray-500 hover:text-amber-400 hover:bg-amber-500/10"
+                        style={{ color: "var(--kipu-warning)" }}
                         title="Editar secuenciales"
                       >
                         <span className="text-[10px] font-mono font-bold">#</span>
@@ -265,23 +351,31 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
                       {/* Toggle activo */}
                       <BtnAccion
                         onClick={() => togglePunto(punto.id, punto.is_active)}
-                        color={punto.is_active ? "text-red-400 hover:bg-red-500/10" : "text-emerald-400 hover:bg-emerald-500/10"}
+                        style={{ color: punto.is_active ? "var(--kipu-danger)" : "var(--kipu-success)" }}
                         title={punto.is_active ? "Desactivar" : "Activar"}
                       >
-                        {toggling === punto.id
-                          ? <Loader2 size={12} className="animate-spin" />
-                          : <Power size={12} />
-                        }
+                        {toggling === punto.id ? (
+                          <div
+                            className="w-3 h-3 border-2 border-t-transparent rounded-full animate-spin"
+                            style={{ borderColor: "currentColor", borderTopColor: "transparent" }}
+                          />
+                        ) : (
+                          <Power size={12} />
+                        )}
                       </BtnAccion>
                     </div>
                   ))}
 
                   <button
+                    type="button"
                     onClick={() => {
                       setPuntoForm({ establecimiento_codigo: estab.codigo, codigo: "001", nombre: "" });
                       setModal({ tipo: "crearPunto", estabCodigo: estab.codigo });
                     }}
-                    className="flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 transition-colors mt-1"
+                    className="flex items-center gap-1.5 text-xs transition-colors mt-1 font-medium"
+                    style={{ color: "var(--kipu-accent)" }}
+                    onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent-h)"}
+                    onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-accent)"}
                   >
                     <Plus size={12} /> Agregar punto de emisión
                   </button>
@@ -299,23 +393,86 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
       {modal?.tipo === "crearEstab" && (
         <Modal title="Nuevo establecimiento" onClose={cerrar}>
           <Campo label="Código (ej: 001)">
-            <input value={estabForm.codigo} onChange={e => setEstabForm({ ...estabForm, codigo: e.target.value })}
-              placeholder="001" maxLength={3} className={inputCls} />
+            <input
+              value={estabForm.codigo}
+              onChange={e => setEstabForm({ ...estabForm, codigo: e.target.value })}
+              placeholder="001"
+              maxLength={3}
+              className="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none"
+              style={inputStyle}
+              onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+              onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+            />
           </Campo>
           <Campo label="Nombre comercial">
-            <input value={estabForm.nombre_comercial} onChange={e => setEstabForm({ ...estabForm, nombre_comercial: e.target.value })}
-              placeholder="Sucursal principal (opcional)" className={inputCls} />
+            <input
+              value={estabForm.nombre_comercial}
+              onChange={e => setEstabForm({ ...estabForm, nombre_comercial: e.target.value })}
+              placeholder="Sucursal principal (opcional)"
+              className="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none"
+              style={inputStyle}
+              onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+              onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+            />
           </Campo>
           <Campo label="Dirección">
-            <input value={estabForm.direccion} onChange={e => setEstabForm({ ...estabForm, direccion: e.target.value })}
-              placeholder="Dirección (opcional)" className={inputCls} />
+            <input
+              value={estabForm.direccion}
+              onChange={e => setEstabForm({ ...estabForm, direccion: e.target.value })}
+              placeholder="Dirección (opcional)"
+              className="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none"
+              style={inputStyle}
+              onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+              onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+            />
           </Campo>
-          {error && <p className="text-xs text-red-400 bg-red-400/10 px-3 py-2 rounded-lg">{error}</p>}
+          {error && (
+            <p
+              className="text-xs px-3 py-2 rounded-lg"
+              style={{
+                color: "var(--kipu-danger)",
+                background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
+              }}
+            >
+              {error}
+            </p>
+          )}
           <div className="flex gap-3 pt-1">
-            <button onClick={cerrar} className="flex-1 py-2.5 rounded-lg border border-gray-700 text-gray-400 text-sm">Cancelar</button>
-            <button onClick={crearEstab} disabled={saving}
-              className="flex-1 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm font-medium flex items-center justify-center gap-2">
-              {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Crear
+            <button
+              type="button"
+              onClick={cerrar}
+              className="flex-1 py-2.5 rounded-lg text-sm transition-colors"
+              style={{
+                border: "1px solid var(--kipu-border)",
+                color: "var(--kipu-muted)",
+              }}
+              onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
+              onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-muted)"}
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={crearEstab}
+              disabled={saving}
+              className="flex-1 py-2.5 rounded-lg text-white text-sm font-medium flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+              style={{ background: "var(--kipu-accent)" }}
+              onMouseEnter={e => {
+                if (!saving) e.currentTarget.style.background = "var(--kipu-accent-h)";
+              }}
+              onMouseLeave={e => {
+                if (!saving) e.currentTarget.style.background = "var(--kipu-accent)";
+              }}
+            >
+              {saving ? (
+                <div
+                  className="w-3.5 h-3.5 border-2 border-t-transparent rounded-full animate-spin"
+                  style={{ borderColor: "#FFFFFF", borderTopColor: "transparent" }}
+                />
+              ) : (
+                <Save size={14} />
+              )}
+              Crear
             </button>
           </div>
         </Modal>
@@ -325,22 +482,77 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
       {modal?.tipo === "editarEstab" && (
         <Modal title={`Editar establecimiento ${modal.estab.codigo}`} onClose={cerrar}>
           <Campo label="Código">
-            <input value={modal.estab.codigo} disabled className={inputDisCls} />
+            <input value={modal.estab.codigo} disabled className="w-full px-3 py-2 rounded-lg text-sm" style={inputDisStyle} />
           </Campo>
           <Campo label="Nombre comercial">
-            <input value={editEstab.nombre_comercial} onChange={e => setEditEstab({ ...editEstab, nombre_comercial: e.target.value })}
-              placeholder="Nombre comercial" className={inputCls} />
+            <input
+              value={editEstab.nombre_comercial}
+              onChange={e => setEditEstab({ ...editEstab, nombre_comercial: e.target.value })}
+              placeholder="Nombre comercial"
+              className="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none"
+              style={inputStyle}
+              onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+              onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+            />
           </Campo>
           <Campo label="Dirección">
-            <input value={editEstab.direccion} onChange={e => setEditEstab({ ...editEstab, direccion: e.target.value })}
-              placeholder="Dirección" className={inputCls} />
+            <input
+              value={editEstab.direccion}
+              onChange={e => setEditEstab({ ...editEstab, direccion: e.target.value })}
+              placeholder="Dirección"
+              className="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none"
+              style={inputStyle}
+              onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+              onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+            />
           </Campo>
-          {error && <p className="text-xs text-red-400 bg-red-400/10 px-3 py-2 rounded-lg">{error}</p>}
+          {error && (
+            <p
+              className="text-xs px-3 py-2 rounded-lg"
+              style={{
+                color: "var(--kipu-danger)",
+                background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
+              }}
+            >
+              {error}
+            </p>
+          )}
           <div className="flex gap-3 pt-1">
-            <button onClick={cerrar} className="flex-1 py-2.5 rounded-lg border border-gray-700 text-gray-400 text-sm">Cancelar</button>
-            <button onClick={() => guardarEstab(modal.estab.id)} disabled={saving}
-              className="flex-1 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm font-medium flex items-center justify-center gap-2">
-              {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Guardar
+            <button
+              type="button"
+              onClick={cerrar}
+              className="flex-1 py-2.5 rounded-lg text-sm transition-colors"
+              style={{
+                border: "1px solid var(--kipu-border)",
+                color: "var(--kipu-muted)",
+              }}
+              onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
+              onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-muted)"}
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={() => guardarEstab(modal.estab.id)}
+              disabled={saving}
+              className="flex-1 py-2.5 rounded-lg text-white text-sm font-medium flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+              style={{ background: "var(--kipu-accent)" }}
+              onMouseEnter={e => {
+                if (!saving) e.currentTarget.style.background = "var(--kipu-accent-h)";
+              }}
+              onMouseLeave={e => {
+                if (!saving) e.currentTarget.style.background = "var(--kipu-accent)";
+              }}
+            >
+              {saving ? (
+                <div
+                  className="w-3.5 h-3.5 border-2 border-t-transparent rounded-full animate-spin"
+                  style={{ borderColor: "#FFFFFF", borderTopColor: "transparent" }}
+                />
+              ) : (
+                <Save size={14} />
+              )}
+              Guardar
             </button>
           </div>
         </Modal>
@@ -350,22 +562,78 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
       {modal?.tipo === "crearPunto" && (
         <Modal title="Nuevo punto de emisión" onClose={cerrar}>
           <Campo label="Establecimiento">
-            <input value={puntoForm.establecimiento_codigo} disabled className={inputDisCls} />
+            <input value={puntoForm.establecimiento_codigo} disabled className="w-full px-3 py-2 rounded-lg text-sm" style={inputDisStyle} />
           </Campo>
           <Campo label="Código punto (ej: 001)">
-            <input value={puntoForm.codigo} onChange={e => setPuntoForm({ ...puntoForm, codigo: e.target.value })}
-              placeholder="001" maxLength={3} className={inputCls} />
+            <input
+              value={puntoForm.codigo}
+              onChange={e => setPuntoForm({ ...puntoForm, codigo: e.target.value })}
+              placeholder="001"
+              maxLength={3}
+              className="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none"
+              style={inputStyle}
+              onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+              onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+            />
           </Campo>
           <Campo label="Nombre">
-            <input value={puntoForm.nombre} onChange={e => setPuntoForm({ ...puntoForm, nombre: e.target.value })}
-              placeholder="Caja 1 (opcional)" className={inputCls} />
+            <input
+              value={puntoForm.nombre}
+              onChange={e => setPuntoForm({ ...puntoForm, nombre: e.target.value })}
+              placeholder="Caja 1 (opcional)"
+              className="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none"
+              style={inputStyle}
+              onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+              onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+            />
           </Campo>
-          {error && <p className="text-xs text-red-400 bg-red-400/10 px-3 py-2 rounded-lg">{error}</p>}
+          {error && (
+            <p
+              className="text-xs px-3 py-2 rounded-lg"
+              style={{
+                color: "var(--kipu-danger)",
+                background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
+              }}
+            >
+              {error}
+            </p>
+          )}
           <div className="flex gap-3 pt-1">
-            <button onClick={cerrar} className="flex-1 py-2.5 rounded-lg border border-gray-700 text-gray-400 text-sm">Cancelar</button>
-            <button onClick={crearPunto} disabled={saving}
-              className="flex-1 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm font-medium flex items-center justify-center gap-2">
-              {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Crear
+            <button
+              type="button"
+              onClick={cerrar}
+              className="flex-1 py-2.5 rounded-lg text-sm transition-colors"
+              style={{
+                border: "1px solid var(--kipu-border)",
+                color: "var(--kipu-muted)",
+              }}
+              onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
+              onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-muted)"}
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={crearPunto}
+              disabled={saving}
+              className="flex-1 py-2.5 rounded-lg text-white text-sm font-medium flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+              style={{ background: "var(--kipu-accent)" }}
+              onMouseEnter={e => {
+                if (!saving) e.currentTarget.style.background = "var(--kipu-accent-h)";
+              }}
+              onMouseLeave={e => {
+                if (!saving) e.currentTarget.style.background = "var(--kipu-accent)";
+              }}
+            >
+              {saving ? (
+                <div
+                  className="w-3.5 h-3.5 border-2 border-t-transparent rounded-full animate-spin"
+                  style={{ borderColor: "#FFFFFF", borderTopColor: "transparent" }}
+                />
+              ) : (
+                <Save size={14} />
+              )}
+              Crear
             </button>
           </div>
         </Modal>
@@ -375,18 +643,66 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
       {modal?.tipo === "editarPunto" && (
         <Modal title={`Editar punto ${modal.punto.codigo}`} onClose={cerrar}>
           <Campo label="Código">
-            <input value={modal.punto.codigo} disabled className={inputDisCls} />
+            <input value={modal.punto.codigo} disabled className="w-full px-3 py-2 rounded-lg text-sm" style={inputDisStyle} />
           </Campo>
           <Campo label="Nombre">
-            <input value={editPunto.nombre} onChange={e => setEditPunto({ nombre: e.target.value })}
-              placeholder="Nombre del punto" className={inputCls} />
+            <input
+              value={editPunto.nombre}
+              onChange={e => setEditPunto({ nombre: e.target.value })}
+              placeholder="Nombre del punto"
+              className="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none"
+              style={inputStyle}
+              onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+              onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+            />
           </Campo>
-          {error && <p className="text-xs text-red-400 bg-red-400/10 px-3 py-2 rounded-lg">{error}</p>}
+          {error && (
+            <p
+              className="text-xs px-3 py-2 rounded-lg"
+              style={{
+                color: "var(--kipu-danger)",
+                background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
+              }}
+            >
+              {error}
+            </p>
+          )}
           <div className="flex gap-3 pt-1">
-            <button onClick={cerrar} className="flex-1 py-2.5 rounded-lg border border-gray-700 text-gray-400 text-sm">Cancelar</button>
-            <button onClick={() => guardarPunto(modal.punto.id)} disabled={saving}
-              className="flex-1 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm font-medium flex items-center justify-center gap-2">
-              {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Guardar
+            <button
+              type="button"
+              onClick={cerrar}
+              className="flex-1 py-2.5 rounded-lg text-sm transition-colors"
+              style={{
+                border: "1px solid var(--kipu-border)",
+                color: "var(--kipu-muted)",
+              }}
+              onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
+              onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-muted)"}
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={() => guardarPunto(modal.punto.id)}
+              disabled={saving}
+              className="flex-1 py-2.5 rounded-lg text-white text-sm font-medium flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+              style={{ background: "var(--kipu-accent)" }}
+              onMouseEnter={e => {
+                if (!saving) e.currentTarget.style.background = "var(--kipu-accent-h)";
+              }}
+              onMouseLeave={e => {
+                if (!saving) e.currentTarget.style.background = "var(--kipu-accent)";
+              }}
+            >
+              {saving ? (
+                <div
+                  className="w-3.5 h-3.5 border-2 border-t-transparent rounded-full animate-spin"
+                  style={{ borderColor: "#FFFFFF", borderTopColor: "transparent" }}
+                />
+              ) : (
+                <Save size={14} />
+              )}
+              Guardar
             </button>
           </div>
         </Modal>
@@ -395,9 +711,15 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
       {/* Editar secuencial */}
       {modal?.tipo === "secuencial" && (
         <Modal title={`Secuenciales — Punto ${modal.punto.codigo}`} onClose={cerrar}>
-          <div className="flex items-start gap-3 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2.5">
-            <AlertTriangle size={14} className="text-amber-400 shrink-0 mt-0.5" />
-            <p className="text-xs text-amber-300">
+          <div
+            className="flex items-start gap-3 rounded-lg px-3 py-2.5"
+            style={{
+              background: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)",
+              border: "1px solid color-mix(in srgb, var(--kipu-warning) 20%, transparent)",
+            }}
+          >
+            <AlertTriangle size={14} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-warning)" }} />
+            <p className="text-xs" style={{ color: "var(--kipu-warning)" }}>
               Solo modifica si hay un hueco en la secuencia o necesitas reiniciar.
               El SRI puede rechazar comprobantes con secuenciales duplicados.
             </p>
@@ -405,50 +727,79 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
 
           {/* Producción */}
           <div className="space-y-2">
-            <p className="text-xs font-semibold text-emerald-400 uppercase tracking-wider">
+            <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--kipu-success)" }}>
               Producción
             </p>
             {Object.entries(modal.punto.secuenciales?.produccion || {}).map(([tipo, sec]: [string, any]) => (
               <div key={`prod-${tipo}`} className="flex items-center gap-3">
-                <span className="text-xs font-bold text-gray-400 w-10 shrink-0">{tipo}</span>
+                <span className="text-xs font-bold w-10 shrink-0" style={{ color: "var(--kipu-subtle)" }}>{tipo}</span>
                 <input
                   type="number"
                   defaultValue={sec}
                   min={0}
                   id={`sec-produccion-${tipo}`}
-                  className={inputCls}
+                  className="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none"
+                  style={inputStyle}
+                  onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                  onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
                 />
               </div>
             ))}
           </div>
 
           {/* Pruebas */}
-          <div className="space-y-2 pt-2 border-t border-gray-800">
-            <p className="text-xs font-semibold text-blue-400 uppercase tracking-wider">
+          <div
+            className="space-y-2 pt-2"
+            style={{ borderTop: "1px solid var(--kipu-border)" }}
+          >
+            <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "#60a5fa" }}>
               Pruebas / Sandbox
             </p>
             {Object.entries(modal.punto.secuenciales?.pruebas || {}).map(([tipo, sec]: [string, any]) => (
               <div key={`test-${tipo}`} className="flex items-center gap-3">
-                <span className="text-xs font-bold text-gray-400 w-10 shrink-0">{tipo}</span>
+                <span className="text-xs font-bold w-10 shrink-0" style={{ color: "var(--kipu-subtle)" }}>{tipo}</span>
                 <input
                   type="number"
                   defaultValue={sec}
                   min={0}
                   id={`sec-pruebas-${tipo}`}
-                  className={inputCls}
+                  className="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none"
+                  style={inputStyle}
+                  onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                  onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
                 />
               </div>
             ))}
           </div>
 
-          {error && <p className="text-xs text-red-400 bg-red-400/10 px-3 py-2 rounded-lg">{error}</p>}
+          {error && (
+            <p
+              className="text-xs px-3 py-2 rounded-lg"
+              style={{
+                color: "var(--kipu-danger)",
+                background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
+              }}
+            >
+              {error}
+            </p>
+          )}
 
           <div className="flex gap-3 pt-1">
-            <button onClick={cerrar}
-              className="flex-1 py-2.5 rounded-lg border border-gray-700 text-gray-400 text-sm">
+            <button
+              type="button"
+              onClick={cerrar}
+              className="flex-1 py-2.5 rounded-lg text-sm transition-colors"
+              style={{
+                border: "1px solid var(--kipu-border)",
+                color: "var(--kipu-muted)",
+              }}
+              onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
+              onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-muted)"}
+            >
               Cancelar
             </button>
             <button
+              type="button"
               onClick={async () => {
                 setError(""); setSaving(true);
                 try {
@@ -475,9 +826,17 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
                 } finally { setSaving(false); }
               }}
               disabled={saving}
-              className="flex-1 py-2.5 rounded-lg bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white text-sm font-medium flex items-center justify-center gap-2"
+              className="flex-1 py-2.5 rounded-lg text-white text-sm font-medium flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+              style={{ background: "var(--kipu-warning)" }}
             >
-              {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+              {saving ? (
+                <div
+                  className="w-3.5 h-3.5 border-2 border-t-transparent rounded-full animate-spin"
+                  style={{ borderColor: "#FFFFFF", borderTopColor: "transparent" }}
+                />
+              ) : (
+                <Save size={14} />
+              )}
               Actualizar
             </button>
           </div>

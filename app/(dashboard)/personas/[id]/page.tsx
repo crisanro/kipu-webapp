@@ -1,4 +1,3 @@
-// app/(dashboard)/personas/[id]/page.tsx
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -7,9 +6,9 @@ import api from "@/lib/api";
 import {
   ArrowLeft, User, Mail, Phone, MapPin, FileText,
   CheckCircle2, Clock, AlertTriangle, XCircle,
-  Loader2, Edit2, Save, X, Plus, Wallet, TrendingUp, TrendingDown, AlertCircle, Check
+  Edit2, Save, X, Plus, Wallet, TrendingUp, TrendingDown, AlertCircle, Check,
+  Copy, Key
 } from "lucide-react";
-import { clsx } from "clsx";
 
 const TIPO_ID: Record<string, string> = {
   "04": "RUC",
@@ -19,12 +18,12 @@ const TIPO_ID: Record<string, string> = {
   "08": "Exterior",
 };
 
-const ESTADO_CONFIG: Record<string, { label: string; color: string; icon: any }> = {
-  AUTORIZADO: { label: "Autorizado", color: "text-emerald-400 bg-emerald-400/10", icon: CheckCircle2 },
-  RECIBIDA:   { label: "En proceso", color: "text-indigo-400 bg-indigo-400/10",   icon: Clock },
-  FIRMADO:    { label: "En cola",    color: "text-blue-400 bg-blue-400/10",       icon: Clock },
-  DEVUELTA:   { label: "Devuelto",   color: "text-amber-400 bg-amber-400/10",     icon: AlertTriangle },
-  RECHAZADO:  { label: "Rechazado",  color: "text-red-400 bg-red-400/10",         icon: XCircle },
+const ESTADO_CONFIG: Record<string, { label: string; color: string; bg: string; icon: any }> = {
+  AUTORIZADO: { label: "Autorizado", color: "var(--kipu-success)", bg: "color-mix(in srgb, var(--kipu-success) 10%, transparent)", icon: CheckCircle2 },
+  RECIBIDA:   { label: "En proceso",  color: "#818cf8",           bg: "color-mix(in srgb, #818cf8 10%, transparent)",           icon: Clock },
+  FIRMADO:    { label: "En cola",     color: "#60a5fa",           bg: "color-mix(in srgb, #60a5fa 10%, transparent)",           icon: Clock },
+  DEVUELTA:   { label: "Devuelto",    color: "var(--kipu-warning)", bg: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)", icon: AlertTriangle },
+  RECHAZADO:  { label: "Rechazado",   color: "var(--kipu-danger)",  bg: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",  icon: XCircle },
 };
 
 const fmt = (n: any) => parseFloat(n ?? 0).toFixed(2);
@@ -45,6 +44,7 @@ export default function DetallePersonaPage() {
   const [editing, setEditing] = useState(false);
   const [saving,  setSaving]  = useState(false);
   const [error,   setError]   = useState("");
+  const [copiado, setCopiado] = useState(false);
   const [form,    setForm]    = useState({
     razon_social: "",
     email:        "",
@@ -57,8 +57,8 @@ export default function DetallePersonaPage() {
   const [loadingCuentas, setLoadingCuentas] = useState(true);
 
   // Validación reactiva del form de edición
-  const emailOk     = validarEmail(form.email);
-  const nombreOk    = form.razon_social.trim().length > 0;
+  const emailOk      = validarEmail(form.email);
+  const nombreOk     = form.razon_social.trim().length > 0;
   const puedeGuardar = emailOk && nombreOk && !saving;
 
   const cargar = useCallback(async () => {
@@ -67,10 +67,10 @@ export default function DetallePersonaPage() {
       const res = await api.get(`/api/v1/app/clientes/detalle/${id}`);
       setData(res.data);
       setForm({
-        razon_social: res.data.cliente.razon_social     ?? "",
-        email:        res.data.cliente.email            ?? "",
-        telefono:     res.data.cliente.telefono         ?? "",
-        direccion:    res.data.cliente.direccion        ?? "",
+        razon_social: res.data.cliente.razon_social    ?? "",
+        email:        res.data.cliente.email           ?? "",
+        telefono:     res.data.cliente.telefono        ?? "",
+        direccion:    res.data.cliente.direccion       ?? "",
       });
     } catch (e) {
       console.error(e);
@@ -97,10 +97,17 @@ export default function DetallePersonaPage() {
     cargarCuentas();
   }, [cargar, cargarCuentas]);
 
+  const copiarUid = async () => {
+    const uidTarget = data?.cliente?.uid || (id as string);
+    if (!uidTarget) return;
+    await navigator.clipboard.writeText(uidTarget);
+    setCopiado(true);
+    setTimeout(() => setCopiado(false), 2000);
+  };
+
   const cancelarEdicion = () => {
     setEditing(false);
     setError("");
-    // Restaurar form al estado guardado
     if (data?.cliente) {
       setForm({
         razon_social: data.cliente.razon_social ?? "",
@@ -156,16 +163,27 @@ export default function DetallePersonaPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 size={24} className="animate-spin text-indigo-400" />
+        <div
+          className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin"
+          style={{ borderColor: "var(--kipu-accent)", borderTopColor: "transparent" }}
+        />
       </div>
     );
   }
   if (!data) {
     return (
       <div className="p-6 text-center">
-        <User size={40} className="text-gray-700 mx-auto mb-3" />
-        <p className="text-gray-500">Persona no encontrada.</p>
-        <button onClick={() => router.back()} className="mt-4 text-indigo-400 text-sm">Volver</button>
+        <User size={40} className="mx-auto mb-3" style={{ color: "var(--kipu-subtle)" }} />
+        <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>Persona no encontrada.</p>
+        <button
+          onClick={() => router.back()}
+          className="mt-4 text-sm transition-colors"
+          style={{ color: "var(--kipu-accent)" }}
+          onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent-h)"}
+          onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-accent)"}
+        >
+          Volver
+        </button>
       </div>
     );
   }
@@ -186,7 +204,7 @@ export default function DetallePersonaPage() {
     const isInvalid = editing && validate && form[field as keyof typeof form] && !validate(form[field as keyof typeof form]);
     return (
       <div className="flex justify-between items-center text-sm gap-4">
-        <span className="text-gray-500 flex items-center gap-2 shrink-0">
+        <span className="flex items-center gap-2 shrink-0" style={{ color: "var(--kipu-subtle)" }}>
           <Icon size={13} /> {label}
         </span>
         {editing ? (
@@ -200,22 +218,33 @@ export default function DetallePersonaPage() {
                   setForm({ ...form, [field]: val });
                 }}
                 placeholder={placeholder}
-                className={`w-full px-2 py-1 rounded-lg bg-gray-800 border text-white text-xs focus:outline-none text-right pr-6 ${
-                  isInvalid ? "border-red-500/70" : "border-gray-700 focus:border-indigo-500"
-                }`}
+                className="w-full px-2 py-1 rounded-lg text-xs text-right pr-6 transition-colors focus:outline-none"
+                style={{
+                  background: "var(--kipu-surface)",
+                  border: isInvalid
+                    ? "1px solid color-mix(in srgb, var(--kipu-danger) 70%, transparent)"
+                    : "1px solid var(--kipu-border)",
+                  color: "var(--kipu-text)",
+                }}
+                onFocus={e => {
+                  if (!isInvalid) e.currentTarget.style.borderColor = "var(--kipu-accent)";
+                }}
+                onBlur={e => {
+                  if (!isInvalid) e.currentTarget.style.borderColor = "var(--kipu-border)";
+                }}
               />
               {validate && form[field as keyof typeof form] && !isInvalid && (
-                <Check size={10} className="absolute right-2 top-1/2 -translate-y-1/2 text-emerald-400" />
+                <Check size={10} className="absolute right-2 top-1/2 -translate-y-1/2" style={{ color: "var(--kipu-success)" }} />
               )}
             </div>
             {isInvalid && validError && (
-              <p className="flex items-center gap-1 text-xs text-red-400">
+              <p className="flex items-center gap-1 text-xs" style={{ color: "var(--kipu-danger)" }}>
                 <AlertCircle size={10} /> {validError}
               </p>
             )}
           </div>
         ) : (
-          <span className="text-white text-right max-w-[60%] truncate">{value || "—"}</span>
+          <span className="text-right max-w-[60%] truncate" style={{ color: "var(--kipu-text)" }}>{value || "—"}</span>
         )}
       </div>
     );
@@ -228,20 +257,32 @@ export default function DetallePersonaPage() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => router.back()}
-            className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
+            className="p-2 rounded-lg transition-colors"
+            style={{ color: "var(--kipu-muted)" }}
+            onMouseEnter={e => {
+              e.currentTarget.style.color = "var(--kipu-text)";
+              e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 5%, transparent)";
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.color = "var(--kipu-muted)";
+              e.currentTarget.style.background = "transparent";
+            }}
           >
             <ArrowLeft size={18} />
           </button>
           <div>
-            <h1 className="text-xl font-bold text-white">{cliente.razon_social}</h1>
-            <p className="text-sm text-gray-500">
+            <h1 className="text-xl font-bold" style={{ color: "var(--kipu-text)" }}>{cliente.razon_social}</h1>
+            <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>
               {TIPO_ID[cliente.tipo_identificacion_sri] ?? "ID"}: {cliente.identificacion}
             </p>
           </div>
         </div>
         <button
           onClick={nuevaFactura}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium transition-colors shrink-0"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-medium transition-colors shrink-0"
+          style={{ background: "var(--kipu-accent)" }}
+          onMouseEnter={e => e.currentTarget.style.background = "var(--kipu-accent-h)"}
+          onMouseLeave={e => e.currentTarget.style.background = "var(--kipu-accent)"}
         >
           <Plus size={13} />
           <span className="hidden sm:inline">Nueva factura</span>
@@ -250,26 +291,47 @@ export default function DetallePersonaPage() {
 
       {/* Resumen */}
       <div className="grid grid-cols-2 gap-3">
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-          <p className="text-xs text-gray-500 mb-1">Total facturado</p>
-          <p className="text-2xl font-bold text-white">${fmt(resumen.suma_facturada)}</p>
-          <p className="text-xs text-gray-600 mt-0.5">solo autorizadas</p>
+        <div
+          className="rounded-xl p-4"
+          style={{
+            background: "var(--kipu-surface)",
+            border: "1px solid var(--kipu-border)",
+          }}
+        >
+          <p className="text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>Total facturado</p>
+          <p className="text-2xl font-bold" style={{ color: "var(--kipu-text)" }}>${fmt(resumen.suma_facturada)}</p>
+          <p className="text-xs mt-0.5" style={{ color: "var(--kipu-subtle)" }}>solo autorizadas</p>
         </div>
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-          <p className="text-xs text-gray-500 mb-1">Facturas emitidas</p>
-          <p className="text-2xl font-bold text-white">{resumen.total_documentos}</p>
-          <p className="text-xs text-gray-600 mt-0.5">total histórico</p>
+        <div
+          className="rounded-xl p-4"
+          style={{
+            background: "var(--kipu-surface)",
+            border: "1px solid var(--kipu-border)",
+          }}
+        >
+          <p className="text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>Facturas emitidas</p>
+          <p className="text-2xl font-bold" style={{ color: "var(--kipu-text)" }}>{resumen.total_documentos}</p>
+          <p className="text-xs mt-0.5" style={{ color: "var(--kipu-subtle)" }}>total histórico</p>
         </div>
       </div>
 
       {/* Datos */}
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+      <div
+        className="rounded-xl p-4"
+        style={{
+          background: "var(--kipu-surface)",
+          border: "1px solid var(--kipu-border)",
+        }}
+      >
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Datos</h2>
+          <h2 className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--kipu-subtle)" }}>Datos</h2>
           {!editing ? (
             <button
               onClick={() => setEditing(true)}
-              className="flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
+              className="flex items-center gap-1 text-xs transition-colors"
+              style={{ color: "var(--kipu-accent)" }}
+              onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent-h)"}
+              onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-accent)"}
             >
               <Edit2 size={12} /> Editar
             </button>
@@ -278,7 +340,10 @@ export default function DetallePersonaPage() {
               <button
                 type="button"
                 onClick={cancelarEdicion}
-                className="flex items-center gap-1 text-xs text-gray-500 hover:text-white transition-colors"
+                className="flex items-center gap-1 text-xs transition-colors"
+                style={{ color: "var(--kipu-subtle)" }}
+                onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
+                onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-subtle)"}
               >
                 <X size={12} /> Cancelar
               </button>
@@ -286,9 +351,23 @@ export default function DetallePersonaPage() {
                 type="button"
                 onClick={guardar}
                 disabled={!puedeGuardar}
-                className="flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-300 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                className="flex items-center gap-1 text-xs transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                style={{ color: "var(--kipu-accent)" }}
+                onMouseEnter={e => {
+                  if (puedeGuardar) e.currentTarget.style.color = "var(--kipu-accent-h)";
+                }}
+                onMouseLeave={e => {
+                  if (puedeGuardar) e.currentTarget.style.color = "var(--kipu-accent)";
+                }}
               >
-                {saving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
+                {saving ? (
+                  <div
+                    className="w-3 h-3 border-2 border-t-transparent rounded-full animate-spin"
+                    style={{ borderColor: "var(--kipu-accent)", borderTopColor: "transparent" }}
+                  />
+                ) : (
+                  <Save size={12} />
+                )}
                 Guardar
               </button>
             </div>
@@ -296,14 +375,51 @@ export default function DetallePersonaPage() {
         </div>
 
         <div className="space-y-3">
-          {/* Tipo e identificación — nunca editables */}
+          {/* ID de usuario / UID de la persona */}
+          <div className="flex justify-between items-center text-sm">
+            <span className="flex items-center gap-2" style={{ color: "var(--kipu-subtle)" }}>
+              <Key size={13} /> UID Usuario
+            </span>
+            <div className="flex items-center gap-2">
+              <code
+                className="text-xs font-mono px-2 py-0.5 rounded"
+                style={{
+                  background: "color-mix(in srgb, var(--kipu-text) 5%, transparent)",
+                  color: "var(--kipu-text)",
+                }}
+              >
+                {cliente.uid || (id as string)}
+              </code>
+              <button
+                type="button"
+                onClick={copiarUid}
+                className="p-1.5 rounded transition-colors flex items-center gap-1 text-xs"
+                style={{
+                  color: copiado ? "var(--kipu-success)" : "var(--kipu-subtle)",
+                  background: "color-mix(in srgb, var(--kipu-text) 4%, transparent)",
+                }}
+                title="Copiar UID"
+              >
+                {copiado ? (
+                  <>
+                    <Check size={13} />
+                    <span className="text-[10px]" style={{ color: "var(--kipu-success)" }}>Copiado</span>
+                  </>
+                ) : (
+                  <Copy size={13} />
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Tipo e identificación — no editables */}
           <div className="flex justify-between text-sm">
-            <span className="text-gray-500 flex items-center gap-2"><User size={13} /> Tipo</span>
-            <span className="text-white">{TIPO_ID[cliente.tipo_identificacion_sri] ?? cliente.tipo_identificacion_sri}</span>
+            <span className="flex items-center gap-2" style={{ color: "var(--kipu-subtle)" }}><User size={13} /> Tipo</span>
+            <span style={{ color: "var(--kipu-text)" }}>{TIPO_ID[cliente.tipo_identificacion_sri] ?? cliente.tipo_identificacion_sri}</span>
           </div>
           <div className="flex justify-between text-sm">
-            <span className="text-gray-500 flex items-center gap-2"><FileText size={13} /> Identificación</span>
-            <span className="text-white font-mono">{cliente.identificacion}</span>
+            <span className="flex items-center gap-2" style={{ color: "var(--kipu-subtle)" }}><FileText size={13} /> Identificación</span>
+            <span className="font-mono" style={{ color: "var(--kipu-text)" }}>{cliente.identificacion}</span>
           </div>
 
           {/* Campos editables */}
@@ -336,42 +452,62 @@ export default function DetallePersonaPage() {
         </div>
 
         {error && (
-          <div className="mt-3 flex items-center gap-2 text-xs text-red-400 bg-red-400/10 px-3 py-2 rounded-lg">
+          <div
+            className="mt-3 flex items-center gap-2 text-xs px-3 py-2 rounded-lg"
+            style={{
+              color: "var(--kipu-danger)",
+              background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
+            }}
+          >
             <AlertCircle size={12} /> {error}
           </div>
         )}
       </div>
 
       {/* Historial de facturas */}
-      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
-        <div className="px-4 py-3 border-b border-gray-800">
-          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Historial de facturas</h2>
+      <div
+        className="rounded-xl overflow-hidden"
+        style={{
+          background: "var(--kipu-surface)",
+          border: "1px solid var(--kipu-border)",
+        }}
+      >
+        <div className="px-4 py-3" style={{ borderBottom: "1px solid var(--kipu-border)" }}>
+          <h2 className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--kipu-subtle)" }}>Historial de facturas</h2>
         </div>
         {facturas.length === 0 ? (
           <div className="px-4 py-8 text-center">
-            <p className="text-xs text-gray-600">Sin facturas emitidas a esta persona.</p>
+            <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Sin facturas emitidas a esta persona.</p>
           </div>
         ) : (
-          <div className="divide-y divide-gray-800">
-            {facturas.map((f: any) => {
+          <div>
+            {facturas.map((f: any, idx: number) => {
               const estado = ESTADO_CONFIG[f.estado_sri] ?? ESTADO_CONFIG.FIRMADO;
               const Icon   = estado.icon;
               return (
                 <Link
                   key={f.id}
                   href={`/documentos/${f.id}`}
-                  className="flex items-center gap-3 px-4 py-3 hover:bg-gray-800/50 transition-colors"
+                  className="flex items-center gap-3 px-4 py-3 transition-colors"
+                  style={{
+                    borderTop: idx > 0 ? "1px solid var(--kipu-border)" : "none",
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 4%, transparent)"}
+                  onMouseLeave={e => e.currentTarget.style.background = "transparent"}
                 >
-                  <div className={clsx("w-7 h-7 rounded-full flex items-center justify-center shrink-0", estado.color.split(" ")[1])}>
-                    <Icon size={13} className={estado.color.split(" ")[0]} />
+                  <div
+                    className="w-7 h-7 rounded-full flex items-center justify-center shrink-0"
+                    style={{ background: estado.bg }}
+                  >
+                    <Icon size={13} style={{ color: estado.color }} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-mono text-indigo-400">{f.numero_doc}</p>
-                    <p className="text-xs text-gray-500">{f.fecha_emision}</p>
+                    <p className="text-sm font-mono" style={{ color: "var(--kipu-accent)" }}>{f.numero_doc}</p>
+                    <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>{f.fecha_emision}</p>
                   </div>
                   <div className="text-right shrink-0">
-                    <p className="text-sm font-semibold text-white">${fmt(f.importe_total)}</p>
-                    <p className={clsx("text-xs", estado.color.split(" ")[0])}>{estado.label}</p>
+                    <p className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>${fmt(f.importe_total)}</p>
+                    <p className="text-xs" style={{ color: estado.color }}>{estado.label}</p>
                   </div>
                 </Link>
               );
@@ -381,23 +517,35 @@ export default function DetallePersonaPage() {
       </div>
 
       {/* Cuentas */}
-      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
-        <div className="px-4 py-3 border-b border-gray-800 flex items-center justify-between">
-          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Cuentas</h2>
+      <div
+        className="rounded-xl overflow-hidden"
+        style={{
+          background: "var(--kipu-surface)",
+          border: "1px solid var(--kipu-border)",
+        }}
+      >
+        <div
+          className="px-4 py-3 flex items-center justify-between"
+          style={{ borderBottom: "1px solid var(--kipu-border)" }}
+        >
+          <h2 className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--kipu-subtle)" }}>Cuentas</h2>
           <div className="flex items-center gap-3">
             {resumenCuentas.por_cobrar > 0 && (
-              <span className="text-xs text-emerald-400 flex items-center gap-1">
+              <span className="text-xs flex items-center gap-1" style={{ color: "var(--kipu-success)" }}>
                 <TrendingUp size={11} /> ${resumenCuentas.por_cobrar.toFixed(2)} por cobrar
               </span>
             )}
             {resumenCuentas.por_pagar > 0 && (
-              <span className="text-xs text-red-400 flex items-center gap-1">
+              <span className="text-xs flex items-center gap-1" style={{ color: "var(--kipu-danger)" }}>
                 <TrendingDown size={11} /> ${resumenCuentas.por_pagar.toFixed(2)} por pagar
               </span>
             )}
             <Link
               href={`/cuentas?cliente=${id}`}
-              className="flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
+              className="flex items-center gap-1 text-xs transition-colors"
+              style={{ color: "var(--kipu-accent)" }}
+              onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent-h)"}
+              onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-accent)"}
             >
               <Plus size={12} /> Nueva
             </Link>
@@ -405,44 +553,57 @@ export default function DetallePersonaPage() {
         </div>
         {loadingCuentas ? (
           <div className="flex items-center justify-center py-8">
-            <Loader2 size={18} className="animate-spin text-indigo-400" />
+            <div
+              className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin"
+              style={{ borderColor: "var(--kipu-accent)", borderTopColor: "transparent" }}
+            />
           </div>
         ) : cuentas.length === 0 ? (
           <div className="px-4 py-8 text-center">
-            <Wallet size={28} className="text-gray-700 mx-auto mb-2" />
-            <p className="text-xs text-gray-600">Sin cuentas registradas.</p>
+            <Wallet size={28} className="mx-auto mb-2" style={{ color: "var(--kipu-subtle)" }} />
+            <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Sin cuentas registradas.</p>
           </div>
         ) : (
-          <div className="divide-y divide-gray-800">
-            {cuentas.map((c: any) => {
+          <div>
+            {cuentas.map((c: any, idx: number) => {
               const ESTADO_COLOR: Record<string, string> = {
-                PENDIENTE: "text-amber-400",
-                PARCIAL:   "text-blue-400",
-                PAGADO:    "text-emerald-400",
-                ANULADO:   "text-gray-500",
+                PENDIENTE: "var(--kipu-warning)",
+                PARCIAL:   "#60a5fa",
+                PAGADO:    "var(--kipu-success)",
+                ANULADO:   "var(--kipu-subtle)",
               };
               return (
                 <Link
                   key={c.id}
                   href={`/cuentas/${c.id}`}
-                  className="flex items-center gap-3 px-4 py-3 hover:bg-gray-800/50 transition-colors"
+                  className="flex items-center gap-3 px-4 py-3 transition-colors"
+                  style={{
+                    borderTop: idx > 0 ? "1px solid var(--kipu-border)" : "none",
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 4%, transparent)"}
+                  onMouseLeave={e => e.currentTarget.style.background = "transparent"}
                 >
-                  <div className={clsx(
-                    "w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-bold",
-                    c.tipo === "COBRAR" ? "bg-emerald-400/10 text-emerald-400" : "bg-red-400/10 text-red-400"
-                  )}>
+                  <div
+                    className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-bold"
+                    style={{
+                      background: c.tipo === "COBRAR"
+                        ? "color-mix(in srgb, var(--kipu-success) 10%, transparent)"
+                        : "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
+                      color: c.tipo === "COBRAR" ? "var(--kipu-success)" : "var(--kipu-danger)",
+                    }}
+                  >
                     {c.tipo === "COBRAR" ? "C" : "P"}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-white truncate">{c.concepto}</p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-sm truncate" style={{ color: "var(--kipu-text)" }}>{c.concepto}</p>
+                    <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
                       {c.fecha_emision}
                       {c.fecha_vencimiento && ` · vence ${c.fecha_vencimiento}`}
                     </p>
                   </div>
                   <div className="text-right shrink-0">
-                    <p className="text-sm font-semibold text-white">${c.saldo_pendiente.toFixed(2)}</p>
-                    <p className={clsx("text-xs", ESTADO_COLOR[c.estado] ?? "text-gray-500")}>
+                    <p className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>${c.saldo_pendiente.toFixed(2)}</p>
+                    <p className="text-xs" style={{ color: ESTADO_COLOR[c.estado] ?? "var(--kipu-subtle)" }}>
                       {c.estado.toLowerCase()}
                     </p>
                   </div>

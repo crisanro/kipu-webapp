@@ -1,13 +1,12 @@
-// app/(dashboard)/documentos/emitir/fac/components/PuntoEmision.tsx
 "use client";
 
 import { ChevronDown } from "lucide-react";
 
 interface Establecimiento {
-  codigo:          string;
+  codigo:           string;
   nombre_comercial?: string;
-  direccion:       string;
-  puntos_emision:  { codigo: string; nombre?: string }[];
+  direccion:        string;
+  puntos_emision:   { codigo: string; nombre?: string }[];
 }
 
 interface Props {
@@ -30,8 +29,16 @@ export default function PuntoEmision({
   if (establecimientos.length === 0) return null;
 
   return (
-    <div className="bg-gray-900 rounded-xl border border-gray-800 p-4">
-      <h2 className="text-sm font-semibold text-white mb-3">Punto de emisión</h2>
+    <div
+      className="rounded-xl p-4"
+      style={{
+        background: "var(--kipu-surface)",
+        border: "1px solid var(--kipu-border)",
+      }}
+    >
+      <h2 className="text-sm font-semibold mb-3" style={{ color: "var(--kipu-text)" }}>
+        Punto de emisión
+      </h2>
       <div className="space-y-2">
 
         {/* Establecimiento */}
@@ -43,7 +50,14 @@ export default function PuntoEmision({
               const ptos  = estab?.puntos_emision ?? [];
               onEstabChange(e.target.value, ptos);
             }}
-            className="w-full px-3 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-indigo-500 text-sm appearance-none pr-8"
+            className="w-full px-3 py-2 rounded-lg text-sm appearance-none pr-8 transition-colors focus:outline-none"
+            style={{
+              background: "var(--kipu-surface)",
+              border: "1px solid var(--kipu-border)",
+              color: "var(--kipu-text)",
+            }}
+            onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+            onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
           >
             {establecimientos.map((e) => (
               <option key={e.codigo} value={e.codigo}>
@@ -51,7 +65,11 @@ export default function PuntoEmision({
               </option>
             ))}
           </select>
-          <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
+          <ChevronDown
+            size={14}
+            className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"
+            style={{ color: "var(--kipu-subtle)" }}
+          />
         </div>
 
         {/* Punto de emisión */}
@@ -59,7 +77,14 @@ export default function PuntoEmision({
           <select
             value={ptoSelected}
             onChange={(e) => onPtoChange(e.target.value)}
-            className="w-full px-3 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-indigo-500 text-sm appearance-none pr-8"
+            className="w-full px-3 py-2 rounded-lg text-sm appearance-none pr-8 transition-colors focus:outline-none"
+            style={{
+              background: "var(--kipu-surface)",
+              border: "1px solid var(--kipu-border)",
+              color: "var(--kipu-text)",
+            }}
+            onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+            onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
           >
             {puntos.map((p) => (
               <option key={p.codigo} value={p.codigo}>
@@ -67,7 +92,11 @@ export default function PuntoEmision({
               </option>
             ))}
           </select>
-          <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
+          <ChevronDown
+            size={14}
+            className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"
+            style={{ color: "var(--kipu-subtle)" }}
+          />
         </div>
 
       </div>

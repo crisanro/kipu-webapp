@@ -1,8 +1,7 @@
-// app/(dashboard)/usuarios/page.tsx
 "use client";
 
 import { useAuthStore } from "@/store/auth.store";
-import { UserCog, Loader2 } from "lucide-react";
+import { UserCog } from "lucide-react";
 import TabUsuarios from "@/components/configuracion/TabUsuarios";
 import { usePermiso } from "@/hooks/usePermiso";
 import SinAcceso from "@/components/SinAcceso";
@@ -15,7 +14,10 @@ export default function UsuariosPage() {
   if (!empresa) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 size={24} className="animate-spin text-indigo-400" />
+        <div
+          className="w-6 h-6 border-2 border-t-transparent rounded-full animate-spin"
+          style={{ borderColor: "var(--kipu-accent)", borderTopColor: "transparent" }}
+        />
       </div>
     );
   }
@@ -25,12 +27,15 @@ export default function UsuariosPage() {
 
       {/* Header */}
       <div className="flex items-center gap-3">
-        <div className="w-9 h-9 rounded-lg bg-indigo-600/20 flex items-center justify-center">
-          <UserCog size={18} className="text-indigo-400" />
+        <div
+          className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
+          style={{ background: "color-mix(in srgb, var(--kipu-accent) 20%, transparent)" }}
+        >
+          <UserCog size={18} style={{ color: "var(--kipu-accent)" }} />
         </div>
         <div>
-          <h1 className="text-xl font-bold text-white">Usuarios</h1>
-          <p className="text-sm text-gray-500">
+          <h1 className="text-xl font-bold" style={{ color: "var(--kipu-text)" }}>Usuarios</h1>
+          <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>
             Gestiona quién tiene acceso a {empresa.nombre_comercial || empresa.razon_social}
           </p>
         </div>

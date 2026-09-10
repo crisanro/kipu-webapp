@@ -1,11 +1,10 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
 import { ClipboardList, AlertTriangle } from "lucide-react";
 import { hoyEC } from "@/lib/fecha";
-import { clsx } from "clsx";
 
 // ── Componentes reutilizados de factura ────────────────────────────────────────
 import ClienteSelector from "../../documentos/emitir/components/ClienteSelector";
@@ -85,7 +84,7 @@ export default function NuevaProformaPage() {
       if (data.items && Array.isArray(data.items)) {
         setItems(data.items.map((i: any) => ({
           _id:            genId(),
-          codigo:         String(i.codigo          ?? ""),
+          codigo:         String(i.codigo           ?? ""),
           descripcion:    String(i.descripcion     ?? ""),
           cantidad:       parseFloat(i.cantidad)  || 1,
           precio:         parseFloat(i.precio     ) || parseFloat(i.precio_unitario) || 0,
@@ -159,7 +158,6 @@ export default function NuevaProformaPage() {
           .map((c) => `${c.nombre}: ${c.valor}`)
           .join(" | ") || null,
         items: items.map((i) => {
-          const c = calcItem(i);
           return {
             descripcion:     i.descripcion,
             cantidad:        i.cantidad,
@@ -188,30 +186,43 @@ export default function NuevaProformaPage() {
 
       {/* Header */}
       <div>
-        <h1 className="text-xl font-bold text-white">Nueva Proforma</h1>
-        <p className="text-sm text-gray-500">
+        <h1 className="text-xl font-bold" style={{ color: "var(--kipu-text)" }}>Nueva Proforma</h1>
+        <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>
           {empresa?.razon_social} · Documento no tributario
         </p>
       </div>
 
       {/* Bloqueo sin suscripción */}
       {!tieneSub && (
-        <div className="flex flex-col items-center justify-center py-16 text-center bg-gray-900 border border-gray-800 rounded-xl">
-          <AlertTriangle size={36} className="text-amber-400 mb-3" />
-          <h2 className="text-white font-semibold mb-1">Suscripción requerida</h2>
-          <p className="text-sm text-gray-500 mb-4 max-w-xs">
+        <div
+          className="flex flex-col items-center justify-center py-16 text-center rounded-xl"
+          style={{
+            background: "var(--kipu-surface)",
+            border: "1px solid var(--kipu-border)",
+          }}
+        >
+          <AlertTriangle size={36} className="mb-3" style={{ color: "var(--kipu-warning)" }} />
+          <h2 className="font-semibold mb-1" style={{ color: "var(--kipu-text)" }}>Suscripción requerida</h2>
+          <p className="text-sm mb-4 max-w-xs" style={{ color: "var(--kipu-subtle)" }}>
             Las proformas están disponibles con un plan activo. Activa tu suscripción para continuar.
           </p>
           <div className="flex gap-3">
             <button
               onClick={() => router.back()}
-              className="px-4 py-2 rounded-lg border border-gray-700 text-gray-400 hover:text-white text-sm transition-colors"
+              className="px-4 py-2 rounded-lg text-sm transition-colors"
+              style={{
+                border: "1px solid var(--kipu-border)",
+                color: "var(--kipu-muted)",
+              }}
+              onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
+              onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-muted)"}
             >
               Volver
             </button>
             <button
               onClick={() => router.push("/planes")}
-              className="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-sm font-medium transition-colors"
+              className="px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors"
+              style={{ background: "var(--kipu-warning)" }}
             >
               Ver planes
             </button>
@@ -268,74 +279,130 @@ export default function NuevaProformaPage() {
           <div className="space-y-4">
 
             {/* Fechas */}
-            <div className="bg-gray-900 rounded-xl border border-gray-800 p-4 space-y-3">
-              <h2 className="text-sm font-semibold text-white">Fechas</h2>
+            <div
+              className="rounded-xl p-4 space-y-3"
+              style={{
+                background: "var(--kipu-surface)",
+                border: "1px solid var(--kipu-border)",
+              }}
+            >
+              <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>Fechas</h2>
               <div>
-                <label className="block text-xs text-gray-500 mb-1.5">Fecha emisión</label>
+                <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Fecha emisión</label>
                 <input
                   type="date"
                   value={fechaEmision}
                   onChange={(e) => setFechaEmision(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-indigo-500 text-sm"
+                  className="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none"
+                  style={{
+                    background: "var(--kipu-surface)",
+                    border: "1px solid var(--kipu-border)",
+                    color: "var(--kipu-text)",
+                  }}
+                  onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                  onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
                 />
               </div>
               <div>
-                <label className="block text-xs text-gray-500 mb-1.5">Válida hasta</label>
+                <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Válida hasta</label>
                 <input
                   type="date"
                   value={fechaValidez}
                   onChange={(e) => setFechaValidez(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-indigo-500 text-sm"
+                  className="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none"
+                  style={{
+                    background: "var(--kipu-surface)",
+                    border: "1px solid var(--kipu-border)",
+                    color: "var(--kipu-text)",
+                  }}
+                  onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                  onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
                 />
-                <p className="text-xs text-gray-600 mt-1">Opcional — si no, no vence</p>
+                <p className="text-xs mt-1" style={{ color: "var(--kipu-subtle)" }}>Opcional — si no, no vence</p>
               </div>
             </div>
 
             {/* Resumen */}
-            <div className="bg-gray-900 rounded-xl border border-gray-800 p-4 sticky top-4">
-              <h2 className="text-sm font-semibold text-white mb-4">Resumen</h2>
+            <div
+              className="rounded-xl p-4 sticky top-4"
+              style={{
+                background: "var(--kipu-surface)",
+                border: "1px solid var(--kipu-border)",
+              }}
+            >
+              <h2 className="text-sm font-semibold mb-4" style={{ color: "var(--kipu-text)" }}>Resumen</h2>
               <div className="space-y-2 text-sm">
                 {totales.subtotal > 0 && (
-                  <div className="flex justify-between text-gray-400">
+                  <div className="flex justify-between" style={{ color: "var(--kipu-muted)" }}>
                     <span>Subtotal</span>
                     <span>${fmt(totales.subtotal)}</span>
                   </div>
                 )}
                 {totales.descuento > 0 && (
-                  <div className="flex justify-between text-amber-400">
+                  <div className="flex justify-between" style={{ color: "var(--kipu-warning)" }}>
                     <span>Descuento</span>
                     <span>-${fmt(totales.descuento)}</span>
                   </div>
                 )}
                 {totales.iva > 0 && (
-                  <div className="flex justify-between text-gray-400">
+                  <div className="flex justify-between" style={{ color: "var(--kipu-muted)" }}>
                     <span>IVA</span>
                     <span>${fmt(totales.iva)}</span>
                   </div>
                 )}
-                <div className="border-t border-gray-800 pt-2 flex justify-between font-bold text-white text-base">
+                <div
+                  className="pt-2 flex justify-between font-bold text-base"
+                  style={{
+                    borderTop: "1px solid var(--kipu-border)",
+                    color: "var(--kipu-text)",
+                  }}
+                >
                   <span>Total</span>
                   <span>${fmt(totales.total)}</span>
                 </div>
               </div>
 
-              <div className="mt-3 px-3 py-2 rounded-lg bg-gray-800 text-xs text-gray-500 flex items-center gap-2">
+              <div
+                className="mt-3 px-3 py-2 rounded-lg text-xs flex items-center gap-2"
+                style={{
+                  background: "color-mix(in srgb, var(--kipu-text) 5%, transparent)",
+                  color: "var(--kipu-subtle)",
+                }}
+              >
                 <ClipboardList size={12} />
                 Documento referencial — no tiene validez tributaria
               </div>
 
               {error && (
-                <p className="mt-3 text-xs text-red-400 bg-red-400/10 px-3 py-2 rounded-lg">{error}</p>
+                <p
+                  className="mt-3 text-xs px-3 py-2 rounded-lg"
+                  style={{
+                    color: "var(--kipu-danger)",
+                    background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
+                  }}
+                >
+                  {error}
+                </p>
               )}
 
               <button
                 onClick={guardar}
                 disabled={submitting}
-                className="mt-4 w-full py-3 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2"
+                className="mt-4 w-full py-3 rounded-lg text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ background: "var(--kipu-accent)" }}
+                onMouseEnter={e => {
+                  if (!submitting) e.currentTarget.style.background = "var(--kipu-accent-h)";
+                }}
+                onMouseLeave={e => {
+                  if (!submitting) e.currentTarget.style.background = "var(--kipu-accent)";
+                }}
               >
                 {submitting ? (
                   <>
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <div
+                      className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin"
+                      style={{ borderColor: "#FFFFFF", borderTopColor: "transparent" }}
+                    />
                     Guardando...
                   </>
                 ) : (

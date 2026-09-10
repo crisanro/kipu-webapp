@@ -1,24 +1,22 @@
-// app/(dashboard)/documentos/recibidos/nueva/_components/TabXML.tsx
 "use client";
 import { useRef, useCallback } from "react";
 import { Upload } from "lucide-react";
-import { clsx } from "clsx";
 import { DocParseado } from "./ReviewXML";
 
 interface Props {
-  empresa:   any;
-  onParsed:  (parsed: DocParseado, file: File) => void;
-  error:     string;
-  setError:  (e: string) => void;
-  dragging:  boolean;
+  empresa:     any;
+  onParsed:    (parsed: DocParseado, file: File) => void;
+  error:       string;
+  setError:    (e: string) => void;
+  dragging:    boolean;
   setDragging: (v: boolean) => void;
 }
 
-const TIPO_COLOR: Record<string, string> = {
-  FAC: "bg-gray-400/10 text-gray-400",
-  NCR: "bg-purple-400/10 text-purple-400",
-  NDB: "bg-amber-400/10 text-amber-400",
-  RET: "bg-blue-400/10 text-blue-400",
+const TIPO_COLOR: Record<string, { color: string; bg: string }> = {
+  FAC: { color: "var(--kipu-muted)", bg: "color-mix(in srgb, var(--kipu-muted) 10%, transparent)" },
+  NCR: { color: "#c084fc", bg: "color-mix(in srgb, #c084fc 10%, transparent)" },
+  NDB: { color: "var(--kipu-warning)", bg: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)" },
+  RET: { color: "#60a5fa", bg: "color-mix(in srgb, #60a5fa 10%, transparent)" },
 };
 
 const TIPOS: Record<string, [string, string]> = {
@@ -179,22 +177,46 @@ export default function TabXML({ empresa, onParsed, error, setError, dragging, s
         onDragLeave={() => setDragging(false)}
         onDrop={onDrop}
         onClick={() => fileRef.current?.click()}
-        className={clsx(
-          "border-2 border-dashed rounded-xl p-12 flex flex-col items-center justify-center gap-4 cursor-pointer transition-colors",
-          dragging ? "border-indigo-500 bg-indigo-500/10" : "border-gray-700 hover:border-indigo-500/50 hover:bg-indigo-500/5"
-        )}
+        className="border-2 border-dashed rounded-xl p-12 flex flex-col items-center justify-center gap-4 cursor-pointer transition-colors"
+        style={{
+          borderColor: dragging
+            ? "var(--kipu-accent)"
+            : "var(--kipu-border)",
+          background: dragging
+            ? "color-mix(in srgb, var(--kipu-accent) 10%, transparent)"
+            : "transparent",
+        }}
+        onMouseEnter={e => {
+          if (!dragging) {
+            e.currentTarget.style.borderColor = "color-mix(in srgb, var(--kipu-accent) 50%, transparent)";
+            e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-accent) 5%, transparent)";
+          }
+        }}
+        onMouseLeave={e => {
+          if (!dragging) {
+            e.currentTarget.style.borderColor = "var(--kipu-border)";
+            e.currentTarget.style.background = "transparent";
+          }
+        }}
       >
-        <div className="w-14 h-14 rounded-xl bg-indigo-600/20 flex items-center justify-center">
-          <Upload size={24} className="text-indigo-400" />
+        <div
+          className="w-14 h-14 rounded-xl flex items-center justify-center"
+          style={{ background: "color-mix(in srgb, var(--kipu-accent) 20%, transparent)" }}
+        >
+          <Upload size={24} style={{ color: "var(--kipu-accent)" }} />
         </div>
         <div className="text-center">
-          <p className="text-white font-medium">Arrastra el XML aquí</p>
-          <p className="text-sm text-gray-500 mt-1">o haz clic para seleccionar</p>
-          <p className="text-xs text-gray-600 mt-2">Facturas · Notas de crédito · Notas de débito · Retenciones</p>
+          <p className="font-medium" style={{ color: "var(--kipu-text)" }}>Arrastra el XML aquí</p>
+          <p className="text-sm mt-1" style={{ color: "var(--kipu-subtle)" }}>o haz clic para seleccionar</p>
+          <p className="text-xs mt-2" style={{ color: "var(--kipu-muted)" }}>Facturas · Notas de crédito · Notas de débito · Retenciones</p>
         </div>
-        <input ref={fileRef} type="file" accept=".xml"
+        <input
+          ref={fileRef}
+          type="file"
+          accept=".xml"
           onChange={e => { const f = e.target.files?.[0]; if (f) procesarArchivo(f); }}
-          className="hidden" />
+          className="hidden"
+        />
       </div>
 
       <div className="grid grid-cols-2 gap-2">
@@ -203,12 +225,27 @@ export default function TabXML({ empresa, onParsed, error, setError, dragging, s
           { tipo: "NCR", desc: "Notas de crédito recibidas" },
           { tipo: "NDB", desc: "Notas de débito recibidas" },
           { tipo: "RET", desc: "Retenciones que te hicieron" },
-        ].map(({ tipo, desc }) => (
-          <div key={tipo} className="flex items-center gap-2 bg-gray-900 border border-gray-800 rounded-lg px-3 py-2">
-            <span className={clsx("text-[10px] px-1.5 py-0.5 rounded font-bold", TIPO_COLOR[tipo])}>{tipo}</span>
-            <span className="text-xs text-gray-500">{desc}</span>
-          </div>
-        ))}
+        ].map(({ tipo, desc }) => {
+          const tColor = TIPO_COLOR[tipo] ?? TIPO_COLOR.FAC;
+          return (
+            <div
+              key={tipo}
+              className="flex items-center gap-2 rounded-lg px-3 py-2"
+              style={{
+                background: "var(--kipu-surface)",
+                border: "1px solid var(--kipu-border)",
+              }}
+            >
+              <span
+                className="text-[10px] px-1.5 py-0.5 rounded font-bold"
+                style={{ color: tColor.color, background: tColor.bg }}
+              >
+                {tipo}
+              </span>
+              <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>{desc}</span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

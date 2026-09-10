@@ -1,34 +1,32 @@
-// app/(dashboard)/admin/emisores/[id]/page.tsx
 "use client";
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import api from "@/lib/api";
 import {
   ArrowLeft, Building2, CreditCard, FileText, Users,
-  Loader2, Plus, CheckCircle2, Clock, AlertTriangle,
+  Plus, CheckCircle2, Clock, AlertTriangle,
   XCircle, Send, RefreshCw, Banknote, ShieldCheck,
-  ShieldOff, CalendarClock, Receipt, ChevronDown,
+  ShieldOff, CalendarClock, Receipt,
 } from "lucide-react";
-import { clsx } from "clsx";
 
 const fmt     = (n: any) => parseFloat(n ?? 0).toFixed(2);
 const fmtDate = (d: any) => d ? new Date(d).toLocaleDateString("es-EC", { day: "2-digit", month: "short", year: "numeric" }) : "—";
 
 // ── Estado de suscripción ───────────────────────────────────────────────────
-const SUB_CONFIG: Record<string, { label: string; color: string; icon: any }> = {
-  ACTIVO:    { label: "Activo",    color: "text-emerald-400 bg-emerald-400/10 border-emerald-500/20", icon: ShieldCheck },
-  TRIAL:     { label: "Trial",     color: "text-blue-400 bg-blue-400/10 border-blue-500/20",         icon: Clock },
-  CANCELADO: { label: "Cancelado", color: "text-amber-400 bg-amber-400/10 border-amber-500/20",      icon: ShieldOff },
-  VENCIDO:   { label: "Vencido",   color: "text-red-400 bg-red-400/10 border-red-500/20",            icon: XCircle },
+const SUB_CONFIG: Record<string, { label: string; color: string; bg: string; border: string; icon: any }> = {
+  ACTIVO:    { label: "Activo",    color: "var(--kipu-success)", bg: "color-mix(in srgb, var(--kipu-success) 10%, transparent)", border: "color-mix(in srgb, var(--kipu-success) 20%, transparent)", icon: ShieldCheck },
+  TRIAL:     { label: "Trial",     color: "#60a5fa",            bg: "color-mix(in srgb, #60a5fa 10%, transparent)",            border: "color-mix(in srgb, #60a5fa 20%, transparent)",            icon: Clock },
+  CANCELADO: { label: "Cancelado", color: "var(--kipu-warning)", bg: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)", border: "color-mix(in srgb, var(--kipu-warning) 20%, transparent)", icon: ShieldOff },
+  VENCIDO:   { label: "Vencido",   color: "var(--kipu-danger)",  bg: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",  border: "color-mix(in srgb, var(--kipu-danger) 20%, transparent)",  icon: XCircle },
 };
 
 // ── Estado de documentos ────────────────────────────────────────────────────
-const DOC_CONFIG: Record<string, { label: string; color: string; icon: any }> = {
-  AUTORIZADO: { label: "Autorizado", color: "text-emerald-400 bg-emerald-400/10", icon: CheckCircle2 },
-  FIRMADO:    { label: "En cola",    color: "text-blue-400 bg-blue-400/10",       icon: Clock },
-  DEVUELTA:   { label: "Devuelta",   color: "text-amber-400 bg-amber-400/10",     icon: AlertTriangle },
-  RECHAZADO:  { label: "Rechazado",  color: "text-red-400 bg-red-400/10",         icon: XCircle },
-  PENDIENTE:  { label: "Pendiente",  color: "text-gray-400 bg-gray-400/10",       icon: Clock },
+const DOC_CONFIG: Record<string, { label: string; color: string; bg: string; icon: any }> = {
+  AUTORIZADO: { label: "Autorizado", color: "var(--kipu-success)", bg: "color-mix(in srgb, var(--kipu-success) 10%, transparent)", icon: CheckCircle2 },
+  FIRMADO:    { label: "En cola",    color: "#60a5fa",            bg: "color-mix(in srgb, #60a5fa 10%, transparent)",            icon: Clock },
+  DEVUELTA:   { label: "Devuelta",   color: "var(--kipu-warning)", bg: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)", icon: AlertTriangle },
+  RECHAZADO:  { label: "Rechazado",  color: "var(--kipu-danger)",  bg: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",  icon: XCircle },
+  PENDIENTE:  { label: "Pendiente",  color: "var(--kipu-subtle)",  bg: "color-mix(in srgb, var(--kipu-text) 10%, transparent)",  icon: Clock },
 };
 
 type Tab = "overview" | "suscripcion" | "documentos" | "usuarios" | "creditos" | "notificar";
@@ -63,9 +61,9 @@ export default function AdminEmisorDetallePage() {
   const [guardando,    setGuardando]    = useState(false);
   const [msgEditar,    setMsgEditar]    = useState<{ ok: boolean; texto: string } | null>(null);
   const [form, setForm] = useState({
-    razon_social:          "",
-    nombre_comercial:      "",
-    direccion_matriz:      "",
+    razon_social:           "",
+    nombre_comercial:       "",
+    direccion_matriz:       "",
     obligado_contabilidad: "",
     contribuyente_especial: "",
   });
@@ -225,7 +223,10 @@ export default function AdminEmisorDetallePage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 size={24} className="animate-spin text-indigo-400" />
+        <div
+          className="w-6 h-6 border-2 border-t-transparent rounded-full animate-spin"
+          style={{ borderColor: "var(--kipu-accent)", borderTopColor: "transparent" }}
+        />
       </div>
     );
   }
@@ -241,33 +242,61 @@ export default function AdminEmisorDetallePage() {
       {/* Header */}
       <div className="flex items-center gap-3">
         <button
+          type="button"
           onClick={() => router.back()}
-          className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
+          className="p-2 rounded-lg transition-colors"
+          style={{ color: "var(--kipu-subtle)", background: "transparent" }}
+          onMouseEnter={e => {
+            e.currentTarget.style.color = "var(--kipu-text)";
+            e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 5%, transparent)";
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.color = "var(--kipu-subtle)";
+            e.currentTarget.style.background = "transparent";
+          }}
         >
           <ArrowLeft size={18} />
         </button>
         <div className="flex items-center gap-3 flex-1 min-w-0">
-          <div className="w-10 h-10 rounded-xl bg-indigo-600/20 flex items-center justify-center shrink-0">
-            <Building2 size={18} className="text-indigo-400" />
+          <div
+            className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+            style={{ background: "color-mix(in srgb, var(--kipu-accent) 20%, transparent)" }}
+          >
+            <Building2 size={18} style={{ color: "var(--kipu-accent)" }} />
           </div>
           <div className="min-w-0">
-            <h1 className="text-lg font-bold text-white truncate">
+            <h1 className="text-lg font-bold truncate" style={{ color: "var(--kipu-text)" }}>
               {emisor.nombre_comercial || emisor.razon_social}
             </h1>
-            <p className="text-xs text-gray-500 font-mono">{emisor.ruc}</p>
+            <p className="text-xs font-mono" style={{ color: "var(--kipu-subtle)" }}>{emisor.ruc}</p>
           </div>
-          <span className={clsx(
-            "shrink-0 text-xs px-2 py-0.5 rounded-full",
-            emisor.ambiente === 2
-              ? "bg-emerald-500/20 text-emerald-400"
-              : "bg-amber-500/20 text-amber-400"
-          )}>
+          <span
+            className="shrink-0 text-xs px-2 py-0.5 rounded-full font-medium"
+            style={{
+              background: emisor.ambiente === 2
+                ? "color-mix(in srgb, var(--kipu-success) 20%, transparent)"
+                : "color-mix(in srgb, var(--kipu-warning) 20%, transparent)",
+              color: emisor.ambiente === 2
+                ? "var(--kipu-success)"
+                : "var(--kipu-warning)",
+            }}
+          >
             {emisor.ambiente === 2 ? "Producción" : "Pruebas"}
           </span>
         </div>
         <button
+          type="button"
           onClick={cargar}
-          className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
+          className="p-2 rounded-lg transition-colors"
+          style={{ color: "var(--kipu-subtle)", background: "transparent" }}
+          onMouseEnter={e => {
+            e.currentTarget.style.color = "var(--kipu-text)";
+            e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 5%, transparent)";
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.color = "var(--kipu-subtle)";
+            e.currentTarget.style.background = "transparent";
+          }}
         >
           <RefreshCw size={16} />
         </button>
@@ -279,76 +308,126 @@ export default function AdminEmisorDetallePage() {
           {
             label: "Créditos API",
             value: emisor.balance_emision,
-            color: emisor.balance_emision <= 5 ? "text-red-400" : "text-white",
+            color: emisor.balance_emision <= 5 ? "var(--kipu-danger)" : "var(--kipu-text)",
           },
           {
             label: "Suscripción",
             value: emisor.sub_estado ?? "Sin plan",
-            color: subCfg.color.split(" ")[0],
+            color: subCfg.color,
           },
           {
             label: "Documentos",
             value: emisor.conteos?.total_documentos ?? 0,
-            color: "text-white",
+            color: "var(--kipu-text)",
           },
           {
             label: "Usuarios",
             value: emisor.total_usuarios,
-            color: "text-white",
+            color: "var(--kipu-text)",
           },
         ].map(({ label, value, color }) => (
-          <div key={label} className="bg-gray-900 border border-gray-800 rounded-xl p-3 text-center">
-            <p className={clsx("text-xl font-bold truncate", color)}>{value}</p>
-            <p className="text-xs text-gray-500 mt-0.5">{label}</p>
+          <div
+            key={label}
+            className="rounded-xl p-3 text-center"
+            style={{
+              background: "var(--kipu-surface)",
+              border: "1px solid var(--kipu-border)",
+            }}
+          >
+            <p className="text-xl font-bold truncate" style={{ color }}>{value}</p>
+            <p className="text-xs mt-0.5" style={{ color: "var(--kipu-subtle)" }}>{label}</p>
           </div>
         ))}
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-gray-900 border border-gray-800 rounded-xl p-1 overflow-x-auto">
+      <div
+        className="flex gap-1 rounded-xl p-1 overflow-x-auto"
+        style={{
+          background: "var(--kipu-surface)",
+          border: "1px solid var(--kipu-border)",
+        }}
+      >
         {([
-          { key: "overview",     label: "Info",         icon: Building2   },
-          { key: "suscripcion",  label: "Suscripción",  icon: CalendarClock },
-          { key: "documentos",   label: "Documentos",   icon: FileText    },
-          { key: "usuarios",     label: "Usuarios",     icon: Users       },
-          { key: "creditos",     label: "Créditos API", icon: CreditCard  },
-          { key: "notificar",    label: "Notificar",    icon: Send        },
-        ] as const).map(({ key, label, icon: Icon }) => (
-          <button
-            key={key}
-            onClick={() => setTab(key)}
-            className={clsx(
-              "shrink-0 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-medium transition-colors",
-              tab === key ? "bg-indigo-600 text-white" : "text-gray-500 hover:text-white"
-            )}
-          >
-            <Icon size={13} />
-            <span className="hidden sm:inline">{label}</span>
-          </button>
-        ))}
+          { key: "overview",    label: "Info",         icon: Building2   },
+          { key: "suscripcion", label: "Suscripción",  icon: CalendarClock },
+          { key: "documentos",  label: "Documentos",   icon: FileText    },
+          { key: "usuarios",    label: "Usuarios",     icon: Users       },
+          { key: "creditos",    label: "Créditos API", icon: CreditCard  },
+          { key: "notificar",   label: "Notificar",    icon: Send        },
+        ] as const).map(({ key, label, icon: Icon }) => {
+          const active = tab === key;
+          return (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setTab(key)}
+              className="shrink-0 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-medium transition-colors"
+              style={{
+                background: active ? "var(--kipu-accent)" : "transparent",
+                color: active ? "#FFFFFF" : "var(--kipu-subtle)",
+              }}
+              onMouseEnter={e => {
+                if (!active) e.currentTarget.style.color = "var(--kipu-text)";
+              }}
+              onMouseLeave={e => {
+                if (!active) e.currentTarget.style.color = "var(--kipu-subtle)";
+              }}
+            >
+              <Icon size={13} />
+              <span className="hidden sm:inline">{label}</span>
+            </button>
+          );
+        })}
       </div>
 
       {/* ── Tab: Info ──────────────────────────────────────────────────────── */}
       {tab === "overview" && (
         <div className="space-y-4">
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 space-y-4">
+          <div
+            className="rounded-xl p-4 space-y-4"
+            style={{
+              background: "var(--kipu-surface)",
+              border: "1px solid var(--kipu-border)",
+            }}
+          >
 
             {/* Header con botón editar/cancelar */}
             <div className="flex items-center justify-between">
-              <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              <h2 className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--kipu-subtle)" }}>
                 Datos del emisor
               </h2>
               {!editando ? (
                 <button
+                  type="button"
                   onClick={() => { setEditando(true); setMsgEditar(null); }}
-                  className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors px-2 py-1 rounded-lg hover:bg-indigo-400/10"
+                  className="text-xs transition-colors px-2 py-1 rounded-lg"
+                  style={{ color: "var(--kipu-accent)", background: "transparent" }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.color = "var(--kipu-accent-h)";
+                    e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-accent) 10%, transparent)";
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.color = "var(--kipu-accent)";
+                    e.currentTarget.style.background = "transparent";
+                  }}
                 >
                   Editar
                 </button>
               ) : (
                 <button
+                  type="button"
                   onClick={() => { setEditando(false); setMsgEditar(null); }}
-                  className="text-xs text-gray-500 hover:text-white transition-colors px-2 py-1 rounded-lg hover:bg-gray-800"
+                  className="text-xs transition-colors px-2 py-1 rounded-lg"
+                  style={{ color: "var(--kipu-subtle)", background: "transparent" }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.color = "var(--kipu-text)";
+                    e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 5%, transparent)";
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.color = "var(--kipu-subtle)";
+                    e.currentTarget.style.background = "transparent";
+                  }}
                 >
                   Cancelar
                 </button>
@@ -357,11 +436,17 @@ export default function AdminEmisorDetallePage() {
 
             {/* RUC — nunca editable */}
             <div className="flex justify-between items-center text-sm gap-4">
-              <span className="text-gray-500 shrink-0">RUC</span>
+              <span className="shrink-0" style={{ color: "var(--kipu-subtle)" }}>RUC</span>
               <div className="flex items-center gap-2">
-                <span className="text-white font-mono">{emisor.ruc}</span>
+                <span className="font-mono font-medium" style={{ color: "var(--kipu-text)" }}>{emisor.ruc}</span>
                 {emisor.firma_ok && (
-                  <span className="text-[10px] text-amber-500/70 bg-amber-500/10 px-1.5 py-0.5 rounded">
+                  <span
+                    className="text-[10px] px-1.5 py-0.5 rounded font-medium"
+                    style={{
+                      color: "var(--kipu-warning)",
+                      background: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)",
+                    }}
+                  >
                     bloqueado
                   </span>
                 )}
@@ -370,66 +455,97 @@ export default function AdminEmisorDetallePage() {
 
             {/* Razón Social — editable por soporte */}
             <div className="flex justify-between items-center text-sm gap-4">
-              <span className="text-gray-500 shrink-0">Razón Social</span>
+              <span className="shrink-0" style={{ color: "var(--kipu-subtle)" }}>Razón Social</span>
               {editando ? (
                 <input
                   value={form.razon_social}
                   onChange={(e) => setForm(f => ({ ...f, razon_social: e.target.value }))}
-                  className="flex-1 px-2 py-1 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-indigo-500 text-sm text-right"
+                  className="flex-1 px-2 py-1 rounded-lg text-sm text-right focus:outline-none transition-colors"
+                  style={{
+                    background: "var(--kipu-surface)",
+                    border: "1px solid var(--kipu-border)",
+                    color: "var(--kipu-text)",
+                  }}
+                  onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                  onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
                 />
               ) : (
-                <span className="text-white text-right">{emisor.razon_social}</span>
+                <span className="text-right font-medium" style={{ color: "var(--kipu-text)" }}>{emisor.razon_social}</span>
               )}
             </div>
 
             {/* Nombre Comercial */}
             <div className="flex justify-between items-center text-sm gap-4">
-              <span className="text-gray-500 shrink-0">Nombre Comercial</span>
+              <span className="shrink-0" style={{ color: "var(--kipu-subtle)" }}>Nombre Comercial</span>
               {editando ? (
                 <input
                   value={form.nombre_comercial}
                   onChange={(e) => setForm(f => ({ ...f, nombre_comercial: e.target.value }))}
                   placeholder="Opcional"
-                  className="flex-1 px-2 py-1 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 text-sm text-right"
+                  className="flex-1 px-2 py-1 rounded-lg text-sm text-right focus:outline-none transition-colors"
+                  style={{
+                    background: "var(--kipu-surface)",
+                    border: "1px solid var(--kipu-border)",
+                    color: "var(--kipu-text)",
+                  }}
+                  onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                  onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
                 />
               ) : (
-                <span className="text-white text-right">{emisor.nombre_comercial || "—"}</span>
+                <span className="text-right font-medium" style={{ color: "var(--kipu-text)" }}>{emisor.nombre_comercial || "—"}</span>
               )}
             </div>
 
             {/* Dirección Matriz */}
             <div className="flex justify-between items-start text-sm gap-4">
-              <span className="text-gray-500 shrink-0">Dirección Matriz</span>
+              <span className="shrink-0" style={{ color: "var(--kipu-subtle)" }}>Dirección Matriz</span>
               {editando ? (
                 <input
                   value={form.direccion_matriz}
                   onChange={(e) => setForm(f => ({ ...f, direccion_matriz: e.target.value }))}
-                  className="flex-1 px-2 py-1 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-indigo-500 text-sm text-right"
+                  className="flex-1 px-2 py-1 rounded-lg text-sm text-right focus:outline-none transition-colors"
+                  style={{
+                    background: "var(--kipu-surface)",
+                    border: "1px solid var(--kipu-border)",
+                    color: "var(--kipu-text)",
+                  }}
+                  onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                  onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
                 />
               ) : (
-                <span className="text-white text-right max-w-[60%]">{emisor.direccion_matriz || "—"}</span>
+                <span className="text-right max-w-[60%] font-medium" style={{ color: "var(--kipu-text)" }}>{emisor.direccion_matriz || "—"}</span>
               )}
             </div>
 
             {/* Obligado Contabilidad */}
             <div className="flex justify-between items-center text-sm gap-4">
-              <span className="text-gray-500 shrink-0">Obligado Contabilidad</span>
+              <span className="shrink-0" style={{ color: "var(--kipu-subtle)" }}>Obligado Contabilidad</span>
               {editando ? (
                 <select
                   value={form.obligado_contabilidad}
                   onChange={(e) => setForm(f => ({ ...f, obligado_contabilidad: e.target.value }))}
-                  className="px-2 py-1 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-indigo-500 text-sm"
+                  className="px-2 py-1 rounded-lg text-sm focus:outline-none transition-colors"
+                  style={{
+                    background: "var(--kipu-surface)",
+                    border: "1px solid var(--kipu-border)",
+                    color: "var(--kipu-text)",
+                  }}
                 >
                   <option value="NO">NO</option>
                   <option value="SI">SI</option>
                 </select>
               ) : (
-                <span className={clsx(
-                  "text-xs px-2 py-0.5 rounded-full",
-                  emisor.obligado_contabilidad === "SI"
-                    ? "bg-indigo-500/20 text-indigo-400"
-                    : "bg-gray-700 text-gray-400"
-                )}>
+                <span
+                  className="text-xs px-2 py-0.5 rounded-full font-medium"
+                  style={{
+                    background: emisor.obligado_contabilidad === "SI"
+                      ? "color-mix(in srgb, var(--kipu-accent) 20%, transparent)"
+                      : "color-mix(in srgb, var(--kipu-text) 10%, transparent)",
+                    color: emisor.obligado_contabilidad === "SI"
+                      ? "var(--kipu-accent)"
+                      : "var(--kipu-subtle)",
+                  }}
+                >
                   {emisor.obligado_contabilidad ?? "NO"}
                 </span>
               )}
@@ -437,16 +553,23 @@ export default function AdminEmisorDetallePage() {
 
             {/* Contribuyente Especial */}
             <div className="flex justify-between items-center text-sm gap-4">
-              <span className="text-gray-500 shrink-0">Contribuyente Especial</span>
+              <span className="shrink-0" style={{ color: "var(--kipu-subtle)" }}>Contribuyente Especial</span>
               {editando ? (
                 <input
                   value={form.contribuyente_especial}
                   onChange={(e) => setForm(f => ({ ...f, contribuyente_especial: e.target.value }))}
                   placeholder="N° resolución o vacío"
-                  className="flex-1 px-2 py-1 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 text-sm text-right"
+                  className="flex-1 px-2 py-1 rounded-lg text-sm text-right focus:outline-none transition-colors"
+                  style={{
+                    background: "var(--kipu-surface)",
+                    border: "1px solid var(--kipu-border)",
+                    color: "var(--kipu-text)",
+                  }}
+                  onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                  onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
                 />
               ) : (
-                <span className="text-white text-right">{emisor.contribuyente_especial || "—"}</span>
+                <span className="text-right font-medium" style={{ color: "var(--kipu-text)" }}>{emisor.contribuyente_especial || "—"}</span>
               )}
             </div>
 
@@ -459,33 +582,51 @@ export default function AdminEmisorDetallePage() {
               { label: "Registro",         value: fmtDate(emisor.created_at) },
             ].map(({ label, value }) => (
               <div key={label} className="flex justify-between text-sm gap-4">
-                <span className="text-gray-500 shrink-0">{label}</span>
-                <span className="text-white text-right">{value}</span>
+                <span className="shrink-0" style={{ color: "var(--kipu-subtle)" }}>{label}</span>
+                <span className="text-right font-medium" style={{ color: "var(--kipu-text)" }}>{value}</span>
               </div>
             ))}
 
             {/* Feedback + botón guardar */}
             {msgEditar && (
-              <p className={clsx(
-                "text-xs px-3 py-2 rounded-lg",
-                msgEditar.ok
-                  ? "text-emerald-400 bg-emerald-400/10"
-                  : "text-red-400 bg-red-400/10"
-              )}>
+              <p
+                className="text-xs px-3 py-2 rounded-lg font-medium"
+                style={{
+                  color: msgEditar.ok ? "var(--kipu-success)" : "var(--kipu-danger)",
+                  background: msgEditar.ok
+                    ? "color-mix(in srgb, var(--kipu-success) 10%, transparent)"
+                    : "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
+                }}
+              >
                 {msgEditar.ok ? "✅" : "❌"} {msgEditar.texto}
               </p>
             )}
 
             {editando && (
               <button
+                type="button"
                 onClick={guardarEdicion}
                 disabled={guardando}
-                className="w-full py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-medium text-sm transition-colors flex items-center justify-center gap-2"
+                className="w-full py-2.5 rounded-lg text-white font-medium text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                style={{ background: "var(--kipu-accent)" }}
+                onMouseEnter={e => {
+                  if (!guardando) e.currentTarget.style.background = "var(--kipu-accent-h)";
+                }}
+                onMouseLeave={e => {
+                  if (!guardando) e.currentTarget.style.background = "var(--kipu-accent)";
+                }}
               >
-                {guardando
-                  ? <><Loader2 size={14} className="animate-spin" /> Guardando...</>
-                  : "Guardar cambios"
-                }
+                {guardando ? (
+                  <>
+                    <div
+                      className="w-3.5 h-3.5 border-2 border-t-transparent rounded-full animate-spin"
+                      style={{ borderColor: "#FFFFFF", borderTopColor: "transparent" }}
+                    />
+                    Guardando...
+                  </>
+                ) : (
+                  "Guardar cambios"
+                )}
               </button>
             )}
           </div>
@@ -497,10 +638,14 @@ export default function AdminEmisorDetallePage() {
         <div className="space-y-4">
 
           {/* Estado actual */}
-          <div className={clsx(
-            "rounded-xl border p-4 flex items-center gap-3",
-            subCfg.color
-          )}>
+          <div
+            className="rounded-xl border p-4 flex items-center gap-3"
+            style={{
+              color: subCfg.color,
+              background: subCfg.bg,
+              borderColor: subCfg.border,
+            }}
+          >
             <SubIcon size={20} className="shrink-0" />
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-sm">
@@ -521,152 +666,237 @@ export default function AdminEmisorDetallePage() {
           </div>
 
           {/* Activar por transferencia */}
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 space-y-4">
+          <div
+            className="rounded-xl p-4 space-y-4"
+            style={{
+              background: "var(--kipu-surface)",
+              border: "1px solid var(--kipu-border)",
+            }}
+          >
             <div className="flex items-center gap-2">
-              <Banknote size={15} className="text-indigo-400" />
-              <h2 className="text-sm font-semibold text-white">Activar por transferencia</h2>
+              <Banknote size={15} style={{ color: "var(--kipu-accent)" }} />
+              <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>Activar por transferencia</h2>
             </div>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
               Registra el pago manual y activa la suscripción PRO ANUAL. Se emite la factura de Kipu automáticamente.
             </p>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs text-gray-500 mb-1.5">Monto cobrado (USD + IVA)</label>
+                <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Monto cobrado (USD + IVA)</label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">$</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm" style={{ color: "var(--kipu-subtle)" }}>$</span>
                   <input
                     type="number"
                     value={tfMonto}
                     onChange={(e) => setTfMonto(e.target.value)}
                     min="0"
                     step="0.01"
-                    className="w-full pl-7 pr-3 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-indigo-500 text-sm"
+                    className="w-full pl-7 pr-3 py-2 rounded-lg text-sm focus:outline-none transition-colors"
+                    style={{
+                      background: "var(--kipu-surface)",
+                      border: "1px solid var(--kipu-border)",
+                      color: "var(--kipu-text)",
+                    }}
+                    onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                    onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-xs text-gray-500 mb-1.5">Fecha del comprobante</label>
+                <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Fecha del comprobante</label>
                 <input
                   type="date"
                   value={tfFecha}
                   onChange={(e) => setTfFecha(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-indigo-500 text-sm"
+                  className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none transition-colors"
+                  style={{
+                    background: "var(--kipu-surface)",
+                    border: "1px solid var(--kipu-border)",
+                    color: "var(--kipu-text)",
+                  }}
+                  onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                  onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs text-gray-500 mb-1.5">Banco origen</label>
+              <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Banco origen</label>
               <input
                 type="text"
                 value={tfBanco}
                 onChange={(e) => setTfBanco(e.target.value)}
                 placeholder="Ej: Pichincha, Pacífico"
-                className="w-full px-3 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 text-sm"
+                className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none transition-colors"
+                style={{
+                  background: "var(--kipu-surface)",
+                  border: "1px solid var(--kipu-border)",
+                  color: "var(--kipu-text)",
+                }}
+                onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
               />
             </div>
 
             <div>
-              <label className="block text-xs text-gray-500 mb-1.5">
-                Referencia / N° comprobante <span className="text-red-400">*</span>
+              <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>
+                Referencia / N° comprobante <span style={{ color: "var(--kipu-danger)" }}>*</span>
               </label>
               <input
                 type="text"
                 value={tfRef}
                 onChange={(e) => setTfRef(e.target.value)}
                 placeholder="Ej: 0021234567890123456789"
-                className="w-full px-3 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 text-sm font-mono"
+                className="w-full px-3 py-2 rounded-lg text-sm font-mono focus:outline-none transition-colors"
+                style={{
+                  background: "var(--kipu-surface)",
+                  border: "1px solid var(--kipu-border)",
+                  color: "var(--kipu-text)",
+                }}
+                onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
               />
             </div>
 
             <div>
-              <label className="block text-xs text-gray-500 mb-1.5">Notas internas</label>
+              <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Notas internas</label>
               <input
                 type="text"
                 value={tfNotas}
                 onChange={(e) => setTfNotas(e.target.value)}
                 placeholder="Opcional — quién confirmó, canal, etc."
-                className="w-full px-3 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 text-sm"
+                className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none transition-colors"
+                style={{
+                  background: "var(--kipu-surface)",
+                  border: "1px solid var(--kipu-border)",
+                  color: "var(--kipu-text)",
+                }}
+                onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
               />
             </div>
 
             {msgTransf && (
-              <p className={clsx(
-                "text-xs px-3 py-2 rounded-lg",
-                msgTransf.ok
-                  ? "text-emerald-400 bg-emerald-400/10"
-                  : "text-red-400 bg-red-400/10"
-              )}>
+              <p
+                className="text-xs px-3 py-2 rounded-lg font-medium"
+                style={{
+                  color: msgTransf.ok ? "var(--kipu-success)" : "var(--kipu-danger)",
+                  background: msgTransf.ok
+                    ? "color-mix(in srgb, var(--kipu-success) 10%, transparent)"
+                    : "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
+                }}
+              >
                 {msgTransf.ok ? "✅" : "❌"} {msgTransf.texto}
               </p>
             )}
 
             <button
+              type="button"
               onClick={activarTransferencia}
               disabled={activando || !tfRef.trim()}
-              className="w-full py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-medium text-sm transition-colors flex items-center justify-center gap-2"
+              className="w-full py-2.5 rounded-lg text-white font-medium text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+              style={{ background: "var(--kipu-accent)" }}
+              onMouseEnter={e => {
+                if (!activando && tfRef.trim()) e.currentTarget.style.background = "var(--kipu-accent-h)";
+              }}
+              onMouseLeave={e => {
+                if (!activando && tfRef.trim()) e.currentTarget.style.background = "var(--kipu-accent)";
+              }}
             >
-              {activando
-                ? <><Loader2 size={14} className="animate-spin" /> Activando...</>
-                : <><Receipt size={14} /> Activar y emitir factura</>
-              }
+              {activando ? (
+                <>
+                  <div
+                    className="w-3.5 h-3.5 border-2 border-t-transparent rounded-full animate-spin"
+                    style={{ borderColor: "#FFFFFF", borderTopColor: "transparent" }}
+                  />
+                  Activando...
+                </>
+              ) : (
+                <><Receipt size={14} /> Activar y emitir factura</>
+              )}
             </button>
           </div>
 
           {/* Acciones de soporte */}
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 space-y-3">
-            <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+          <div
+            className="rounded-xl p-4 space-y-3"
+            style={{
+              background: "var(--kipu-surface)",
+              border: "1px solid var(--kipu-border)",
+            }}
+          >
+            <h2 className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--kipu-subtle)" }}>
               Soporte — forzar estado
             </h2>
-            <p className="text-xs text-gray-600">
+            <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
               Sin cobro ni factura. Solo para pruebas y soporte.
             </p>
             <div className="grid grid-cols-2 gap-2">
-              {(["TRIAL", "ACTIVO", "CANCELADO", "VENCIDO"] as const).map((estado) => (
-                <button
-                  key={estado}
-                  onClick={() => forzarEstado(estado)}
-                  disabled={forzandoEstado || emisor.sub_estado === estado}
-                  className={clsx(
-                    "py-2 rounded-lg text-xs font-medium transition-colors disabled:opacity-40",
-                    estado === "ACTIVO"    && "bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30",
-                    estado === "TRIAL"     && "bg-blue-500/20 text-blue-400 hover:bg-blue-500/30",
-                    estado === "CANCELADO" && "bg-amber-500/20 text-amber-400 hover:bg-amber-500/30",
-                    estado === "VENCIDO"   && "bg-red-500/20 text-red-400 hover:bg-red-500/30",
-                  )}
-                >
-                  {forzandoEstado
-                    ? <Loader2 size={12} className="animate-spin mx-auto" />
-                    : estado
-                  }
-                </button>
-              ))}
+              {(["TRIAL", "ACTIVO", "CANCELADO", "VENCIDO"] as const).map((estado) => {
+                const cfg = SUB_CONFIG[estado];
+                return (
+                  <button
+                    key={estado}
+                    type="button"
+                    onClick={() => forzarEstado(estado)}
+                    disabled={forzandoEstado || emisor.sub_estado === estado}
+                    className="py-2 rounded-lg text-xs font-medium transition-colors disabled:opacity-40"
+                    style={{
+                      background: cfg.bg,
+                      color: cfg.color,
+                      border: `1px solid ${cfg.border}`,
+                    }}
+                  >
+                    {forzandoEstado ? (
+                      <div
+                        className="w-3 h-3 border-2 border-t-transparent rounded-full animate-spin mx-auto"
+                        style={{ borderColor: "currentColor", borderTopColor: "transparent" }}
+                      />
+                    ) : (
+                      estado
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
           {/* Historial de transferencias */}
           {(emisor.transferencias ?? []).length > 0 && (
-            <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
-              <div className="px-4 py-3 border-b border-gray-800">
-                <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+            <div
+              className="rounded-xl overflow-hidden"
+              style={{
+                background: "var(--kipu-surface)",
+                border: "1px solid var(--kipu-border)",
+              }}
+            >
+              <div
+                className="px-4 py-3"
+                style={{ borderBottom: "1px solid var(--kipu-border)" }}
+              >
+                <h2 className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--kipu-subtle)" }}>
                   Transferencias registradas
                 </h2>
               </div>
-              <div className="divide-y divide-gray-800">
+              <div>
                 {emisor.transferencias.map((tf: any, i: number) => {
                   const d = tf.detalle ?? {};
                   return (
-                    <div key={i} className="px-4 py-3 text-sm">
+                    <div
+                      key={i}
+                      className="px-4 py-3 text-sm"
+                      style={{ borderTop: i > 0 ? "1px solid var(--kipu-border)" : "none" }}
+                    >
                       <div className="flex items-center justify-between">
-                        <span className="text-white font-medium">${fmt(d.monto)}</span>
-                        <span className="text-xs text-gray-500">{fmtDate(tf.created_at)}</span>
+                        <span className="font-medium" style={{ color: "var(--kipu-text)" }}>${fmt(d.monto)}</span>
+                        <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>{fmtDate(tf.created_at)}</span>
                       </div>
-                      <p className="text-xs text-gray-500 font-mono mt-0.5">{d.referencia_pago}</p>
+                      <p className="text-xs font-mono mt-0.5" style={{ color: "var(--kipu-subtle)" }}>{d.referencia_pago}</p>
                       <div className="flex gap-3 mt-0.5">
-                        {d.banco && <p className="text-xs text-gray-600">{d.banco}</p>}
+                        {d.banco && <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>{d.banco}</p>}
                         {d.fecha_comprobante && (
-                          <p className="text-xs text-gray-600">
+                          <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
                             Comprobante: {new Date(d.fecha_comprobante).toLocaleDateString("es-EC", { day: "2-digit", month: "short", year: "numeric" })}
                           </p>
                         )}
@@ -691,44 +921,67 @@ export default function AdminEmisorDetallePage() {
               { label: "Facturas",    value: emisor.conteos?.facturas ?? 0 },
               { label: "Retenciones", value: emisor.conteos?.retenciones ?? 0 },
             ].map(({ label, value }) => (
-              <div key={label} className="bg-gray-900 border border-gray-800 rounded-xl p-3 text-center">
-                <p className="text-lg font-bold text-white">{value}</p>
-                <p className="text-[11px] text-gray-500 mt-0.5">{label}</p>
+              <div
+                key={label}
+                className="rounded-xl p-3 text-center"
+                style={{
+                  background: "var(--kipu-surface)",
+                  border: "1px solid var(--kipu-border)",
+                }}
+              >
+                <p className="text-lg font-bold" style={{ color: "var(--kipu-text)" }}>{value}</p>
+                <p className="text-[11px] mt-0.5" style={{ color: "var(--kipu-subtle)" }}>{label}</p>
               </div>
             ))}
           </div>
 
           {/* Lista */}
-          <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
-            <div className="px-4 py-3 border-b border-gray-800">
-              <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+          <div
+            className="rounded-xl overflow-hidden"
+            style={{
+              background: "var(--kipu-surface)",
+              border: "1px solid var(--kipu-border)",
+            }}
+          >
+            <div
+              className="px-4 py-3"
+              style={{ borderBottom: "1px solid var(--kipu-border)" }}
+            >
+              <h2 className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--kipu-subtle)" }}>
                 Últimos 20 documentos
               </h2>
             </div>
             {(emisor.documentos ?? []).length === 0 ? (
-              <p className="text-sm text-gray-500 text-center py-8">Sin documentos.</p>
+              <p className="text-sm text-center py-8" style={{ color: "var(--kipu-subtle)" }}>Sin documentos.</p>
             ) : (
-              <div className="divide-y divide-gray-800">
-                {(emisor.documentos ?? []).map((d: any) => {
+              <div>
+                {(emisor.documentos ?? []).map((d: any, idx: number) => {
                   const cfg  = DOC_CONFIG[d.estado_sri] ?? DOC_CONFIG.PENDIENTE;
                   const Icon = cfg.icon;
                   return (
-                    <div key={d.id} className="flex items-center gap-3 px-4 py-3">
-                      <div className={clsx("w-7 h-7 rounded-full flex items-center justify-center shrink-0", cfg.color.split(" ")[1])}>
-                        <Icon size={12} className={cfg.color.split(" ")[0]} />
+                    <div
+                      key={d.id}
+                      className="flex items-center gap-3 px-4 py-3"
+                      style={{ borderTop: idx > 0 ? "1px solid var(--kipu-border)" : "none" }}
+                    >
+                      <div
+                        className="w-7 h-7 rounded-full flex items-center justify-center shrink-0"
+                        style={{ background: cfg.bg }}
+                      >
+                        <Icon size={12} style={{ color: cfg.color }} />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm text-white font-mono truncate">
+                        <p className="text-sm font-mono truncate" style={{ color: "var(--kipu-text)" }}>
                           {d.numero_doc ?? "—"}
                         </p>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
                           {d.tipo_doc} · {fmtDate(d.fecha_emision)}
                           {d.origen && d.origen !== "web" && (
-                            <span className="ml-1.5 text-[10px] text-gray-600 uppercase">{d.origen}</span>
+                            <span className="ml-1.5 text-[10px] uppercase font-medium" style={{ color: "var(--kipu-subtle)" }}>{d.origen}</span>
                           )}
                         </p>
                       </div>
-                      <span className="text-sm font-semibold text-white shrink-0">
+                      <span className="text-sm font-semibold shrink-0" style={{ color: "var(--kipu-text)" }}>
                         ${fmt(d.importe_total)}
                       </span>
                     </div>
@@ -742,33 +995,54 @@ export default function AdminEmisorDetallePage() {
 
       {/* ── Tab: Usuarios ───────────────────────────────────────────────────── */}
       {tab === "usuarios" && (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
-          <div className="px-4 py-3 border-b border-gray-800">
-            <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+        <div
+          className="rounded-xl overflow-hidden"
+          style={{
+            background: "var(--kipu-surface)",
+            border: "1px solid var(--kipu-border)",
+          }}
+        >
+          <div
+            className="px-4 py-3"
+            style={{ borderBottom: "1px solid var(--kipu-border)" }}
+          >
+            <h2 className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--kipu-subtle)" }}>
               Usuarios con acceso
             </h2>
           </div>
           {(emisor.usuarios ?? []).length === 0 ? (
-            <p className="text-sm text-gray-500 text-center py-8">Sin usuarios.</p>
+            <p className="text-sm text-center py-8" style={{ color: "var(--kipu-subtle)" }}>Sin usuarios.</p>
           ) : (
-            <div className="divide-y divide-gray-800">
-              {(emisor.usuarios ?? []).map((u: any) => (
-                <div key={u.profile_id} className="flex items-center gap-3 px-4 py-3">
-                  <div className="w-8 h-8 rounded-full bg-indigo-600/20 flex items-center justify-center shrink-0">
-                    <span className="text-xs font-bold text-indigo-400">
+            <div>
+              {(emisor.usuarios ?? []).map((u: any, idx: number) => (
+                <div
+                  key={u.profile_id}
+                  className="flex items-center gap-3 px-4 py-3"
+                  style={{ borderTop: idx > 0 ? "1px solid var(--kipu-border)" : "none" }}
+                >
+                  <div
+                    className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
+                    style={{ background: "color-mix(in srgb, var(--kipu-accent) 20%, transparent)" }}
+                  >
+                    <span className="text-xs font-bold" style={{ color: "var(--kipu-accent)" }}>
                       {(u.nombre || u.email)?.[0]?.toUpperCase()}
                     </span>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-white truncate">{u.nombre || u.email}</p>
-                    <p className="text-xs text-gray-500 truncate">{u.email}</p>
+                    <p className="text-sm truncate" style={{ color: "var(--kipu-text)" }}>{u.nombre || u.email}</p>
+                    <p className="text-xs truncate" style={{ color: "var(--kipu-subtle)" }}>{u.email}</p>
                   </div>
-                  <span className={clsx(
-                    "text-xs px-2 py-0.5 rounded-full shrink-0",
-                    u.rol === "admin"
-                      ? "bg-indigo-500/20 text-indigo-400"
-                      : "bg-gray-700 text-gray-400"
-                  )}>
+                  <span
+                    className="text-xs px-2 py-0.5 rounded-full shrink-0 font-medium"
+                    style={{
+                      background: u.rol === "admin"
+                        ? "color-mix(in srgb, var(--kipu-accent) 20%, transparent)"
+                        : "color-mix(in srgb, var(--kipu-text) 10%, transparent)",
+                      color: u.rol === "admin"
+                        ? "var(--kipu-accent)"
+                        : "var(--kipu-subtle)",
+                    }}
+                  >
                     {u.rol}
                   </span>
                 </div>
@@ -783,39 +1057,66 @@ export default function AdminEmisorDetallePage() {
         <div className="space-y-4">
 
           {/* Balance */}
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 text-center">
-            <p className={clsx(
-              "text-5xl font-bold",
-              emisor.balance_emision <= 5 ? "text-red-400" : "text-white"
-            )}>
+          <div
+            className="rounded-xl p-6 text-center"
+            style={{
+              background: "var(--kipu-surface)",
+              border: "1px solid var(--kipu-border)",
+            }}
+          >
+            <p
+              className="text-5xl font-bold"
+              style={{
+                color: emisor.balance_emision <= 5 ? "var(--kipu-danger)" : "var(--kipu-text)",
+              }}
+            >
               {emisor.balance_emision}
             </p>
-            <p className="text-sm text-gray-500 mt-2">créditos API disponibles</p>
+            <p className="text-sm mt-2" style={{ color: "var(--kipu-subtle)" }}>créditos API disponibles</p>
             {emisor.balance_emision <= 5 && (
-              <p className="text-xs text-red-400 mt-1">Balance bajo</p>
+              <p className="text-xs mt-1" style={{ color: "var(--kipu-danger)" }}>Balance bajo</p>
             )}
           </div>
 
           {/* Recargar */}
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 space-y-3">
-            <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+          <div
+            className="rounded-xl p-4 space-y-3"
+            style={{
+              background: "var(--kipu-surface)",
+              border: "1px solid var(--kipu-border)",
+            }}
+          >
+            <h2 className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--kipu-subtle)" }}>
               Agregar créditos manualmente
             </h2>
             <div className="flex gap-2">
-              {[10, 25, 50, 100].map((n) => (
-                <button
-                  key={n}
-                  onClick={() => setMontoRecarga(String(n))}
-                  className={clsx(
-                    "flex-1 py-2 rounded-lg text-sm font-medium transition-colors",
-                    montoRecarga === String(n)
-                      ? "bg-indigo-600 text-white"
-                      : "bg-gray-800 text-gray-400 hover:text-white"
-                  )}
-                >
-                  +{n}
-                </button>
-              ))}
+              {[10, 25, 50, 100].map((n) => {
+                const active = montoRecarga === String(n);
+                return (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setMontoRecarga(String(n))}
+                    className="flex-1 py-2 rounded-lg text-sm font-medium transition-colors"
+                    style={{
+                      background: active
+                        ? "var(--kipu-accent)"
+                        : "color-mix(in srgb, var(--kipu-text) 5%, transparent)",
+                      color: active
+                        ? "#FFFFFF"
+                        : "var(--kipu-subtle)",
+                    }}
+                    onMouseEnter={e => {
+                      if (!active) e.currentTarget.style.color = "var(--kipu-text)";
+                    }}
+                    onMouseLeave={e => {
+                      if (!active) e.currentTarget.style.color = "var(--kipu-subtle)";
+                    }}
+                  >
+                    +{n}
+                  </button>
+                );
+              })}
             </div>
             <div className="flex gap-2">
               <input
@@ -824,24 +1125,49 @@ export default function AdminEmisorDetallePage() {
                 onChange={(e) => setMontoRecarga(e.target.value)}
                 placeholder="Cantidad personalizada"
                 min={1}
-                className="flex-1 px-3 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 text-sm"
+                className="flex-1 px-3 py-2 rounded-lg text-sm focus:outline-none transition-colors"
+                style={{
+                  background: "var(--kipu-surface)",
+                  border: "1px solid var(--kipu-border)",
+                  color: "var(--kipu-text)",
+                }}
+                onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
               />
               <button
+                type="button"
                 onClick={recargarCreditos}
                 disabled={recargando || !montoRecarga}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm font-medium transition-colors"
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors disabled:opacity-50"
+                style={{ background: "var(--kipu-accent)" }}
+                onMouseEnter={e => {
+                  if (!recargando && montoRecarga) e.currentTarget.style.background = "var(--kipu-accent-h)";
+                }}
+                onMouseLeave={e => {
+                  if (!recargando && montoRecarga) e.currentTarget.style.background = "var(--kipu-accent)";
+                }}
               >
-                {recargando ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+                {recargando ? (
+                  <div
+                    className="w-3.5 h-3.5 border-2 border-t-transparent rounded-full animate-spin"
+                    style={{ borderColor: "#FFFFFF", borderTopColor: "transparent" }}
+                  />
+                ) : (
+                  <Plus size={14} />
+                )}
                 Agregar
               </button>
             </div>
             {msgRecarga && (
-              <p className={clsx(
-                "text-xs px-3 py-2 rounded-lg",
-                msgRecarga.startsWith("✅")
-                  ? "text-emerald-400 bg-emerald-400/10"
-                  : "text-red-400 bg-red-400/10"
-              )}>
+              <p
+                className="text-xs px-3 py-2 rounded-lg font-medium"
+                style={{
+                  color: msgRecarga.startsWith("✅") ? "var(--kipu-success)" : "var(--kipu-danger)",
+                  background: msgRecarga.startsWith("✅")
+                    ? "color-mix(in srgb, var(--kipu-success) 10%, transparent)"
+                    : "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
+                }}
+              >
                 {msgRecarga}
               </p>
             )}
@@ -849,27 +1175,42 @@ export default function AdminEmisorDetallePage() {
 
           {/* Historial de transacciones */}
           {(emisor.transacciones ?? []).length > 0 && (
-            <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
-              <div className="px-4 py-3 border-b border-gray-800">
-                <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+            <div
+              className="rounded-xl overflow-hidden"
+              style={{
+                background: "var(--kipu-surface)",
+                border: "1px solid var(--kipu-border)",
+              }}
+            >
+              <div
+                className="px-4 py-3"
+                style={{ borderBottom: "1px solid var(--kipu-border)" }}
+              >
+                <h2 className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--kipu-subtle)" }}>
                   Últimas transacciones
                 </h2>
               </div>
-              <div className="divide-y divide-gray-800">
+              <div>
                 {emisor.transacciones.map((tx: any, i: number) => (
-                  <div key={i} className="flex items-center gap-3 px-4 py-3">
+                  <div
+                    key={i}
+                    className="flex items-center gap-3 px-4 py-3"
+                    style={{ borderTop: i > 0 ? "1px solid var(--kipu-border)" : "none" }}
+                  >
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm text-white">{tx.tipo}</p>
-                      <p className="text-xs text-gray-500 truncate">{tx.notas || tx.metodo_pago}</p>
+                      <p className="text-sm font-medium" style={{ color: "var(--kipu-text)" }}>{tx.tipo}</p>
+                      <p className="text-xs truncate" style={{ color: "var(--kipu-subtle)" }}>{tx.notas || tx.metodo_pago}</p>
                     </div>
                     <div className="text-right shrink-0">
-                      <p className={clsx(
-                        "text-sm font-semibold",
-                        tx.cantidad > 0 ? "text-emerald-400" : "text-red-400"
-                      )}>
+                      <p
+                        className="text-sm font-semibold"
+                        style={{
+                          color: tx.cantidad > 0 ? "var(--kipu-success)" : "var(--kipu-danger)",
+                        }}
+                      >
                         {tx.cantidad > 0 ? "+" : ""}{tx.cantidad}
                       </p>
-                      <p className="text-xs text-gray-600">{fmtDate(tx.created_at)}</p>
+                      <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>{fmtDate(tx.created_at)}</p>
                     </div>
                   </div>
                 ))}
@@ -881,16 +1222,27 @@ export default function AdminEmisorDetallePage() {
 
       {/* ── Tab: Notificar ──────────────────────────────────────────────────── */}
       {tab === "notificar" && (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 space-y-3">
-          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+        <div
+          className="rounded-xl p-4 space-y-3"
+          style={{
+            background: "var(--kipu-surface)",
+            border: "1px solid var(--kipu-border)",
+          }}
+        >
+          <h2 className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--kipu-subtle)" }}>
             Enviar notificación a este emisor
           </h2>
           <div>
-            <label className="block text-xs text-gray-500 mb-1.5">Tipo</label>
+            <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Tipo</label>
             <select
               value={notifTipo}
               onChange={(e) => setNotifTipo(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-indigo-500 text-sm"
+              className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none transition-colors"
+              style={{
+                background: "var(--kipu-surface)",
+                border: "1px solid var(--kipu-border)",
+                color: "var(--kipu-text)",
+              }}
             >
               <option value="SISTEMA">Sistema</option>
               <option value="DECLARACION">Declaración</option>
@@ -899,43 +1251,79 @@ export default function AdminEmisorDetallePage() {
             </select>
           </div>
           <div>
-            <label className="block text-xs text-gray-500 mb-1.5">Título *</label>
+            <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Título *</label>
             <input
               value={notifTitulo}
               onChange={(e) => setNotifTitulo(e.target.value)}
               placeholder="Título de la notificación"
-              className="w-full px-3 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 text-sm"
+              className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none transition-colors"
+              style={{
+                background: "var(--kipu-surface)",
+                border: "1px solid var(--kipu-border)",
+                color: "var(--kipu-text)",
+              }}
+              onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+              onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
             />
           </div>
           <div>
-            <label className="block text-xs text-gray-500 mb-1.5">Mensaje *</label>
+            <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Mensaje *</label>
             <textarea
               value={notifMensaje}
               onChange={(e) => setNotifMensaje(e.target.value)}
               placeholder="Contenido de la notificación..."
               rows={3}
-              className="w-full px-3 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 text-sm resize-none"
+              className="w-full px-3 py-2 rounded-lg text-sm resize-none focus:outline-none transition-colors"
+              style={{
+                background: "var(--kipu-surface)",
+                border: "1px solid var(--kipu-border)",
+                color: "var(--kipu-text)",
+              }}
+              onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+              onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
             />
           </div>
           {msgNotif && (
-            <p className={clsx(
-              "text-xs px-3 py-2 rounded-lg",
-              msgNotif.startsWith("✅")
-                ? "text-emerald-400 bg-emerald-400/10"
-                : "text-red-400 bg-red-400/10"
-            )}>
+            <p
+              className="text-xs px-3 py-2 rounded-lg font-medium"
+              style={{
+                color: msgNotif.startsWith("✅") ? "var(--kipu-success)" : "var(--kipu-danger)",
+                background: msgNotif.startsWith("✅")
+                  ? "color-mix(in srgb, var(--kipu-success) 10%, transparent)"
+                  : "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
+              }}
+            >
               {msgNotif}
             </p>
           )}
           <button
+            type="button"
             onClick={enviarNotificacion}
             disabled={enviando || !notifTitulo.trim() || !notifMensaje.trim()}
-            className="w-full py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-medium text-sm transition-colors flex items-center justify-center gap-2"
+            className="w-full py-2.5 rounded-lg text-white font-medium text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+            style={{ background: "var(--kipu-accent)" }}
+            onMouseEnter={e => {
+              if (!enviando && notifTitulo.trim() && notifMensaje.trim()) {
+                e.currentTarget.style.background = "var(--kipu-accent-h)";
+              }
+            }}
+            onMouseLeave={e => {
+              if (!enviando && notifTitulo.trim() && notifMensaje.trim()) {
+                e.currentTarget.style.background = "var(--kipu-accent)";
+              }
+            }}
           >
-            {enviando
-              ? <><Loader2 size={14} className="animate-spin" /> Enviando...</>
-              : <><Send size={14} /> Enviar notificación</>
-            }
+            {enviando ? (
+              <>
+                <div
+                  className="w-3.5 h-3.5 border-2 border-t-transparent rounded-full animate-spin"
+                  style={{ borderColor: "#FFFFFF", borderTopColor: "transparent" }}
+                />
+                Enviando...
+              </>
+            ) : (
+              <><Send size={14} /> Enviar notificación</>
+            )}
           </button>
         </div>
       )}

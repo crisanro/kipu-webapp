@@ -1,7 +1,9 @@
+// app/(dashboard)/layout.tsx
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { auth } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
 import { useAuthStore } from "@/store/auth.store";
@@ -11,12 +13,13 @@ import PWAInstallBanner from "@/components/PWAInstallBanner";
 import { registrarNotificaciones } from "@/lib/notifications";
 import {
   LayoutDashboard, FileText, Users, Package, Settings, Key,
-  LogOut, Zap, ChevronRight, ChevronDown, Menu, X, BarChart3,
+  LogOut, ChevronRight, ChevronDown, Menu, X, BarChart3,
   AlertTriangle, FileInput, Building2, CreditCard, UserCog,
-  CheckCircle2, Plus, ChevronUp, Shield, RefreshCw, FlaskConical,
-  MessageCircle, Mail, QrCode, Wallet, ClipboardList,
+  CheckCircle2, Plus, ChevronUp, Shield, FlaskConical,
+  MessageCircle, Wallet, ClipboardList, Sun, Moon,
 } from "lucide-react";
 import { clsx } from "clsx";
+import { useTheme } from "next-themes";
 import {
   useNotificaciones,
   NotificacionesBadge,
@@ -38,36 +41,50 @@ function SoporteWhatsApp({ empresa }: { empresa: any }) {
 
   return (
     <div className="relative">
-      {/* Desktop — botón que muestra QR */}
       <button
         onClick={() => setShowQR(!showQR)}
-        className="hidden lg:flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-green-400 hover:bg-green-500/10 transition-colors"
+        className="hidden lg:flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm transition-colors"
+        style={{ color: "var(--kipu-muted)" }}
+        onMouseEnter={e => {
+          e.currentTarget.style.color = "var(--kipu-success)";
+          e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-success) 10%, transparent)";
+        }}
+        onMouseLeave={e => {
+          e.currentTarget.style.color = "var(--kipu-muted)";
+          e.currentTarget.style.background = "transparent";
+        }}
       >
         <MessageCircle size={16} />
         Soporte
       </button>
-      {/* Mobile — link directo */}
       <a
         href={waUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className="flex lg:hidden items-center gap-2 w-full px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-green-400 hover:bg-green-500/10 transition-colors"
+        className="flex lg:hidden items-center gap-2 w-full px-3 py-2 rounded-lg text-sm transition-colors"
+        style={{ color: "var(--kipu-muted)" }}
       >
         <MessageCircle size={16} />
         Soporte WhatsApp
       </a>
-      {/* QR Popup — solo desktop */}
       {showQR && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setShowQR(false)} />
-          <div className="absolute bottom-10 left-0 z-50 bg-gray-900 border border-gray-700 rounded-xl p-4 shadow-xl w-56">
+          <div
+            className="absolute bottom-10 left-0 z-50 rounded-xl p-4 shadow-xl w-56"
+            style={{
+              background: "var(--kipu-surface)",
+              border:     "1px solid var(--kipu-border)",
+            }}
+          >
             <button
               onClick={() => setShowQR(false)}
-              className="absolute top-2 right-2 text-gray-500 hover:text-white"
+              className="absolute top-2 right-2 transition-colors"
+              style={{ color: "var(--kipu-muted)" }}
             >
               <X size={14} />
             </button>
-            <p className="text-xs text-gray-400 mb-3 text-center">
+            <p className="text-xs mb-3 text-center" style={{ color: "var(--kipu-muted)" }}>
               Escanea para chatear por WhatsApp
             </p>
             <img src={qrUrl} alt="QR Soporte WhatsApp" className="w-full rounded-lg" />
@@ -75,7 +92,8 @@ function SoporteWhatsApp({ empresa }: { empresa: any }) {
               href={waUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-3 flex items-center justify-center gap-2 w-full py-2 rounded-lg bg-green-600 hover:bg-green-500 text-white text-xs font-medium transition-colors"
+              className="mt-3 flex items-center justify-center gap-2 w-full py-2 rounded-lg text-xs font-medium transition-colors"
+              style={{ background: "var(--kipu-success)", color: "#ffffff" }}
             >
               <MessageCircle size={13} />
               Abrir WhatsApp
@@ -88,7 +106,7 @@ function SoporteWhatsApp({ empresa }: { empresa: any }) {
 }
 
 // =============================================================================
-// NAV — con permisos
+// NAV
 // =============================================================================
 const NAV_GROUPS = [
   {
@@ -103,7 +121,7 @@ const NAV_GROUPS = [
   },
   {
     label:    "Emitir",
-    icon:     Zap,
+    icon:     FileText,
     base:     "/documentos/emitir",
     permiso:  "emitir",
     children: [
@@ -156,23 +174,47 @@ function tienePermiso(empresa: any, permiso: string | null): boolean {
 function ModalLogout({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
   return (
     <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 max-w-sm w-full space-y-4">
+      <div
+        className="rounded-xl p-5 max-w-sm w-full space-y-4"
+        style={{
+          background: "var(--kipu-surface)",
+          border:     "1px solid var(--kipu-border)",
+        }}
+      >
         <div className="flex items-start gap-3">
-          <div className="w-9 h-9 rounded-full bg-red-500/20 flex items-center justify-center shrink-0">
-            <LogOut size={16} className="text-red-400" />
+          <div
+            className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
+            style={{ background: "color-mix(in srgb, var(--kipu-danger) 15%, transparent)" }}
+          >
+            <LogOut size={16} style={{ color: "var(--kipu-danger)" }} />
           </div>
           <div>
-            <p className="text-white font-semibold text-sm">¿Cerrar sesión?</p>
-            <p className="text-gray-400 text-xs mt-1">Se cerrará tu sesión en este dispositivo.</p>
+            <p className="font-semibold text-sm" style={{ color: "var(--kipu-text)" }}>
+              ¿Cerrar sesión?
+            </p>
+            <p className="text-xs mt-1" style={{ color: "var(--kipu-muted)" }}>
+              Se cerrará tu sesión en este dispositivo.
+            </p>
           </div>
         </div>
         <div className="flex gap-2">
-          <button onClick={onCancel}
-            className="flex-1 py-2 rounded-lg border border-gray-700 text-gray-400 hover:text-white text-sm transition-colors">
+          <button
+            onClick={onCancel}
+            className="flex-1 py-2 rounded-lg text-sm transition-colors"
+            style={{
+              border: "1px solid var(--kipu-border)",
+              color:  "var(--kipu-muted)",
+            }}
+            onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
+            onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-muted)"}
+          >
             Cancelar
           </button>
-          <button onClick={onConfirm}
-            className="flex-1 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white text-sm font-medium transition-colors">
+          <button
+            onClick={onConfirm}
+            className="flex-1 py-2 rounded-lg text-sm font-medium text-white transition-colors"
+            style={{ background: "var(--kipu-danger)" }}
+          >
             Cerrar sesión
           </button>
         </div>
@@ -229,62 +271,161 @@ function SelectorEmpresa({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 bg-black/70 z-50 flex items-end sm:items-center justify-center p-4">
-      <div className="bg-gray-900 border border-gray-800 rounded-xl w-full max-w-sm">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800">
-          <h2 className="text-sm font-semibold text-white">Cambiar empresa</h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-white"><X size={16} /></button>
+      <div
+        className="rounded-xl w-full max-w-sm"
+        style={{
+          background: "var(--kipu-surface)",
+          border:     "1px solid var(--kipu-border)",
+        }}
+      >
+        <div
+          className="flex items-center justify-between px-4 py-3"
+          style={{ borderBottom: "1px solid var(--kipu-border)" }}
+        >
+          <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>
+            Cambiar empresa
+          </h2>
+          <button onClick={onClose} style={{ color: "var(--kipu-muted)" }}>
+            <X size={16} />
+          </button>
         </div>
-        <div className="divide-y divide-gray-800 max-h-64 overflow-y-auto">
+        <div className="max-h-64 overflow-y-auto">
           {empresasOrdenadas.map((e) => {
             const activa = e.id === empresa?.id;
             return (
-              <button key={e.id} onClick={() => cambiar(e)} disabled={!!cambiando}
-                className={clsx(
-                  "w-full flex items-center gap-3 px-4 py-3 text-left transition-colors",
-                  activa ? "bg-indigo-600/10" : "hover:bg-gray-800"
-                )}>
-                <div className={clsx(
-                  "w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-xs font-bold",
-                  activa ? "bg-indigo-600 text-white" : "bg-gray-800 text-gray-400"
-                )}>
+              <button
+                key={e.id}
+                onClick={() => cambiar(e)}
+                disabled={!!cambiando}
+                className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors"
+                style={{
+                  background:  activa ? "color-mix(in srgb, var(--kipu-accent) 10%, transparent)" : "transparent",
+                  borderBottom: "1px solid var(--kipu-border)",
+                }}
+                onMouseEnter={e => !activa && (e.currentTarget.style.background = "var(--kipu-bg)")}
+                onMouseLeave={e => !activa && (e.currentTarget.style.background = "transparent")}
+              >
+                <div
+                  className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-xs font-bold"
+                  style={{
+                    background: activa ? "var(--kipu-accent)" : "var(--kipu-border)",
+                    color:      activa ? "#ffffff" : "var(--kipu-muted)",
+                  }}
+                >
                   {(e.nombre_comercial || e.razon_social)[0]}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-white truncate">
+                  <p className="text-sm font-medium truncate" style={{ color: "var(--kipu-text)" }}>
                     {e.nombre_comercial || e.razon_social}
                   </p>
-                  <p className="text-xs text-gray-500">{e.ruc}</p>
+                  <p className="text-xs" style={{ color: "var(--kipu-muted)" }}>{e.ruc}</p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  {e.rol === "admin"
-                    ? <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-400">Admin</span>
-                    : <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-700 text-gray-400">Invitado</span>
-                  }
-                  <span className={clsx(
-                    "text-[10px] px-1.5 py-0.5 rounded-full",
-                    e.ambiente === 2 ? "bg-emerald-500/20 text-emerald-400" : "bg-amber-500/20 text-amber-400"
-                  )}>
+                  <span
+                    className="text-[10px] px-1.5 py-0.5 rounded-full"
+                    style={{
+                      background: e.rol === "admin"
+                        ? "color-mix(in srgb, var(--kipu-accent) 15%, transparent)"
+                        : "var(--kipu-border)",
+                      color: e.rol === "admin" ? "var(--kipu-accent)" : "var(--kipu-muted)",
+                    }}
+                  >
+                    {e.rol === "admin" ? "Admin" : "Invitado"}
+                  </span>
+                  <span
+                    className="text-[10px] px-1.5 py-0.5 rounded-full"
+                    style={{
+                      background: e.ambiente === 2
+                        ? "color-mix(in srgb, var(--kipu-success) 15%, transparent)"
+                        : "color-mix(in srgb, var(--kipu-warning) 15%, transparent)",
+                      color: e.ambiente === 2 ? "var(--kipu-success)" : "var(--kipu-warning)",
+                    }}
+                  >
                     {e.ambiente === 2 ? "Prod" : "Pruebas"}
                   </span>
-                  {activa && <CheckCircle2 size={14} className="text-indigo-400" />}
+                  {activa && <CheckCircle2 size={14} style={{ color: "var(--kipu-accent)" }} />}
                   {cambiando === e.id && (
-                    <div className="w-4 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" />
+                    <div
+                      className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin"
+                      style={{ borderColor: "var(--kipu-accent)", borderTopColor: "transparent" }}
+                    />
                   )}
                 </div>
               </button>
             );
           })}
         </div>
-        <div className="p-3 border-t border-gray-800">
+        <div className="p-3">
           <button
             onClick={() => { onClose(); router.push("/nueva-empresa"); }}
-            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-dashed border-gray-700 text-gray-400 hover:text-white hover:border-gray-600 text-sm transition-colors"
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-dashed text-sm transition-colors"
+            style={{
+              borderColor: "var(--kipu-border)",
+              color:       "var(--kipu-muted)",
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.borderColor = "var(--kipu-muted)";
+              e.currentTarget.style.color = "var(--kipu-text)";
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.borderColor = "var(--kipu-border)";
+              e.currentTarget.style.color = "var(--kipu-muted)";
+            }}
           >
             <Plus size={14} /> Agregar empresa
           </button>
         </div>
       </div>
     </div>
+  );
+}
+
+// =============================================================================
+// TOGGLE TEMA
+// =============================================================================
+function ThemeToggle({ compact = false }: { compact?: boolean }) {
+  const { resolvedTheme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  if (!mounted) return null;
+
+  const isDark = resolvedTheme === "dark";
+
+  if (compact) {
+    return (
+      <button
+        onClick={() => setTheme(isDark ? "light" : "dark")}
+        className="p-2 rounded-lg transition-colors"
+        style={{
+          color:      "var(--kipu-muted)",
+          background: "transparent",
+        }}
+        onMouseEnter={e => e.currentTarget.style.background = "var(--kipu-border)"}
+        onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+        title={isDark ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
+      >
+        {isDark ? <Sun size={18} /> : <Moon size={18} />}
+      </button>
+    );
+  }
+
+  return (
+    <button
+      onClick={() => setTheme(isDark ? "light" : "dark")}
+      className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm transition-colors"
+      style={{ color: "var(--kipu-muted)" }}
+      onMouseEnter={e => {
+        e.currentTarget.style.color = "var(--kipu-text)";
+        e.currentTarget.style.background = "var(--kipu-border)";
+      }}
+      onMouseLeave={e => {
+        e.currentTarget.style.color = "var(--kipu-muted)";
+        e.currentTarget.style.background = "transparent";
+      }}
+    >
+      {isDark ? <Sun size={16} /> : <Moon size={16} />}
+      {isDark ? "Modo claro" : "Modo oscuro"}
+    </button>
   );
 }
 
@@ -296,12 +437,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const pathname = usePathname();
   const { empresa, empresas, role, logout } = useAuthStore();
   const { activo: sandbox, setSandbox } = useSandboxStore();
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
 
   const [sidebarOpen,     setSidebarOpen]     = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showSelectorEmp, setShowSelectorEmp] = useState(false);
   const [drawerOpen,      setDrawerOpen]      = useState(false);
   const [emailVerificado, setEmailVerificado] = useState(true);
+
+  useEffect(() => setMounted(true), []);
 
   const firmaOk         = empresa?.firma_ok ?? false;
   const puedeProduccion = firmaOk && empresa?.ambiente === 2;
@@ -371,21 +516,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   if (!empresa) {
     return (
-      <div className="h-screen flex items-center justify-center bg-gray-950">
-        <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+      <div className="h-screen flex items-center justify-center" style={{ background: "var(--kipu-bg)" }}>
+        <div
+          className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin"
+          style={{ borderColor: "var(--kipu-accent)", borderTopColor: "transparent" }}
+        />
       </div>
     );
   }
 
-  const ambienteColor = empresa.ambiente === 2 ? "text-emerald-400" : "text-amber-400";
-  const ambienteLabel = empresa.ambiente === 2 ? "Producción" : "Pruebas";
-
-  // ── Helpers plan ──────────────────────────────────────────────────────────
   const planLabel  = empresa.suscripcion_activa ? (empresa.suscripcion?.plan ?? "Pro") : "Free";
   const sinCreditos = !empresa.suscripcion_activa && (empresa.balance_api ?? 0) === 0;
 
+  // ── Estilos nav activo/inactivo ──────────────────────────────────────────
+  const navActivo   = { color: "var(--kipu-accent)",  background: "color-mix(in srgb, var(--kipu-accent) 12%, transparent)" };
+  const navInactivo = { color: "var(--kipu-muted)" };
+
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex h-screen overflow-hidden" style={{ background: "var(--kipu-bg)" }}>
       {showLogoutModal && (
         <ModalLogout onConfirm={handleLogout} onCancel={() => setShowLogoutModal(false)} />
       )}
@@ -403,23 +551,44 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       />
 
       {sidebarOpen && (
-        <div className="fixed inset-0 bg-black/60 z-20 lg:hidden"
-          onClick={() => setSidebarOpen(false)} />
+        <div
+          className="fixed inset-0 bg-black/60 z-20 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
       )}
 
-      {/* Sidebar */}
-      <aside className={clsx(
-        "fixed lg:static inset-y-0 left-0 z-30 w-64 flex flex-col",
-        "bg-gray-900 border-r border-gray-800 transition-transform duration-200",
-        sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
-      )}>
+      {/* ── Sidebar ─────────────────────────────────────────────────────── */}
+      <aside
+        className={clsx(
+          "fixed lg:static inset-y-0 left-0 z-30 w-64 flex flex-col transition-transform duration-200",
+          sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+        )}
+        style={{
+          background:  "var(--kipu-surface)",
+          borderRight: "2px solid var(--kipu-border)",
+        }}
+      >
         {/* Logo */}
-        <div className="flex items-center gap-2 px-5 py-5 border-b border-gray-800">
-          <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center">
-            <Zap size={16} className="text-white" />
-          </div>
-          <span className="font-bold text-white text-lg tracking-tight">Kipu</span>
-          <button className="ml-auto lg:hidden text-gray-400" onClick={() => setSidebarOpen(false)}>
+        <div
+          className="flex items-center gap-2 px-5 py-5"
+          style={{ borderBottom: "2px solid var(--kipu-border)" }}
+        >
+          {mounted ? (
+            <Image
+              src={resolvedTheme === "dark" ? "/images/logo-dark.svg" : "/images/logo.svg"}
+              alt="Kipu"
+              width={100}
+              height={32}
+              priority
+            />
+          ) : (
+            <div className="w-[100px] h-[32px]" />
+          )}
+          <button
+            className="ml-auto lg:hidden"
+            style={{ color: "var(--kipu-muted)" }}
+            onClick={() => setSidebarOpen(false)}
+          >
             <X size={18} />
           </button>
         </div>
@@ -427,24 +596,34 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* Selector empresa */}
         <button
           onClick={() => setShowSelectorEmp(true)}
-          className="px-4 py-3 border-b border-gray-800 text-left hover:bg-gray-800/50 transition-colors group w-full"
+          className="px-4 py-3 text-left transition-colors w-full group"
+          style={{ borderBottom: "2px solid var(--kipu-border)" }}
+          onMouseEnter={e => e.currentTarget.style.background = "var(--kipu-bg)"}
+          onMouseLeave={e => e.currentTarget.style.background = "transparent"}
         >
-          <p className="text-xs text-gray-500 mb-0.5">Empresa activa</p>
+          <p className="text-xs mb-0.5" style={{ color: "var(--kipu-subtle)" }}>Empresa activa</p>
           <div className="flex items-center justify-between">
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium text-white truncate">
+              <p className="text-sm font-medium truncate" style={{ color: "var(--kipu-text)" }}>
                 {empresa.nombre_comercial || empresa.razon_social}
               </p>
-              <p className="text-xs text-gray-500">{empresa.ruc}</p>
+              <p className="text-xs" style={{ color: "var(--kipu-muted)" }}>{empresa.ruc}</p>
             </div>
             {empresas.length > 1 && (
-              <ChevronUp size={12} className="text-gray-500 group-hover:text-white transition-colors rotate-180 ml-2 shrink-0" />
+              <ChevronUp size={12} className="rotate-180 ml-2 shrink-0" style={{ color: "var(--kipu-subtle)" }} />
             )}
           </div>
           <div className="flex items-center justify-between mt-1">
-            <span className={clsx("text-xs font-medium", ambienteColor)}>● {ambienteLabel}</span>
+            <span
+              className="text-xs font-medium"
+              style={{ color: empresa.ambiente === 2 ? "var(--kipu-success)" : "var(--kipu-warning)" }}
+            >
+              ● {empresa.ambiente === 2 ? "Producción" : "Pruebas"}
+            </span>
             {empresas.length > 1 && (
-              <span className="text-[10px] text-gray-600">{empresas.length} empresas</span>
+              <span className="text-[10px]" style={{ color: "var(--kipu-subtle)" }}>
+                {empresas.length} empresas
+              </span>
             )}
           </div>
         </button>
@@ -453,18 +632,29 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
           {NAV_GROUPS.map((group, gi) => (
             <div key={gi}>
-              {group.separator && <div className="border-t border-gray-800 my-2" />}
+              {group.separator && (
+                <div className="my-2" style={{ borderTop: "2px solid var(--kipu-border)" }} />
+              )}
               {"children" in group && group.children ? (
                 tienePermiso(empresa, group.permiso ?? null) && (
                   <div>
                     <button
                       onClick={() => toggleGrupo(group.base ?? "")}
-                      className={clsx(
-                        "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
-                        pathname.startsWith(group.base ?? "")
-                          ? "bg-indigo-600/20 text-indigo-400"
-                          : "text-gray-400 hover:text-white hover:bg-gray-800"
-                      )}>
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors"
+                      style={pathname.startsWith(group.base ?? "") ? navActivo : navInactivo}
+                      onMouseEnter={e => {
+                        if (!pathname.startsWith(group.base ?? "")) {
+                          e.currentTarget.style.color = "var(--kipu-text)";
+                          e.currentTarget.style.background = "var(--kipu-bg)";
+                        }
+                      }}
+                      onMouseLeave={e => {
+                        if (!pathname.startsWith(group.base ?? "")) {
+                          e.currentTarget.style.color = "var(--kipu-muted)";
+                          e.currentTarget.style.background = "transparent";
+                        }
+                      }}
+                    >
                       <group.icon size={17} />
                       {group.label}
                       <span className="ml-auto">
@@ -474,21 +664,35 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                       </span>
                     </button>
                     {(gruposAbiertos[group.base ?? ""] ?? false) && (
-                      <div className="mt-0.5 ml-4 pl-3 border-l border-gray-800 space-y-0.5">
+                      <div
+                        className="mt-0.5 ml-4 pl-3 space-y-0.5"
+                        style={{ borderLeft: "2px solid var(--kipu-border)" }}
+                      >
                         {group.children
                           .filter(child => tienePermiso(empresa, (child as any).permiso ?? null))
                           .map((child) => {
                             const active = isActive(child.href);
                             const Icon   = child.icon;
                             return (
-                              <Link key={child.href} href={child.href}
+                              <Link
+                                key={child.href}
+                                href={child.href}
                                 onClick={() => setSidebarOpen(false)}
-                                className={clsx(
-                                  "flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors",
-                                  active
-                                    ? "text-indigo-400 bg-indigo-600/10 font-medium"
-                                    : "text-gray-500 hover:text-white hover:bg-gray-800"
-                                )}>
+                                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors"
+                                style={active ? navActivo : navInactivo}
+                                onMouseEnter={e => {
+                                  if (!active) {
+                                    e.currentTarget.style.color = "var(--kipu-text)";
+                                    e.currentTarget.style.background = "var(--kipu-bg)";
+                                  }
+                                }}
+                                onMouseLeave={e => {
+                                  if (!active) {
+                                    e.currentTarget.style.color = "var(--kipu-muted)";
+                                    e.currentTarget.style.background = "transparent";
+                                  }
+                                }}
+                              >
                                 <Icon size={14} />
                                 {child.label}
                               </Link>
@@ -505,33 +709,46 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     const active = isActive(item.href);
                     const Icon   = item.icon;
                     return (
-                      <Link key={item.href} href={item.href}
+                      <Link
+                        key={item.href}
+                        href={item.href}
                         onClick={() => setSidebarOpen(false)}
-                        className={clsx(
-                          "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
-                          active
-                            ? "bg-indigo-600/20 text-indigo-400"
-                            : "text-gray-400 hover:text-white hover:bg-gray-800"
-                        )}>
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors"
+                        style={active ? navActivo : navInactivo}
+                        onMouseEnter={e => {
+                          if (!active) {
+                            e.currentTarget.style.color = "var(--kipu-text)";
+                            e.currentTarget.style.background = "var(--kipu-bg)";
+                          }
+                        }}
+                        onMouseLeave={e => {
+                          if (!active) {
+                            e.currentTarget.style.color = "var(--kipu-muted)";
+                            e.currentTarget.style.background = "transparent";
+                          }
+                        }}
+                      >
                         <Icon size={17} />
                         {item.label}
-                        {active && item.href !== "/dashboard" && <ChevronRight size={14} className="ml-auto" />}
+                        {active && item.href !== "/dashboard" && (
+                          <ChevronRight size={14} className="ml-auto" />
+                        )}
                       </Link>
                     );
                   })
               )}
             </div>
           ))}
+
           {role === "superadmin" && (
             <>
-              <div className="border-t border-gray-800 my-2" />
-              <Link href="/admin" onClick={() => setSidebarOpen(false)}
-                className={clsx(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
-                  pathname.startsWith("/admin")
-                    ? "bg-indigo-600/20 text-indigo-400"
-                    : "text-gray-400 hover:text-white hover:bg-gray-800"
-                )}>
+              <div className="my-2" style={{ borderTop: "2px solid var(--kipu-border)" }} />
+              <Link
+                href="/admin"
+                onClick={() => setSidebarOpen(false)}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors"
+                style={pathname.startsWith("/admin") ? navActivo : navInactivo}
+              >
                 <Shield size={17} />
                 Panel Admin
                 {pathname.startsWith("/admin") && <ChevronRight size={14} className="ml-auto" />}
@@ -540,17 +757,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           )}
         </nav>
 
-        {/* Footer */}
-        <div className="px-4 py-4 border-t border-gray-800 space-y-3">
-
+        {/* Footer sidebar */}
+        <div
+          className="px-4 py-4 space-y-3"
+          style={{ borderTop: "2px solid var(--kipu-border)" }}
+        >
           {/* Plan activo */}
-          <Link href="/planes"
-            className="block bg-gray-800 hover:bg-gray-700 rounded-lg px-3 py-2.5 transition-colors">
-            <p className="text-xs text-gray-500 mb-1">Plan activo</p>
+          <Link
+            href="/planes"
+            className="block rounded-lg px-3 py-2.5 transition-colors"
+            style={{ background: "var(--kipu-bg)" }}
+            onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-border) 60%, transparent)"}
+            onMouseLeave={e => e.currentTarget.style.background = "var(--kipu-bg)"}
+          >
+            <p className="text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>Plan activo</p>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-bold text-white">{planLabel}</p>
-                <p className="text-xs text-gray-500">
+                <p className="text-sm font-bold" style={{ color: "var(--kipu-text)" }}>{planLabel}</p>
+                <p className="text-xs" style={{ color: "var(--kipu-muted)" }}>
                   {empresa.suscripcion?.estado === "TRIAL"
                     ? "⏳ En prueba"
                     : empresa.suscripcion_activa
@@ -560,24 +784,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </div>
               {empresa.suscripcion_activa && empresa.balance_api > 0 && (
                 <div className="text-right">
-                  <p className="text-xs text-gray-500">Créditos</p>
-                  <p className="text-sm font-bold text-amber-400">{empresa.balance_api}</p>
+                  <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Créditos</p>
+                  <p className="text-sm font-bold" style={{ color: "var(--kipu-warning)" }}>
+                    {empresa.balance_api}
+                  </p>
                 </div>
               )}
             </div>
-            {/* Sin créditos Y sin suscripción — ahí sí es urgente */}
             {sinCreditos && (
               <div className="flex items-center gap-1 mt-1.5">
-                <AlertTriangle size={11} className="text-red-400" />
-                <span className="text-xs text-red-400">Sin créditos — activa tu plan</span>
+                <AlertTriangle size={11} style={{ color: "var(--kipu-danger)" }} />
+                <span className="text-xs" style={{ color: "var(--kipu-danger)" }}>
+                  Sin créditos — activa tu plan
+                </span>
               </div>
             )}
-            {/* Tiene créditos pero sin suscripción — info neutral */}
             {!empresa.suscripcion_activa && !sinCreditos && (
               <div className="flex items-center gap-1 mt-1.5">
-                <Zap size={11} className="text-yellow-400" />
-                <span className="text-xs text-yellow-400">
-                  {empresa.balance_api} crédito{empresa.balance_api !== 1 ? "s" : ""} disponible{empresa.balance_api !== 1 ? "s" : ""}
+                <span className="text-xs" style={{ color: "var(--kipu-warning)" }}>
+                  ⚡ {empresa.balance_api} crédito{empresa.balance_api !== 1 ? "s" : ""} disponible{empresa.balance_api !== 1 ? "s" : ""}
                 </span>
               </div>
             )}
@@ -590,33 +815,49 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <button
               onClick={() => { if (!puedeProduccion && sandbox) return; setSandbox(!sandbox); }}
               disabled={!puedeProduccion}
-              className={clsx(
-                "flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm transition-colors border",
-                sandbox
-                  ? "bg-blue-500/20 text-blue-400 border-blue-500/30"
-                  : "bg-gray-800/50 text-gray-400 border-gray-700 hover:text-gray-300",
-                !puedeProduccion && "opacity-60 cursor-not-allowed"
-              )}
+              className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm transition-colors"
+              style={{
+                background: sandbox
+                  ? "color-mix(in srgb, #3b82f6 15%, transparent)"
+                  : "var(--kipu-bg)",
+                border: sandbox
+                  ? "1px solid color-mix(in srgb, #3b82f6 30%, transparent)"
+                  : "1px solid var(--kipu-border)",
+                color: sandbox ? "#60a5fa" : "var(--kipu-muted)",
+                opacity: !puedeProduccion ? 0.6 : 1,
+                cursor:  !puedeProduccion ? "not-allowed" : "pointer",
+              }}
             >
               <FlaskConical size={15} />
               <span className="flex-1 text-left text-xs font-medium">
                 {sandbox ? "Modo Sandbox" : "Producción"}
               </span>
-              {!puedeProduccion && <span className="text-[10px] text-amber-400">Solo sandbox</span>}
+              {!puedeProduccion && (
+                <span className="text-[10px]" style={{ color: "var(--kipu-warning)" }}>
+                  Solo sandbox
+                </span>
+              )}
               {puedeProduccion && (
-                <div className={clsx(
-                  "w-8 h-4 rounded-full transition-colors relative shrink-0",
-                  sandbox ? "bg-blue-600" : "bg-emerald-600"
-                )}>
-                  <span className={clsx(
-                    "absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all",
-                    sandbox ? "left-0.5" : "left-4"
-                  )} />
+                <div
+                  className="w-8 h-4 rounded-full transition-colors relative shrink-0"
+                  style={{ background: sandbox ? "#2563eb" : "var(--kipu-success)" }}
+                >
+                  <span
+                    className="absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all"
+                    style={{ left: sandbox ? "2px" : "16px" }}
+                  />
                 </div>
               )}
             </button>
           ) : (
-            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/20 text-xs text-red-400">
+            <div
+              className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs"
+              style={{
+                background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
+                border:     "1px solid color-mix(in srgb, var(--kipu-danger) 20%, transparent)",
+                color:      "var(--kipu-danger)",
+              }}
+            >
               <AlertTriangle size={13} className="shrink-0" />
               <span>Sin firma — no puedes emitir</span>
             </div>
@@ -624,28 +865,80 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
           <SoporteWhatsApp empresa={empresa} />
 
-          <button onClick={() => setShowLogoutModal(true)}
-            className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-colors">
-            <LogOut size={16} />
-            Cerrar sesión
-          </button>
+          <div className="pt-1" style={{ borderTop: "1px solid var(--kipu-border)" }}>
+            <div className="flex items-center gap-1 pt-2">
+              <ThemeToggle />
+              <button
+                onClick={() => setShowLogoutModal(true)}
+                className="flex items-center gap-2 flex-1 px-3 py-2 rounded-lg text-sm transition-colors"
+                style={{ color: "var(--kipu-muted)" }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.color = "var(--kipu-danger)";
+                  e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-danger) 10%, transparent)";
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.color = "var(--kipu-muted)";
+                  e.currentTarget.style.background = "transparent";
+                }}
+              >
+                <LogOut size={16} />
+                Cerrar sesión
+              </button>
+            </div>
+          </div>
         </div>
       </aside>
 
-      {/* Main */}
+      {/* ── Main ────────────────────────────────────────────────────────── */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="lg:hidden flex items-center gap-3 px-4 py-3 border-b border-gray-800 bg-gray-900">
-          <button onClick={() => setSidebarOpen(true)} className="text-gray-400">
+
+        {/* Header móvil */}
+        <header
+          className="lg:hidden flex items-center gap-3 px-4 py-3"
+          style={{
+            background:   "var(--kipu-surface)",
+            borderBottom: "2px solid var(--kipu-border)",
+          }}
+        >
+          <button onClick={() => setSidebarOpen(true)} style={{ color: "var(--kipu-muted)" }}>
             <Menu size={20} />
           </button>
-          <span className="font-semibold text-white">Kipu</span>
+          {mounted ? (
+            <Image
+              src={resolvedTheme === "dark" ? "/images/logo-dark.svg" : "/images/logo.svg"}
+              alt="Kipu"
+              width={80}
+              height={26}
+              priority
+            />
+          ) : (
+            <div className="w-[80px] h-[26px]" />
+          )}
+          <div className="ml-auto flex items-center gap-1">
+            <ThemeToggle compact />
+            <button
+              className="relative p-2 rounded-lg transition-colors"
+              style={{ color: "var(--kipu-muted)" }}
+              onClick={() => setDrawerOpen(true)}
+              onMouseEnter={e => e.currentTarget.style.background = "var(--kipu-border)"}
+              onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+            >
+              <NotificacionesBadge noLeidas={noLeidas} onClick={() => setDrawerOpen(true)} />
+            </button>
+          </div>
         </header>
 
         <main className="flex-1 overflow-y-auto">
           {/* Banner email no verificado */}
           {!emailVerificado && (
-            <div className="w-full bg-amber-500/10 border-b border-amber-500/20 px-4 py-2.5 flex items-center justify-between gap-3 shrink-0">
-              <div className="flex items-center gap-2 text-amber-400 text-xs">
+            <div
+              className="w-full px-4 py-2.5 flex items-center justify-between gap-3 shrink-0"
+              style={{
+                background:   "color-mix(in srgb, var(--kipu-warning) 10%, transparent)",
+                borderBottom: "1px solid color-mix(in srgb, var(--kipu-warning) 20%, transparent)",
+              }}
+            >
+              <div className="flex items-center gap-2 text-xs" style={{ color: "var(--kipu-warning)" }}>
                 <AlertTriangle size={14} className="shrink-0" />
                 <span>
                   Tu correo <strong>{auth.currentUser?.email}</strong> no está verificado.
@@ -654,7 +947,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </div>
               <button
                 onClick={reenviarVerificacion}
-                className="text-xs text-amber-400 hover:text-amber-300 underline underline-offset-2 whitespace-nowrap shrink-0"
+                className="text-xs underline underline-offset-2 whitespace-nowrap shrink-0"
+                style={{ color: "var(--kipu-warning)" }}
               >
                 Reenviar
               </button>
@@ -663,12 +957,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
           {/* Banner Sandbox */}
           {sandbox && (
-            <div className="w-full bg-blue-600 px-4 py-2 flex items-center justify-center gap-2 text-xs font-medium text-white shadow-md shrink-0">
+            <div className="w-full px-4 py-2 flex items-center justify-center gap-2 text-xs font-medium text-white shrink-0"
+              style={{ background: "#2563eb" }}
+            >
               <FlaskConical size={14} />
               <span>MODO SANDBOX — Las facturas no van al SRI real ni poseen validez tributaria.</span>
               {puedeProduccion && (
-                <button onClick={() => setSandbox(false)}
-                  className="ml-3 underline underline-offset-2 hover:no-underline font-semibold">
+                <button
+                  onClick={() => setSandbox(false)}
+                  className="ml-3 underline underline-offset-2 hover:no-underline font-semibold"
+                >
                   Salir
                 </button>
               )}

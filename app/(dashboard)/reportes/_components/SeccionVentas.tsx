@@ -1,8 +1,6 @@
-// app/(dashboard)/reportes/_components/SeccionVentas.tsx
 "use client";
 import { useState } from "react";
 import { ChevronDown, ChevronUp, TrendingUp } from "lucide-react";
-import { clsx } from "clsx";
 
 interface DesgloseTarifa {
   tarifa:    number;
@@ -31,39 +29,77 @@ const fmt  = (n: number) => n.toLocaleString("es-EC", { minimumFractionDigits: 2
 const fmtN = (n: number) => n.toLocaleString("es-EC", { minimumFractionDigits: 0 });
 
 function Casillero({ num, label, value, highlight = false, negative = false }: {
-  num:       string;
-  label:     string;
-  value:     number;
+  num:        string;
+  label:      string;
+  value:      number;
   highlight?: boolean;
   negative?:  boolean;
 }) {
+  const getFilaEstilo = () => {
+    if (highlight) {
+      return {
+        background: "color-mix(in srgb, var(--kipu-accent) 10%, transparent)",
+        border: "1px solid color-mix(in srgb, var(--kipu-accent) 20%, transparent)",
+      };
+    }
+    return {
+      background: "transparent",
+    };
+  };
+
+  const getNumBadgeEstilo = () => {
+    if (highlight) {
+      return {
+        background: "var(--kipu-accent)",
+        color: "#FFFFFF",
+      };
+    }
+    return {
+      background: "color-mix(in srgb, var(--kipu-text) 8%, transparent)",
+      color: "var(--kipu-subtle)",
+    };
+  };
+
+  const getValueColor = () => {
+    if (highlight) return "var(--kipu-accent)";
+    if (negative) return "var(--kipu-danger)";
+    if (value === 0) return "var(--kipu-subtle)";
+    return "var(--kipu-text)";
+  };
+
   return (
-    <div className={clsx(
-      "flex items-center justify-between gap-3 px-4 py-2.5 rounded-lg",
-      highlight ? "bg-indigo-600/10 border border-indigo-500/20" : "hover:bg-gray-800/40"
-    )}>
+    <div
+      className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-lg transition-colors"
+      style={getFilaEstilo()}
+      onMouseEnter={e => {
+        if (!highlight) {
+          e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 4%, transparent)";
+        }
+      }}
+      onMouseLeave={e => {
+        if (!highlight) {
+          e.currentTarget.style.background = "transparent";
+        }
+      }}
+    >
       <div className="flex items-center gap-3 min-w-0">
-        <span className={clsx(
-          "text-[10px] font-bold px-2 py-0.5 rounded shrink-0",
-          highlight
-            ? "bg-indigo-600 text-white"
-            : "bg-gray-800 text-gray-400"
-        )}>
+        <span
+          className="text-[10px] font-bold px-2 py-0.5 rounded shrink-0"
+          style={getNumBadgeEstilo()}
+        >
           {num}
         </span>
-        <span className={clsx(
-          "text-xs truncate",
-          highlight ? "text-white font-medium" : "text-gray-400"
-        )}>
+        <span
+          className={`text-xs truncate ${highlight ? "font-medium" : ""}`}
+          style={{ color: highlight ? "var(--kipu-text)" : "var(--kipu-subtle)" }}
+        >
           {label}
         </span>
       </div>
-      <span className={clsx(
-        "text-sm font-bold shrink-0 tabular-nums",
-        highlight    ? "text-indigo-400" :
-        negative     ? "text-red-400"    :
-        value === 0  ? "text-gray-600"   : "text-white"
-      )}>
+      <span
+        className="text-sm font-bold shrink-0 tabular-nums"
+        style={{ color: getValueColor() }}
+      >
         {negative && value > 0 ? "-" : ""}${fmt(value)}
       </span>
     </div>
@@ -77,20 +113,33 @@ export default function SeccionVentas({ desglose, casilleros }: Props) {
   const tarifa0   = desglose.find(d => d.tarifa === 0);
 
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+    <div
+      className="rounded-xl overflow-hidden"
+      style={{
+        background: "var(--kipu-surface)",
+        border: "1px solid var(--kipu-border)",
+      }}
+    >
 
       {/* Header */}
       <button
+        type="button"
         onClick={() => setExpandido(!expandido)}
-        className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-800/50 transition-colors"
+        className="w-full flex items-center justify-between px-4 py-3 transition-colors"
+        style={{ background: "transparent" }}
+        onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 4%, transparent)"}
+        onMouseLeave={e => e.currentTarget.style.background = "transparent"}
       >
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-indigo-600/20 flex items-center justify-center">
-            <TrendingUp size={14} className="text-indigo-400" />
+          <div
+            className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+            style={{ background: "color-mix(in srgb, var(--kipu-accent) 20%, transparent)" }}
+          >
+            <TrendingUp size={14} style={{ color: "var(--kipu-accent)" }} />
           </div>
           <div className="text-left">
-            <p className="text-sm font-semibold text-white">Ventas y otras operaciones</p>
-            <p className="text-xs text-gray-500">
+            <p className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>Ventas y otras operaciones</p>
+            <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
               {casilleros["111"]} comprobantes emitidos
               {casilleros["113"] > 0 && ` · ${fmtN(casilleros["113"])} anulados`}
             </p>
@@ -98,27 +147,31 @@ export default function SeccionVentas({ desglose, casilleros }: Props) {
         </div>
         <div className="flex items-center gap-4">
           <div className="text-right hidden sm:block">
-            <p className="text-xs text-gray-500">Total neto ventas</p>
-            <p className="text-sm font-bold text-indigo-400">${fmt(casilleros["419"])}</p>
+            <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Total neto ventas</p>
+            <p className="text-sm font-bold" style={{ color: "var(--kipu-accent)" }}>${fmt(casilleros["419"])}</p>
           </div>
-          {expandido
-            ? <ChevronUp size={16} className="text-gray-500 shrink-0" />
-            : <ChevronDown size={16} className="text-gray-500 shrink-0" />
-          }
+          {expandido ? (
+            <ChevronUp size={16} className="shrink-0" style={{ color: "var(--kipu-subtle)" }} />
+          ) : (
+            <ChevronDown size={16} className="shrink-0" style={{ color: "var(--kipu-subtle)" }} />
+          )}
         </div>
       </button>
 
       {expandido && (
-        <div className="border-t border-gray-800 p-4 space-y-4">
+        <div
+          className="p-4 space-y-4"
+          style={{ borderTop: "1px solid var(--kipu-border)" }}
+        >
 
           {/* Desglose por tarifa */}
           {tarifasNZ.map((d) => (
             <div key={d.tarifa}>
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-xs font-semibold text-white">
+                <span className="text-xs font-semibold" style={{ color: "var(--kipu-text)" }}>
                   Ventas gravadas IVA {d.tarifa}%
                 </span>
-                <span className="text-[10px] text-gray-500">
+                <span className="text-[10px]" style={{ color: "var(--kipu-subtle)" }}>
                   ({fmtN(d.num_docs)} docs)
                 </span>
               </div>
@@ -148,7 +201,7 @@ export default function SeccionVentas({ desglose, casilleros }: Props) {
           {/* Tarifa 0% */}
           {tarifa0 && tarifa0.bruto > 0 && (
             <div>
-              <p className="text-xs font-semibold text-white mb-2">
+              <p className="text-xs font-semibold mb-2" style={{ color: "var(--kipu-text)" }}>
                 Ventas gravadas 0%
               </p>
               <div className="space-y-1">
@@ -171,8 +224,8 @@ export default function SeccionVentas({ desglose, casilleros }: Props) {
           )}
 
           {/* Separador */}
-          <div className="border-t border-gray-800 pt-3">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+          <div className="pt-3" style={{ borderTop: "1px solid var(--kipu-border)" }}>
+            <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: "var(--kipu-subtle)" }}>
               Totales del período
             </p>
             <div className="space-y-1">
@@ -192,30 +245,40 @@ export default function SeccionVentas({ desglose, casilleros }: Props) {
           </div>
 
           {/* Comprobantes */}
-          <div className="border-t border-gray-800 pt-3">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+          <div className="pt-3" style={{ borderTop: "1px solid var(--kipu-border)" }}>
+            <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: "var(--kipu-subtle)" }}>
               Comprobantes
             </p>
             <div className="grid grid-cols-2 gap-2">
-              <div className="bg-gray-800/60 rounded-lg px-3 py-2.5 text-center">
-                <p className="text-xs text-gray-500 mb-0.5">Emitidos</p>
-                <p className="text-lg font-bold text-white">{fmtN(casilleros["111"])}</p>
-                <p className="text-[10px] text-gray-600">casillero 111</p>
+              <div
+                className="rounded-lg px-3 py-2.5 text-center"
+                style={{ background: "color-mix(in srgb, var(--kipu-text) 4%, transparent)" }}
+              >
+                <p className="text-xs mb-0.5" style={{ color: "var(--kipu-subtle)" }}>Emitidos</p>
+                <p className="text-lg font-bold" style={{ color: "var(--kipu-text)" }}>{fmtN(casilleros["111"])}</p>
+                <p className="text-[10px]" style={{ color: "var(--kipu-subtle)" }}>casillero 111</p>
               </div>
-              <div className={clsx(
-                "rounded-lg px-3 py-2.5 text-center",
-                casilleros["113"] > 0
-                  ? "bg-red-500/10 border border-red-500/20"
-                  : "bg-gray-800/60"
-              )}>
-                <p className="text-xs text-gray-500 mb-0.5">Anulados</p>
-                <p className={clsx(
-                  "text-lg font-bold",
-                  casilleros["113"] > 0 ? "text-red-400" : "text-white"
-                )}>
+              <div
+                className="rounded-lg px-3 py-2.5 text-center"
+                style={{
+                  background: casilleros["113"] > 0
+                    ? "color-mix(in srgb, var(--kipu-danger) 10%, transparent)"
+                    : "color-mix(in srgb, var(--kipu-text) 4%, transparent)",
+                  border: casilleros["113"] > 0
+                    ? "1px solid color-mix(in srgb, var(--kipu-danger) 20%, transparent)"
+                    : "none",
+                }}
+              >
+                <p className="text-xs mb-0.5" style={{ color: "var(--kipu-subtle)" }}>Anulados</p>
+                <p
+                  className="text-lg font-bold"
+                  style={{
+                    color: casilleros["113"] > 0 ? "var(--kipu-danger)" : "var(--kipu-text)",
+                  }}
+                >
                   {fmtN(casilleros["113"])}
                 </p>
-                <p className="text-[10px] text-gray-600">casillero 113</p>
+                <p className="text-[10px]" style={{ color: "var(--kipu-subtle)" }}>casillero 113</p>
               </div>
             </div>
           </div>

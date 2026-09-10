@@ -3,11 +3,10 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import api from "@/lib/api";
 import {
-  ArrowLeft, Loader2, FileText, CheckCircle2,
+  ArrowLeft, FileText, CheckCircle2,
   AlertTriangle, Clock, Printer, Zap, Trash2,
   User, Calendar, Hash, StickyNote,
 } from "lucide-react";
-import { clsx } from "clsx";
 
 const fmt  = (n: number) => `$${n.toFixed(2)}`;
 const fmt2 = (n: number) => n.toFixed(2);
@@ -105,10 +104,10 @@ export default function DetalleProformaPage() {
           body { font-family: Arial, sans-serif; font-size: 11px; color: #111; background: #fff; }
           .page { width: 210mm; min-height: 297mm; margin: 0 auto; padding: 14mm; }
           table { width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 10px; }
-          thead tr { background: #4f46e5; color: #fff; }
+          thead tr { background: #059669; color: #fff; }
           thead th { padding: 7px 8px; text-align: left; font-weight: 600; }
           thead th.right { text-align: right; }
-          tbody tr:nth-child(even) { background: #f5f5ff; }
+          tbody tr:nth-child(even) { background: #f0faf6; }
           tbody td { padding: 6px 8px; border-bottom: 1px solid #e5e7eb; }
           tbody td.right { text-align: right; }
           @media print {
@@ -127,15 +126,26 @@ export default function DetalleProformaPage() {
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
-      <Loader2 size={24} className="animate-spin text-indigo-400" />
+      <div
+        className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin"
+        style={{ borderColor: "var(--kipu-accent)", borderTopColor: "transparent" }}
+      />
     </div>
   );
 
   if (!data) return (
     <div className="p-6 text-center">
-      <FileText size={40} className="text-gray-700 mx-auto mb-3" />
-      <p className="text-gray-500">Proforma no encontrada.</p>
-      <button onClick={() => router.back()} className="mt-4 text-indigo-400 text-sm">Volver</button>
+      <FileText size={40} className="mx-auto mb-3" style={{ color: "var(--kipu-subtle)" }} />
+      <p style={{ color: "var(--kipu-muted)" }}>Proforma no encontrada.</p>
+      <button
+        onClick={() => router.back()}
+        className="mt-4 text-sm transition-colors"
+        style={{ color: "var(--kipu-accent)" }}
+        onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent-h)"}
+        onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-accent)"}
+      >
+        Volver
+      </button>
     </div>
   );
 
@@ -150,41 +160,74 @@ export default function DetalleProformaPage() {
       <div className="flex items-center gap-3">
         <button
           onClick={() => router.back()}
-          className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
+          className="p-2 rounded-lg transition-colors"
+          style={{ color: "var(--kipu-muted)" }}
+          onMouseEnter={e => {
+            e.currentTarget.style.color = "var(--kipu-text)";
+            e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 5%, transparent)";
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.color = "var(--kipu-muted)";
+            e.currentTarget.style.background = "transparent";
+          }}
         >
           <ArrowLeft size={18} />
         </button>
         <div className="flex-1">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-400/10 text-indigo-400 font-bold">
+            <span
+              className="text-xs px-2 py-0.5 rounded-full font-bold"
+              style={{
+                color: "var(--kipu-accent)",
+                background: "color-mix(in srgb, var(--kipu-accent) 10%, transparent)",
+              }}
+            >
               PRO
             </span>
-            <h1 className="text-xl font-bold text-white font-mono">{data.numero}</h1>
+            <h1 className="text-xl font-bold font-mono" style={{ color: "var(--kipu-text)" }}>{data.numero}</h1>
           </div>
           <div className="flex items-center gap-2 mt-1 flex-wrap">
             {facturada && (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-400/10 text-emerald-400 flex items-center gap-1">
+              <span
+                className="text-xs px-2 py-0.5 rounded-full flex items-center gap-1"
+                style={{
+                  color: "var(--kipu-success)",
+                  background: "color-mix(in srgb, var(--kipu-success) 10%, transparent)",
+                }}
+              >
                 <CheckCircle2 size={10} /> Facturada
               </span>
             )}
             {!facturada && !vencida && (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-400/10 text-indigo-400 flex items-center gap-1">
+              <span
+                className="text-xs px-2 py-0.5 rounded-full flex items-center gap-1"
+                style={{
+                  color: "#818cf8",
+                  background: "color-mix(in srgb, #818cf8 10%, transparent)",
+                }}
+              >
                 <Clock size={10} /> Vigente
               </span>
             )}
             {vencida && (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-red-400/10 text-red-400 flex items-center gap-1">
+              <span
+                className="text-xs px-2 py-0.5 rounded-full flex items-center gap-1"
+                style={{
+                  color: "var(--kipu-danger)",
+                  background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
+                }}
+              >
                 <AlertTriangle size={10} /> Vencida
               </span>
             )}
-            <p className="text-sm text-gray-500">
+            <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>
               {data.cliente?.razon_social ?? "Sin cliente"}
             </p>
           </div>
         </div>
         <div className="text-right shrink-0">
-          <p className="text-xl font-bold text-white">{fmt(data.total)}</p>
-          <p className="text-xs text-gray-500">{data.fecha_emision}</p>
+          <p className="text-xl font-bold" style={{ color: "var(--kipu-text)" }}>{fmt(data.total)}</p>
+          <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>{data.fecha_emision}</p>
         </div>
       </div>
 
@@ -192,7 +235,14 @@ export default function DetalleProformaPage() {
       <div className="flex gap-2 flex-wrap">
         <button
           onClick={handleImprimir}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs border border-gray-700 transition-colors"
+          className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs transition-colors"
+          style={{
+            background: "var(--kipu-surface)",
+            color: "var(--kipu-text)",
+            border: "1px solid var(--kipu-border)",
+          }}
+          onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 5%, transparent)"}
+          onMouseLeave={e => e.currentTarget.style.background = "var(--kipu-surface)"}
         >
           <Printer size={13} /> Imprimir / PDF
         </button>
@@ -200,13 +250,31 @@ export default function DetalleProformaPage() {
           <>
             <button
               onClick={handleFacturar}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium transition-colors"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-white text-xs font-medium transition-colors"
+              style={{ background: "var(--kipu-accent)" }}
+              onMouseEnter={e => e.currentTarget.style.background = "var(--kipu-accent-h)"}
+              onMouseLeave={e => e.currentTarget.style.background = "var(--kipu-accent)"}
             >
               <Zap size={13} /> Convertir en factura
             </button>
             <button
               onClick={() => setShowEliminar(true)}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-gray-800 hover:bg-red-500/10 text-gray-400 hover:text-red-400 text-xs border border-gray-700 hover:border-red-500/30 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs transition-colors"
+              style={{
+                background: "var(--kipu-surface)",
+                color: "var(--kipu-muted)",
+                border: "1px solid var(--kipu-border)",
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.color = "var(--kipu-danger)";
+                e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-danger) 10%, transparent)";
+                e.currentTarget.style.borderColor = "color-mix(in srgb, var(--kipu-danger) 30%, transparent)";
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.color = "var(--kipu-muted)";
+                e.currentTarget.style.background = "var(--kipu-surface)";
+                e.currentTarget.style.borderColor = "var(--kipu-border)";
+              }}
             >
               <Trash2 size={13} /> Eliminar
             </button>
@@ -216,10 +284,16 @@ export default function DetalleProformaPage() {
 
       {/* Cliente */}
       {data.cliente && (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+        <div
+          className="rounded-xl p-4"
+          style={{
+            background: "var(--kipu-surface)",
+            border: "1px solid var(--kipu-border)",
+          }}
+        >
           <div className="flex items-center gap-2 mb-3">
-            <User size={14} className="text-indigo-400" />
-            <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Cliente</h2>
+            <User size={14} style={{ color: "var(--kipu-accent)" }} />
+            <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--kipu-subtle)" }}>Cliente</h2>
           </div>
           <div className="grid grid-cols-2 gap-3 text-sm">
             {[
@@ -232,8 +306,8 @@ export default function DetalleProformaPage() {
                 : []),
             ].map(({ label, value }) => (
               <div key={label}>
-                <p className="text-xs text-gray-500">{label}</p>
-                <p className="text-white font-medium truncate">{value}</p>
+                <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>{label}</p>
+                <p className="font-medium truncate" style={{ color: "var(--kipu-text)" }}>{value}</p>
               </div>
             ))}
           </div>
@@ -241,19 +315,28 @@ export default function DetalleProformaPage() {
       )}
 
       {/* Fechas */}
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+      <div
+        className="rounded-xl p-4"
+        style={{
+          background: "var(--kipu-surface)",
+          border: "1px solid var(--kipu-border)",
+        }}
+      >
         <div className="flex items-center gap-2 mb-3">
-          <Calendar size={14} className="text-indigo-400" />
-          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Fechas</h2>
+          <Calendar size={14} style={{ color: "var(--kipu-accent)" }} />
+          <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--kipu-subtle)" }}>Fechas</h2>
         </div>
         <div className="grid grid-cols-2 gap-3 text-sm">
           <div>
-            <p className="text-xs text-gray-500">Emisión</p>
-            <p className="text-white font-medium">{data.fecha_emision}</p>
+            <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Emisión</p>
+            <p className="font-medium" style={{ color: "var(--kipu-text)" }}>{data.fecha_emision}</p>
           </div>
           <div>
-            <p className="text-xs text-gray-500">Válida hasta</p>
-            <p className={clsx("font-medium", vencida ? "text-red-400" : "text-white")}>
+            <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Válida hasta</p>
+            <p
+              className="font-medium"
+              style={{ color: vencida ? "var(--kipu-danger)" : "var(--kipu-text)" }}
+            >
               {data.fecha_validez ?? "Sin vencimiento"}
               {vencida && " ⚠️"}
             </p>
@@ -262,26 +345,41 @@ export default function DetalleProformaPage() {
       </div>
 
       {/* Ítems */}
-      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
-        <div className="px-4 py-3 border-b border-gray-800 flex items-center gap-2">
-          <Hash size={14} className="text-indigo-400" />
-          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+      <div
+        className="rounded-xl overflow-hidden"
+        style={{
+          background: "var(--kipu-surface)",
+          border: "1px solid var(--kipu-border)",
+        }}
+      >
+        <div
+          className="px-4 py-3 flex items-center gap-2"
+          style={{ borderBottom: "2px solid var(--kipu-border)" }}
+        >
+          <Hash size={14} style={{ color: "var(--kipu-accent)" }} />
+          <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--kipu-subtle)" }}>
             Ítems ({data.items.length})
           </h2>
         </div>
-        <div className="divide-y divide-gray-800">
+        <div>
           {data.items.map((it: any, i: number) => (
-            <div key={i} className="flex items-center gap-3 px-4 py-3">
+            <div
+              key={i}
+              className="flex items-center gap-3 px-4 py-3"
+              style={{
+                borderTop: i > 0 ? "1px solid var(--kipu-border)" : "none",
+              }}
+            >
               <div className="flex-1 min-w-0">
-                <p className="text-sm text-white">{it.descripcion}</p>
-                <p className="text-xs text-gray-500">
+                <p className="text-sm" style={{ color: "var(--kipu-text)" }}>{it.descripcion}</p>
+                <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
                   {it.cantidad} × {fmt(it.precio_unitario)} · IVA {it.tipo_iva}%
                 </p>
               </div>
               <div className="text-right shrink-0">
-                <p className="text-sm font-semibold text-white">{fmt(it.total)}</p>
+                <p className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>{fmt(it.total)}</p>
                 {it.valor_iva > 0 && (
-                  <p className="text-xs text-gray-500">IVA {fmt(it.valor_iva)}</p>
+                  <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>IVA {fmt(it.valor_iva)}</p>
                 )}
               </div>
             </div>
@@ -289,40 +387,62 @@ export default function DetalleProformaPage() {
         </div>
 
         {/* Totales */}
-        <div className="px-4 py-3 border-t border-gray-800 space-y-1.5">
-          <div className="flex justify-between text-sm text-gray-400">
+        <div
+          className="px-4 py-3 space-y-1.5"
+          style={{ borderTop: "2px solid var(--kipu-border)" }}
+        >
+          <div className="flex justify-between text-sm" style={{ color: "var(--kipu-muted)" }}>
             <span>Subtotal</span><span>{fmt(data.subtotal)}</span>
           </div>
-          <div className="flex justify-between text-sm text-gray-400">
+          <div className="flex justify-between text-sm" style={{ color: "var(--kipu-muted)" }}>
             <span>IVA</span><span>{fmt(data.total_iva)}</span>
           </div>
-          <div className="flex justify-between text-base font-bold text-white border-t border-gray-800 pt-1.5">
-            <span>Total</span><span className="text-indigo-400">{fmt(data.total)}</span>
+          <div
+            className="flex justify-between text-base font-bold pt-1.5"
+            style={{ borderTop: "1px solid var(--kipu-border)" }}
+          >
+            <span style={{ color: "var(--kipu-text)" }}>Total</span>
+            <span style={{ color: "var(--kipu-accent)" }}>{fmt(data.total)}</span>
           </div>
         </div>
       </div>
 
       {/* Notas */}
       {data.notas && (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+        <div
+          className="rounded-xl p-4"
+          style={{
+            background: "var(--kipu-surface)",
+            border: "1px solid var(--kipu-border)",
+          }}
+        >
           <div className="flex items-center gap-2 mb-2">
-            <StickyNote size={14} className="text-amber-400" />
-            <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Observaciones</h2>
+            <StickyNote size={14} style={{ color: "var(--kipu-warning)" }} />
+            <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--kipu-subtle)" }}>Observaciones</h2>
           </div>
-          <p className="text-sm text-gray-300">{data.notas}</p>
+          <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>{data.notas}</p>
         </div>
       )}
 
       {/* Facturada — link al documento */}
       {facturada && data.documento_emitido_id && (
-        <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-xl p-4 flex items-center justify-between">
+        <div
+          className="rounded-xl p-4 flex items-center justify-between"
+          style={{
+            background: "color-mix(in srgb, var(--kipu-success) 5%, transparent)",
+            border: "1px solid color-mix(in srgb, var(--kipu-success) 20%, transparent)",
+          }}
+        >
           <div className="flex items-center gap-2">
-            <CheckCircle2 size={14} className="text-emerald-400" />
-            <p className="text-sm text-emerald-400 font-medium">Esta proforma fue facturada</p>
+            <CheckCircle2 size={14} style={{ color: "var(--kipu-success)" }} />
+            <p className="text-sm font-medium" style={{ color: "var(--kipu-success)" }}>Esta proforma fue facturada</p>
           </div>
           <button
             onClick={() => router.push(`/documentos/${data.documento_emitido_id}`)}
-            className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
+            className="text-xs transition-colors"
+            style={{ color: "var(--kipu-accent)" }}
+            onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent-h)"}
+            onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-accent)"}
           >
             Ver factura →
           </button>
@@ -334,9 +454,9 @@ export default function DetalleProformaPage() {
         <div ref={printRef}>
           <div className="page" style={{ padding: "32px", fontFamily: "Arial, sans-serif", color: "#111" }}>
             {/* Header */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "2px solid #4f46e5", paddingBottom: "16px", marginBottom: "20px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderBottom: "2px solid #059669", paddingBottom: "16px", marginBottom: "20px" }}>
               <div>
-                <div style={{ fontSize: "20px", fontWeight: "bold", color: "#4f46e5" }}>
+                <div style={{ fontSize: "20px", fontWeight: "bold", color: "#059669" }}>
                   {data.emisor?.nombre_comercial || data.emisor?.razon_social}
                 </div>
                 <div style={{ fontSize: "11px", color: "#555", marginTop: "4px", lineHeight: "1.6" }}>
@@ -345,7 +465,7 @@ export default function DetalleProformaPage() {
                 </div>
               </div>
               <div style={{ textAlign: "right" }}>
-                <div style={{ fontSize: "26px", fontWeight: "bold", color: "#4f46e5", letterSpacing: "3px" }}>PROFORMA</div>
+                <div style={{ fontSize: "26px", fontWeight: "bold", color: "#059669", letterSpacing: "3px" }}>PROFORMA</div>
                 <div style={{ fontSize: "13px", fontWeight: "bold", color: "#111", marginTop: "4px" }}>{data.numero}</div>
                 <div style={{ fontSize: "10px", color: "#666", marginTop: "2px" }}>Fecha: {data.fecha_emision}</div>
                 {data.fecha_validez && (
@@ -356,7 +476,7 @@ export default function DetalleProformaPage() {
 
             {/* Cliente */}
             {data.cliente && (
-              <div style={{ background: "#f8f8ff", border: "1px solid #e5e7eb", borderRadius: "6px", padding: "12px 14px", marginBottom: "20px" }}>
+              <div style={{ background: "#f0faf6", border: "1px solid #e5e7eb", borderRadius: "6px", padding: "12px 14px", marginBottom: "20px" }}>
                 <div style={{ fontSize: "9px", textTransform: "uppercase", color: "#888", fontWeight: "bold", letterSpacing: "0.5px", marginBottom: "6px" }}>Cliente</div>
                 <div style={{ fontSize: "13px", fontWeight: "bold", color: "#111" }}>{data.cliente.razon_social}</div>
                 <div style={{ fontSize: "10px", color: "#555", marginTop: "3px", lineHeight: "1.6" }}>
@@ -371,7 +491,7 @@ export default function DetalleProformaPage() {
             {/* Tabla */}
             <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "16px", fontSize: "11px" }}>
               <thead>
-                <tr style={{ background: "#4f46e5", color: "#fff" }}>
+                <tr style={{ background: "#059669", color: "#fff" }}>
                   <th style={{ padding: "8px", textAlign: "left", fontWeight: 600 }}>Descripción</th>
                   <th style={{ padding: "8px", textAlign: "right", fontWeight: 600, width: "60px" }}>Cant.</th>
                   <th style={{ padding: "8px", textAlign: "right", fontWeight: 600, width: "80px" }}>P. Unit.</th>
@@ -382,7 +502,7 @@ export default function DetalleProformaPage() {
               </thead>
               <tbody>
                 {data.items.map((it: any, i: number) => (
-                  <tr key={i} style={{ background: i % 2 === 0 ? "#fff" : "#f5f5ff" }}>
+                  <tr key={i} style={{ background: i % 2 === 0 ? "#fff" : "#f0faf6" }}>
                     <td style={{ padding: "7px 8px", borderBottom: "1px solid #e5e7eb" }}>{it.descripcion}</td>
                     <td style={{ padding: "7px 8px", textAlign: "right", borderBottom: "1px solid #e5e7eb" }}>{it.cantidad}</td>
                     <td style={{ padding: "7px 8px", textAlign: "right", borderBottom: "1px solid #e5e7eb" }}>${fmt2(it.precio_unitario)}</td>
@@ -402,7 +522,7 @@ export default function DetalleProformaPage() {
               <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: "11px", color: "#444", borderBottom: "1px solid #eee" }}>
                 <span>IVA</span><span>${fmt2(data.total_iva)}</span>
               </div>
-              <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 0 0", fontSize: "15px", fontWeight: "bold", color: "#4f46e5", borderTop: "2px solid #4f46e5", marginTop: "4px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 0 0", fontSize: "15px", fontWeight: "bold", color: "#059669", borderTop: "2px solid #059669", marginTop: "4px" }}>
                 <span>TOTAL</span><span>${fmt2(data.total)}</span>
               </div>
             </div>
@@ -433,31 +553,56 @@ export default function DetalleProformaPage() {
       {/* Modal eliminar */}
       {showEliminar && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-          <div className="bg-gray-900 border border-gray-800 rounded-xl w-full max-w-sm p-5 space-y-4">
+          <div
+            className="rounded-xl w-full max-w-sm p-5 space-y-4"
+            style={{
+              background: "var(--kipu-surface)",
+              border: "1px solid var(--kipu-border)",
+            }}
+          >
             <div className="flex items-start gap-3">
-              <div className="w-9 h-9 rounded-full bg-red-500/20 flex items-center justify-center shrink-0">
-                <Trash2 size={16} className="text-red-400" />
+              <div
+                className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
+                style={{
+                  background: "color-mix(in srgb, var(--kipu-danger) 20%, transparent)",
+                }}
+              >
+                <Trash2 size={16} style={{ color: "var(--kipu-danger)" }} />
               </div>
               <div>
-                <p className="text-white font-semibold text-sm">¿Eliminar proforma?</p>
-                <p className="text-gray-400 text-xs mt-1">
-                  Se eliminará <span className="text-white font-mono">{data.numero}</span> permanentemente.
+                <p className="font-semibold text-sm" style={{ color: "var(--kipu-text)" }}>¿Eliminar proforma?</p>
+                <p className="text-xs mt-1" style={{ color: "var(--kipu-muted)" }}>
+                  Se eliminará <span className="font-mono" style={{ color: "var(--kipu-text)" }}>{data.numero}</span> permanentemente.
                 </p>
               </div>
             </div>
             <div className="flex gap-2">
               <button
                 onClick={() => setShowEliminar(false)}
-                className="flex-1 py-2 rounded-lg border border-gray-700 text-gray-400 hover:text-white text-sm transition-colors"
+                className="flex-1 py-2 rounded-lg text-sm transition-colors"
+                style={{
+                  border: "1px solid var(--kipu-border)",
+                  color: "var(--kipu-muted)",
+                }}
+                onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
+                onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-muted)"}
               >
                 Cancelar
               </button>
               <button
                 onClick={handleEliminar}
                 disabled={eliminando}
-                className="flex-1 py-2 rounded-lg bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                className="flex-1 py-2 rounded-lg text-white text-sm font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                style={{ background: "var(--kipu-danger)" }}
               >
-                {eliminando ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                {eliminando ? (
+                  <div
+                    className="w-3.5 h-3.5 border-2 border-t-transparent rounded-full animate-spin"
+                    style={{ borderColor: "#FFFFFF", borderTopColor: "transparent" }}
+                  />
+                ) : (
+                  <Trash2 size={14} />
+                )}
                 Eliminar
               </button>
             </div>

@@ -2,10 +2,9 @@
 import { useState, useEffect } from "react";
 import api from "@/lib/api";
 import {
-  Plus, Copy, Trash2, Loader2, Key, CheckCircle2, X,
+  Plus, Copy, Trash2, Key, CheckCircle2, X,
   FlaskConical, RefreshCw, Eye, EyeOff
 } from "lucide-react";
-import { clsx } from "clsx";
 import PinInput from "@/components/PinInput";
 import { useAuthStore } from "@/store/auth.store";
 
@@ -96,30 +95,60 @@ export default function TabApiKeys() {
     <div className="space-y-4">
 
       {/* ── Sandbox Key ───────────────────────────────────────────────────── */}
-      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-800">
+      <div
+        className="rounded-xl overflow-hidden"
+        style={{
+          background: "var(--kipu-surface)",
+          border: "1px solid var(--kipu-border)",
+        }}
+      >
+        <div
+          className="flex items-center justify-between px-5 py-4"
+          style={{ borderBottom: "1px solid var(--kipu-border)" }}
+        >
           <div className="flex items-center gap-2">
-            <FlaskConical size={15} className="text-blue-400" />
-            <h2 className="text-sm font-semibold text-white">API Key de Pruebas</h2>
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 font-bold">
+            <FlaskConical size={15} style={{ color: "#60a5fa" }} />
+            <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>API Key de Pruebas</h2>
+            <span
+              className="text-[10px] px-2 py-0.5 rounded-full font-bold"
+              style={{
+                background: "color-mix(in srgb, #60a5fa 20%, transparent)",
+                color: "#60a5fa",
+              }}
+            >
               SANDBOX
             </span>
           </div>
           <button
+            type="button"
             onClick={regenerarSandbox}
             disabled={regenSandbox}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-700 text-gray-400 hover:text-white text-xs transition-colors disabled:opacity-40"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors disabled:opacity-40"
+            style={{
+              border: "1px solid var(--kipu-border)",
+              color: "var(--kipu-muted)",
+            }}
+            onMouseEnter={e => {
+              if (!regenSandbox) e.currentTarget.style.color = "var(--kipu-text)";
+            }}
+            onMouseLeave={e => {
+              if (!regenSandbox) e.currentTarget.style.color = "var(--kipu-muted)";
+            }}
           >
-            {regenSandbox
-              ? <Loader2 size={12} className="animate-spin" />
-              : <RefreshCw size={12} />
-            }
+            {regenSandbox ? (
+              <div
+                className="w-3 h-3 border-2 border-t-transparent rounded-full animate-spin"
+                style={{ borderColor: "currentColor", borderTopColor: "transparent" }}
+              />
+            ) : (
+              <RefreshCw size={12} />
+            )}
             Regenerar
           </button>
         </div>
 
         <div className="p-5 space-y-3">
-          <p className="text-xs text-gray-500">
+          <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
             Usa esta key para probar tu integración. No emite documentos reales al SRI
             ni consume créditos.
           </p>
@@ -127,38 +156,54 @@ export default function TabApiKeys() {
           {sandboxKey ? (
             <div className="space-y-2">
               {/* Key en texto plano — siempre visible */}
-              <div className="flex items-center gap-2 bg-gray-800 rounded-lg px-3 py-2.5">
-                <FlaskConical size={13} className="text-blue-400 shrink-0" />
-                <code className={clsx(
-                  "text-xs flex-1 break-all transition-all",
-                  showSandbox ? "text-white" : "text-gray-600 select-none blur-sm"
-                )}>
+              <div
+                className="flex items-center gap-2 rounded-lg px-3 py-2.5"
+                style={{ background: "color-mix(in srgb, var(--kipu-text) 5%, transparent)" }}
+              >
+                <FlaskConical size={13} className="shrink-0" style={{ color: "#60a5fa" }} />
+                <code
+                  className="text-xs flex-1 break-all transition-all"
+                  style={{
+                    color: showSandbox ? "var(--kipu-text)" : "var(--kipu-subtle)",
+                    filter: showSandbox ? "none" : "blur(4px)",
+                    userSelect: showSandbox ? "auto" : "none",
+                  }}
+                >
                   {sandboxKey.key ?? "kp_test_••••••••••••••••••••••••••••••••"}
                 </code>
                 <div className="flex items-center gap-1 shrink-0">
                   <button
+                    type="button"
                     onClick={() => setShowSandbox(!showSandbox)}
-                    className="p-1 text-gray-500 hover:text-white transition-colors"
+                    className="p-1 transition-colors"
+                    style={{ color: "var(--kipu-subtle)" }}
+                    onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
+                    onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-subtle)"}
                     title={showSandbox ? "Ocultar" : "Mostrar"}
                   >
                     {showSandbox ? <EyeOff size={13} /> : <Eye size={13} />}
                   </button>
                   {sandboxKey.key && (
                     <button
+                      type="button"
                       onClick={() => copiar(sandboxKey.key!, "sandbox")}
-                      className="p-1 text-gray-500 hover:text-white transition-colors"
+                      className="p-1 transition-colors"
+                      style={{ color: "var(--kipu-subtle)" }}
+                      onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
+                      onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-subtle)"}
                       title="Copiar"
                     >
-                      {copiado === "sandbox"
-                        ? <CheckCircle2 size={13} className="text-emerald-400" />
-                        : <Copy size={13} />
-                      }
+                      {copiado === "sandbox" ? (
+                        <CheckCircle2 size={13} style={{ color: "var(--kipu-success)" }} />
+                      ) : (
+                        <Copy size={13} />
+                      )}
                     </button>
                   )}
                 </div>
               </div>
 
-              <div className="flex justify-between text-xs text-gray-600">
+              <div className="flex justify-between text-xs" style={{ color: "var(--kipu-subtle)" }}>
                 <span>
                   {sandboxKey.last_used_at
                     ? `Último uso: ${new Date(sandboxKey.last_used_at).toLocaleDateString("es-EC")}`
@@ -172,11 +217,13 @@ export default function TabApiKeys() {
             </div>
           ) : (
             <div className="text-center py-4">
-              <p className="text-sm text-gray-500 mb-3">Sin key de sandbox.</p>
+              <p className="text-sm mb-3" style={{ color: "var(--kipu-subtle)" }}>Sin key de sandbox.</p>
               <button
+                type="button"
                 onClick={regenerarSandbox}
                 disabled={regenSandbox}
-                className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-medium transition-colors"
+                className="px-4 py-2 rounded-lg text-white text-xs font-medium transition-colors disabled:opacity-50"
+                style={{ background: "#3b82f6" }}
               >
                 Generar key de sandbox
               </button>
@@ -184,8 +231,15 @@ export default function TabApiKeys() {
           )}
 
           {/* Info de uso */}
-          <div className="bg-blue-500/5 border border-blue-500/15 rounded-lg px-3 py-2.5 text-xs text-blue-400/70 space-y-1">
-            <p>· Prefix: <code className="text-blue-300">kp_test_</code></p>
+          <div
+            className="rounded-lg px-3 py-2.5 text-xs space-y-1"
+            style={{
+              background: "color-mix(in srgb, #60a5fa 5%, transparent)",
+              border: "1px solid color-mix(in srgb, #60a5fa 15%, transparent)",
+              color: "#93c5fd",
+            }}
+          >
+            <p>· Prefix: <code className="font-semibold" style={{ color: "#bfdbfe" }}>kp_test_</code></p>
             <p>· Endpoint: mismo que producción</p>
             <p>· Documentos van al SRI de pruebas — no son legales</p>
             <p>· Email de confirmación va al dueño de la cuenta, no al cliente</p>
@@ -195,45 +249,90 @@ export default function TabApiKeys() {
 
       {/* Key nueva generada */}
       {nuevaKey && (
-        <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4">
+        <div
+          className="rounded-xl p-4"
+          style={{
+            background: "color-mix(in srgb, var(--kipu-success) 10%, transparent)",
+            border: "1px solid color-mix(in srgb, var(--kipu-success) 20%, transparent)",
+          }}
+        >
           <div className="flex items-center gap-2 mb-2">
-            <CheckCircle2 size={15} className="text-emerald-400" />
-            <p className="text-sm font-semibold text-emerald-300">API Key creada</p>
+            <CheckCircle2 size={15} style={{ color: "var(--kipu-success)" }} />
+            <p className="text-sm font-semibold" style={{ color: "var(--kipu-success)" }}>API Key creada</p>
           </div>
-          <p className="text-xs text-emerald-400/80 mb-3">
+          <p className="text-xs mb-3" style={{ color: "var(--kipu-success)" }}>
             Guárdala ahora — no podrás verla de nuevo.
           </p>
-          <div className="flex items-center gap-2 bg-gray-900 rounded-lg px-3 py-2">
-            <code className="text-xs text-white flex-1 break-all">{nuevaKey}</code>
-            <button onClick={() => copiar(nuevaKey, "nueva")}
-              className="shrink-0 text-gray-400 hover:text-white transition-colors">
-              {copiado === "nueva"
-                ? <CheckCircle2 size={14} className="text-emerald-400" />
-                : <Copy size={14} />
-              }
+          <div
+            className="flex items-center gap-2 rounded-lg px-3 py-2"
+            style={{ background: "color-mix(in srgb, var(--kipu-surface) 80%, transparent)" }}
+          >
+            <code className="text-xs flex-1 break-all" style={{ color: "var(--kipu-text)" }}>{nuevaKey}</code>
+            <button
+              type="button"
+              onClick={() => copiar(nuevaKey, "nueva")}
+              className="shrink-0 transition-colors"
+              style={{ color: "var(--kipu-subtle)" }}
+              onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
+              onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-subtle)"}
+            >
+              {copiado === "nueva" ? (
+                <CheckCircle2 size={14} style={{ color: "var(--kipu-success)" }} />
+              ) : (
+                <Copy size={14} />
+              )}
             </button>
           </div>
-          <button onClick={() => setNuevaKey("")}
-            className="mt-3 text-xs text-gray-500 hover:text-white transition-colors">
+          <button
+            type="button"
+            onClick={() => setNuevaKey("")}
+            className="mt-3 text-xs transition-colors"
+            style={{ color: "var(--kipu-subtle)" }}
+            onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
+            onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-subtle)"}
+          >
             Ya la guardé, cerrar
           </button>
         </div>
       )}
 
       {/* ── Live Keys ─────────────────────────────────────────────────────── */}
-      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-800">
+      <div
+        className="rounded-xl overflow-hidden"
+        style={{
+          background: "var(--kipu-surface)",
+          border: "1px solid var(--kipu-border)",
+        }}
+      >
+        <div
+          className="flex items-center justify-between px-5 py-4"
+          style={{ borderBottom: "1px solid var(--kipu-border)" }}
+        >
           <div className="flex items-center gap-2">
-            <Key size={15} className="text-indigo-400" />
-            <h2 className="text-sm font-semibold text-white">API Keys de Producción</h2>
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-bold">
+            <Key size={15} style={{ color: "var(--kipu-accent)" }} />
+            <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>API Keys de Producción</h2>
+            <span
+              className="text-[10px] px-2 py-0.5 rounded-full font-bold"
+              style={{
+                background: "color-mix(in srgb, var(--kipu-success) 20%, transparent)",
+                color: "var(--kipu-success)",
+              }}
+            >
               LIVE
             </span>
           </div>
           <button
+            type="button"
             onClick={() => { setShowForm(true); setNombre(""); }}
             disabled={empresa?.ambiente !== 2}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white text-xs font-medium transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-medium transition-colors disabled:opacity-40"
+            style={{ background: "var(--kipu-accent)" }}
+            onMouseEnter={e => {
+              if (empresa?.ambiente === 2) e.currentTarget.style.background = "var(--kipu-accent-h)";
+            }}
+            onMouseLeave={e => {
+              if (empresa?.ambiente === 2) e.currentTarget.style.background = "var(--kipu-accent)";
+            }}
             title={empresa?.ambiente !== 2 ? "Solo disponible en producción" : ""}
           >
             <Plus size={13} /> Nueva key
@@ -242,46 +341,73 @@ export default function TabApiKeys() {
 
         {loading ? (
           <div className="flex items-center justify-center py-8">
-            <Loader2 size={18} className="animate-spin text-indigo-400" />
+            <div
+              className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin"
+              style={{ borderColor: "var(--kipu-accent)", borderTopColor: "transparent" }}
+            />
           </div>
         ) : keys.length === 0 ? (
           <div className="text-center py-8">
-            <Key size={32} className="text-gray-700 mx-auto mb-2" />
-            <p className="text-sm text-gray-500">Sin API keys de producción.</p>
+            <Key size={32} className="mx-auto mb-2" style={{ color: "var(--kipu-subtle)" }} />
+            <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>Sin API keys de producción.</p>
             {empresa?.ambiente !== 2 && (
-              <p className="text-xs text-amber-400 mt-2">
+              <p className="text-xs mt-2" style={{ color: "var(--kipu-warning)" }}>
                 Activa tu cuenta en producción para crear keys live.
               </p>
             )}
           </div>
         ) : (
-          <div className="divide-y divide-gray-800">
-            {keys.map((k) => (
-              <div key={k.id} className="flex items-center gap-3 px-5 py-3">
-                <div className="w-8 h-8 rounded-lg bg-gray-800 flex items-center justify-center shrink-0">
-                  <Key size={14} className="text-gray-400" />
+          <div>
+            {keys.map((k, idx) => (
+              <div
+                key={k.id}
+                className="flex items-center gap-3 px-5 py-3"
+                style={{ borderTop: idx > 0 ? "1px solid var(--kipu-border)" : "none" }}
+              >
+                <div
+                  className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                  style={{ background: "color-mix(in srgb, var(--kipu-text) 5%, transparent)" }}
+                >
+                  <Key size={14} style={{ color: "var(--kipu-subtle)" }} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm text-white font-medium">{k.nombre}</p>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-sm font-medium" style={{ color: "var(--kipu-text)" }}>{k.nombre}</p>
+                  <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
                     {k.last_used_at
                       ? `Último uso: ${new Date(k.last_used_at).toLocaleDateString("es-EC")}`
                       : "Sin usar aún"
                     } · Creada: {new Date(k.created_at).toLocaleDateString("es-EC")}
                   </p>
                 </div>
-                <span className={clsx(
-                  "text-xs px-2 py-0.5 rounded-full font-medium shrink-0",
-                  k.estado === "activa"
-                    ? "bg-emerald-500/20 text-emerald-400"
-                    : "bg-gray-700 text-gray-500"
-                )}>
+                <span
+                  className="text-xs px-2 py-0.5 rounded-full font-medium shrink-0"
+                  style={{
+                    background: k.estado === "activa"
+                      ? "color-mix(in srgb, var(--kipu-success) 20%, transparent)"
+                      : "color-mix(in srgb, var(--kipu-text) 10%, transparent)",
+                    color: k.estado === "activa"
+                      ? "var(--kipu-success)"
+                      : "var(--kipu-subtle)",
+                  }}
+                >
                   {k.estado}
                 </span>
                 {k.estado === "activa" && (
-                  <button onClick={() => setKeyToRevoke(k.id)}
-                    className="p-1.5 rounded text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-colors shrink-0"
-                    title="Revocar">
+                  <button
+                    type="button"
+                    onClick={() => setKeyToRevoke(k.id)}
+                    className="p-1.5 rounded transition-colors shrink-0"
+                    style={{ color: "var(--kipu-subtle)" }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.color = "var(--kipu-danger)";
+                      e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-danger) 10%, transparent)";
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.color = "var(--kipu-subtle)";
+                      e.currentTarget.style.background = "transparent";
+                    }}
+                    title="Revocar"
+                  >
                     <Trash2 size={14} />
                   </button>
                 )}
@@ -294,18 +420,44 @@ export default function TabApiKeys() {
       {/* Modal crear key */}
       {showForm && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-          <div className="bg-gray-900 border border-gray-800 rounded-xl w-full max-w-sm p-5 space-y-4">
-            <div className="flex items-center justify-between pb-2 border-b border-gray-800">
-              <h2 className="text-sm font-semibold text-white">Nueva API Key Live</h2>
-              <button onClick={() => setShowForm(false)} className="text-gray-500 hover:text-white">
+          <div
+            className="rounded-xl w-full max-w-sm p-5 space-y-4"
+            style={{
+              background: "var(--kipu-surface)",
+              border: "1px solid var(--kipu-border)",
+            }}
+          >
+            <div
+              className="flex items-center justify-between pb-2"
+              style={{ borderBottom: "1px solid var(--kipu-border)" }}
+            >
+              <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>Nueva API Key Live</h2>
+              <button
+                type="button"
+                onClick={() => setShowForm(false)}
+                className="transition-colors"
+                style={{ color: "var(--kipu-subtle)" }}
+                onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
+                onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-subtle)"}
+              >
                 <X size={18} />
               </button>
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1.5">Nombre de la integración</label>
-              <input value={nombre} onChange={(e) => setNombre(e.target.value)}
+              <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Nombre de la integración</label>
+              <input
+                value={nombre}
+                onChange={(e) => setNombre(e.target.value)}
                 placeholder="Ej: WooCommerce, ERP, POS..."
-                className="w-full px-3 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 text-sm" />
+                className="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none"
+                style={{
+                  background: "var(--kipu-surface)",
+                  border: "1px solid var(--kipu-border)",
+                  color: "var(--kipu-text)",
+                }}
+                onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+              />
             </div>
             {nombre.trim() && (
               <PinInput
@@ -323,11 +475,22 @@ export default function TabApiKeys() {
       {/* Modal revocar key */}
       {keyToRevoke && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-          <div className="bg-gray-900 border border-gray-800 rounded-xl w-full max-w-sm p-5">
-            <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 mb-4">
-              <p className="text-xs text-red-300">
-                ⚠️ Revocar una API Key deshabilitará inmediatamente cualquier integración vinculada.
-              </p>
+          <div
+            className="rounded-xl w-full max-w-sm p-5"
+            style={{
+              background: "var(--kipu-surface)",
+              border: "1px solid var(--kipu-border)",
+            }}
+          >
+            <div
+              className="rounded-lg p-3 mb-4 text-xs"
+              style={{
+                background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
+                border: "1px solid color-mix(in srgb, var(--kipu-danger) 20%, transparent)",
+                color: "var(--kipu-danger)",
+              }}
+            >
+              ⚠️ Revocar una API Key deshabilitará inmediatamente cualquier integración vinculada.
             </div>
             <PinInput
               tipoAccion="ELIMINAR_TOKEN"
@@ -341,18 +504,25 @@ export default function TabApiKeys() {
       )}
 
       {/* Info */}
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 text-xs text-gray-500 space-y-1.5">
-        <p className="font-semibold text-gray-400 mb-2">Diferencias entre keys</p>
+      <div
+        className="rounded-xl p-4 text-xs space-y-1.5"
+        style={{
+          background: "var(--kipu-surface)",
+          border: "1px solid var(--kipu-border)",
+          color: "var(--kipu-subtle)",
+        }}
+      >
+        <p className="font-semibold mb-2" style={{ color: "var(--kipu-text)" }}>Diferencias entre keys</p>
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1">
-            <p className="text-blue-400 font-medium">kp_test_ (Sandbox)</p>
+            <p className="font-medium" style={{ color: "#60a5fa" }}>kp_test_ (Sandbox)</p>
             <p>· SRI de pruebas</p>
             <p>· Sin cobro de créditos</p>
             <p>· Email al dueño de cuenta</p>
             <p>· Siempre visible</p>
           </div>
           <div className="space-y-1">
-            <p className="text-emerald-400 font-medium">kp_live_ (Producción)</p>
+            <p className="font-medium" style={{ color: "var(--kipu-success)" }}>kp_live_ (Producción)</p>
             <p>· SRI real</p>
             <p>· Consume créditos</p>
             <p>· Email al cliente</p>

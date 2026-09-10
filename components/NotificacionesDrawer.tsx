@@ -1,14 +1,13 @@
 "use client";
-import { useState, useCallback } from "react";
+import { useCallback } from "react";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 import useSWR from "swr";
 import { useAuthStore } from "@/store/auth.store";
 import {
-  Bell, X, CheckCheck, Loader2,
+  Bell, X, CheckCheck,
   FileText, CreditCard, AlertTriangle, Info, ClipboardList
 } from "lucide-react";
-import { clsx } from "clsx";
 
 interface Notificacion {
   id:          number;
@@ -23,24 +22,27 @@ interface Notificacion {
 // ── Ícono por tipo ─────────────────────────────────────────────────────────────
 function IconoTipo({ tipo }: { tipo: string }) {
   const config: Record<string, { icon: any; color: string; bg: string }> = {
-    DECLARACION: { icon: ClipboardList, color: "text-indigo-400",  bg: "bg-indigo-500/20" },
-    FACTURA:     { icon: FileText,      color: "text-emerald-400", bg: "bg-emerald-500/20" },
-    CREDITOS:    { icon: CreditCard,    color: "text-amber-400",   bg: "bg-amber-500/20" },
-    SISTEMA:     { icon: Info,          color: "text-blue-400",    bg: "bg-blue-500/20" },
-    DEFAULT:     { icon: AlertTriangle, color: "text-gray-400",    bg: "bg-gray-500/20" },
+    DECLARACION: { icon: ClipboardList, color: "var(--kipu-accent)",  bg: "color-mix(in srgb, var(--kipu-accent) 20%, transparent)" },
+    FACTURA:     { icon: FileText,      color: "var(--kipu-success)", bg: "color-mix(in srgb, var(--kipu-success) 20%, transparent)" },
+    CREDITOS:    { icon: CreditCard,    color: "var(--kipu-warning)", bg: "color-mix(in srgb, var(--kipu-warning) 20%, transparent)" },
+    SISTEMA:     { icon: Info,          color: "#60a5fa",            bg: "color-mix(in srgb, #60a5fa 20%, transparent)" },
+    DEFAULT:     { icon: AlertTriangle, color: "var(--kipu-subtle)",  bg: "color-mix(in srgb, var(--kipu-text) 10%, transparent)" },
   };
   const c    = config[tipo] ?? config.DEFAULT;
   const Icon = c.icon;
   return (
-    <div className={clsx("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", c.bg)}>
-      <Icon size={15} className={c.color} />
+    <div
+      className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+      style={{ background: c.bg }}
+    >
+      <Icon size={15} style={{ color: c.color }} />
     </div>
   );
 }
 
 // ── Tiempo relativo ────────────────────────────────────────────────────────────
 function tiempoRelativo(fecha: string): string {
-  const diff = Date.now() - new Date(fecha).getTime();
+  const diff  = Date.now() - new Date(fecha).getTime();
   const mins  = Math.floor(diff / 60000);
   const horas = Math.floor(diff / 3600000);
   const dias  = Math.floor(diff / 86400000);
@@ -75,8 +77,8 @@ export function useNotificaciones(authLoading: boolean = false) {
   );
 
   const notificaciones: Notificacion[] = data?.notificaciones ?? [];
-  const noLeidas:        number        = data?.no_leidas       ?? 0;
-  const loading                        = !data;
+  const noLeidas:        number         = data?.no_leidas        ?? 0;
+  const loading                         = !data;
 
   const marcarLeida = useCallback(async (id: number) => {
     try {
@@ -128,13 +130,26 @@ export function NotificacionesBadge({
 }) {
   return (
     <button
+      type="button"
       onClick={onClick}
-      className="relative flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
+      className="relative flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm transition-colors"
+      style={{ color: "var(--kipu-subtle)" }}
+      onMouseEnter={e => {
+        e.currentTarget.style.color = "var(--kipu-text)";
+        e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 5%, transparent)";
+      }}
+      onMouseLeave={e => {
+        e.currentTarget.style.color = "var(--kipu-subtle)";
+        e.currentTarget.style.background = "transparent";
+      }}
     >
       <Bell size={16} />
       <span>Notificaciones</span>
       {noLeidas > 0 && (
-        <span className="ml-auto flex items-center justify-center w-5 h-5 rounded-full bg-indigo-600 text-white text-[10px] font-bold">
+        <span
+          className="ml-auto flex items-center justify-center w-5 h-5 rounded-full text-white text-[10px] font-bold"
+          style={{ background: "var(--kipu-accent)" }}
+        >
           {noLeidas > 9 ? "9+" : noLeidas}
         </span>
       )}
@@ -177,18 +192,27 @@ export function NotificacionesDrawer({
       {open && (
         <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose} />
       )}
-      <div className={clsx(
-        "fixed top-0 right-0 h-full w-full sm:w-96 bg-gray-900 border-l border-gray-800",
-        "z-50 flex flex-col transition-transform duration-300 ease-in-out",
-        open ? "translate-x-0" : "translate-x-full"
-      )}>
+      <div
+        className="fixed top-0 right-0 h-full w-full sm:w-96 z-50 flex flex-col transition-transform duration-300 ease-in-out"
+        style={{
+          background: "var(--kipu-surface)",
+          borderLeft: "1px solid var(--kipu-border)",
+          transform: open ? "translateX(0)" : "translateX(100%)",
+        }}
+      >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-4 border-b border-gray-800">
+        <div
+          className="flex items-center justify-between px-4 py-4"
+          style={{ borderBottom: "1px solid var(--kipu-border)" }}
+        >
           <div className="flex items-center gap-2">
-            <Bell size={17} className="text-white" />
-            <h2 className="text-sm font-semibold text-white">Notificaciones</h2>
+            <Bell size={17} style={{ color: "var(--kipu-text)" }} />
+            <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>Notificaciones</h2>
             {noLeidas > 0 && (
-              <span className="px-2 py-0.5 rounded-full bg-indigo-600 text-white text-xs font-bold">
+              <span
+                className="px-2 py-0.5 rounded-full text-white text-xs font-bold"
+                style={{ background: "var(--kipu-accent)" }}
+              >
                 {noLeidas}
               </span>
             )}
@@ -196,21 +220,49 @@ export function NotificacionesDrawer({
           <div className="flex items-center gap-2">
             {noLeidas > 0 && (
               <button
+                type="button"
                 onClick={onMarcarTodas}
                 disabled={loading}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs text-gray-400 hover:text-white hover:bg-gray-800 transition-colors disabled:opacity-40"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-colors disabled:opacity-40"
+                style={{ color: "var(--kipu-subtle)" }}
+                onMouseEnter={e => {
+                  if (!loading) {
+                    e.currentTarget.style.color = "var(--kipu-text)";
+                    e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 5%, transparent)";
+                  }
+                }}
+                onMouseLeave={e => {
+                  if (!loading) {
+                    e.currentTarget.style.color = "var(--kipu-subtle)";
+                    e.currentTarget.style.background = "transparent";
+                  }
+                }}
                 title="Marcar todas como leídas"
               >
-                {loading
-                  ? <Loader2 size={13} className="animate-spin" />
-                  : <CheckCheck size={13} />
-                }
+                {loading ? (
+                  <div
+                    className="w-3 h-3 border-2 border-t-transparent rounded-full animate-spin"
+                    style={{ borderColor: "currentColor", borderTopColor: "transparent" }}
+                  />
+                ) : (
+                  <CheckCheck size={13} />
+                )}
                 <span className="hidden sm:inline">Marcar todas</span>
               </button>
             )}
             <button
+              type="button"
               onClick={onClose}
-              className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
+              className="p-1.5 rounded-lg transition-colors"
+              style={{ color: "var(--kipu-subtle)" }}
+              onMouseEnter={e => {
+                e.currentTarget.style.color = "var(--kipu-text)";
+                e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 5%, transparent)";
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.color = "var(--kipu-subtle)";
+                e.currentTarget.style.background = "transparent";
+              }}
             >
               <X size={16} />
             </button>
@@ -221,48 +273,69 @@ export function NotificacionesDrawer({
         <div className="flex-1 overflow-y-auto">
           {loading ? (
             <div className="flex items-center justify-center h-full">
-              <Loader2 size={24} className="animate-spin text-indigo-400" />
+              <div
+                className="w-6 h-6 border-2 border-t-transparent rounded-full animate-spin"
+                style={{ borderColor: "var(--kipu-accent)", borderTopColor: "transparent" }}
+              />
             </div>
           ) : notificaciones.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-center px-6">
-              <Bell size={36} className="text-gray-700 mb-3" />
-              <p className="text-gray-500 text-sm">Sin notificaciones</p>
-              <p className="text-gray-600 text-xs mt-1">
+              <Bell size={36} className="mb-3" style={{ color: "var(--kipu-subtle)" }} />
+              <p className="text-sm font-medium" style={{ color: "var(--kipu-muted)" }}>Sin notificaciones</p>
+              <p className="text-xs mt-1" style={{ color: "var(--kipu-subtle)" }}>
                 Te avisaremos cuando haya algo importante
               </p>
             </div>
           ) : (
-            <div className="divide-y divide-gray-800">
-              {notificaciones.map((notif) => (
+            <div>
+              {notificaciones.map((notif, idx) => (
                 <button
                   key={notif.id}
+                  type="button"
                   onClick={() => handleClick(notif)}
-                  className={clsx(
-                    "w-full flex items-start gap-3 px-4 py-3 text-left transition-colors",
-                    notif.is_read
-                      ? "hover:bg-gray-800/50"
-                      : "bg-indigo-600/5 hover:bg-indigo-600/10"
-                  )}
+                  className="w-full flex items-start gap-3 px-4 py-3 text-left transition-colors"
+                  style={{
+                    borderTop: idx > 0 ? "1px solid var(--kipu-border)" : "none",
+                    background: notif.is_read
+                      ? "transparent"
+                      : "color-mix(in srgb, var(--kipu-accent) 5%, transparent)",
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.background = notif.is_read
+                      ? "color-mix(in srgb, var(--kipu-text) 4%, transparent)"
+                      : "color-mix(in srgb, var(--kipu-accent) 10%, transparent)";
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.background = notif.is_read
+                      ? "transparent"
+                      : "color-mix(in srgb, var(--kipu-accent) 5%, transparent)";
+                  }}
                 >
                   <IconoTipo tipo={notif.type} />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
-                      <p className={clsx(
-                        "text-sm leading-snug",
-                        notif.is_read ? "text-gray-300" : "text-white font-medium"
-                      )}>
+                      <p
+                        className="text-sm leading-snug"
+                        style={{
+                          color: notif.is_read ? "var(--kipu-muted)" : "var(--kipu-text)",
+                          fontWeight: notif.is_read ? "normal" : 500,
+                        }}
+                      >
                         {notif.title}
                       </p>
-                      <span className="text-[10px] text-gray-600 shrink-0 mt-0.5">
+                      <span className="text-[10px] shrink-0 mt-0.5" style={{ color: "var(--kipu-subtle)" }}>
                         {tiempoRelativo(notif.created_at)}
                       </span>
                     </div>
-                    <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">
+                    <p className="text-xs mt-0.5 line-clamp-2" style={{ color: "var(--kipu-subtle)" }}>
                       {notif.description}
                     </p>
                   </div>
                   {!notif.is_read && (
-                    <div className="w-2 h-2 rounded-full bg-indigo-400 shrink-0 mt-1.5" />
+                    <div
+                      className="w-2 h-2 rounded-full shrink-0 mt-1.5"
+                      style={{ background: "var(--kipu-accent)" }}
+                    />
                   )}
                 </button>
               ))}
@@ -271,8 +344,11 @@ export function NotificacionesDrawer({
         </div>
 
         {/* Footer */}
-        <div className="px-4 py-3 border-t border-gray-800">
-          <p className="text-xs text-gray-600 text-center">
+        <div
+          className="px-4 py-3 text-center"
+          style={{ borderTop: "1px solid var(--kipu-border)" }}
+        >
+          <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
             {notificaciones.length} notificación{notificaciones.length !== 1 ? "es" : ""}
           </p>
         </div>

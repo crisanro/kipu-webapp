@@ -1,4 +1,3 @@
-// app/(dashboard)/documentos/[id]/components/DetalleNDB.tsx
 "use client";
 import { useRouter } from "next/navigation";
 import { fmt, TIPO_ID, type FacturaBase } from "./DetalleShared";
@@ -41,8 +40,14 @@ export default function DetalleNDB({ factura }: Props) {
   return (
     <>
       {/* Emisor */}
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-        <h2 className="text-xs font-semibold text-gray-500 mb-3 uppercase tracking-wide">Emisor</h2>
+      <div
+        className="rounded-xl p-4"
+        style={{
+          background: "var(--kipu-surface)",
+          border: "1px solid var(--kipu-border)",
+        }}
+      >
+        <h2 className="text-xs font-semibold mb-3 uppercase tracking-wide" style={{ color: "var(--kipu-subtle)" }}>Emisor</h2>
         <div className="space-y-2 text-sm">
           {[
             { label: "Razón Social",    value: trib.razonSocial },
@@ -52,16 +57,22 @@ export default function DetalleNDB({ factura }: Props) {
             { label: "Ambiente",        value: trib.ambiente == 2 ? "🟢 Producción" : "🟡 Pruebas" },
           ].map(({ label, value }) => (
             <div key={label} className="flex justify-between">
-              <span className="text-gray-500">{label}</span>
-              <span className="text-white text-right max-w-[60%]">{value}</span>
+              <span style={{ color: "var(--kipu-muted)" }}>{label}</span>
+              <span className="text-right max-w-[60%]" style={{ color: "var(--kipu-text)" }}>{value}</span>
             </div>
           ))}
         </div>
       </div>
 
       {/* Cliente */}
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-        <h2 className="text-xs font-semibold text-gray-500 mb-3 uppercase tracking-wide">Cliente</h2>
+      <div
+        className="rounded-xl p-4"
+        style={{
+          background: "var(--kipu-surface)",
+          border: "1px solid var(--kipu-border)",
+        }}
+      >
+        <h2 className="text-xs font-semibold mb-3 uppercase tracking-wide" style={{ color: "var(--kipu-subtle)" }}>Cliente</h2>
         <div className="space-y-2 text-sm">
           {[
             { label: "Razón Social",   value: infoNDB.razonSocialComprador },
@@ -69,16 +80,22 @@ export default function DetalleNDB({ factura }: Props) {
             { label: "Identificación", value: infoNDB.identificacionComprador },
           ].map(({ label, value }) => (
             <div key={label} className="flex justify-between">
-              <span className="text-gray-500">{label}</span>
-              <span className="text-white text-right max-w-[60%]">{value}</span>
+              <span style={{ color: "var(--kipu-muted)" }}>{label}</span>
+              <span className="text-right max-w-[60%]" style={{ color: "var(--kipu-text)" }}>{value}</span>
             </div>
           ))}
         </div>
       </div>
 
       {/* Documento que modifica */}
-      <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-4">
-        <h2 className="text-xs font-semibold text-amber-400 mb-3 uppercase tracking-wide">
+      <div
+        className="rounded-xl p-4"
+        style={{
+          background: "color-mix(in srgb, var(--kipu-warning) 5%, transparent)",
+          border: "1px solid color-mix(in srgb, var(--kipu-warning) 20%, transparent)",
+        }}
+      >
+        <h2 className="text-xs font-semibold mb-3 uppercase tracking-wide" style={{ color: "var(--kipu-warning)" }}>
           Documento que Modifica
         </h2>
         <div className="space-y-2 text-sm">
@@ -88,15 +105,17 @@ export default function DetalleNDB({ factura }: Props) {
             { label: "Fecha emisión", value: infoNDB.fechaEmisionDocSustento },
           ].map(({ label, value }) => (
             <div key={label} className="flex justify-between">
-              <span className="text-gray-500">{label}</span>
-              <span className="text-white text-right max-w-[60%] font-medium">{value}</span>
+              <span style={{ color: "var(--kipu-muted)" }}>{label}</span>
+              <span className="text-right max-w-[60%] font-medium" style={{ color: "var(--kipu-text)" }}>{value}</span>
             </div>
           ))}
         </div>
         {factura.doc_origen_emitido_id && (
           <button
             onClick={() => router.push(`/documentos/${factura.doc_origen_emitido_id}`)}
-            className="mt-3 text-xs text-amber-400 hover:text-amber-300 transition-colors underline-offset-2 hover:underline">
+            className="mt-3 text-xs transition-colors underline-offset-2 hover:underline"
+            style={{ color: "var(--kipu-warning)" }}
+          >
             Ver documento original →
           </button>
         )}
@@ -104,15 +123,30 @@ export default function DetalleNDB({ factura }: Props) {
 
       {/* Motivos */}
       {motivos.length > 0 && (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
-          <div className="px-4 py-3 border-b border-gray-800">
-            <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Motivos</h2>
+        <div
+          className="rounded-xl overflow-hidden"
+          style={{
+            background: "var(--kipu-surface)",
+            border: "1px solid var(--kipu-border)",
+          }}
+        >
+          <div
+            className="px-4 py-3"
+            style={{ borderBottom: "2px solid var(--kipu-border)" }}
+          >
+            <h2 className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--kipu-subtle)" }}>Motivos</h2>
           </div>
-          <div className="divide-y divide-gray-800">
+          <div>
             {motivos.map((m: any, i: number) => (
-              <div key={i} className="flex items-center justify-between px-4 py-3">
-                <span className="text-sm text-white">{m.razon}</span>
-                <span className="text-sm font-bold text-amber-400">${fmt(m.valor)}</span>
+              <div
+                key={i}
+                className="flex items-center justify-between px-4 py-3"
+                style={{
+                  borderTop: i > 0 ? "1px solid var(--kipu-border)" : "none",
+                }}
+              >
+                <span className="text-sm" style={{ color: "var(--kipu-text)" }}>{m.razon}</span>
+                <span className="text-sm font-bold" style={{ color: "var(--kipu-warning)" }}>${fmt(m.valor)}</span>
               </div>
             ))}
           </div>
@@ -121,11 +155,17 @@ export default function DetalleNDB({ factura }: Props) {
 
       {/* Impuestos */}
       {impuestos.length > 0 && (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-          <h2 className="text-xs font-semibold text-gray-500 mb-3 uppercase tracking-wide">Impuestos</h2>
+        <div
+          className="rounded-xl p-4"
+          style={{
+            background: "var(--kipu-surface)",
+            border: "1px solid var(--kipu-border)",
+          }}
+        >
+          <h2 className="text-xs font-semibold mb-3 uppercase tracking-wide" style={{ color: "var(--kipu-subtle)" }}>Impuestos</h2>
           <div className="space-y-2 text-sm">
             {impuestos.map((imp: any, i: number) => (
-              <div key={i} className="flex justify-between text-gray-400">
+              <div key={i} className="flex justify-between" style={{ color: "var(--kipu-muted)" }}>
                 <span>IVA {imp.tarifa}% · Base ${fmt(imp.baseImponible)}</span>
                 <span>${fmt(imp.valor)}</span>
               </div>
@@ -135,8 +175,14 @@ export default function DetalleNDB({ factura }: Props) {
       )}
 
       {/* Total */}
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-        <div className="flex justify-between font-bold text-amber-400 text-base">
+      <div
+        className="rounded-xl p-4"
+        style={{
+          background: "var(--kipu-surface)",
+          border: "1px solid var(--kipu-border)",
+        }}
+      >
+        <div className="flex justify-between font-bold text-base" style={{ color: "var(--kipu-warning)" }}>
           <span>Total nota de débito</span>
           <span>${fmt(infoNDB.valorTotal)}</span>
         </div>
@@ -144,13 +190,19 @@ export default function DetalleNDB({ factura }: Props) {
 
       {/* Pagos */}
       {pagos.length > 0 && (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-          <h2 className="text-xs font-semibold text-gray-500 mb-3 uppercase tracking-wide">Forma de Pago</h2>
+        <div
+          className="rounded-xl p-4"
+          style={{
+            background: "var(--kipu-surface)",
+            border: "1px solid var(--kipu-border)",
+          }}
+        >
+          <h2 className="text-xs font-semibold mb-3 uppercase tracking-wide" style={{ color: "var(--kipu-subtle)" }}>Forma de Pago</h2>
           <div className="space-y-2">
             {pagos.map((pago: any, i: number) => (
               <div key={i} className="flex justify-between text-sm">
-                <span className="text-gray-400">{FORMA_PAGO[pago.formaPago] ?? pago.formaPago}</span>
-                <span className="text-white font-medium">${fmt(pago.total)}</span>
+                <span style={{ color: "var(--kipu-muted)" }}>{FORMA_PAGO[pago.formaPago] ?? pago.formaPago}</span>
+                <span className="font-medium" style={{ color: "var(--kipu-text)" }}>${fmt(pago.total)}</span>
               </div>
             ))}
           </div>
@@ -159,15 +211,21 @@ export default function DetalleNDB({ factura }: Props) {
 
       {/* Info adicional */}
       {adicionales.filter((a: any) => a["@nombre"] !== "PROVEEDOR_SISTEMA_INFORMATICO").length > 0 && (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-          <h2 className="text-xs font-semibold text-gray-500 mb-3 uppercase tracking-wide">Información Adicional</h2>
+        <div
+          className="rounded-xl p-4"
+          style={{
+            background: "var(--kipu-surface)",
+            border: "1px solid var(--kipu-border)",
+          }}
+        >
+          <h2 className="text-xs font-semibold mb-3 uppercase tracking-wide" style={{ color: "var(--kipu-subtle)" }}>Información Adicional</h2>
           <div className="space-y-2">
             {adicionales
               .filter((a: any) => a["@nombre"] !== "PROVEEDOR_SISTEMA_INFORMATICO")
               .map((campo: any, i: number) => (
                 <div key={i} className="flex justify-between text-sm">
-                  <span className="text-gray-500">{campo["@nombre"]}</span>
-                  <span className="text-white">{campo["#text"]}</span>
+                  <span style={{ color: "var(--kipu-subtle)" }}>{campo["@nombre"]}</span>
+                  <span style={{ color: "var(--kipu-text)" }}>{campo["#text"]}</span>
                 </div>
               ))}
           </div>

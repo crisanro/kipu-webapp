@@ -7,24 +7,23 @@ import { usePermiso } from "@/hooks/usePermiso";
 import SinAcceso from "@/components/SinAcceso";
 import { useAuthStore } from "@/store/auth.store";
 import {
-  ClipboardList, Plus, Loader2, Search,
+  ClipboardList, Plus, Search,
   CheckCircle2, AlertTriangle, Clock,
 } from "lucide-react";
-import { clsx } from "clsx";
 
 interface Proforma {
-  id:             string;
-  numero:         string;
+  id:              string;
+  numero:          string;
   fecha_emision: string;
   fecha_validez: string | null;
   subtotal:      number;
-  total_iva:     number;
-  total:         number;
+  total_iva:      number;
+  total:          number;
   estado:        "VIGENTE" | "FACTURADA";
-  vencida:       boolean;
-  notas:         string | null;
+  vencida:        boolean;
+  notas:          string | null;
   cliente: {
-    id:             string;
+    id:              string;
     razon_social:   string;
     identificacion: string;
   } | null;
@@ -33,7 +32,6 @@ interface Proforma {
 const fmt = (n: number) => `$${n.toFixed(2)}`;
 
 export default function ProformasPage() {
-  
   const puedeVer = usePermiso("emitir");
   if (!puedeVer) return <SinAcceso />;
 
@@ -74,19 +72,25 @@ export default function ProformasPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-bold text-white">Proformas</h1>
-          <p className="text-sm text-gray-500">{proformas.length} registradas</p>
+          <h1 className="text-xl font-bold" style={{ color: "var(--kipu-text)" }}>Proformas</h1>
+          <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>{proformas.length} registradas</p>
         </div>
         <button
           onClick={() => tieneSub && router.push("/proformas/nueva")}
           disabled={!tieneSub}
           title={!tieneSub ? "Requiere suscripción activa" : undefined}
-          className={clsx(
-            "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors",
-            tieneSub
-              ? "bg-indigo-600 hover:bg-indigo-500 text-white"
-              : "bg-gray-800 text-gray-500 cursor-not-allowed"
-          )}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+          style={{
+            background: tieneSub ? "var(--kipu-accent)" : "color-mix(in srgb, var(--kipu-text) 8%, transparent)",
+            color: tieneSub ? "#FFFFFF" : "var(--kipu-subtle)",
+            cursor: tieneSub ? "pointer" : "not-allowed",
+          }}
+          onMouseEnter={e => {
+            if (tieneSub) e.currentTarget.style.background = "var(--kipu-accent-h)";
+          }}
+          onMouseLeave={e => {
+            if (tieneSub) e.currentTarget.style.background = "var(--kipu-accent)";
+          }}
         >
           <Plus size={15} />
           Nueva proforma
@@ -95,13 +99,25 @@ export default function ProformasPage() {
 
       {/* Banner de suscripción */}
       {!tieneSub && (
-        <div className="flex items-center gap-3 bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-3 mb-4">
-          <AlertTriangle size={15} className="text-amber-400 shrink-0" />
+        <div
+          className="flex items-center gap-3 rounded-xl px-4 py-3 mb-4"
+          style={{
+            background: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)",
+            border: "1px solid color-mix(in srgb, var(--kipu-warning) 20%, transparent)",
+          }}
+        >
+          <AlertTriangle size={15} className="shrink-0" style={{ color: "var(--kipu-warning)" }} />
           <div className="flex-1">
-            <p className="text-sm text-amber-300 font-medium">Suscripción requerida</p>
-            <p className="text-xs text-amber-400/70">Las proformas están disponibles con un plan activo.</p>
+            <p className="text-sm font-medium" style={{ color: "var(--kipu-warning)" }}>Suscripción requerida</p>
+            <p className="text-xs" style={{ color: "color-mix(in srgb, var(--kipu-warning) 70%, transparent)" }}>
+              Las proformas están disponibles con un plan activo.
+            </p>
           </div>
-          <Link href="/planes" className="text-xs text-amber-400 hover:text-amber-300 underline underline-offset-2 shrink-0">
+          <Link
+            href="/planes"
+            className="text-xs underline underline-offset-2 shrink-0 transition-colors"
+            style={{ color: "var(--kipu-warning)" }}
+          >
             Ver planes
           </Link>
         </div>
@@ -109,38 +125,52 @@ export default function ProformasPage() {
 
       {/* Buscador */}
       <div className="relative mb-4">
-        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--kipu-subtle)" }} />
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Buscar por número o cliente..."
-          className="w-full pl-9 pr-4 py-2.5 rounded-lg bg-gray-900 border border-gray-800 text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 text-sm"
+          className="w-full pl-9 pr-4 py-2.5 rounded-lg text-sm transition-colors focus:outline-none"
+          style={{
+            background: "var(--kipu-surface)",
+            border: "1px solid var(--kipu-border)",
+            color: "var(--kipu-text)",
+          }}
+          onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+          onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
         />
       </div>
 
       {/* Lista */}
       {loading ? (
         <div className="flex items-center justify-center py-20">
-          <Loader2 size={24} className="animate-spin text-indigo-400" />
+          <div
+            className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin"
+            style={{ borderColor: "var(--kipu-accent)", borderTopColor: "transparent" }}
+          />
         </div>
       ) : filtradas.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
-          <ClipboardList size={40} className="text-gray-700 mb-3" />
-          <p className="text-gray-500 text-sm">
+          <ClipboardList size={40} className="mb-3" style={{ color: "var(--kipu-subtle)" }} />
+          <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>
             {query ? "No hay proformas que coincidan." : "Aún no tienes proformas registradas."}
           </p>
           {!query && (
             tieneSub ? (
               <button
                 onClick={() => router.push("/proformas/nueva")}
-                className="mt-4 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors"
+                className="mt-4 px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors"
+                style={{ background: "var(--kipu-accent)" }}
+                onMouseEnter={e => e.currentTarget.style.background = "var(--kipu-accent-h)"}
+                onMouseLeave={e => e.currentTarget.style.background = "var(--kipu-accent)"}
               >
                 Crear primera proforma
               </button>
             ) : (
               <Link
                 href="/planes"
-                className="mt-4 px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-sm font-medium transition-colors"
+                className="mt-4 px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors"
+                style={{ background: "var(--kipu-warning)" }}
               >
                 Ver planes para crear proformas
               </Link>
@@ -148,45 +178,71 @@ export default function ProformasPage() {
           )}
         </div>
       ) : (
-        <div className="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
-          <div className="divide-y divide-gray-800">
-            {filtradas.map((p) => {
+        <div
+          className="rounded-xl overflow-hidden"
+          style={{
+            background: "var(--kipu-surface)",
+            border: "1px solid var(--kipu-border)",
+          }}
+        >
+          <div>
+            {filtradas.map((p, index) => {
               const vencida   = p.vencida && p.estado === "VIGENTE";
               const facturada = p.estado === "FACTURADA";
               return (
                 <Link
                   key={p.id}
                   href={`/proformas/${p.id}`}
-                  className="flex items-center gap-3 px-4 py-3 hover:bg-gray-800/50 transition-colors"
+                  className="flex items-center gap-3 px-4 py-3 transition-colors"
+                  style={{
+                    borderTop: index > 0 ? "1px solid var(--kipu-border)" : "none",
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 4%, transparent)"}
+                  onMouseLeave={e => e.currentTarget.style.background = "transparent"}
                 >
-                  <div className={clsx(
-                    "w-9 h-9 rounded-full flex items-center justify-center shrink-0",
-                    facturada ? "bg-emerald-400/10" : vencida ? "bg-red-400/10" : "bg-indigo-400/10"
-                  )}>
+                  <div
+                    className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
+                    style={{
+                      background: facturada
+                        ? "color-mix(in srgb, var(--kipu-success) 10%, transparent)"
+                        : vencida
+                        ? "color-mix(in srgb, var(--kipu-danger) 10%, transparent)"
+                        : "color-mix(in srgb, #818cf8 10%, transparent)",
+                    }}
+                  >
                     {facturada
-                      ? <CheckCircle2 size={16} className="text-emerald-400" />
+                      ? <CheckCircle2 size={16} style={{ color: "var(--kipu-success)" }} />
                       : vencida
-                        ? <AlertTriangle size={16} className="text-red-400" />
-                        : <Clock size={16} className="text-indigo-400" />
+                        ? <AlertTriangle size={16} style={{ color: "var(--kipu-danger)" }} />
+                        : <Clock size={16} style={{ color: "#818cf8" }} />
                     }
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-mono font-medium text-indigo-400">{p.numero}</p>
-                    <p className="text-xs text-gray-500 truncate">
+                    <p className="text-sm font-mono font-medium" style={{ color: "var(--kipu-accent)" }}>{p.numero}</p>
+                    <p className="text-xs truncate" style={{ color: "var(--kipu-subtle)" }}>
                       {p.cliente?.razon_social ?? "Sin cliente"}
                       {p.fecha_validez && (
-                        <span className={clsx("ml-2", vencida ? "text-red-400" : "text-gray-600")}>
+                        <span
+                          className="ml-2"
+                          style={{ color: vencida ? "var(--kipu-danger)" : "var(--kipu-subtle)" }}
+                        >
                           · vence {p.fecha_validez}
                         </span>
                       )}
                     </p>
                   </div>
                   <div className="text-right shrink-0">
-                    <p className="text-sm font-semibold text-white">{fmt(p.total)}</p>
-                    <p className={clsx(
-                      "text-xs",
-                      facturada ? "text-emerald-400" : vencida ? "text-red-400" : "text-gray-500"
-                    )}>
+                    <p className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>{fmt(p.total)}</p>
+                    <p
+                      className="text-xs"
+                      style={{
+                        color: facturada
+                          ? "var(--kipu-success)"
+                          : vencida
+                          ? "var(--kipu-danger)"
+                          : "var(--kipu-subtle)",
+                      }}
+                    >
                       {facturada ? "Facturada" : vencida ? "Vencida" : "Vigente"}
                     </p>
                   </div>

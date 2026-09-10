@@ -1,11 +1,9 @@
-// app/(dashboard)/reportes/_components/ReporteCard.tsx
 "use client";
 import Link from "next/link";
 import {
   FileText, ChevronRight, RefreshCw,
   Calendar, Shield, AlertTriangle,
 } from "lucide-react";
-import { clsx } from "clsx";
 import EstadoBadge, { EstadoReporte } from "./EstadoBadge";
 
 interface Props {
@@ -28,9 +26,9 @@ interface Props {
 }
 
 const TIPO_CONFIG = {
-  IVA:   { label: "IVA 104",     color: "bg-indigo-600/20 text-indigo-400",  border: "border-indigo-500/20"  },
-  RENTA: { label: "Renta 102",   color: "bg-purple-600/20 text-purple-400",  border: "border-purple-500/20"  },
-  ATS:   { label: "ATS",         color: "bg-cyan-600/20   text-cyan-400",    border: "border-cyan-500/20"    },
+  IVA:   { label: "IVA 104",  color: "var(--kipu-accent)", bg: "color-mix(in srgb, var(--kipu-accent) 20%, transparent)", border: "color-mix(in srgb, var(--kipu-accent) 20%, transparent)" },
+  RENTA: { label: "Renta 102", color: "#c084fc",            bg: "color-mix(in srgb, #a855f7 20%, transparent)",     border: "color-mix(in srgb, #a855f7 20%, transparent)" },
+  ATS:   { label: "ATS",       color: "#22d3ee",            bg: "color-mix(in srgb, #06b6d4 20%, transparent)",     border: "color-mix(in srgb, #06b6d4 20%, transparent)" },
 };
 
 const fmt = (n: number) =>
@@ -52,40 +50,58 @@ export default function ReporteCard({
   const tieneSaldo   = (resumen?.saldoFavor       ?? 0) > 0;
   const tieneCausado = (resumen?.impuestoCausado  ?? 0) > 0;
 
+  const getBorderColor = () => {
+    if (estado === "URGENTE" || estado === "VENCIDO") return "color-mix(in srgb, var(--kipu-danger) 40%, transparent)";
+    if (estado === "PROXIMO") return "color-mix(in srgb, var(--kipu-warning) 30%, transparent)";
+    return "var(--kipu-border)";
+  };
+
   return (
-    <Link href={href(tipo, periodo)}
-      className={clsx(
-        "block bg-gray-900 border rounded-xl p-4 hover:border-gray-600 transition-all group",
-        estado === "URGENTE" ? "border-red-500/40"   :
-        estado === "VENCIDO" ? "border-red-600/40"   :
-        estado === "PROXIMO" ? "border-amber-500/30" :
-        declarado            ? "border-gray-700"     : "border-gray-800"
-      )}
+    <Link
+      href={href(tipo, periodo)}
+      className="block rounded-xl p-4 transition-all group"
+      style={{
+        background: "var(--kipu-surface)",
+        border: `1px solid ${getBorderColor()}`,
+      }}
+      onMouseEnter={e => e.currentTarget.style.borderColor = "color-mix(in srgb, var(--kipu-text) 30%, transparent)"}
+      onMouseLeave={e => e.currentTarget.style.borderColor = getBorderColor()}
     >
       <div className="flex items-start justify-between gap-3">
 
         {/* Izquierda */}
         <div className="flex items-start gap-3 min-w-0 flex-1">
           {/* Ícono tipo */}
-          <div className={clsx(
-            "w-9 h-9 rounded-lg flex items-center justify-center shrink-0 mt-0.5",
-            cfg.color
-          )}>
+          <div
+            className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
+            style={{ background: cfg.bg, color: cfg.color }}
+          >
             <FileText size={16} />
           </div>
 
           <div className="min-w-0 flex-1">
             {/* Tipo + período */}
             <div className="flex items-center gap-2 flex-wrap mb-1">
-              <span className={clsx(
-                "text-[10px] font-bold px-2 py-0.5 rounded-full border",
-                cfg.color, cfg.border
-              )}>
+              <span
+                className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                style={{
+                  background: cfg.bg,
+                  color: cfg.color,
+                  border: `1px solid ${cfg.border}`,
+                }}
+              >
                 {cfg.label}
               </span>
-              <p className="text-sm font-semibold text-white">{periodoFmt}</p>
+              <p className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>{periodoFmt}</p>
               {enCurso && (
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/20 font-medium">
+                <span
+                  className="text-[10px] px-1.5 py-0.5 rounded font-medium"
+                  style={{
+                    background: "color-mix(in srgb, #60a5fa 20%, transparent)",
+                    color: "#60a5fa",
+                    border: "1px solid color-mix(in srgb, #60a5fa 20%, transparent)",
+                  }}
+                >
                   En curso
                 </span>
               )}
@@ -94,15 +110,20 @@ export default function ReporteCard({
             {/* Vencimiento */}
             {vencimiento && !declarado && (
               <div className="flex items-center gap-1.5 mb-2">
-                <Calendar size={11} className={clsx(
-                  estado === "URGENTE" || estado === "VENCIDO" ? "text-red-400" :
-                  estado === "PROXIMO" ? "text-amber-400" : "text-gray-500"
-                )} />
-                <p className={clsx(
-                  "text-xs",
-                  estado === "URGENTE" || estado === "VENCIDO" ? "text-red-400" :
-                  estado === "PROXIMO" ? "text-amber-400" : "text-gray-500"
-                )}>
+                <Calendar
+                  size={11}
+                  style={{
+                    color: estado === "URGENTE" || estado === "VENCIDO" ? "var(--kipu-danger)" :
+                           estado === "PROXIMO" ? "var(--kipu-warning)" : "var(--kipu-subtle)",
+                  }}
+                />
+                <p
+                  className="text-xs"
+                  style={{
+                    color: estado === "URGENTE" || estado === "VENCIDO" ? "var(--kipu-danger)" :
+                           estado === "PROXIMO" ? "var(--kipu-warning)" : "var(--kipu-subtle)",
+                  }}
+                >
                   Vence: {new Date(vencimiento).toLocaleDateString("es-EC", {
                     day: "2-digit", month: "short", year: "numeric"
                   })}
@@ -115,24 +136,24 @@ export default function ReporteCard({
               <div className="flex items-center gap-3 flex-wrap">
                 {tieneAPagar && (
                   <div className="flex items-center gap-1">
-                    <AlertTriangle size={11} className="text-red-400" />
-                    <span className="text-xs text-red-400 font-semibold">
+                    <AlertTriangle size={11} style={{ color: "var(--kipu-danger)" }} />
+                    <span className="text-xs font-semibold" style={{ color: "var(--kipu-danger)" }}>
                       A pagar: ${fmt(resumen.ivaAPagar ?? 0)}
                     </span>
                   </div>
                 )}
                 {tieneSaldo && (
-                  <span className="text-xs text-emerald-400 font-semibold">
+                  <span className="text-xs font-semibold" style={{ color: "var(--kipu-success)" }}>
                     Saldo favor: ${fmt(resumen.saldoFavor ?? 0)}
                   </span>
                 )}
                 {tieneCausado && !tieneAPagar && !tieneSaldo && (
-                  <span className="text-xs text-purple-400 font-semibold">
+                  <span className="text-xs font-semibold" style={{ color: "#c084fc" }}>
                     Causado: ${fmt(resumen.impuestoCausado ?? 0)}
                   </span>
                 )}
                 {resumen.totalDocs !== undefined && (
-                  <span className="text-xs text-gray-500">
+                  <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
                     {resumen.totalDocs} documentos
                   </span>
                 )}
@@ -142,15 +163,15 @@ export default function ReporteCard({
             {/* Generado / pendiente */}
             {!cached && !enCurso && (
               <div className="flex items-center gap-1.5">
-                <RefreshCw size={11} className="text-gray-600" />
-                <p className="text-xs text-gray-600">Reporte no generado aún</p>
+                <RefreshCw size={11} style={{ color: "var(--kipu-subtle)" }} />
+                <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Reporte no generado aún</p>
               </div>
             )}
 
             {cached && generadoAt && (
               <div className="flex items-center gap-1.5 mt-1">
-                <Shield size={11} className="text-gray-600" />
-                <p className="text-xs text-gray-600">
+                <Shield size={11} style={{ color: "var(--kipu-subtle)" }} />
+                <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
                   Generado {new Date(generadoAt).toLocaleDateString("es-EC", {
                     day: "2-digit", month: "short"
                   })}
@@ -165,7 +186,8 @@ export default function ReporteCard({
           <EstadoBadge estado={estado} diasRestantes={diasRestantes} size="sm" />
           <ChevronRight
             size={16}
-            className="text-gray-600 group-hover:text-gray-400 transition-colors mt-1"
+            className="transition-colors mt-1"
+            style={{ color: "var(--kipu-subtle)" }}
           />
         </div>
 

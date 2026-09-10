@@ -1,19 +1,16 @@
-// app/(dashboard)/planes/exitoso/page.tsx
 "use client";
 import { useEffect, useState } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
 import {
   CheckCircle2, Zap, CreditCard, ArrowRight,
-  FileText, Loader2, Sparkles,
+  FileText, Sparkles,
 } from "lucide-react";
-import { clsx } from "clsx";
 
 export default function PagoExitosoPage() {
   const params  = useSearchParams();
-  const router  = useRouter();
   const { updateEmpresa, empresa } = useAuthStore();
 
   const tipo    = params.get("tipo")    ?? "creditos";   // creditos | suscripcion
@@ -21,8 +18,8 @@ export default function PagoExitosoPage() {
   const periodo = params.get("periodo") ?? "";
   const cantidadParam = parseInt(params.get("cantidad") ?? "0");
 
-  const [balance,  setBalance]  = useState<number | null>(null);
-  const [loading,  setLoading]  = useState(true);
+  const [balance, setBalance] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
 
   // Recargar balance / estado suscripción
   useEffect(() => {
@@ -57,27 +54,33 @@ export default function PagoExitosoPage() {
     : `Plan ${plan === "NATURAL" ? "Natural" : "Jurídico"} ${periodo === "MENSUAL" ? "Mensual" : "Anual"}`;
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gray-950">
+    <div className="min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-md space-y-6">
 
         {/* Icono animado */}
         <div className="flex justify-center">
           <div className="relative">
-            <div className="w-24 h-24 rounded-full bg-emerald-500/20 flex items-center justify-center animate-pulse">
-              <div className="w-16 h-16 rounded-full bg-emerald-500/30 flex items-center justify-center">
-                <CheckCircle2 size={36} className="text-emerald-400" />
+            <div
+              className="w-24 h-24 rounded-full flex items-center justify-center animate-pulse"
+              style={{ background: "color-mix(in srgb, var(--kipu-success) 20%, transparent)" }}
+            >
+              <div
+                className="w-16 h-16 rounded-full flex items-center justify-center"
+                style={{ background: "color-mix(in srgb, var(--kipu-success) 30%, transparent)" }}
+              >
+                <CheckCircle2 size={36} style={{ color: "var(--kipu-success)" }} />
               </div>
             </div>
             <div className="absolute -top-1 -right-1">
-              <Sparkles size={20} className="text-yellow-400" />
+              <Sparkles size={20} style={{ color: "var(--kipu-warning)" }} />
             </div>
           </div>
         </div>
 
         {/* Título */}
         <div className="text-center space-y-2">
-          <h1 className="text-2xl font-bold text-white">¡Pago exitoso!</h1>
-          <p className="text-gray-400 text-sm">
+          <h1 className="text-2xl font-bold" style={{ color: "var(--kipu-text)" }}>¡Pago exitoso!</h1>
+          <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>
             {esCreditos
               ? "Tus créditos ya están disponibles en tu cuenta."
               : "Tu suscripción está activa. Bienvenido a Kipu."}
@@ -85,22 +88,32 @@ export default function PagoExitosoPage() {
         </div>
 
         {/* Card detalle */}
-        <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5 space-y-4">
+        <div
+          className="rounded-2xl p-5 space-y-4"
+          style={{
+            background: "var(--kipu-surface)",
+            border: "1px solid var(--kipu-border)",
+          }}
+        >
 
           {/* Qué compraron */}
           <div className="flex items-center gap-3">
-            <div className={clsx(
-              "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
-              esCreditos ? "bg-yellow-400/10" : "bg-indigo-600/20"
-            )}>
+            <div
+              className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+              style={{
+                background: esCreditos
+                  ? "color-mix(in srgb, var(--kipu-warning) 10%, transparent)"
+                  : "color-mix(in srgb, var(--kipu-accent) 20%, transparent)",
+              }}
+            >
               {esCreditos
-                ? <Zap size={20} className="text-yellow-400" />
-                : <CreditCard size={20} className="text-indigo-400" />
+                ? <Zap size={20} style={{ color: "var(--kipu-warning)" }} />
+                : <CreditCard size={20} style={{ color: "var(--kipu-accent)" }} />
               }
             </div>
             <div>
-              <p className="text-white font-semibold">{tituloPlan}</p>
-              <p className="text-xs text-gray-500">
+              <p className="font-semibold" style={{ color: "var(--kipu-text)" }}>{tituloPlan}</p>
+              <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
                 {esCreditos
                   ? "Créditos para emitir comprobantes"
                   : "Emisión ilimitada · Sistema contable · Soporte"
@@ -111,16 +124,25 @@ export default function PagoExitosoPage() {
 
           {/* Balance actualizado (créditos) */}
           {esCreditos && (
-            <div className="bg-yellow-400/5 border border-yellow-500/20 rounded-xl px-4 py-3">
+            <div
+              className="rounded-xl px-4 py-3"
+              style={{
+                background: "color-mix(in srgb, var(--kipu-warning) 5%, transparent)",
+                border: "1px solid color-mix(in srgb, var(--kipu-warning) 20%, transparent)",
+              }}
+            >
               {loading ? (
-                <div className="flex items-center gap-2 text-gray-500 text-sm">
-                  <Loader2 size={14} className="animate-spin" />
+                <div className="flex items-center gap-2 text-sm" style={{ color: "var(--kipu-subtle)" }}>
+                  <div
+                    className="w-3.5 h-3.5 border-2 border-t-transparent rounded-full animate-spin"
+                    style={{ borderColor: "currentColor", borderTopColor: "transparent" }}
+                  />
                   Actualizando balance...
                 </div>
               ) : (
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-gray-500">Balance actual</span>
-                  <span className="text-xl font-bold text-yellow-400">
+                  <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Balance actual</span>
+                  <span className="text-xl font-bold" style={{ color: "var(--kipu-warning)" }}>
                     {balance ?? "—"} créditos
                   </span>
                 </div>
@@ -130,16 +152,25 @@ export default function PagoExitosoPage() {
 
           {/* Estado suscripción */}
           {esSuscripcion && (
-            <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-xl px-4 py-3">
+            <div
+              className="rounded-xl px-4 py-3"
+              style={{
+                background: "color-mix(in srgb, var(--kipu-success) 5%, transparent)",
+                border: "1px solid color-mix(in srgb, var(--kipu-success) 20%, transparent)",
+              }}
+            >
               {loading ? (
-                <div className="flex items-center gap-2 text-gray-500 text-sm">
-                  <Loader2 size={14} className="animate-spin" />
+                <div className="flex items-center gap-2 text-sm" style={{ color: "var(--kipu-subtle)" }}>
+                  <div
+                    className="w-3.5 h-3.5 border-2 border-t-transparent rounded-full animate-spin"
+                    style={{ borderColor: "currentColor", borderTopColor: "transparent" }}
+                  />
                   Activando suscripción...
                 </div>
               ) : (
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-gray-500">Estado</span>
-                  <span className="text-sm font-bold text-emerald-400">
+                  <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Estado</span>
+                  <span className="text-sm font-bold" style={{ color: "var(--kipu-success)" }}>
                     ✅ Activo
                   </span>
                 </div>
@@ -158,37 +189,63 @@ export default function PagoExitosoPage() {
                 "Soporte por WhatsApp",
               ].map((item, i) => (
                 <div key={i} className="flex items-center gap-2">
-                  <CheckCircle2 size={13} className="text-emerald-400 shrink-0" />
-                  <p className="text-xs text-gray-400">{item}</p>
+                  <CheckCircle2 size={13} className="shrink-0" style={{ color: "var(--kipu-success)" }} />
+                  <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>{item}</p>
                 </div>
               ))}
             </div>
           )}
 
           {/* Factura */}
-          <p className="text-[11px] text-gray-600 text-center pt-1">
+          <p className="text-[11px] text-center pt-1" style={{ color: "var(--kipu-subtle)" }}>
             📧 Recibirás tu factura electrónica por correo en los próximos minutos.
           </p>
         </div>
 
         {/* Botones */}
         <div className="space-y-3">
-          <Link href="/documentos/nueva"
-            className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm transition-colors">
+          <Link
+            href="/documentos/nueva"
+            className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-white font-semibold text-sm transition-colors"
+            style={{ background: "var(--kipu-accent)" }}
+            onMouseEnter={e => e.currentTarget.style.background = "var(--kipu-accent-h)"}
+            onMouseLeave={e => e.currentTarget.style.background = "var(--kipu-accent)"}
+          >
             <FileText size={16} />
             Emitir primer comprobante
             <ArrowRight size={16} />
           </Link>
-          <Link href="/dashboard"
-            className="flex items-center justify-center gap-2 w-full py-3 rounded-xl border border-gray-700 text-gray-400 hover:text-white hover:border-gray-600 text-sm transition-colors">
+          <Link
+            href="/dashboard"
+            className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm transition-colors"
+            style={{
+              border: "1px solid var(--kipu-border)",
+              color: "var(--kipu-subtle)",
+              background: "var(--kipu-surface)",
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.color = "var(--kipu-text)";
+              e.currentTarget.style.borderColor = "color-mix(in srgb, var(--kipu-text) 30%, transparent)";
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.color = "var(--kipu-subtle)";
+              e.currentTarget.style.borderColor = "var(--kipu-border)";
+            }}
+          >
             Ir al dashboard
           </Link>
         </div>
 
         {/* Link planes */}
-        <p className="text-center text-xs text-gray-600">
+        <p className="text-center text-xs" style={{ color: "var(--kipu-subtle)" }}>
           ¿Tienes dudas?{" "}
-          <Link href="/planes" className="text-indigo-400 hover:text-indigo-300">
+          <Link
+            href="/planes"
+            className="transition-colors"
+            style={{ color: "var(--kipu-accent)" }}
+            onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent-h)"}
+            onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-accent)"}
+          >
             Ver mi plan
           </Link>
         </p>

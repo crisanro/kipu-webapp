@@ -1,4 +1,3 @@
-// app/(dashboard)/personas/page.tsx
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
@@ -6,7 +5,7 @@ import api from "@/lib/api";
 import { usePermiso } from "@/hooks/usePermiso";
 import SinAcceso from "@/components/SinAcceso";
 import {
-  Search, Plus, Users, Loader2, X,
+  Search, Plus, Users, X,
   ChevronDown, Save, AlertCircle, Check
 } from "lucide-react";
 
@@ -182,12 +181,16 @@ export default function PersonasPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-bold text-white">Personas</h1>
-          <p className="text-sm text-gray-500">{personas.length} registradas</p>
+          <h1 className="text-xl font-bold" style={{ color: "var(--kipu-text)" }}>Personas</h1>
+          <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>{personas.length} registradas</p>
         </div>
         <button
+          type="button"
           onClick={abrirModal}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors"
+          style={{ background: "var(--kipu-accent)" }}
+          onMouseEnter={e => e.currentTarget.style.background = "var(--kipu-accent-h)"}
+          onMouseLeave={e => e.currentTarget.style.background = "var(--kipu-accent)"}
         >
           <Plus size={15} />
           Nueva persona
@@ -196,15 +199,29 @@ export default function PersonasPage() {
 
       {/* Buscador */}
       <div className="relative mb-4">
-        <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+        <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--kipu-subtle)" }} />
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Buscar por nombre, RUC, cédula o email..."
-          className="w-full pl-9 pr-4 py-2.5 rounded-lg bg-gray-900 border border-gray-800 text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 text-sm"
+          className="w-full pl-9 pr-8 py-2.5 rounded-lg text-sm transition-colors focus:outline-none"
+          style={{
+            background: "var(--kipu-surface)",
+            border: "1px solid var(--kipu-border)",
+            color: "var(--kipu-text)",
+          }}
+          onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+          onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
         />
         {query && (
-          <button onClick={() => setQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white">
+          <button
+            type="button"
+            onClick={() => setQuery("")}
+            className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors"
+            style={{ color: "var(--kipu-subtle)" }}
+            onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
+            onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-subtle)"}
+          >
             <X size={14} />
           </button>
         )}
@@ -213,46 +230,67 @@ export default function PersonasPage() {
       {/* Lista */}
       {loading ? (
         <div className="flex items-center justify-center py-20">
-          <Loader2 size={24} className="animate-spin text-indigo-400" />
+          <div
+            className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin"
+            style={{ borderColor: "var(--kipu-accent)", borderTopColor: "transparent" }}
+          />
         </div>
       ) : filtrados.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
-          <Users size={40} className="text-gray-700 mb-3" />
-          <p className="text-gray-500 text-sm">
+          <Users size={40} className="mb-3" style={{ color: "var(--kipu-subtle)" }} />
+          <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>
             {query ? "No hay personas que coincidan." : "Aún no tienes personas registradas."}
           </p>
           {!query && (
             <button
+              type="button"
               onClick={abrirModal}
-              className="mt-4 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors"
+              className="mt-4 px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors"
+              style={{ background: "var(--kipu-accent)" }}
+              onMouseEnter={e => e.currentTarget.style.background = "var(--kipu-accent-h)"}
+              onMouseLeave={e => e.currentTarget.style.background = "var(--kipu-accent)"}
             >
               Agregar primera persona
             </button>
           )}
         </div>
       ) : (
-        <div className="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
-          <div className="divide-y divide-gray-800">
-            {filtrados.map((c) => (
+        <div
+          className="rounded-xl overflow-hidden"
+          style={{
+            background: "var(--kipu-surface)",
+            border: "1px solid var(--kipu-border)",
+          }}
+        >
+          <div>
+            {filtrados.map((c, idx) => (
               <Link
                 key={c.uid}
                 href={`/personas/${c.uid}`}
-                className="flex items-center gap-3 px-4 py-3 hover:bg-gray-800/50 transition-colors"
+                className="flex items-center gap-3 px-4 py-3 transition-colors"
+                style={{
+                  borderTop: idx > 0 ? "1px solid var(--kipu-border)" : "none",
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 4%, transparent)"}
+                onMouseLeave={e => e.currentTarget.style.background = "transparent"}
               >
-                <div className="w-9 h-9 rounded-full bg-indigo-600/20 flex items-center justify-center shrink-0">
-                  <span className="text-sm font-bold text-indigo-400">
+                <div
+                  className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
+                  style={{ background: "color-mix(in srgb, var(--kipu-accent) 20%, transparent)" }}
+                >
+                  <span className="text-sm font-bold" style={{ color: "var(--kipu-accent)" }}>
                     {c.razon_social?.[0] ?? "?"}
                   </span>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-white truncate">{c.razon_social}</p>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-sm font-medium truncate" style={{ color: "var(--kipu-text)" }}>{c.razon_social}</p>
+                  <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
                     {TIPO_ID.find(t => t.value === c.tipo_identificacion_sri)?.label ?? "ID"}: {c.identificacion}
                     {c.email && ` · ${c.email}`}
                   </p>
                 </div>
                 {c.telefono && (
-                  <span className="text-xs text-gray-500 hidden md:block">{c.telefono}</span>
+                  <span className="text-xs hidden md:block" style={{ color: "var(--kipu-subtle)" }}>{c.telefono}</span>
                 )}
               </Link>
             ))}
@@ -263,11 +301,27 @@ export default function PersonasPage() {
       {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-          <div className="bg-gray-900 border border-gray-800 rounded-xl w-full max-w-md">
+          <div
+            className="rounded-xl w-full max-w-md"
+            style={{
+              background: "var(--kipu-surface)",
+              border: "1px solid var(--kipu-border)",
+            }}
+          >
             {/* Header modal */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-800">
-              <h2 className="text-sm font-semibold text-white">Nueva persona</h2>
-              <button onClick={() => setShowModal(false)} className="text-gray-500 hover:text-white">
+            <div
+              className="flex items-center justify-between px-5 py-4"
+              style={{ borderBottom: "1px solid var(--kipu-border)" }}
+            >
+              <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>Nueva persona</h2>
+              <button
+                type="button"
+                onClick={() => setShowModal(false)}
+                className="transition-colors"
+                style={{ color: "var(--kipu-subtle)" }}
+                onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
+                onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-subtle)"}
+              >
                 <X size={18} />
               </button>
             </div>
@@ -276,22 +330,33 @@ export default function PersonasPage() {
               {/* Tipo + Identificación */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1.5">Tipo ID</label>
+                  <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Tipo ID</label>
                   <div className="relative">
                     <select
                       value={form.tipo_identificacion_sri}
                       onChange={(e) => handleTipoChange(e.target.value)}
-                      className="w-full px-3 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-indigo-500 text-sm appearance-none"
+                      className="w-full px-3 py-2 rounded-lg text-sm appearance-none transition-colors focus:outline-none"
+                      style={{
+                        background: "var(--kipu-surface)",
+                        border: "1px solid var(--kipu-border)",
+                        color: "var(--kipu-text)",
+                      }}
+                      onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                      onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
                     >
                       {TIPO_ID.map(t => (
                         <option key={t.value} value={t.value}>{t.label}</option>
                       ))}
                     </select>
-                    <ChevronDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
+                    <ChevronDown
+                      size={13}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none"
+                      style={{ color: "var(--kipu-subtle)" }}
+                    />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1.5">Identificación *</label>
+                  <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Identificación *</label>
                   <div className="relative">
                     <input
                       value={form.identificacion}
@@ -310,16 +375,27 @@ export default function PersonasPage() {
                         form.tipo_identificacion_sri === "04" ? 13 :
                         form.tipo_identificacion_sri === "05" ? 10 : 20
                       }
-                      className={`w-full px-3 py-2 rounded-lg bg-gray-800 border text-white placeholder-gray-600 focus:outline-none text-sm pr-7 ${
-                        valId.error ? "border-red-500/70 focus:border-red-500" : "border-gray-700 focus:border-indigo-500"
-                      }`}
+                      className="w-full px-3 py-2 rounded-lg text-sm pr-7 transition-colors focus:outline-none"
+                      style={{
+                        background: "var(--kipu-surface)",
+                        border: valId.error
+                          ? "1px solid color-mix(in srgb, var(--kipu-danger) 70%, transparent)"
+                          : "1px solid var(--kipu-border)",
+                        color: "var(--kipu-text)",
+                      }}
+                      onFocus={e => {
+                        if (!valId.error) e.currentTarget.style.borderColor = "var(--kipu-accent)";
+                      }}
+                      onBlur={e => {
+                        if (!valId.error) e.currentTarget.style.borderColor = "var(--kipu-border)";
+                      }}
                     />
                     {valId.ok && form.identificacion && (
-                      <Check size={12} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-emerald-400" />
+                      <Check size={12} className="absolute right-2.5 top-1/2 -translate-y-1/2" style={{ color: "var(--kipu-success)" }} />
                     )}
                   </div>
                   {valId.error && (
-                    <p className="flex items-center gap-1 mt-1 text-xs text-red-400">
+                    <p className="flex items-center gap-1 mt-1 text-xs" style={{ color: "var(--kipu-danger)" }}>
                       <AlertCircle size={10} /> {valId.error}
                     </p>
                   )}
@@ -328,29 +404,47 @@ export default function PersonasPage() {
 
               {/* Razón social */}
               <div>
-                <label className="block text-xs text-gray-500 mb-1.5">Razón Social / Nombre *</label>
+                <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Razón Social / Nombre *</label>
                 <input
                   value={form.razon_social}
                   onChange={(e) => setForm({ ...form, razon_social: e.target.value.toUpperCase() })}
                   placeholder="APELLIDOS NOMBRES o EMPRESA S.A."
-                  className="w-full px-3 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 text-sm"
+                  className="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none"
+                  style={{
+                    background: "var(--kipu-surface)",
+                    border: "1px solid var(--kipu-border)",
+                    color: "var(--kipu-text)",
+                  }}
+                  onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                  onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
                 />
               </div>
 
               {/* Email */}
               <div>
-                <label className="block text-xs text-gray-500 mb-1.5">Email</label>
+                <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Email</label>
                 <input
                   type="email"
                   value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value.toLowerCase() })}
                   placeholder="persona@email.com"
-                  className={`w-full px-3 py-2 rounded-lg bg-gray-800 border text-white placeholder-gray-600 focus:outline-none text-sm ${
-                    form.email && !emailOk ? "border-red-500/70 focus:border-red-500" : "border-gray-700 focus:border-indigo-500"
-                  }`}
+                  className="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none"
+                  style={{
+                    background: "var(--kipu-surface)",
+                    border: form.email && !emailOk
+                      ? "1px solid color-mix(in srgb, var(--kipu-danger) 70%, transparent)"
+                      : "1px solid var(--kipu-border)",
+                    color: "var(--kipu-text)",
+                  }}
+                  onFocus={e => {
+                    if (!(form.email && !emailOk)) e.currentTarget.style.borderColor = "var(--kipu-accent)";
+                  }}
+                  onBlur={e => {
+                    if (!(form.email && !emailOk)) e.currentTarget.style.borderColor = "var(--kipu-border)";
+                  }}
                 />
                 {form.email && !emailOk && (
-                  <p className="flex items-center gap-1 mt-1 text-xs text-red-400">
+                  <p className="flex items-center gap-1 mt-1 text-xs" style={{ color: "var(--kipu-danger)" }}>
                     <AlertCircle size={10} /> Email inválido.
                   </p>
                 )}
@@ -359,29 +453,49 @@ export default function PersonasPage() {
               {/* Teléfono + Dirección */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1.5">Teléfono</label>
+                  <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Teléfono</label>
                   <input
                     value={form.telefono}
                     onChange={(e) => setForm({ ...form, telefono: e.target.value.replace(/\D/g, "") })}
                     placeholder="0999999999"
                     maxLength={15}
-                    className="w-full px-3 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 text-sm"
+                    className="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none"
+                    style={{
+                      background: "var(--kipu-surface)",
+                      border: "1px solid var(--kipu-border)",
+                      color: "var(--kipu-text)",
+                    }}
+                    onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                    onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1.5">Dirección</label>
+                  <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Dirección</label>
                   <input
                     value={form.direccion}
                     onChange={(e) => setForm({ ...form, direccion: e.target.value.toUpperCase() })}
                     placeholder="AV. PRINCIPAL 123"
-                    className="w-full px-3 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 text-sm"
+                    className="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none"
+                    style={{
+                      background: "var(--kipu-surface)",
+                      border: "1px solid var(--kipu-border)",
+                      color: "var(--kipu-text)",
+                    }}
+                    onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                    onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
                   />
                 </div>
               </div>
 
               {/* Error general */}
               {error && (
-                <div className="flex items-center gap-2 text-xs text-red-400 bg-red-400/10 px-3 py-2 rounded-lg">
+                <div
+                  className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg"
+                  style={{
+                    color: "var(--kipu-danger)",
+                    background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
+                  }}
+                >
                   <AlertCircle size={12} />
                   {error}
                 </div>
@@ -392,7 +506,13 @@ export default function PersonasPage() {
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="flex-1 py-2.5 rounded-lg border border-gray-700 text-gray-400 hover:text-white text-sm transition-colors"
+                  className="flex-1 py-2.5 rounded-lg text-sm transition-colors"
+                  style={{
+                    border: "1px solid var(--kipu-border)",
+                    color: "var(--kipu-muted)",
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
+                  onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-muted)"}
                 >
                   Cancelar
                 </button>
@@ -400,9 +520,23 @@ export default function PersonasPage() {
                   type="button"
                   onClick={handleSave}
                   disabled={!puedeGuardar}
-                  className="flex-1 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                  className="flex-1 py-2.5 rounded-lg text-white text-sm font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+                  style={{ background: "var(--kipu-accent)" }}
+                  onMouseEnter={e => {
+                    if (puedeGuardar) e.currentTarget.style.background = "var(--kipu-accent-h)";
+                  }}
+                  onMouseLeave={e => {
+                    if (puedeGuardar) e.currentTarget.style.background = "var(--kipu-accent)";
+                  }}
                 >
-                  {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                  {saving ? (
+                    <div
+                      className="w-3.5 h-3.5 border-2 border-t-transparent rounded-full animate-spin"
+                      style={{ borderColor: "#FFFFFF", borderTopColor: "transparent" }}
+                    />
+                  ) : (
+                    <Save size={14} />
+                  )}
                   Guardar
                 </button>
               </div>

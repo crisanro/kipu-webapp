@@ -2,16 +2,33 @@
 @import "tailwindcss";
 
 :root {
-  --kipu-bg:        #030712;
-  --kipu-surface:   #0f172a;
-  --kipu-border:    #1e293b;
-  --kipu-accent:    #6366f1;
-  --kipu-accent-h:  #4f46e5;
-  --kipu-success:   #10b981;
-  --kipu-warning:   #f59e0b;
-  --kipu-danger:    #ef4444;
-  --kipu-text:      #f1f5f9;
-  --kipu-muted:     #64748b;
+  /* TEMA CLARO */
+  --kipu-bg:       #FAFAF8;
+  --kipu-surface:  #FFFFFF;
+  --kipu-border:   #E6E4DC;
+  --kipu-accent:   #059669;
+  --kipu-accent-h: #047857;
+  --kipu-text:     #111827;
+  --kipu-muted:    #4B5563;
+  --kipu-subtle:   #9CA3AF;
+  --kipu-success:  #059669;
+  --kipu-warning:  #f59e0b;
+  --kipu-danger:   #ef4444;
+}
+
+[data-theme="dark"] {
+  /* TEMA OSCURO */
+  --kipu-bg:       #0B1F1A;
+  --kipu-surface:  #0F2922;
+  --kipu-border:   #1A3D33;
+  --kipu-accent:   #059669;
+  --kipu-accent-h: #10b981;
+  --kipu-text:     #F0FAF6;
+  --kipu-muted:    #9CB8AF;
+  --kipu-subtle:   #4D7A6E;
+  --kipu-success:  #10b981;
+  --kipu-warning:  #f59e0b;
+  --kipu-danger:   #ef4444;
 }
 
 * {
@@ -21,10 +38,10 @@
 body {
   background: var(--kipu-bg);
   color: var(--kipu-text);
+  transition: background 0.2s ease, color 0.2s ease;
 }
 
-/* Scrollbar */
 ::-webkit-scrollbar       { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #334155; }
+::-webkit-scrollbar-thumb { background: var(--kipu-border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--kipu-muted); }

@@ -1,8 +1,6 @@
-// app/(dashboard)/configuracion/page.tsx
 "use client";
 import { useState, useEffect } from "react";
 import api from "@/lib/api";
-import { Loader2 } from "lucide-react";
 import { HealthData } from "@/components/Checklist";
 import TabEmpresa from "@/components/configuracion/TabEmpresa";
 import TabFirma   from "@/components/configuracion/TabFirma";
@@ -48,14 +46,19 @@ export default function ConfiguracionPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 size={24} className="animate-spin text-indigo-400" />
+        <div
+          className="w-6 h-6 border-2 border-t-transparent rounded-full animate-spin"
+          style={{ borderColor: "var(--kipu-accent)", borderTopColor: "transparent" }}
+        />
       </div>
     );
   }
 
   return (
     <div className="p-4 md:p-6 max-w-3xl mx-auto space-y-6">
-      <h1 className="text-xl font-bold text-white">Configuración</h1>
+      <h1 className="text-xl font-bold" style={{ color: "var(--kipu-text)" }}>
+        Configuración
+      </h1>
       <TabEmpresa
         legal={config?.legal}
         health={health}

@@ -1,6 +1,8 @@
+// app/providers.tsx
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import { ThemeProvider } from "next-themes";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { useAuthStore } from "@/store/auth.store";
@@ -80,7 +82,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
         const empresaActual = empresa
           ? data.empresas.find((e: any) => e.id === empresa.id) ?? data.empresas[0]
           : data.empresas[0];
-          
+
         setEmpresa({
           id:                    empresaActual.id,
           ruc:                   empresaActual.ruc,
@@ -95,7 +97,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
           suscripcion:           empresaActual.suscripcion,
           balance_api:           empresaActual.balance_api,
           obligado_contabilidad: empresaActual.obligado_contabilidad ?? null,
-          periodo_iva:           empresaActual.periodo_iva ?? null,  // ← agregar
+          periodo_iva:           empresaActual.periodo_iva ?? null,
         });
 
         localStorage.setItem("kipu-ext-emisor", String(empresaActual.id));
@@ -123,11 +125,16 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
 
   if (!listo) {
     return (
-      <div className="h-screen flex items-center justify-center bg-gray-950">
-        <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+      <div className="h-screen flex items-center justify-center" style={{ background: "var(--kipu-bg)" }}>
+        <div className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin"
+             style={{ borderColor: "var(--kipu-accent)", borderTopColor: "transparent" }} />
       </div>
     );
   }
 
-  return <SWRProvider>{children}</SWRProvider>;
+  return (
+    <ThemeProvider attribute="data-theme" defaultTheme="light" enableSystem={false}>
+      <SWRProvider>{children}</SWRProvider>
+    </ThemeProvider>
+  );
 }

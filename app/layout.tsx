@@ -7,7 +7,7 @@ import { AppProviders } from "./providers";
 const inter = Inter({ subsets: ["latin"] });
 
 export const viewport: Viewport = {
-  themeColor:    "#4f46e5",
+  themeColor:    "#059669",
   width:         "device-width",
   initialScale:  1,
   maximumScale:  1,
@@ -36,8 +36,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es">
-      <body className={`${inter.className} bg-gray-950 text-gray-100 antialiased`}>
+    <html lang="es" suppressHydrationWarning>
+      <body className={`${inter.className} antialiased`}>
         <AppProviders>
           {children}
         </AppProviders>

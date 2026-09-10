@@ -1,9 +1,8 @@
-// app/(dashboard)/documentos/emitir/fac/components/ItemsEditor.tsx
 "use client";
 
 import { useRef, useCallback, useState, useEffect } from "react";
 import api from "@/lib/api";
-import { Search, Plus, Trash2, Loader2 } from "lucide-react";
+import { Search, Plus, Trash2 } from "lucide-react";
 
 // ── Tipos ──────────────────────────────────────────────────────────────────────
 interface Producto {
@@ -70,12 +69,14 @@ function InputDecimal({
   onChange,
   placeholder = "0",
   className = "",
+  style = {},
   defaultValueOnBlur = 0,
 }: {
   value: number;
   onChange: (val: number) => void;
   placeholder?: string;
   className?: string;
+  style?: React.CSSProperties;
   defaultValueOnBlur?: number;
 }) {
   const [valStr, setValStr] = useState<string>(value === 0 ? "" : String(value));
@@ -101,11 +102,12 @@ function InputDecimal({
     onChange(isNaN(num) ? 0 : num);
   };
 
-  const handleBlur = () => {
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
     if (!valStr.trim()) {
       onChange(defaultValueOnBlur);
       setValStr(defaultValueOnBlur === 0 ? "" : String(defaultValueOnBlur));
     }
+    e.currentTarget.style.borderColor = "var(--kipu-border)";
   };
 
   return (
@@ -114,9 +116,13 @@ function InputDecimal({
       inputMode="decimal"
       value={valStr}
       onChange={handleChange}
+      onFocus={(e) => {
+        e.currentTarget.style.borderColor = "var(--kipu-accent)";
+      }}
       onBlur={handleBlur}
       placeholder={placeholder}
       className={className}
+      style={style}
     />
   );
 }
@@ -195,47 +201,87 @@ export default function ItemsEditor({ items, onChange }: Props) {
 
   // ── Render ───────────────────────────────────────────────────────────────────
   return (
-    <div className="bg-gray-900 rounded-xl border border-gray-800 p-4 space-y-4">
-
+    <div
+      className="rounded-xl p-4 space-y-4"
+      style={{
+        background: "var(--kipu-surface)",
+        border: "1px solid var(--kipu-border)",
+      }}
+    >
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Search size={15} className="text-indigo-400" />
-          <h2 className="text-sm font-semibold text-white">Productos / Servicios</h2>
+          <Search size={15} style={{ color: "var(--kipu-accent)" }} />
+          <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>
+            Productos / Servicios
+          </h2>
         </div>
-        <span className="text-xs text-gray-500">{items.length} ítem(s)</span>
+        <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+          {items.length} ítem(s)
+        </span>
       </div>
 
       {/* Buscador catálogo */}
       <div className="relative" ref={productoRef}>
         <div className="relative">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+          <Search
+            size={15}
+            className="absolute left-3 top-1/2 -translate-y-1/2"
+            style={{ color: "var(--kipu-subtle)" }}
+          />
           <input
             value={productoQuery}
             onChange={(e) => { setProductoQuery(e.target.value); setShowProductos(true); }}
             placeholder="Buscar en catálogo para agregar..."
-            className="w-full pl-9 pr-4 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 text-sm"
+            className="w-full pl-9 pr-4 py-2 rounded-lg text-sm transition-colors focus:outline-none"
+            style={{
+              background: "var(--kipu-surface)",
+              border: "1px solid var(--kipu-border)",
+              color: "var(--kipu-text)",
+            }}
+            onFocus={(e) => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+            onBlur={(e) => e.currentTarget.style.borderColor = "var(--kipu-border)"}
           />
           {productoLoading && (
-            <Loader2 size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 animate-spin" />
+            <div
+              className="w-3.5 h-3.5 border-2 border-t-transparent rounded-full animate-spin absolute right-3 top-1/2 -translate-y-1/2"
+              style={{ borderColor: "var(--kipu-accent)", borderTopColor: "transparent" }}
+            />
           )}
         </div>
 
         {showProductos && productoResults.length > 0 && (
-          <div className="absolute z-10 w-full mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-xl overflow-hidden max-h-48 overflow-y-auto">
+          <div
+            className="absolute z-10 w-full mt-1 rounded-lg shadow-xl overflow-hidden max-h-48 overflow-y-auto"
+            style={{
+              background: "var(--kipu-surface)",
+              border: "1px solid var(--kipu-border)",
+            }}
+          >
             {productoResults.map((p) => (
               <button
+                type="button"
                 key={p.id}
                 onClick={() => seleccionarProducto(p)}
-                className="w-full flex items-center justify-between gap-3 px-4 py-2.5 hover:bg-gray-700 text-left border-b border-gray-700/50 last:border-0"
+                className="w-full flex items-center justify-between gap-3 px-4 py-2.5 text-left transition-colors"
+                style={{
+                  borderBottom: "1px solid var(--kipu-border)",
+                }}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.background =
+                    "color-mix(in srgb, var(--kipu-text) 5%, transparent)")
+                }
+                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
               >
                 <div>
-                  <p className="text-sm text-white">{p.descripcion}</p>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-sm" style={{ color: "var(--kipu-text)" }}>
+                    {p.descripcion}
+                  </p>
+                  <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
                     {p.codigo || p.unidad} · IVA {p.tipo_iva}%
                   </p>
                 </div>
-                <span className="text-sm font-medium text-indigo-400 shrink-0">
+                <span className="text-sm font-medium shrink-0" style={{ color: "var(--kipu-accent)" }}>
                   ${fmt(p.precio)}
                 </span>
               </button>
@@ -251,11 +297,23 @@ export default function ItemsEditor({ items, onChange }: Props) {
           return (
             <div
               key={item._id}
-              className="p-3.5 bg-gray-950/60 border border-gray-800/80 rounded-xl space-y-3 hover:border-gray-700/80 transition-colors"
+              className="p-3.5 rounded-xl space-y-3 transition-colors"
+              style={{
+                background: "color-mix(in srgb, var(--kipu-surface) 60%, transparent)",
+                border: "1px solid var(--kipu-border)",
+              }}
+              onMouseEnter={(e) =>
+                (e.currentTarget.style.borderColor =
+                  "color-mix(in srgb, var(--kipu-text) 20%, transparent)")
+              }
+              onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--kipu-border)")}
             >
               {/* Fila 1 — índice + cantidad + descripción + eliminar */}
               <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-gray-500 w-4 shrink-0 text-center">
+                <span
+                  className="text-xs font-semibold w-4 shrink-0 text-center"
+                  style={{ color: "var(--kipu-subtle)" }}
+                >
                   #{index + 1}
                 </span>
 
@@ -265,19 +323,46 @@ export default function ItemsEditor({ items, onChange }: Props) {
                   onChange={(v) => editItem(item._id, "cantidad", v)}
                   defaultValueOnBlur={1}
                   placeholder="Cant."
-                  className="w-20 shrink-0 px-2 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-indigo-500 text-sm font-medium text-center"
+                  className="w-20 shrink-0 px-2 py-2 rounded-lg text-sm font-medium text-center transition-colors focus:outline-none"
+                  style={{
+                    background: "var(--kipu-surface)",
+                    border: "1px solid var(--kipu-border)",
+                    color: "var(--kipu-text)",
+                  }}
                 />
 
                 <input
                   value={item.descripcion}
                   onChange={(e) => editItem(item._id, "descripcion", e.target.value)}
                   placeholder="Descripción del producto o servicio"
-                  className="flex-1 px-3 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 text-sm font-medium min-w-0"
+                  className="flex-1 px-3 py-2 rounded-lg text-sm font-medium min-w-0 transition-colors focus:outline-none"
+                  style={{
+                    background: "var(--kipu-surface)",
+                    border: "1px solid var(--kipu-border)",
+                    color: "var(--kipu-text)",
+                  }}
+                  onFocus={(e) => (e.currentTarget.style.borderColor = "var(--kipu-accent)")}
+                  onBlur={(e) => (e.currentTarget.style.borderColor = "var(--kipu-border)")}
                 />
                 <button
+                  type="button"
                   onClick={() => removeItem(item._id)}
                   disabled={items.length === 1}
-                  className="p-2 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg disabled:opacity-20 transition-colors shrink-0"
+                  className="p-2 rounded-lg transition-colors shrink-0 disabled:opacity-20"
+                  style={{ color: "var(--kipu-subtle)" }}
+                  onMouseEnter={(e) => {
+                    if (items.length > 1) {
+                      e.currentTarget.style.color = "var(--kipu-danger)";
+                      e.currentTarget.style.background =
+                        "color-mix(in srgb, var(--kipu-danger) 10%, transparent)";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (items.length > 1) {
+                      e.currentTarget.style.color = "var(--kipu-subtle)";
+                      e.currentTarget.style.background = "transparent";
+                    }
+                  }}
                   title="Eliminar ítem"
                 >
                   <Trash2 size={16} />
@@ -286,10 +371,12 @@ export default function ItemsEditor({ items, onChange }: Props) {
 
               {/* Fila 2 — precio + descuento + IVA + total */}
               <div className="grid grid-cols-12 gap-2 items-end">
-
                 {/* Precio unitario */}
                 <div className="col-span-4 sm:col-span-3 space-y-1">
-                  <label className="text-[10px] uppercase font-semibold tracking-wider text-gray-500 block">
+                  <label
+                    className="text-[10px] uppercase font-semibold tracking-wider block"
+                    style={{ color: "var(--kipu-subtle)" }}
+                  >
                     Precio Unit.
                   </label>
                   <InputDecimal
@@ -297,20 +384,41 @@ export default function ItemsEditor({ items, onChange }: Props) {
                     onChange={(v) => editItem(item._id, "precio", v)}
                     defaultValueOnBlur={0}
                     placeholder="0.00"
-                    className="w-full px-2 py-1.5 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-indigo-500 text-sm text-center"
+                    className="w-full px-2 py-1.5 rounded-lg text-sm text-center transition-colors focus:outline-none"
+                    style={{
+                      background: "var(--kipu-surface)",
+                      border: "1px solid var(--kipu-border)",
+                      color: "var(--kipu-text)",
+                    }}
                   />
                 </div>
 
                 {/* Descuento */}
                 <div className="col-span-4 sm:col-span-4 space-y-1">
-                  <label className="text-[10px] uppercase font-semibold tracking-wider text-gray-500 block">
+                  <label
+                    className="text-[10px] uppercase font-semibold tracking-wider block"
+                    style={{ color: "var(--kipu-subtle)" }}
+                  >
                     Descuento
                   </label>
                   <div className="flex gap-1">
                     <select
                       value={item.tipo_descuento}
-                      onChange={(e) => editItem(item._id, "tipo_descuento", e.target.value as "$" | "%")}
-                      className="w-10 px-1 py-1.5 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-indigo-500 text-xs shrink-0 font-medium"
+                      onChange={(e) =>
+                        editItem(
+                          item._id,
+                          "tipo_descuento",
+                          e.target.value as "$" | "%"
+                        )
+                      }
+                      className="w-10 px-1 py-1.5 rounded-lg text-xs shrink-0 font-medium transition-colors focus:outline-none"
+                      style={{
+                        background: "var(--kipu-surface)",
+                        border: "1px solid var(--kipu-border)",
+                        color: "var(--kipu-text)",
+                      }}
+                      onFocus={(e) => (e.currentTarget.style.borderColor = "var(--kipu-accent)")}
+                      onBlur={(e) => (e.currentTarget.style.borderColor = "var(--kipu-border)")}
                     >
                       <option value="$">$</option>
                       <option value="%">%</option>
@@ -320,20 +428,35 @@ export default function ItemsEditor({ items, onChange }: Props) {
                       onChange={(v) => editItem(item._id, "descuento", Math.max(0, v))}
                       defaultValueOnBlur={0}
                       placeholder="0"
-                      className="w-full min-w-0 px-2 py-1.5 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-indigo-500 text-sm text-center"
+                      className="w-full min-w-0 px-2 py-1.5 rounded-lg text-sm text-center transition-colors focus:outline-none"
+                      style={{
+                        background: "var(--kipu-surface)",
+                        border: "1px solid var(--kipu-border)",
+                        color: "var(--kipu-text)",
+                      }}
                     />
                   </div>
                 </div>
 
                 {/* IVA */}
                 <div className="col-span-4 sm:col-span-2 space-y-1">
-                  <label className="text-[10px] uppercase font-semibold tracking-wider text-gray-500 block">
+                  <label
+                    className="text-[10px] uppercase font-semibold tracking-wider block"
+                    style={{ color: "var(--kipu-subtle)" }}
+                  >
                     IVA
                   </label>
                   <select
                     value={item.tipo_iva}
                     onChange={(e) => editItem(item._id, "tipo_iva", e.target.value)}
-                    className="w-full px-1.5 py-1.5 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-indigo-500 text-xs text-center"
+                    className="w-full px-1.5 py-1.5 rounded-lg text-xs text-center transition-colors focus:outline-none"
+                    style={{
+                      background: "var(--kipu-surface)",
+                      border: "1px solid var(--kipu-border)",
+                      color: "var(--kipu-text)",
+                    }}
+                    onFocus={(e) => (e.currentTarget.style.borderColor = "var(--kipu-accent)")}
+                    onBlur={(e) => (e.currentTarget.style.borderColor = "var(--kipu-border)")}
                   >
                     <option value="0">0%</option>
                     <option value="5">5%</option>
@@ -342,13 +465,24 @@ export default function ItemsEditor({ items, onChange }: Props) {
                 </div>
 
                 {/* Total ítem */}
-                <div className="col-span-12 sm:col-span-3 flex sm:flex-col justify-between sm:justify-end items-center sm:items-end pt-2 sm:pt-0 border-t sm:border-t-0 border-gray-800/60">
+                <div
+                  className="col-span-12 sm:col-span-3 flex sm:flex-col justify-between sm:justify-end items-center sm:items-end pt-2 sm:pt-0"
+                  style={{
+                    borderTop: "1px solid var(--kipu-border)",
+                  }}
+                >
                   <div className="text-right">
-                    <span className="text-[10px] text-gray-500 block uppercase tracking-wider">Total Ítem</span>
-                    <span className="text-sm font-bold text-indigo-400">${fmt(c.total)}</span>
+                    <span
+                      className="text-[10px] block uppercase tracking-wider"
+                      style={{ color: "var(--kipu-subtle)" }}
+                    >
+                      Total Ítem
+                    </span>
+                    <span className="text-sm font-bold" style={{ color: "var(--kipu-accent)" }}>
+                      ${fmt(c.total)}
+                    </span>
                   </div>
                 </div>
-
               </div>
             </div>
           );
@@ -357,13 +491,28 @@ export default function ItemsEditor({ items, onChange }: Props) {
 
       {/* Agregar ítem manual */}
       <button
+        type="button"
         onClick={addItem}
-        className="w-full py-2.5 rounded-xl border border-dashed border-gray-700 hover:border-indigo-500/50 hover:bg-indigo-500/5 text-sm text-indigo-400 hover:text-indigo-300 transition-all flex items-center justify-center gap-2 font-medium"
+        className="w-full py-2.5 rounded-xl border border-dashed text-sm transition-all flex items-center justify-center gap-2 font-medium"
+        style={{
+          borderColor: "var(--kipu-border)",
+          color: "var(--kipu-accent)",
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.borderColor = "var(--kipu-accent)";
+          e.currentTarget.style.background =
+            "color-mix(in srgb, var(--kipu-accent) 5%, transparent)";
+          e.currentTarget.style.color = "var(--kipu-accent-h)";
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.borderColor = "var(--kipu-border)";
+          e.currentTarget.style.background = "transparent";
+          e.currentTarget.style.color = "var(--kipu-accent)";
+        }}
       >
         <Plus size={16} />
         Agregar ítem manualmente
       </button>
-
     </div>
   );
 }

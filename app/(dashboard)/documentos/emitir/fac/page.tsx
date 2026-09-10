@@ -1,13 +1,11 @@
-// app/(dashboard)/documentos/emitir/fac/page.tsx
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
 import { CheckCircle2, AlertTriangle } from "lucide-react";
-import { clsx } from "clsx";
 
 // ── Componentes ────────────────────────────────────────────────────────────────
 import PuntoEmision from "../components/PuntoEmision";
@@ -44,8 +42,6 @@ interface Establecimiento {
 // ── Helpers ────────────────────────────────────────────────────────────────────
 const r2  = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 const fmt = (n: number) => r2(n).toFixed(2);
-
-const IVA_RATES: Record<string, number> = { "0": 0, "5": 0.05, "15": 0.15 };
 
 function calcTotales(items: Item[], incluirPropina: boolean) {
   const base = items.reduce(
@@ -143,7 +139,7 @@ export default function NuevaFacturaPage() {
 
       if (data.items && Array.isArray(data.items)) {
         setItems(data.items.map((i: any) => ({
-          _id:             genId(),
+          _id:              genId(),
           codigo:          String(i.codigo ?? ""),
           descripcion:     String(i.descripcion ?? ""),
           cantidad:        parseFloat(i.cantidad)  || 1,
@@ -240,7 +236,7 @@ export default function NuevaFacturaPage() {
 
     const payload: any = {
       establecimiento: estabSelected,
-      punto_emision:    ptoSelected,
+      punto_emision:   ptoSelected,
 
       cliente_id: esConsumidorFinal
         ? "consumidor_final"
@@ -306,34 +302,60 @@ export default function NuevaFacturaPage() {
   if (resultado) {
     const isAutorizado = resultado.estado === "AUTORIZADO";
     return (
-      <div className="min-h-screen flex items-center justify-center p-6 bg-gray-950">
+      <div
+        className="min-h-screen flex items-center justify-center p-6"
+        style={{ background: "var(--kipu-bg)" }}
+      >
         <div className="w-full max-w-sm text-center">
-          <div className={clsx(
-            "w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4",
-            isAutorizado ? "bg-emerald-500/20" : "bg-indigo-500/20"
-          )}>
-            <CheckCircle2 size={32} className={isAutorizado ? "text-emerald-400" : "text-indigo-400"} />
+          <div
+            className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
+            style={{
+              background: isAutorizado
+                ? "color-mix(in srgb, var(--kipu-success) 20%, transparent)"
+                : "color-mix(in srgb, #818cf8 20%, transparent)",
+            }}
+          >
+            <CheckCircle2
+              size={32}
+              style={{
+                color: isAutorizado ? "var(--kipu-success)" : "#818cf8",
+              }}
+            />
           </div>
-          <h2 className="text-xl font-bold text-white mb-1">
+          <h2 className="text-xl font-bold mb-1" style={{ color: "var(--kipu-text)" }}>
             {isAutorizado ? "¡Factura autorizada!" : "Factura en proceso"}
           </h2>
-          <p className="text-sm text-gray-500 mb-2">{resultado.claveAcceso}</p>
-          <span className={clsx(
-            "inline-block px-3 py-1 rounded-full text-xs font-medium mb-6",
-            isAutorizado ? "bg-emerald-500/20 text-emerald-400" : "bg-indigo-500/20 text-indigo-400"
-          )}>
+          <p className="text-sm mb-2" style={{ color: "var(--kipu-subtle)" }}>{resultado.claveAcceso}</p>
+          <span
+            className="inline-block px-3 py-1 rounded-full text-xs font-medium mb-6"
+            style={{
+              background: isAutorizado
+                ? "color-mix(in srgb, var(--kipu-success) 20%, transparent)"
+                : "color-mix(in srgb, #818cf8 20%, transparent)",
+              color: isAutorizado ? "var(--kipu-success)" : "#818cf8",
+            }}
+          >
             {resultado.estado}
           </span>
           <div className="flex gap-3">
             <button
               onClick={reset}
-              className="flex-1 py-2.5 rounded-lg border border-gray-700 text-gray-400 hover:text-white text-sm transition-colors"
+              className="flex-1 py-2.5 rounded-lg text-sm transition-colors"
+              style={{
+                border: "1px solid var(--kipu-border)",
+                color: "var(--kipu-muted)",
+              }}
+              onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
+              onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-muted)"}
             >
               Nueva factura
             </button>
             <button
               onClick={() => router.push("/documentos")}
-              className="flex-1 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors"
+              className="flex-1 py-2.5 rounded-lg text-white text-sm font-medium transition-colors"
+              style={{ background: "var(--kipu-accent)" }}
+              onMouseEnter={e => e.currentTarget.style.background = "var(--kipu-accent-h)"}
+              onMouseLeave={e => e.currentTarget.style.background = "var(--kipu-accent)"}
             >
               Ver historial
             </button>
@@ -349,17 +371,23 @@ export default function NuevaFacturaPage() {
 
       {/* Header */}
       <div>
-        <h1 className="text-xl font-bold text-white">Nueva Factura</h1>
-        <p className="text-sm text-gray-500">
+        <h1 className="text-xl font-bold" style={{ color: "var(--kipu-text)" }}>Nueva Factura</h1>
+        <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>
           {empresa?.razon_social} · {empresa?.ambiente === 2 ? "Producción" : "Pruebas"}
         </p>
       </div>
 
       {/* Alerta sin suscripción activa ni créditos API */}
       {empresa && !empresa.suscripcion_activa && empresa.balance_api === 0 && (
-        <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3">
-          <AlertTriangle size={16} className="text-red-400 shrink-0" />
-          <p className="text-sm text-red-300">
+        <div
+          className="flex items-center gap-2 rounded-lg px-4 py-3"
+          style={{
+            background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
+            border: "1px solid color-mix(in srgb, var(--kipu-danger) 20%, transparent)",
+          }}
+        >
+          <AlertTriangle size={16} className="shrink-0" style={{ color: "var(--kipu-danger)" }} />
+          <p className="text-sm" style={{ color: "var(--kipu-danger)" }}>
             Sin acceso para emitir.{" "}
             <a href="/planes" className="underline">Ver opciones</a>
           </p>

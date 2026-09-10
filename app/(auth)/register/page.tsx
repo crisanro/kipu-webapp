@@ -4,20 +4,25 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
-import { Zap, Eye, EyeOff, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { useTheme } from "next-themes";
 
 export default function RegisterPage() {
   const router = useRouter();
-
   const { uid } = useAuthStore();
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
   useEffect(() => {
-      if (uid) router.replace("/dashboard");
+    if (uid) router.replace("/dashboard");
   }, [uid]);
-  
+
   const [email,          setEmail]          = useState("");
   const [password,       setPassword]       = useState("");
   const [showPass,       setShowPass]       = useState(false);
@@ -35,34 +40,23 @@ export default function RegisterPage() {
       setError("La contraseña debe tener al menos 8 caracteres.");
       return;
     }
-
     if (password !== confirm) {
       setError("Las contraseñas no coinciden.");
       return;
     }
-
     if (!aceptaTerminos) {
       setError("Debes aceptar la Política de Privacidad y el Tratamiento de Datos para continuar.");
       return;
     }
 
     setLoading(true);
-
     try {
-      // 1. Crear usuario en Firebase
       await createUserWithEmailAndPassword(auth, email, password);
-
-      // 2. Enviar verificación de email
       try {
         await api.post("/api/v1/app/auth/send-verification");
-      } catch {
-        // No crítico — el usuario igual puede continuar
-      }
-
-      // 3. Ir a bienvenida con el parámetro de empresa si existe
+      } catch {}
       const empresaParam = new URLSearchParams(window.location.search).get("empresa");
       router.replace(empresaParam ? `/bienvenida?empresa=${empresaParam}` : "/bienvenida");
-
     } catch (err: any) {
       const code = err?.code ?? "";
       if (code === "auth/email-already-in-use") {
@@ -79,23 +73,39 @@ export default function RegisterPage() {
     }
   };
 
+  const inputStyle = {
+    background: "var(--kipu-surface)",
+    border:     "1px solid var(--kipu-border)",
+    color:      "var(--kipu-text)",
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 bg-gray-950">
+    <div
+      className="min-h-screen flex items-center justify-center px-4 py-10"
+      style={{ background: "var(--kipu-bg)" }}
+    >
       <div className="w-full max-w-sm">
 
         {/* Logo */}
-        <div className="flex flex-col items-center mb-8">
-          <div className="w-12 h-12 rounded-2xl bg-indigo-600 flex items-center justify-center mb-4">
-            <Zap size={24} className="text-white" />
-          </div>
-          <h1 className="text-2xl font-bold text-white">Crear cuenta</h1>
-          <p className="text-sm text-gray-500 mt-1">Empieza gratis con 10 facturas</p>
+        <div className="flex flex-col items-center mb-8 min-h-[68px] justify-end">
+          {mounted ? (
+            <Image
+              src={resolvedTheme === "dark" ? "/images/logo-dark.svg" : "/images/logo.svg"}
+              alt="Kipu"
+              width={200}
+              height={40}
+              priority
+            />
+          ) : (
+            <div className="w-[200px] h-[40px]" />
+          )}
         </div>
 
         {/* Form */}
         <form onSubmit={handleRegister} className="space-y-4">
+
           <div>
-            <label className="block text-sm font-medium text-gray-400 mb-1.5">
+            <label className="block text-sm font-medium mb-1.5" style={{ color: "var(--kipu-muted)" }}>
               Correo electrónico
             </label>
             <input
@@ -104,12 +114,15 @@ export default function RegisterPage() {
               onChange={(e) => setEmail(e.target.value)}
               placeholder="tu@empresa.com"
               required
-              className="w-full px-4 py-2.5 rounded-lg bg-gray-900 border border-gray-800 text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 transition-colors text-sm"
+              className="w-full px-4 py-2.5 rounded-lg text-sm transition-colors focus:outline-none"
+              style={inputStyle}
+              onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+              onBlur={e  => e.currentTarget.style.borderColor = "var(--kipu-border)"}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-400 mb-1.5">
+            <label className="block text-sm font-medium mb-1.5" style={{ color: "var(--kipu-muted)" }}>
               Contraseña
             </label>
             <div className="relative">
@@ -119,12 +132,16 @@ export default function RegisterPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Mínimo 8 caracteres"
                 required
-                className="w-full px-4 py-2.5 rounded-lg bg-gray-900 border border-gray-800 text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 transition-colors text-sm pr-10"
+                className="w-full px-4 py-2.5 rounded-lg text-sm transition-colors focus:outline-none pr-10"
+                style={inputStyle}
+                onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                onBlur={e  => e.currentTarget.style.borderColor = "var(--kipu-border)"}
               />
               <button
                 type="button"
                 onClick={() => setShowPass(!showPass)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
+                className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors"
+                style={{ color: "var(--kipu-subtle)" }}
               >
                 {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
@@ -132,7 +149,7 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-400 mb-1.5">
+            <label className="block text-sm font-medium mb-1.5" style={{ color: "var(--kipu-muted)" }}>
               Confirmar contraseña
             </label>
             <div className="relative">
@@ -142,12 +159,16 @@ export default function RegisterPage() {
                 onChange={(e) => setConfirm(e.target.value)}
                 placeholder="Repite tu contraseña"
                 required
-                className="w-full px-4 py-2.5 rounded-lg bg-gray-900 border border-gray-800 text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 transition-colors text-sm pr-10"
+                className="w-full px-4 py-2.5 rounded-lg text-sm transition-colors focus:outline-none pr-10"
+                style={inputStyle}
+                onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                onBlur={e  => e.currentTarget.style.borderColor = "var(--kipu-border)"}
               />
               <button
                 type="button"
                 onClick={() => setShowConf(!showConf)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
+                className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors"
+                style={{ color: "var(--kipu-subtle)" }}
               >
                 {showConf ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
@@ -161,24 +182,27 @@ export default function RegisterPage() {
               id="terminos"
               checked={aceptaTerminos}
               onChange={(e) => setAceptaTerminos(e.target.checked)}
-              className="mt-0.5 w-4 h-4 rounded border-gray-700 bg-gray-900 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+              className="mt-0.5 w-4 h-4 rounded cursor-pointer"
+              style={{ accentColor: "var(--kipu-accent)" }}
             />
-            <label htmlFor="terminos" className="text-xs text-gray-500 leading-relaxed">
+            <label htmlFor="terminos" className="text-xs leading-relaxed" style={{ color: "var(--kipu-muted)" }}>
               He leído y acepto la{" "}
-              <a 
-                href="https://kipu.ec/politica-de-privacidad" 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                className="text-indigo-400 hover:text-indigo-300 underline"
+              <a
+                href="https://kipu.ec/politica-de-privacidad"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline transition-colors"
+                style={{ color: "var(--kipu-accent)" }}
               >
                 Política de Privacidad
               </a>{" "}
               y el{" "}
-              <a 
-                href="https://kipu.ec/tratamiento-de-datos-personales" 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                className="text-indigo-400 hover:text-indigo-300 underline"
+              <a
+                href="https://kipu.ec/tratamiento-de-datos-personales"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline transition-colors"
+                style={{ color: "var(--kipu-accent)" }}
               >
                 Tratamiento de Datos Personales
               </a>{" "}
@@ -187,7 +211,13 @@ export default function RegisterPage() {
           </div>
 
           {error && (
-            <p className="text-sm text-red-400 bg-red-400/10 px-3 py-2 rounded-lg">
+            <p
+              className="text-sm px-3 py-2 rounded-lg"
+              style={{
+                color:      "var(--kipu-danger)",
+                background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
+              }}
+            >
               {error}
             </p>
           )}
@@ -195,7 +225,10 @@ export default function RegisterPage() {
           <button
             type="submit"
             disabled={loading || !aceptaTerminos}
-            className="w-full py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium text-sm transition-colors flex items-center justify-center gap-2"
+            className="w-full py-2.5 rounded-lg font-medium text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ background: "var(--kipu-accent)", color: "#ffffff" }}
+            onMouseEnter={e => !loading && (e.currentTarget.style.background = "var(--kipu-accent-h)")}
+            onMouseLeave={e => !loading && (e.currentTarget.style.background = "var(--kipu-accent)")}
           >
             {loading ? (
               <><Loader2 size={16} className="animate-spin" /> Creando cuenta...</>
@@ -205,12 +238,17 @@ export default function RegisterPage() {
           </button>
         </form>
 
-        <p className="mt-6 text-center text-sm text-gray-600">
+        <p className="mt-6 text-center text-sm" style={{ color: "var(--kipu-subtle)" }}>
           ¿Ya tienes cuenta?{" "}
-          <Link href="/login" className="text-indigo-400 hover:text-indigo-300 transition-colors">
+          <Link
+            href="/login"
+            className="font-medium transition-colors"
+            style={{ color: "var(--kipu-accent)" }}
+          >
             Inicia sesión
           </Link>
         </p>
+
       </div>
     </div>
   );

@@ -1,4 +1,3 @@
-// app/(dashboard)/cuentas/page.tsx
 "use client";
 import { useState, useEffect, useCallback, Suspense } from "react";
 import Link from "next/link";
@@ -9,11 +8,10 @@ import SinAcceso from "@/components/SinAcceso";
 import { useAuthStore } from "@/store/auth.store";
 import { hoyEC } from "@/lib/fecha";
 import {
-  Wallet, Plus, Loader2, X, ChevronDown, Save,
+  Wallet, Plus, X, ChevronDown, Save,
   TrendingUp, TrendingDown, Scale, Search,
   AlertTriangle, CheckCircle2, Clock, Ban,
 } from "lucide-react";
-import { clsx } from "clsx";
 
 // ── Tipos ──────────────────────────────────────────────────────────────────────
 interface Cuenta {
@@ -42,10 +40,10 @@ interface Resumen {
 const fmt = (n: number) => `$${n.toFixed(2)}`;
 
 const ESTADO_CONFIG = {
-  PENDIENTE: { label: "Pendiente", color: "text-amber-400 bg-amber-400/10",    icon: Clock          },
-  PARCIAL:   { label: "Parcial",   color: "text-blue-400 bg-blue-400/10",      icon: AlertTriangle },
-  PAGADO:    { label: "Pagado",    color: "text-emerald-400 bg-emerald-400/10", icon: CheckCircle2 },
-  ANULADO:   { label: "Anulado",   color: "text-gray-500 bg-gray-500/10",      icon: Ban          },
+  PENDIENTE: { label: "Pendiente", color: "var(--kipu-warning)", bg: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)", icon: Clock },
+  PARCIAL:   { label: "Parcial",   color: "#60a5fa",           bg: "color-mix(in srgb, #60a5fa 10%, transparent)",           icon: AlertTriangle },
+  PAGADO:    { label: "Pagado",    color: "var(--kipu-success)", bg: "color-mix(in srgb, var(--kipu-success) 10%, transparent)", icon: CheckCircle2 },
+  ANULADO:   { label: "Anulado",   color: "var(--kipu-subtle)",  bg: "color-mix(in srgb, var(--kipu-subtle) 10%, transparent)",  icon: Ban },
 };
 
 const EMPTY_FORM = {
@@ -192,19 +190,26 @@ function CuentasContent() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-bold text-white">Cuentas</h1>
-          <p className="text-sm text-gray-500">{cuentas.length} registradas</p>
+          <h1 className="text-xl font-bold" style={{ color: "var(--kipu-text)" }}>Cuentas</h1>
+          <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>{cuentas.length} registradas</p>
         </div>
         <button
+          type="button"
           onClick={() => { if (!tieneSub) return; setShowModal(true); resetModal(); }}
           disabled={!tieneSub}
           title={!tieneSub ? "Requiere suscripción activa" : undefined}
-          className={clsx(
-            "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors",
-            tieneSub
-              ? "bg-indigo-600 hover:bg-indigo-500 text-white"
-              : "bg-gray-800 text-gray-500 cursor-not-allowed"
-          )}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:cursor-not-allowed"
+          style={{
+            background: tieneSub ? "var(--kipu-accent)" : "var(--kipu-surface)",
+            color: tieneSub ? "#FFFFFF" : "var(--kipu-subtle)",
+            border: tieneSub ? "none" : "1px solid var(--kipu-border)",
+          }}
+          onMouseEnter={e => {
+            if (tieneSub) e.currentTarget.style.background = "var(--kipu-accent-h)";
+          }}
+          onMouseLeave={e => {
+            if (tieneSub) e.currentTarget.style.background = "var(--kipu-accent)";
+          }}
         >
           <Plus size={15} />
           Nueva cuenta
@@ -212,13 +217,23 @@ function CuentasContent() {
       </div>
 
       {!tieneSub && (
-        <div className="flex items-center gap-3 bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-3 mb-4">
-          <AlertTriangle size={15} className="text-amber-400 shrink-0" />
+        <div
+          className="flex items-center gap-3 rounded-xl px-4 py-3 mb-4"
+          style={{
+            background: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)",
+            border: "1px solid color-mix(in srgb, var(--kipu-warning) 20%, transparent)",
+          }}
+        >
+          <AlertTriangle size={15} className="shrink-0" style={{ color: "var(--kipu-warning)" }} />
           <div className="flex-1">
-            <p className="text-sm text-amber-300 font-medium">Suscripción requerida</p>
-            <p className="text-xs text-amber-400/70">Las cuentas por cobrar/pagar requieren un plan activo.</p>
+            <p className="text-sm font-medium" style={{ color: "var(--kipu-warning)" }}>Suscripción requerida</p>
+            <p className="text-xs" style={{ color: "color-mix(in srgb, var(--kipu-warning) 80%, transparent)" }}>Las cuentas por cobrar/pagar requieren un plan activo.</p>
           </div>
-          <Link href="/planes" className="text-xs text-amber-400 hover:text-amber-300 underline underline-offset-2 shrink-0">
+          <Link
+            href="/planes"
+            className="text-xs underline underline-offset-2 shrink-0 transition-colors"
+            style={{ color: "var(--kipu-warning)" }}
+          >
             Ver planes
           </Link>
         </div>
@@ -226,29 +241,50 @@ function CuentasContent() {
 
       {/* Resumen */}
       <div className="grid grid-cols-3 gap-3 mb-6">
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+        <div
+          className="rounded-xl p-4"
+          style={{
+            background: "var(--kipu-surface)",
+            border: "1px solid var(--kipu-border)",
+          }}
+        >
           <div className="flex items-center gap-2 mb-1">
-            <TrendingUp size={14} className="text-emerald-400" />
-            <p className="text-xs text-gray-500">Por cobrar</p>
+            <TrendingUp size={14} style={{ color: "var(--kipu-success)" }} />
+            <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Por cobrar</p>
           </div>
-          <p className="text-xl font-bold text-emerald-400">{fmt(resumen.por_cobrar)}</p>
+          <p className="text-xl font-bold" style={{ color: "var(--kipu-success)" }}>{fmt(resumen.por_cobrar)}</p>
         </div>
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+        <div
+          className="rounded-xl p-4"
+          style={{
+            background: "var(--kipu-surface)",
+            border: "1px solid var(--kipu-border)",
+          }}
+        >
           <div className="flex items-center gap-2 mb-1">
-            <TrendingDown size={14} className="text-red-400" />
-            <p className="text-xs text-gray-500">Por pagar</p>
+            <TrendingDown size={14} style={{ color: "var(--kipu-danger)" }} />
+            <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Por pagar</p>
           </div>
-          <p className="text-xl font-bold text-red-400">{fmt(resumen.por_pagar)}</p>
+          <p className="text-xl font-bold" style={{ color: "var(--kipu-danger)" }}>{fmt(resumen.por_pagar)}</p>
         </div>
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+        <div
+          className="rounded-xl p-4"
+          style={{
+            background: "var(--kipu-surface)",
+            border: "1px solid var(--kipu-border)",
+          }}
+        >
           <div className="flex items-center gap-2 mb-1">
-            <Scale size={14} className={resumen.balance >= 0 ? "text-indigo-400" : "text-amber-400"} />
-            <p className="text-xs text-gray-500">Balance</p>
+            <Scale
+              size={14}
+              style={{ color: resumen.balance >= 0 ? "var(--kipu-accent)" : "var(--kipu-warning)" }}
+            />
+            <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Balance</p>
           </div>
-          <p className={clsx(
-            "text-xl font-bold",
-            resumen.balance >= 0 ? "text-indigo-400" : "text-amber-400"
-          )}>
+          <p
+            className="text-xl font-bold"
+            style={{ color: resumen.balance >= 0 ? "var(--kipu-accent)" : "var(--kipu-warning)" }}
+          >
             {fmt(resumen.balance)}
           </p>
         </div>
@@ -257,31 +293,56 @@ function CuentasContent() {
       {/* Filtros */}
       <div className="flex gap-2 mb-4 flex-wrap">
         <div className="relative flex-1 min-w-48">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--kipu-subtle)" }} />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Buscar por persona o concepto..."
-            className="w-full pl-9 pr-4 py-2.5 rounded-lg bg-gray-900 border border-gray-800 text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 text-sm"
+            className="w-full pl-9 pr-4 py-2.5 rounded-lg text-sm transition-colors focus:outline-none"
+            style={{
+              background: "var(--kipu-surface)",
+              border: "1px solid var(--kipu-border)",
+              color: "var(--kipu-text)",
+            }}
+            onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+            onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
           />
         </div>
         <div className="relative">
           <select
             value={filtroTipo}
             onChange={(e) => setFiltroTipo(e.target.value as any)}
-            className="pl-3 pr-8 py-2.5 rounded-lg bg-gray-900 border border-gray-800 text-white focus:outline-none focus:border-indigo-500 text-sm appearance-none"
+            className="pl-3 pr-8 py-2.5 rounded-lg text-sm appearance-none transition-colors focus:outline-none"
+            style={{
+              background: "var(--kipu-surface)",
+              border: "1px solid var(--kipu-border)",
+              color: "var(--kipu-text)",
+            }}
+            onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+            onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
           >
             <option value="">Todos</option>
             <option value="COBRAR">Por cobrar</option>
             <option value="PAGAR">Por pagar</option>
           </select>
-          <ChevronDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
+          <ChevronDown
+            size={13}
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none"
+            style={{ color: "var(--kipu-subtle)" }}
+          />
         </div>
         <div className="relative">
           <select
             value={filtroEst}
             onChange={(e) => setFiltroEst(e.target.value)}
-            className="pl-3 pr-8 py-2.5 rounded-lg bg-gray-900 border border-gray-800 text-white focus:outline-none focus:border-indigo-500 text-sm appearance-none"
+            className="pl-3 pr-8 py-2.5 rounded-lg text-sm appearance-none transition-colors focus:outline-none"
+            style={{
+              background: "var(--kipu-surface)",
+              border: "1px solid var(--kipu-border)",
+              color: "var(--kipu-text)",
+            }}
+            onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+            onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
           >
             <option value="">Todos los estados</option>
             <option value="PENDIENTE">Pendiente</option>
@@ -289,19 +350,26 @@ function CuentasContent() {
             <option value="PAGADO">Pagado</option>
             <option value="ANULADO">Anulado</option>
           </select>
-          <ChevronDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
+          <ChevronDown
+            size={13}
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none"
+            style={{ color: "var(--kipu-subtle)" }}
+          />
         </div>
       </div>
 
       {/* Lista */}
       {loading ? (
         <div className="flex items-center justify-center py-20">
-          <Loader2 size={24} className="animate-spin text-indigo-400" />
+          <div
+            className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin"
+            style={{ borderColor: "var(--kipu-accent)", borderTopColor: "transparent" }}
+          />
         </div>
       ) : filtradas.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
-          <Wallet size={40} className="text-gray-700 mb-3" />
-          <p className="text-gray-500 text-sm">
+          <Wallet size={40} className="mb-3" style={{ color: "var(--kipu-subtle)" }} />
+          <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>
             {query || filtroTipo || filtroEst
               ? "No hay cuentas que coincidan con los filtros."
               : "Aún no tienes cuentas registradas."}
@@ -309,15 +377,20 @@ function CuentasContent() {
           {!query && !filtroTipo && !filtroEst && (
             tieneSub ? (
               <button
+                type="button"
                 onClick={() => { setShowModal(true); resetModal(); }}
-                className="mt-4 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors"
+                className="mt-4 px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors"
+                style={{ background: "var(--kipu-accent)" }}
+                onMouseEnter={e => e.currentTarget.style.background = "var(--kipu-accent-h)"}
+                onMouseLeave={e => e.currentTarget.style.background = "var(--kipu-accent)"}
               >
                 Registrar primera cuenta
               </button>
             ) : (
               <Link
                 href="/planes"
-                className="mt-4 px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-sm font-medium transition-colors"
+                className="mt-4 px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors inline-block"
+                style={{ background: "var(--kipu-warning)" }}
               >
                 Ver planes
               </Link>
@@ -325,9 +398,15 @@ function CuentasContent() {
           )}
         </div>
       ) : (
-        <div className="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
-          <div className="divide-y divide-gray-800">
-            {filtradas.map((c) => {
+        <div
+          className="rounded-xl overflow-hidden"
+          style={{
+            background: "var(--kipu-surface)",
+            border: "1px solid var(--kipu-border)",
+          }}
+        >
+          <div>
+            {filtradas.map((c, idx) => {
               const est  = ESTADO_CONFIG[c.estado] ?? ESTADO_CONFIG.PENDIENTE;
               const Icon = est.icon;
               const vencida = c.fecha_vencimiento &&
@@ -338,25 +417,36 @@ function CuentasContent() {
                 <Link
                   key={c.id}
                   href={`/cuentas/${c.id}`}
-                  className="flex items-center gap-3 px-4 py-3 hover:bg-gray-800/50 transition-colors"
+                  className="flex items-center gap-3 px-4 py-3 transition-colors"
+                  style={{
+                    borderTop: idx > 0 ? "1px solid var(--kipu-border)" : "none",
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 4%, transparent)"}
+                  onMouseLeave={e => e.currentTarget.style.background = "transparent"}
                 >
                   {/* Tipo badge */}
-                  <div className={clsx(
-                    "w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-xs font-bold",
-                    c.tipo === "COBRAR"
-                      ? "bg-emerald-400/10 text-emerald-400"
-                      : "bg-red-400/10 text-red-400"
-                  )}>
+                  <div
+                    className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-xs font-bold"
+                    style={{
+                      background: c.tipo === "COBRAR"
+                        ? "color-mix(in srgb, var(--kipu-success) 10%, transparent)"
+                        : "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
+                      color: c.tipo === "COBRAR" ? "var(--kipu-success)" : "var(--kipu-danger)",
+                    }}
+                  >
                     {c.tipo === "COBRAR" ? "C" : "P"}
                   </div>
 
                   {/* Info */}
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-white truncate">{c.concepto}</p>
-                    <p className="text-xs text-gray-500 truncate">
+                    <p className="text-sm font-medium truncate" style={{ color: "var(--kipu-text)" }}>{c.concepto}</p>
+                    <p className="text-xs truncate" style={{ color: "var(--kipu-subtle)" }}>
                       {c.razon_social}
                       {c.fecha_vencimiento && (
-                        <span className={clsx("ml-2", vencida ? "text-red-400" : "text-gray-600")}>
+                        <span
+                          className="ml-2"
+                          style={{ color: vencida ? "var(--kipu-danger)" : "var(--kipu-subtle)" }}
+                        >
                           · Vence {c.fecha_vencimiento}
                           {vencida && " ⚠️"}
                         </span>
@@ -366,15 +456,18 @@ function CuentasContent() {
 
                   {/* Montos */}
                   <div className="text-right shrink-0">
-                    <p className="text-sm font-semibold text-white">{fmt(c.saldo_pendiente)}</p>
-                    <p className="text-xs text-gray-600">de {fmt(c.monto_total)}</p>
+                    <p className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>{fmt(c.saldo_pendiente)}</p>
+                    <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>de {fmt(c.monto_total)}</p>
                   </div>
 
                   {/* Estado */}
-                  <div className={clsx(
-                    "flex items-center gap-1 px-2 py-1 rounded-full text-xs shrink-0 hidden sm:flex",
-                    est.color
-                  )}>
+                  <div
+                    className="items-center gap-1 px-2 py-1 rounded-full text-xs shrink-0 hidden sm:flex font-medium"
+                    style={{
+                      color: est.color,
+                      background: est.bg,
+                    }}
+                  >
                     <Icon size={11} />
                     {est.label}
                   </div>
@@ -388,10 +481,26 @@ function CuentasContent() {
       {/* Modal nueva cuenta */}
       {showModal && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-          <div className="bg-gray-900 border border-gray-800 rounded-xl w-full max-w-md">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-800">
-              <h2 className="text-sm font-semibold text-white">Nueva cuenta</h2>
-              <button onClick={() => { setShowModal(false); resetModal(); }} className="text-gray-500 hover:text-white">
+          <div
+            className="rounded-xl w-full max-w-md"
+            style={{
+              background: "var(--kipu-surface)",
+              border: "1px solid var(--kipu-border)",
+            }}
+          >
+            <div
+              className="flex items-center justify-between px-5 py-4"
+              style={{ borderBottom: "1px solid var(--kipu-border)" }}
+            >
+              <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>Nueva cuenta</h2>
+              <button
+                type="button"
+                onClick={() => { setShowModal(false); resetModal(); }}
+                className="transition-colors"
+                style={{ color: "var(--kipu-subtle)" }}
+                onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
+                onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-subtle)"}
+              >
                 <X size={18} />
               </button>
             </div>
@@ -399,63 +508,110 @@ function CuentasContent() {
             <div className="p-5 space-y-3">
               {/* Tipo */}
               <div className="grid grid-cols-2 gap-2">
-                {(["COBRAR", "PAGAR"] as const).map((t) => (
-                  <button
-                    key={t}
-                    onClick={() => setForm({ ...form, tipo: t })}
-                    className={clsx(
-                      "py-2.5 rounded-lg text-sm font-medium border transition-colors",
-                      form.tipo === t
-                        ? t === "COBRAR"
-                          ? "bg-emerald-600/20 border-emerald-500/50 text-emerald-400"
-                          : "bg-red-600/20 border-red-500/50 text-red-400"
-                        : "border-gray-700 text-gray-500 hover:text-white"
-                    )}
-                  >
-                    {t === "COBRAR" ? "Por cobrar" : "Por pagar"}
-                  </button>
-                ))}
+                {(["COBRAR", "PAGAR"] as const).map((t) => {
+                  const isSelected = form.tipo === t;
+                  return (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => setForm({ ...form, tipo: t })}
+                      className="py-2.5 rounded-lg text-sm font-medium transition-colors"
+                      style={{
+                        background: isSelected
+                          ? (t === "COBRAR"
+                              ? "color-mix(in srgb, var(--kipu-success) 20%, transparent)"
+                              : "color-mix(in srgb, var(--kipu-danger) 20%, transparent)")
+                          : "var(--kipu-surface)",
+                        border: isSelected
+                          ? (t === "COBRAR"
+                              ? "1px solid color-mix(in srgb, var(--kipu-success) 50%, transparent)"
+                              : "1px solid color-mix(in srgb, var(--kipu-danger) 50%, transparent)")
+                          : "1px solid var(--kipu-border)",
+                        color: isSelected
+                          ? (t === "COBRAR" ? "var(--kipu-success)" : "var(--kipu-danger)")
+                          : "var(--kipu-subtle)",
+                      }}
+                      onMouseEnter={e => {
+                        if (!isSelected) e.currentTarget.style.color = "var(--kipu-text)";
+                      }}
+                      onMouseLeave={e => {
+                        if (!isSelected) e.currentTarget.style.color = "var(--kipu-subtle)";
+                      }}
+                    >
+                      {t === "COBRAR" ? "Por cobrar" : "Por pagar"}
+                    </button>
+                  );
+                })}
               </div>
 
               {/* Selector de persona */}
               <div>
-                <label className="block text-xs text-gray-500 mb-1.5">Persona *</label>
+                <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Persona *</label>
                 {clienteSelec ? (
-                  <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-800 border border-gray-700">
+                  <div
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg"
+                    style={{
+                      background: "color-mix(in srgb, var(--kipu-text) 5%, transparent)",
+                      border: "1px solid var(--kipu-border)",
+                    }}
+                  >
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm text-white truncate">{clienteSelec.razon_social}</p>
-                      <p className="text-xs text-gray-500">{clienteSelec.identificacion}</p>
+                      <p className="text-sm truncate" style={{ color: "var(--kipu-text)" }}>{clienteSelec.razon_social}</p>
+                      <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>{clienteSelec.identificacion}</p>
                     </div>
                     <button
+                      type="button"
                       onClick={() => { setClienteSelec(null); setClienteQuery(""); }}
-                      className="text-gray-500 hover:text-white shrink-0"
+                      className="shrink-0 transition-colors"
+                      style={{ color: "var(--kipu-subtle)" }}
+                      onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
+                      onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-subtle)"}
                     >
                       <X size={14} />
                     </button>
                   </div>
                 ) : (
                   <div className="relative">
-                    <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                    <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--kipu-subtle)" }} />
                     <input
                       value={clienteQuery}
                       onChange={(e) => setClienteQuery(e.target.value)}
                       placeholder="Buscar por nombre o identificación..."
-                      className="w-full pl-9 pr-4 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 text-sm"
+                      className="w-full pl-9 pr-4 py-2 rounded-lg text-sm transition-colors focus:outline-none"
+                      style={{
+                        background: "var(--kipu-surface)",
+                        border: "1px solid var(--kipu-border)",
+                        color: "var(--kipu-text)",
+                      }}
+                      onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                      onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
                     />
                     {buscandoCliente && (
-                      <Loader2 size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 animate-spin" />
+                      <div
+                        className="w-3.5 h-3.5 border-2 border-t-transparent rounded-full animate-spin absolute right-3 top-1/2 -translate-y-1/2"
+                        style={{ borderColor: "var(--kipu-accent)", borderTopColor: "transparent" }}
+                      />
                     )}
                     {clientesBusq.length > 0 && (
-                      <div className="absolute top-full left-0 right-0 mt-1 bg-gray-800 border border-gray-700 rounded-lg overflow-hidden z-10 shadow-xl">
+                      <div
+                        className="absolute top-full left-0 right-0 mt-1 rounded-lg overflow-hidden z-10 shadow-xl"
+                        style={{
+                          background: "var(--kipu-surface)",
+                          border: "1px solid var(--kipu-border)",
+                        }}
+                      >
                         {clientesBusq.map((cl) => (
                           <button
+                            type="button"
                             key={cl.uid ?? cl.id}
                             onClick={() => { setClienteSelec(cl); setClienteQuery(""); setClientesBusq([]); }}
-                            className="w-full flex items-start gap-2 px-3 py-2.5 hover:bg-gray-700 transition-colors text-left"
+                            className="w-full flex items-start gap-2 px-3 py-2.5 text-left transition-colors"
+                            onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 5%, transparent)"}
+                            onMouseLeave={e => e.currentTarget.style.background = "transparent"}
                           >
                             <div>
-                              <p className="text-sm text-white">{cl.razon_social}</p>
-                              <p className="text-xs text-gray-500">{cl.identificacion}</p>
+                              <p className="text-sm" style={{ color: "var(--kipu-text)" }}>{cl.razon_social}</p>
+                              <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>{cl.identificacion}</p>
                             </div>
                           </button>
                         ))}
@@ -467,20 +623,27 @@ function CuentasContent() {
 
               {/* Concepto */}
               <div>
-                <label className="block text-xs text-gray-500 mb-1.5">Concepto *</label>
+                <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Concepto *</label>
                 <input
                   value={form.concepto}
                   onChange={(e) => setForm({ ...form, concepto: e.target.value })}
                   placeholder="Descripción de la deuda..."
-                  className="w-full px-3 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 text-sm"
+                  className="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none"
+                  style={{
+                    background: "var(--kipu-surface)",
+                    border: "1px solid var(--kipu-border)",
+                    color: "var(--kipu-text)",
+                  }}
+                  onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                  onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
                 />
               </div>
 
               {/* Monto */}
               <div>
-                <label className="block text-xs text-gray-500 mb-1.5">Monto total *</label>
+                <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Monto total *</label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">$</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm" style={{ color: "var(--kipu-subtle)" }}>$</span>
                   <input
                     type="number"
                     min="0"
@@ -488,7 +651,14 @@ function CuentasContent() {
                     value={form.monto_total}
                     onChange={(e) => setForm({ ...form, monto_total: e.target.value })}
                     placeholder="0.00"
-                    className="w-full pl-7 pr-4 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 text-sm"
+                    className="w-full pl-7 pr-4 py-2 rounded-lg text-sm transition-colors focus:outline-none"
+                    style={{
+                      background: "var(--kipu-surface)",
+                      border: "1px solid var(--kipu-border)",
+                      color: "var(--kipu-text)",
+                    }}
+                    onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                    onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
                   />
                 </div>
               </div>
@@ -496,54 +666,105 @@ function CuentasContent() {
               {/* Fechas */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1.5">Fecha</label>
+                  <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Fecha</label>
                   <input
                     type="date"
                     value={form.fecha_emision}
                     onChange={(e) => setForm({ ...form, fecha_emision: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-indigo-500 text-sm"
+                    className="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none"
+                    style={{
+                      background: "var(--kipu-surface)",
+                      border: "1px solid var(--kipu-border)",
+                      color: "var(--kipu-text)",
+                    }}
+                    onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                    onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1.5">Vencimiento</label>
+                  <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Vencimiento</label>
                   <input
                     type="date"
                     value={form.fecha_vencimiento}
                     onChange={(e) => setForm({ ...form, fecha_vencimiento: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white focus:outline-none focus:border-indigo-500 text-sm"
+                    className="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none"
+                    style={{
+                      background: "var(--kipu-surface)",
+                      border: "1px solid var(--kipu-border)",
+                      color: "var(--kipu-text)",
+                    }}
+                    onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                    onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
                   />
                 </div>
               </div>
 
               {/* Notas */}
               <div>
-                <label className="block text-xs text-gray-500 mb-1.5">Notas</label>
+                <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Notas</label>
                 <textarea
                   value={form.notas}
                   onChange={(e) => setForm({ ...form, notas: e.target.value })}
                   placeholder="Notas adicionales (opcional)..."
                   rows={2}
-                  className="w-full px-3 py-2 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 text-sm resize-none"
+                  className="w-full px-3 py-2 rounded-lg text-sm resize-none transition-colors focus:outline-none"
+                  style={{
+                    background: "var(--kipu-surface)",
+                    border: "1px solid var(--kipu-border)",
+                    color: "var(--kipu-text)",
+                  }}
+                  onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                  onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
                 />
               </div>
 
               {error && (
-                <p className="text-xs text-red-400 bg-red-400/10 px-3 py-2 rounded-lg">{error}</p>
+                <p
+                  className="text-xs px-3 py-2 rounded-lg"
+                  style={{
+                    color: "var(--kipu-danger)",
+                    background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
+                  }}
+                >
+                  {error}
+                </p>
               )}
 
               <div className="flex gap-3 pt-1">
                 <button
+                  type="button"
                   onClick={() => { setShowModal(false); resetModal(); }}
-                  className="flex-1 py-2.5 rounded-lg border border-gray-700 text-gray-400 hover:text-white text-sm transition-colors"
+                  className="flex-1 py-2.5 rounded-lg text-sm transition-colors"
+                  style={{
+                    border: "1px solid var(--kipu-border)",
+                    color: "var(--kipu-muted)",
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
+                  onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-muted)"}
                 >
                   Cancelar
                 </button>
                 <button
+                  type="button"
                   onClick={handleGuardar}
                   disabled={saving}
-                  className="flex-1 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                  className="flex-1 py-2.5 rounded-lg text-white text-sm font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                  style={{ background: "var(--kipu-accent)" }}
+                  onMouseEnter={e => {
+                    if (!saving) e.currentTarget.style.background = "var(--kipu-accent-h)";
+                  }}
+                  onMouseLeave={e => {
+                    if (!saving) e.currentTarget.style.background = "var(--kipu-accent)";
+                  }}
                 >
-                  {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                  {saving ? (
+                    <div
+                      className="w-3.5 h-3.5 border-2 border-t-transparent rounded-full animate-spin"
+                      style={{ borderColor: "#FFFFFF", borderTopColor: "transparent" }}
+                    />
+                  ) : (
+                    <Save size={14} />
+                  )}
                   Guardar
                 </button>
               </div>
@@ -562,7 +783,10 @@ export default function CuentasPage() {
   return (
     <Suspense fallback={
       <div className="flex items-center justify-center py-20">
-        <Loader2 size={24} className="animate-spin text-indigo-400" />
+        <div
+          className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin"
+          style={{ borderColor: "var(--kipu-accent)", borderTopColor: "transparent" }}
+        />
       </div>
     }>
       <CuentasContent />
