@@ -15,7 +15,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title:       "Kipu — Facturación Electrónica",
+  title:       "Kipu — Aplicación de facturación y contabilidad",
   description: "Facturación electrónica simple y rápida para Ecuador",
   manifest:    "/manifest.webmanifest",
   appleWebApp: {
@@ -25,10 +25,10 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: "/icon.svg", type: "image/svg+xml" },
     ],
     apple: [
-      { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: "/icon.svg", type: "image/svg+xml" },
     ],
   },
 };
