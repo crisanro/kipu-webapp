@@ -15,15 +15,16 @@ interface Producto {
 }
 
 export interface Item {
-  _id:            string;
-  codigo:         string;
-  descripcion:    string;
-  cantidad:       number;
-  precio:         number;
-  descuento:      number;
+  _id:           string;
+  _fromCatalog?: boolean; // 1. INSERCIÓN: Flag para identificar items del catálogo
+  codigo:        string;
+  descripcion:   string;
+  cantidad:      number;
+  precio:        number;
+  descuento:     number;
   tipo_descuento: "$" | "%";
-  tipo_iva:       string;
-  unidad:         string;
+  tipo_iva:      string;
+  unidad:        string;
 }
 
 interface Props {
@@ -173,6 +174,7 @@ export default function ItemsEditor({ items, onChange }: Props) {
   const seleccionarProducto = (p: Producto) => {
     onChange([...items, {
       _id:            genId(),
+      _fromCatalog:   true, // 2. INSERCIÓN: Marcado de origen desde catálogo
       codigo:         p.codigo,
       descripcion:    p.descripcion,
       cantidad:       1,
@@ -446,14 +448,18 @@ export default function ItemsEditor({ items, onChange }: Props) {
                   >
                     IVA
                   </label>
+                  {/* 3. INSERCIÓN: Bloqueo del selector de IVA cuando el item proviene del catálogo */}
                   <select
                     value={item.tipo_iva}
                     onChange={(e) => editItem(item._id, "tipo_iva", e.target.value)}
+                    disabled={!!item._fromCatalog}
                     className="w-full px-1.5 py-1.5 rounded-lg text-xs text-center transition-colors focus:outline-none"
                     style={{
                       background: "var(--kipu-surface)",
                       border: "1px solid var(--kipu-border)",
                       color: "var(--kipu-text)",
+                      opacity: item._fromCatalog ? 0.6 : 1,
+                      cursor: item._fromCatalog ? "not-allowed" : "pointer",
                     }}
                     onFocus={(e) => (e.currentTarget.style.borderColor = "var(--kipu-accent)")}
                     onBlur={(e) => (e.currentTarget.style.borderColor = "var(--kipu-border)")}

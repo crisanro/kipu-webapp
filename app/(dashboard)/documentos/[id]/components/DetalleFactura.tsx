@@ -265,39 +265,6 @@ export default function DetalleFactura({ factura }: Props) {
         </div>
       )}
 
-      {/* Acciones */}
-      <div className="flex gap-3 pb-2">
-        {factura.estado_sri === "AUTORIZADO" && factura.tipo_doc === "FAC" && (
-          <button
-            onClick={() => router.push(`/documentos/${factura.id}/nota-credito`)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs transition-colors"
-            style={{
-              background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
-              color: "var(--kipu-danger)",
-              border: "1px solid color-mix(in srgb, var(--kipu-danger) 20%, transparent)",
-            }}
-            onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-danger) 20%, transparent)"}
-            onMouseLeave={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-danger) 10%, transparent)"}
-          >
-            <RotateCcw size={13} />
-            Nota de crédito
-          </button>
-        )}
-        <button
-          onClick={duplicar}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs transition-colors"
-          style={{
-            background: "var(--kipu-surface)",
-            color: "var(--kipu-text)",
-            border: "1px solid var(--kipu-border)",
-          }}
-          onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 5%, transparent)"}
-          onMouseLeave={e => e.currentTarget.style.background = "var(--kipu-surface)"}
-        >
-          <Copy size={13} />
-          Crear nueva a partir de esta
-        </button>
-      </div>
     </>
   );
 }

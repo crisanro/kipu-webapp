@@ -612,7 +612,7 @@ export default function HistorialPage() {
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        {cobro && ["FAC", "LIQ"].includes(d.tipo_doc) && (
+                        {cobro && ["FAC", "LIQ", "NDB"].includes(d.tipo_doc) && (
                           <span className="text-xs font-medium" style={{ color: cobro.color }}>
                             {cobro.label}
                           </span>

@@ -5,9 +5,10 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
-import { CheckCircle2, AlertTriangle, Plus, Trash2 } from "lucide-react";
+import { CheckCircle2, AlertTriangle, Plus, Trash2, ChevronDown } from "lucide-react";
 import PuntoEmision from "../components/PuntoEmision";
 import CamposAdicionales, { CampoAdicional } from "../components/CamposAdicionales";
+import EstadoCobro, { DatosCobro, COBRO_INICIAL } from "../components/EstadoCobro";
 import ResumenTotales from "../components/ResumenTotales";
 import DocOrigenSelector, { DocOrigen } from "../components/DocOrigenSelector";
 
@@ -15,10 +16,26 @@ const r2  = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 const fmt = (n: number) => r2(n).toFixed(2);
 const genId = () => Math.random().toString(36).slice(2);
 
+const TARIFAS_IVA = [
+  { value: "15", label: "15%", codPorcentaje: "4" },
+  { value: "5",  label: "5%",  codPorcentaje: "5" },
+  { value: "0",  label: "0%",  codPorcentaje: "0" },
+];
+
+const FORMA_PAGO_COBRO_MAP: Record<string, string> = {
+  "01": "EFECTIVO",
+  "15": "OTRO",
+  "16": "TARJETA",
+  "17": "TRANSFERENCIA",
+  "19": "TARJETA",
+  "20": "TRANSFERENCIA",
+};
+
 interface Motivo {
-  _id:   string;
-  razon: string;
-  valor: number;
+  _id:      string;
+  razon:    string;
+  valor:    number;
+  tipo_iva: string;  // "0" | "5" | "15"
 }
 
 interface Establecimiento {
@@ -36,24 +53,67 @@ const RAZONES_SUGERIDAS = [
   "Otros cargos",
 ];
 
+function calcTotalesNdb(motivos: Motivo[]) {
+  let subtotal_0 = 0, subtotal_5 = 0, subtotal_15 = 0;
+  let iva_5 = 0, iva_15 = 0;
+
+  motivos.forEach(m => {
+    const val = m.valor || 0;
+    if (m.tipo_iva === "5") {
+      subtotal_5 = r2(subtotal_5 + val);
+      iva_5 = r2(iva_5 + val * 0.05);
+    } else if (m.tipo_iva === "15") {
+      subtotal_15 = r2(subtotal_15 + val);
+      iva_15 = r2(iva_15 + val * 0.15);
+    } else {
+      subtotal_0 = r2(subtotal_0 + val);
+    }
+  });
+
+  const subtotal  = r2(subtotal_0 + subtotal_5 + subtotal_15);
+  const iva       = r2(iva_5 + iva_15);
+  const total     = r2(subtotal + iva);
+
+  return {
+    subtotal,
+    descuento:   0,
+    iva,
+    subtotal_0,
+    subtotal_5,
+    subtotal_15,
+    iva_5,
+    iva_15,
+    propina:     0,
+    total,
+  };
+}
+
 export default function NuevaNdbPage() {
   const router       = useRouter();
   const searchParams = useSearchParams();
   const empresa      = useAuthStore((s) => s.empresa);
 
-  // ── Idempotencia ────────────────────────────────────────────────────────────
   const idempotencyKey = useRef(uuidv4());
 
   // Doc origen
   const [docOrigen, setDocOrigen] = useState<DocOrigen>(null);
 
-  // Motivos
+  const esConsumidorFinal = docOrigen?.tipo === "kipu"
+    ? docOrigen.data.identificacion === "9999999999999"
+    : docOrigen?.tipo === "manual"
+    ? docOrigen.data.cliente?.identificacion === "9999999999999"
+    : false;
+
+  // Motivos — ahora con tipo_iva
   const [motivos, setMotivos] = useState<Motivo[]>([
-    { _id: genId(), razon: "", valor: 0 }
+    { _id: genId(), razon: "", valor: 0, tipo_iva: "15" }
   ]);
 
   // Campos adicionales
   const [camposAdicionales, setCamposAdicionales] = useState<CampoAdicional[]>([]);
+
+  // Estado cobro
+  const [cobro, setCobro] = useState<DatosCobro>({ ...COBRO_INICIAL });
 
   // Establecimiento
   const [establecimientos, setEstablecimientos] = useState<Establecimiento[]>([]);
@@ -66,20 +126,7 @@ export default function NuevaNdbPage() {
   const [resultado,  setResultado]  = useState<any>(null);
   const [error,      setError]      = useState("");
 
-  const totalNdb = r2(motivos.reduce((s, m) => s + (m.valor || 0), 0));
-
-  const totales = {
-    subtotal:    totalNdb,
-    descuento:   0,
-    iva:         0,
-    subtotal_0:  totalNdb,
-    subtotal_5:  0,
-    subtotal_15: 0,
-    iva_5:       0,
-    iva_15:      0,
-    propina:     0,
-    total:       totalNdb,
-  };
+  const totales = calcTotalesNdb(motivos);
 
   // Cargar estructura
   useEffect(() => {
@@ -126,6 +173,12 @@ export default function NuevaNdbPage() {
             estado_sri:     d.estado_sri,
           }
         });
+
+        // Pre-seleccionar mismo punto de emisión de la factura origen
+        const estab = d.datos?.infoTributaria?.estab;
+        const pto   = d.datos?.infoTributaria?.ptoEmi;
+        if (estab) setEstabSelected(estab);
+        if (pto)   setPtoSelected(pto);
       } catch (e) { console.error(e); }
     };
     cargar();
@@ -138,41 +191,77 @@ export default function NuevaNdbPage() {
   };
 
   // Motivos handlers
-  const addMotivo = () => setMotivos([...motivos, { _id: genId(), razon: "", valor: 0 }]);
+  const addMotivo = () => setMotivos([...motivos, { _id: genId(), razon: "", valor: 0, tipo_iva: "15" }]);
   const removeMotivo = (id: string) => {
     if (motivos.length === 1) return;
     setMotivos(motivos.filter(m => m._id !== id));
   };
-  const editMotivo = (id: string, field: "razon" | "valor", value: any) => {
+  const editMotivo = (id: string, field: keyof Motivo, value: any) => {
     setMotivos(motivos.map(m => m._id === id ? { ...m, [field]: value } : m));
   };
 
   const reset = () => {
-    idempotencyKey.current = uuidv4(); // Regenerar key al resetear
+    idempotencyKey.current = uuidv4();
     setResultado(null);
     setDocOrigen(null);
-    setMotivos([{ _id: genId(), razon: "", valor: 0 }]);
+    setMotivos([{ _id: genId(), razon: "", valor: 0, tipo_iva: "15" }]);
     setCamposAdicionales([]);
+    setCobro({ ...COBRO_INICIAL });
     setError("");
   };
 
   const emitir = async () => {
     setError("");
+
+    if (esConsumidorFinal) {
+      setError("Por normativa del SRI, no se pueden emitir notas de débito para comprobantes a Consumidor Final.");
+      return;
+    }
     if (!docOrigen)                     { setError("Selecciona el documento a modificar."); return; }
     if (!estabSelected || !ptoSelected) { setError("Configura el punto de emisión."); return; }
     if (motivos.some(m => !m.razon.trim())) { setError("Todos los motivos deben tener descripción."); return; }
-    if (totalNdb <= 0)                  { setError("El valor total debe ser mayor a $0."); return; }
+    if (totales.total <= 0)             { setError("El valor total debe ser mayor a $0."); return; }
 
     const puedeEmitir = empresa?.suscripcion_activa || (empresa?.balance_api ?? 0) > 0;
     if (!puedeEmitir) { setError("Se requiere suscripción activa o créditos API."); return; }
 
     setSubmitting(true);
     try {
+      // Agrupar impuestos por tarifa para el payload
+      const impuestosPorTarifa: Record<string, { base: number; valor: number }> = {};
+      motivos.forEach(m => {
+        const tarifa = m.tipo_iva || "0";
+        if (!impuestosPorTarifa[tarifa]) impuestosPorTarifa[tarifa] = { base: 0, valor: 0 };
+        impuestosPorTarifa[tarifa].base  = r2(impuestosPorTarifa[tarifa].base + (m.valor || 0));
+        const rate = parseFloat(tarifa) / 100;
+        impuestosPorTarifa[tarifa].valor = r2(impuestosPorTarifa[tarifa].valor + (m.valor || 0) * rate);
+      });
+
+      const impuestos = Object.entries(impuestosPorTarifa).map(([tarifa, datos]) => {
+        const tarifaInfo = TARIFAS_IVA.find(t => t.value === tarifa) || TARIFAS_IVA[2];
+        return {
+          codigo:           "2",
+          codigoPorcentaje: tarifaInfo.codPorcentaje,
+          tarifa:           tarifa,
+          baseImponible:    datos.base,
+          valor:            datos.valor,
+        };
+      });
+
       const payload: any = {
         establecimiento:    estabSelected,
         punto_emision:      ptoSelected,
         motivos:            motivos.map(m => ({ razon: m.razon.toUpperCase(), valor: m.valor })),
+        impuestos,
         campos_adicionales: camposAdicionales.filter(c => c.nombre && c.valor),
+
+        // Datos de cobro
+        estado_cobro:            cobro.estado,
+        forma_pago_cobro:        cobro.estado === "PAGADO" ? "EFECTIVO" : null,
+        fecha_pago:              cobro.estado === "PAGADO" ? cobro.fecha_pago : null,
+        numero_comprobante_pago: cobro.estado === "PAGADO" && cobro.referencia.trim()
+                                   ? cobro.referencia.trim()
+                                   : null,
       };
 
       if (docOrigen?.tipo === "kipu") {
@@ -195,9 +284,7 @@ export default function NuevaNdbPage() {
       );
       setResultado(res.data);
     } catch (err: any) {
-      // Regenerar key si ocurre un error para un nuevo intento
       idempotencyKey.current = uuidv4();
-
       const detail = err?.response?.data?.detail;
       setError(Array.isArray(detail)
         ? detail.map((e: any) => `${e.campo}: ${e.mensaje}`).join(" | ")
@@ -318,6 +405,27 @@ export default function NuevaNdbPage() {
             colorAccent="amber"
           />
 
+          {/* Banner Consumidor Final */}
+          {esConsumidorFinal && (
+            <div
+              className="flex items-start gap-3 rounded-xl px-4 py-3"
+              style={{
+                background: "color-mix(in srgb, var(--kipu-danger) 8%, transparent)",
+                border: "1px solid color-mix(in srgb, var(--kipu-danger) 20%, transparent)",
+              }}
+            >
+              <AlertTriangle size={15} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-danger)" }} />
+              <div>
+                <p className="text-xs font-medium" style={{ color: "var(--kipu-danger)" }}>
+                  No disponible para Consumidor Final
+                </p>
+                <p className="text-xs mt-1" style={{ color: "var(--kipu-muted)" }}>
+                  Por normativa del SRI, los comprobantes emitidos a Consumidor Final no pueden ser modificados mediante notas de crédito ni notas de débito.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Motivos */}
           <div
             className="rounded-xl p-4 space-y-3"
@@ -390,6 +498,7 @@ export default function NuevaNdbPage() {
                     <Trash2 size={15} />
                   </button>
                 </div>
+
                 {/* Sugerencias rápidas */}
                 {!m.razon && (
                   <div className="flex gap-1.5 flex-wrap pl-6">
@@ -417,6 +526,8 @@ export default function NuevaNdbPage() {
                     ))}
                   </div>
                 )}
+
+                {/* Valor + IVA */}
                 <div className="flex items-center gap-2 pl-6">
                   <span className="text-sm" style={{ color: "var(--kipu-subtle)" }}>$</span>
                   <input
@@ -426,7 +537,7 @@ export default function NuevaNdbPage() {
                     min={0}
                     step={0.01}
                     placeholder="0.00"
-                    className="w-32 px-3 py-1.5 rounded-lg text-sm text-right transition-colors focus:outline-none"
+                    className="w-28 px-3 py-1.5 rounded-lg text-sm text-right transition-colors focus:outline-none"
                     style={{
                       background: "var(--kipu-surface)",
                       border: "1px solid var(--kipu-border)",
@@ -435,9 +546,40 @@ export default function NuevaNdbPage() {
                     onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-warning)"}
                     onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
                   />
-                  <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
-                    valor a cobrar
-                  </span>
+
+                  {/* Selector IVA */}
+                  <div className="relative">
+                    <select
+                      value={m.tipo_iva}
+                      onChange={e => editMotivo(m._id, "tipo_iva", e.target.value)}
+                      className="appearance-none pl-2 pr-6 py-1.5 rounded-lg text-xs font-medium transition-colors focus:outline-none"
+                      style={{
+                        background: m.tipo_iva !== "0"
+                          ? "color-mix(in srgb, var(--kipu-accent) 10%, transparent)"
+                          : "color-mix(in srgb, var(--kipu-text) 5%, transparent)",
+                        border: m.tipo_iva !== "0"
+                          ? "1px solid color-mix(in srgb, var(--kipu-accent) 25%, transparent)"
+                          : "1px solid var(--kipu-border)",
+                        color: m.tipo_iva !== "0" ? "var(--kipu-accent)" : "var(--kipu-muted)",
+                      }}
+                    >
+                      {TARIFAS_IVA.map(t => (
+                        <option key={t.value} value={t.value}>IVA {t.label}</option>
+                      ))}
+                    </select>
+                    <ChevronDown
+                      size={10}
+                      className="absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none"
+                      style={{ color: "var(--kipu-subtle)" }}
+                    />
+                  </div>
+
+                  {/* IVA calculado */}
+                  {parseFloat(m.tipo_iva) > 0 && m.valor > 0 && (
+                    <span className="text-[10px]" style={{ color: "var(--kipu-subtle)" }}>
+                      +${fmt(r2(m.valor * parseFloat(m.tipo_iva) / 100))} IVA
+                    </span>
+                  )}
                 </div>
               </div>
             ))}
@@ -450,13 +592,16 @@ export default function NuevaNdbPage() {
               >
                 <span style={{ color: "var(--kipu-muted)" }}>Total NDB</span>
                 <span className="font-bold" style={{ color: "var(--kipu-text)" }}>
-                  ${fmt(totalNdb)}
+                  ${fmt(totales.total)}
                 </span>
               </div>
             )}
           </div>
 
           <CamposAdicionales campos={camposAdicionales} onChange={setCamposAdicionales} />
+
+          {/* Estado de cobro */}
+          <EstadoCobro cobro={cobro} onChange={setCobro} />
         </div>
 
         {/* Panel lateral */}

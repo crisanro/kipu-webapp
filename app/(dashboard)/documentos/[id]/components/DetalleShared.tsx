@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import {
   ArrowLeft, CheckCircle2, Clock, XCircle, AlertTriangle,
   Download, Eye, Copy, RefreshCw, RotateCcw,
-  DollarSign, Ban, ExternalLink, ClipboardCopy,
+  DollarSign, Ban, ExternalLink, Info, Pencil,
   Share2, ChevronDown, MessageCircle, Link2,
 } from "lucide-react";
 import api from "@/lib/api";
@@ -94,16 +94,8 @@ export const normalizarTarifa = (tarifa: any): string => {
   return "15";
 };
 
-const MOTIVOS_ANULACION = [
-  "ERROR EN DATOS DEL CLIENTE",
-  "ERROR EN MONTO O ÍTEMS",
-  "DOCUMENTO DUPLICADO",
-  "OPERACIÓN NO REALIZADA",
-  "OTRO",
-];
-
-const SRI_ANULACION_URL =
-  "https://srienlinea.sri.gob.ec/comprobantes-electronicos-internet/pages/solicitud/anulacion/menuAnulacion.jsf";
+// URL del artículo del blog sobre anulación
+const BLOG_ANULACION_URL = "https://kipu.ec/blog/por-que-no-puedo-anular-comprobantes";
 
 // Formatos PDF disponibles
 const PDF_FORMATOS = [
@@ -130,6 +122,14 @@ function extraerMensajesSRI(mensajes_sri: any): any[] {
   return [];
 }
 
+/** Detecta si el comprobante fue emitido a Consumidor Final */
+function esConsumidorFinal(datos: any): boolean {
+  const info = datos?.infoFactura || datos?.infoLiquidacionCompra || {};
+  const tipoId = info.tipoIdentificacionComprador;
+  const identificacion = info.identificacionComprador;
+  return tipoId === "07" || identificacion === "9999999999999";
+}
+
 // =============================================================================
 // COMPONENTE
 // =============================================================================
@@ -142,20 +142,23 @@ interface Props {
 export default function DetalleShared({ factura, onRecargar, children }: Props) {
   const router = useRouter();
 
-  // estados existentes
+  // estados
   const [copiado,       setCopiado]       = useState(false);
   const [reintento,     setReintento]     = useState(false);
-  const [showAnular,    setShowAnular]    = useState(false);
-  const [motivoCustom,  setMotivoCustom]  = useState("");
-  const [confirmado,    setConfirmado]    = useState(false);
-  const [anulando,      setAnulando]      = useState(false);
-  const [errorAnular,   setErrorAnular]   = useState("");
-  const [copiandoCampo, setCopiandoCampo] = useState<string | null>(null);
 
   // nuevos estados
   const [showPdfMenu,   setShowPdfMenu]   = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [compartidoMsg, setCompartidoMsg] = useState<string | null>(null);
+
+  // Estado de cobro — edición inline
+  const [editandoCobro,      setEditandoCobro]      = useState(false);
+  const [cobroEstado,         setCobroEstado]         = useState(factura.estado_cobro ?? "PENDIENTE");
+  const [cobroFormaPago,      setCobroFormaPago]      = useState(factura.forma_pago_cobro ?? "EFECTIVO");
+  const [cobroFecha,          setCobroFecha]          = useState(factura.fecha_pago ?? new Date().toISOString().split("T")[0]);
+  const [cobroReferencia,     setCobroReferencia]     = useState(factura.numero_comprobante_pago ?? "");
+  const [guardandoCobro,      setGuardandoCobro]      = useState(false);
+  const [errorCobro,          setErrorCobro]          = useState("");
 
   const pdfMenuRef   = useRef<HTMLDivElement>(null);
   const shareMenuRef = useRef<HTMLDivElement>(null);
@@ -184,8 +187,7 @@ export default function DetalleShared({ factura, onRecargar, children }: Props) 
   const idComprador     = infoFac.identificacionComprador || infoFac.identificacionProveedor || factura.cliente?.identificacion || "";
   const emailComprador  = factura.datos?.legacy_email_comprador || factura.cliente?.email || "";
 
-  const motivoFinal = motivoCustom.trim();
-  const puedeAnular = confirmado && !anulando;
+  const consumidorFinal = esConsumidorFinal(factura.datos);
 
   const base_url     = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
   const xml_url      = `${base_url}/api/v1/public/xml/${factura.clave_acceso}`;
@@ -200,12 +202,6 @@ export default function DetalleShared({ factura, onRecargar, children }: Props) 
     await navigator.clipboard.writeText(factura.clave_acceso);
     setCopiado(true);
     setTimeout(() => setCopiado(false), 2000);
-  };
-
-  const copiarCampo = async (valor: string, campo: string) => {
-    await navigator.clipboard.writeText(valor);
-    setCopiandoCampo(campo);
-    setTimeout(() => setCopiandoCampo(null), 1500);
   };
 
   const abrirPDF = (formato: string) => {
@@ -240,25 +236,6 @@ export default function DetalleShared({ factura, onRecargar, children }: Props) 
     }
   };
 
-  const anular = async () => {
-    setErrorAnular("");
-    if (!motivoFinal) { setErrorAnular("Selecciona o ingresa un motivo."); return; }
-    if (!confirmado)  { setErrorAnular("Debes confirmar que ya lo anulaste en el SRI."); return; }
-    setAnulando(true);
-    try {
-      await api.post(`/api/v1/app/documentos/${factura.id}/anular`, {
-        motivo: motivoFinal,
-        confirmado,
-      });
-      setShowAnular(false);
-      setMotivoCustom("");
-    } catch (err: any) {
-      setErrorAnular(err?.response?.data?.detail ?? "Error al anular.");
-    } finally {
-      setAnulando(false);
-    }
-  };
-
   const formatearFechaSRI = (fecha: string | undefined): string => {
     if (!fecha) return "";
     const d = new Date(fecha);
@@ -266,14 +243,43 @@ export default function DetalleShared({ factura, onRecargar, children }: Props) 
     return `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${d.getFullYear()}`;
   };
 
-  const camposSRI = [
-    { label: "Tipo de comprobante",     valor: TIPO_LABEL[factura.tipo_doc] ?? factura.tipo_doc },
-    { label: "Fecha autorización",       valor: formatearFechaSRI(factura.fecha_autorizacion) },
-    { label: "Clave de acceso",          valor: factura.clave_acceso },
-    { label: "No. Autorización",         valor: factura.clave_acceso },
-    { label: "Identificación receptor",  valor: idComprador },
-    { label: "Correo receptor",          valor: emailComprador },
+  const FORMAS_PAGO_COBRO = [
+    { value: "EFECTIVO",      label: "Efectivo" },
+    { value: "TRANSFERENCIA", label: "Transferencia bancaria" },
+    { value: "TARJETA",       label: "Tarjeta" },
+    { value: "CHEQUE",        label: "Cheque" },
+    { value: "OTRO",          label: "Otro" },
   ];
+
+  const abrirEdicionCobro = () => {
+    setCobroEstado(factura.estado_cobro ?? "PENDIENTE");
+    setCobroFormaPago(factura.forma_pago_cobro ?? "EFECTIVO");
+    setCobroFecha(factura.fecha_pago ?? new Date().toISOString().split("T")[0]);
+    setCobroReferencia(factura.numero_comprobante_pago ?? "");
+    setErrorCobro("");
+    setEditandoCobro(true);
+  };
+
+  const guardarCobro = async () => {
+    setErrorCobro("");
+    setGuardandoCobro(true);
+    try {
+      await api.patch(`/api/v1/app/documentos/${factura.id}/cobro`, {
+        estado_cobro:            cobroEstado,
+        forma_pago_cobro:        cobroEstado === "PAGADO" ? cobroFormaPago : null,
+        fecha_pago:              cobroEstado === "PAGADO" ? cobroFecha : null,
+        numero_comprobante_pago: cobroEstado === "PAGADO" && cobroReferencia.trim()
+                                   ? cobroReferencia.trim()
+                                   : null,
+      });
+      setEditandoCobro(false);
+      onRecargar();
+    } catch (err: any) {
+      setErrorCobro(err?.response?.data?.detail ?? "Error al actualizar el cobro.");
+    } finally {
+      setGuardandoCobro(false);
+    }
+  };
 
   return (
     <div className="p-4 md:p-6 max-w-3xl mx-auto space-y-4">
@@ -486,23 +492,6 @@ export default function DetalleShared({ factura, onRecargar, children }: Props) 
                   </div>
                 )}
               </div>
-
-              {/* ── Anular ──────────────────────────────────────────── */}
-              {["FAC", "LIQ"].includes(factura.tipo_doc) && (
-                <button
-                  onClick={() => { setShowAnular(true); setMotivoCustom(""); setConfirmado(false); setErrorAnular(""); }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors"
-                  style={{
-                    background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
-                    color: "var(--kipu-danger)",
-                    border: "1px solid color-mix(in srgb, var(--kipu-danger) 20%, transparent)",
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-danger) 20%, transparent)"}
-                  onMouseLeave={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-danger) 10%, transparent)"}
-                >
-                  <Ban size={13} /> Anular
-                </button>
-              )}
             </>
           )}
 
@@ -551,7 +540,7 @@ export default function DetalleShared({ factura, onRecargar, children }: Props) 
       </div>
 
       {/* Estado de cobro */}
-      {["FAC", "LIQ"].includes(factura.tipo_doc) && factura.estado_sri === "AUTORIZADO" && (
+      {["FAC", "LIQ", "NDB"].includes(factura.tipo_doc) && factura.estado_sri === "AUTORIZADO" && (
         <div
           className="rounded-xl p-4"
           style={{
@@ -559,34 +548,225 @@ export default function DetalleShared({ factura, onRecargar, children }: Props) 
             border: "1px solid var(--kipu-border)",
           }}
         >
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <DollarSign size={15} style={{ color: "var(--kipu-subtle)" }} />
               <h2 className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--kipu-subtle)" }}>
                 Estado de Cobro
               </h2>
             </div>
-            {cobro && <span className="text-sm font-semibold" style={{ color: cobro.color }}>{cobro.label}</span>}
+            {!editandoCobro && (
+              <button
+                onClick={abrirEdicionCobro}
+                className="flex items-center gap-1 text-xs transition-colors"
+                style={{ color: "var(--kipu-subtle)" }}
+                onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent)"}
+                onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-subtle)"}
+              >
+                <Pencil size={11} />
+                {factura.estado_cobro === "PAGADO" ? "Editar" : "Registrar cobro"}
+              </button>
+            )}
           </div>
-          {factura.forma_pago_cobro && (
-            <div className="mt-2 space-y-1 text-sm">
-              <div className="flex justify-between">
-                <span style={{ color: "var(--kipu-subtle)" }}>Forma de pago</span>
-                <span style={{ color: "var(--kipu-text)" }}>{factura.forma_pago_cobro}</span>
+
+          {editandoCobro ? (
+            /* ── Modo edición ── */
+            <div className="space-y-3">
+              {/* Toggle estado */}
+              <div
+                className="flex rounded-lg overflow-hidden"
+                style={{ border: "1px solid var(--kipu-border)" }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setCobroEstado("PAGADO")}
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 text-xs font-medium transition-colors"
+                  style={{
+                    background: cobroEstado === "PAGADO"
+                      ? "color-mix(in srgb, var(--kipu-success) 15%, transparent)"
+                      : "transparent",
+                    color: cobroEstado === "PAGADO" ? "var(--kipu-success)" : "var(--kipu-subtle)",
+                    borderRight: "1px solid var(--kipu-border)",
+                  }}
+                >
+                  <CheckCircle2 size={13} />
+                  Cobrada
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCobroEstado("PENDIENTE")}
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 text-xs font-medium transition-colors"
+                  style={{
+                    background: cobroEstado === "PENDIENTE"
+                      ? "color-mix(in srgb, var(--kipu-warning) 15%, transparent)"
+                      : "transparent",
+                    color: cobroEstado === "PENDIENTE" ? "var(--kipu-warning)" : "var(--kipu-subtle)",
+                  }}
+                >
+                  <Clock size={13} />
+                  Pendiente
+                </button>
               </div>
-              {factura.numero_comprobante_pago && (
-                <div className="flex justify-between">
-                  <span style={{ color: "var(--kipu-subtle)" }}>N° comprobante</span>
-                  <span className="font-mono text-xs" style={{ color: "var(--kipu-text)" }}>{factura.numero_comprobante_pago}</span>
+
+              {/* Campos de pago — solo cuando está cobrada */}
+              {cobroEstado === "PAGADO" && (
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <label className="block text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>Forma de pago</label>
+                      <select
+                        value={cobroFormaPago}
+                        onChange={e => setCobroFormaPago(e.target.value)}
+                        className="w-full px-2.5 py-2 rounded-lg text-sm transition-colors focus:outline-none"
+                        style={{
+                          background: "var(--kipu-surface)",
+                          border: "1px solid var(--kipu-border)",
+                          color: "var(--kipu-text)",
+                        }}
+                        onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                        onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+                      >
+                        {FORMAS_PAGO_COBRO.map(f => (
+                          <option key={f.value} value={f.value}>{f.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="flex-1">
+                      <label className="block text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>Fecha de pago</label>
+                      <input
+                        type="date"
+                        value={cobroFecha}
+                        onChange={e => setCobroFecha(e.target.value)}
+                        className="w-full px-2.5 py-2 rounded-lg text-sm transition-colors focus:outline-none"
+                        style={{
+                          background: "var(--kipu-surface)",
+                          border: "1px solid var(--kipu-border)",
+                          color: "var(--kipu-text)",
+                        }}
+                        onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                        onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>
+                      Referencia <span style={{ color: "var(--kipu-subtle)" }}>(opcional)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={cobroReferencia}
+                      onChange={e => setCobroReferencia(e.target.value)}
+                      placeholder="N° transferencia, recibo..."
+                      maxLength={100}
+                      className="w-full px-2.5 py-2 rounded-lg text-sm transition-colors focus:outline-none"
+                      style={{
+                        background: "var(--kipu-surface)",
+                        border: "1px solid var(--kipu-border)",
+                        color: "var(--kipu-text)",
+                      }}
+                      onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                      onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+                    />
+                  </div>
                 </div>
               )}
-              {factura.fecha_pago && (
-                <div className="flex justify-between">
-                  <span style={{ color: "var(--kipu-subtle)" }}>Fecha de pago</span>
-                  <span style={{ color: "var(--kipu-text)" }}>{factura.fecha_pago}</span>
-                </div>
+
+              {/* Error */}
+              {errorCobro && (
+                <p
+                  className="text-xs px-3 py-2 rounded-lg"
+                  style={{
+                    color: "var(--kipu-danger)",
+                    background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
+                  }}
+                >
+                  {errorCobro}
+                </p>
               )}
+
+              {/* Acciones */}
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditandoCobro(false)}
+                  className="flex-1 py-2 rounded-lg text-xs transition-colors"
+                  style={{
+                    border: "1px solid var(--kipu-border)",
+                    color: "var(--kipu-muted)",
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
+                  onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-muted)"}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={guardarCobro}
+                  disabled={guardandoCobro}
+                  className="flex-1 py-2 rounded-lg text-white text-xs font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                  style={{ background: "var(--kipu-accent)" }}
+                  onMouseEnter={e => { if (!guardandoCobro) e.currentTarget.style.background = "var(--kipu-accent-h)"; }}
+                  onMouseLeave={e => { if (!guardandoCobro) e.currentTarget.style.background = "var(--kipu-accent)"; }}
+                >
+                  {guardandoCobro ? (
+                    <div
+                      className="w-3 h-3 border-2 border-t-transparent rounded-full animate-spin"
+                      style={{ borderColor: "#FFFFFF", borderTopColor: "transparent" }}
+                    />
+                  ) : (
+                    "Guardar"
+                  )}
+                </button>
+              </div>
             </div>
+          ) : (
+            /* ── Modo lectura ── */
+            <>
+              {cobro && (
+                <div
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg mb-2"
+                  style={{
+                    background: cobro.color === "var(--kipu-success)"
+                      ? "color-mix(in srgb, var(--kipu-success) 10%, transparent)"
+                      : "color-mix(in srgb, var(--kipu-warning) 10%, transparent)",
+                  }}
+                >
+                  {factura.estado_cobro === "PAGADO" ? (
+                    <CheckCircle2 size={14} style={{ color: cobro.color }} />
+                  ) : (
+                    <Clock size={14} style={{ color: cobro.color }} />
+                  )}
+                  <span className="text-sm font-medium" style={{ color: cobro.color }}>{cobro.label}</span>
+                </div>
+              )}
+              {factura.estado_cobro === "PAGADO" && (
+                <div className="space-y-1 text-sm">
+                  {factura.forma_pago_cobro && (
+                    <div className="flex justify-between">
+                      <span style={{ color: "var(--kipu-subtle)" }}>Forma de pago</span>
+                      <span style={{ color: "var(--kipu-text)" }}>{factura.forma_pago_cobro}</span>
+                    </div>
+                  )}
+                  {factura.fecha_pago && (
+                    <div className="flex justify-between">
+                      <span style={{ color: "var(--kipu-subtle)" }}>Fecha de pago</span>
+                      <span style={{ color: "var(--kipu-text)" }}>{factura.fecha_pago}</span>
+                    </div>
+                  )}
+                  {factura.numero_comprobante_pago && (
+                    <div className="flex justify-between">
+                      <span style={{ color: "var(--kipu-subtle)" }}>Referencia</span>
+                      <span className="font-mono text-xs" style={{ color: "var(--kipu-text)" }}>{factura.numero_comprobante_pago}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+              {factura.estado_cobro === "PENDIENTE" && (
+                <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+                  Registra el cobro cuando recibas el pago.
+                </p>
+              )}
+            </>
           )}
         </div>
       )}
@@ -704,32 +884,35 @@ export default function DetalleShared({ factura, onRecargar, children }: Props) 
           <h2 className="text-xs font-semibold mb-3 uppercase tracking-wide" style={{ color: "var(--kipu-subtle)" }}>
             Emitir comprobante relacionado
           </h2>
+
           <div className="flex flex-wrap gap-2">
             {factura.tipo_doc === "FAC" && (
               <>
                 <button
-                  onClick={() => router.push(`/documentos/emitir/ncr?doc_id=${factura.id}`)}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs transition-colors"
+                  onClick={consumidorFinal ? undefined : () => router.push(`/documentos/emitir/ncr?doc_id=${factura.id}`)}
+                  disabled={consumidorFinal}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                   style={{
                     background: "color-mix(in srgb, #c084fc 10%, transparent)",
                     color: "#c084fc",
                     border: "1px solid color-mix(in srgb, #c084fc 20%, transparent)",
                   }}
-                  onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, #c084fc 20%, transparent)"}
-                  onMouseLeave={e => e.currentTarget.style.background = "color-mix(in srgb, #c084fc 10%, transparent)"}
+                  onMouseEnter={e => { if (!consumidorFinal) e.currentTarget.style.background = "color-mix(in srgb, #c084fc 20%, transparent)"; }}
+                  onMouseLeave={e => { if (!consumidorFinal) e.currentTarget.style.background = "color-mix(in srgb, #c084fc 10%, transparent)"; }}
                 >
                   NCR · Nota de crédito
                 </button>
                 <button
-                  onClick={() => router.push(`/documentos/emitir/ndb?doc_id=${factura.id}`)}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs transition-colors"
+                  onClick={consumidorFinal ? undefined : () => router.push(`/documentos/emitir/ndb?doc_id=${factura.id}`)}
+                  disabled={consumidorFinal}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                   style={{
                     background: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)",
                     color: "var(--kipu-warning)",
                     border: "1px solid color-mix(in srgb, var(--kipu-warning) 20%, transparent)",
                   }}
-                  onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-warning) 20%, transparent)"}
-                  onMouseLeave={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-warning) 10%, transparent)"}
+                  onMouseEnter={e => { if (!consumidorFinal) e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-warning) 20%, transparent)"; }}
+                  onMouseLeave={e => { if (!consumidorFinal) e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-warning) 10%, transparent)"; }}
                 >
                   NDB · Nota de débito
                 </button>
@@ -750,7 +933,97 @@ export default function DetalleShared({ factura, onRecargar, children }: Props) 
                 RET · Retención al proveedor
               </button>
             )}
+
+            {/* Duplicar / Crear nueva */}
+            {["FAC", "LIQ"].includes(factura.tipo_doc) && (
+              <button
+                onClick={() => {
+                  const datos = factura.datos ?? {};
+                  const info = datos.infoFactura || datos.infoLiquidacionCompra || {};
+                  const detalles = datos.detalles?.detalle
+                    ? (Array.isArray(datos.detalles.detalle) ? datos.detalles.detalle : [datos.detalles.detalle])
+                    : [];
+                  const adicionales = datos.infoAdicional?.campoAdicional
+                    ? (Array.isArray(datos.infoAdicional.campoAdicional) ? datos.infoAdicional.campoAdicional : [datos.infoAdicional.campoAdicional])
+                    : [];
+                  const idComp = info.identificacionComprador || factura.cliente?.identificacion || "";
+                  const razon  = info.razonSocialComprador || factura.cliente?.razon_social || "";
+                  const tipoId = info.tipoIdentificacionComprador || "05";
+
+                  sessionStorage.setItem("kipu:prefill", JSON.stringify({
+                    cliente: idComp === "9999999999999" ? null : {
+                      identificacion: idComp,
+                      razon_social:   razon,
+                      tipo_id:        tipoId,
+                    },
+                    esConsumidorFinal: idComp === "9999999999999",
+                    items: detalles.map((d: any) => {
+                      const imp    = d.impuestos?.impuesto;
+                      const impArr = Array.isArray(imp) ? imp : [imp];
+                      const tarifa = impArr[0]?.tarifa ?? "15";
+                      return {
+                        codigo:          d.codigoPrincipal !== "S/C" ? d.codigoPrincipal : "",
+                        descripcion:     d.descripcion,
+                        cantidad:        parseFloat(d.cantidad),
+                        precio:          parseFloat(d.precioUnitario),
+                        descuento:       parseFloat(d.descuento || 0),
+                        tipo_descuento:  "$",
+                        tipo_iva:        normalizarTarifa(tarifa),
+                        unidad:          "UNIDAD",
+                      };
+                    }),
+                    camposAdicionales: adicionales
+                      .filter((a: any) => a["@nombre"] !== "PROVEEDOR_SISTEMA_INFORMATICO")
+                      .map((a: any) => ({ nombre: a["@nombre"], valor: a["#text"] })),
+                  }));
+                  router.push("/documentos/emitir/fac");
+                }}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs transition-colors"
+                style={{
+                  background: "var(--kipu-surface)",
+                  color: "var(--kipu-text)",
+                  border: "1px solid var(--kipu-border)",
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 5%, transparent)"}
+                onMouseLeave={e => e.currentTarget.style.background = "var(--kipu-surface)"}
+              >
+                <Copy size={13} />
+                Crear nueva a partir de esta
+              </button>
+            )}
           </div>
+
+          {/* Leyenda consumidor final */}
+          {consumidorFinal && ["FAC", "LIQ"].includes(factura.tipo_doc) && (
+            <div
+              className="mt-3 rounded-lg px-3 py-2.5 flex items-start gap-2.5"
+              style={{
+                background: "color-mix(in srgb, var(--kipu-warning) 8%, transparent)",
+                border: "1px solid color-mix(in srgb, var(--kipu-warning) 15%, transparent)",
+              }}
+            >
+              <Info size={13} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-warning)" }} />
+              <p className="text-xs" style={{ color: "var(--kipu-muted)" }}>
+                Por normativa del SRI, los comprobantes emitidos a <span className="font-medium" style={{ color: "var(--kipu-warning)" }}>Consumidor Final</span> no
+                pueden ser modificados mediante notas de crédito ni notas de débito.
+              </p>
+            </div>
+          )}
+
+          {/* Link al blog sobre anulación */}
+          {["FAC", "LIQ"].includes(factura.tipo_doc) && (
+            <a
+              href={BLOG_ANULACION_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-3 inline-flex items-center gap-1.5 text-xs transition-colors"
+              style={{ color: "var(--kipu-subtle)" }}
+              onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent)"}
+              onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-subtle)"}
+            >
+              <ExternalLink size={11} /> ¿Quieres anular una factura? Conoce por qué es mejor emitir una nota de crédito
+            </a>
+          )}
         </div>
       )}
 
@@ -772,9 +1045,9 @@ export default function DetalleShared({ factura, onRecargar, children }: Props) 
               className="rounded-lg p-3 space-y-1"
               style={{ background: "color-mix(in srgb, var(--kipu-surface) 50%, transparent)" }}
             >
-              {err.identificador && <p className="text-xs font-mono" style={{ color: "var(--kipu-danger)" }}>Código: {err.identificador}</p>}
-              {err.mensaje && <p className="text-sm" style={{ color: "var(--kipu-text)" }}>{err.mensaje}</p>}
-              {err.informacionAdicional && <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>{err.informacionAdicional}</p>}
+              {err.identificador && <p className="text-xs font-mono" style={{ color: "var(--kipu-danger)" }}>Código: {String(err.identificador)}</p>}
+              {err.mensaje && <p className="text-sm" style={{ color: "var(--kipu-text)" }}>{String(err.mensaje)}</p>}
+              {err.informacionAdicional && <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>{typeof err.informacionAdicional === 'object' ? JSON.stringify(err.informacionAdicional) : String(err.informacionAdicional)}</p>}
               {err.tipo && (
                 <span
                   className="text-xs px-2 py-0.5 rounded-full"
@@ -787,7 +1060,7 @@ export default function DetalleShared({ factura, onRecargar, children }: Props) 
                       : "var(--kipu-warning)",
                   }}
                 >
-                  {err.tipo}
+                  {String(err.tipo)}
                 </span>
               )}
             </div>
@@ -838,220 +1111,6 @@ export default function DetalleShared({ factura, onRecargar, children }: Props) 
 
       {/* Contenido específico */}
       {children}
-
-      {/* ── Modal anulación ── */}
-      {showAnular && (
-        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-          <div
-            className="rounded-xl w-full max-w-lg"
-            style={{
-              background: "var(--kipu-surface)",
-              border: "1px solid var(--kipu-border)",
-            }}
-          >
-            {/* Header modal */}
-            <div
-              className="flex items-center gap-3 px-5 py-4"
-              style={{ borderBottom: "1px solid var(--kipu-border)" }}
-            >
-              <div
-                className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
-                style={{ background: "color-mix(in srgb, var(--kipu-danger) 20%, transparent)" }}
-              >
-                <Ban size={15} style={{ color: "var(--kipu-danger)" }} />
-              </div>
-              <div>
-                <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>Anular comprobante</h2>
-                <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>{factura.numero_doc}</p>
-              </div>
-            </div>
-            <div className="p-5 space-y-4">
-              {/* Advertencia */}
-              <div
-                className="rounded-lg px-4 py-3"
-                style={{
-                  background: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)",
-                  border: "1px solid color-mix(in srgb, var(--kipu-warning) 20%, transparent)",
-                }}
-              >
-                <p className="text-xs font-medium mb-1" style={{ color: "var(--kipu-warning)" }}>
-                  ⚠️ Esta acción es irreversible en Kipu
-                </p>
-                <p className="text-xs" style={{ color: "color-mix(in srgb, var(--kipu-warning) 80%, transparent)" }}>
-                  Antes de continuar, debes anular el comprobante en el portal del SRI.
-                  Usa los datos de abajo para completar el formulario de anulación.
-                </p>
-                <a
-                  href={SRI_ANULACION_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-2 inline-flex items-center gap-1.5 text-xs transition-colors"
-                  style={{ color: "var(--kipu-warning)" }}
-                >
-                  <ExternalLink size={11} /> Ir al portal del SRI → Anulación
-                </a>
-              </div>
-
-              {/* Datos para el SRI */}
-              <div
-                className="rounded-lg overflow-hidden"
-                style={{ background: "color-mix(in srgb, var(--kipu-text) 4%, transparent)" }}
-              >
-                <p
-                  className="text-xs px-3 py-2"
-                  style={{
-                    color: "var(--kipu-subtle)",
-                    borderBottom: "1px solid var(--kipu-border)",
-                  }}
-                >
-                  Datos para el formulario del SRI — haz clic para copiar
-                </p>
-                <div>
-                  {camposSRI.map(({ label, valor }, idx) => (
-                    <button
-                      key={label}
-                      type="button"
-                      onClick={() => copiarCampo(valor, label)}
-                      disabled={!valor}
-                      className="w-full flex items-center justify-between px-3 py-2.5 transition-colors text-left disabled:opacity-40"
-                      style={{
-                        borderTop: idx > 0 ? "1px solid var(--kipu-border)" : "none",
-                      }}
-                      onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 5%, transparent)"}
-                      onMouseLeave={e => e.currentTarget.style.background = "transparent"}
-                    >
-                      <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>{label}</span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-mono max-w-[200px] truncate" style={{ color: "var(--kipu-text)" }}>
-                          {valor || "—"}
-                        </span>
-                        {copiandoCampo === label
-                          ? <CheckCircle2 size={12} className="shrink-0" style={{ color: "var(--kipu-success)" }} />
-                          : <ClipboardCopy size={12} className="shrink-0" style={{ color: "var(--kipu-subtle)" }} />}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Motivo */}
-              <div>
-                <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>
-                  Motivo de anulación <span style={{ color: "var(--kipu-subtle)" }}>(opcional)</span>
-                </label>
-                <div className="relative">
-                  <textarea
-                    value={motivoCustom}
-                    onChange={(e) => setMotivoCustom(e.target.value.toUpperCase().slice(0, 100))}
-                    placeholder="Ej: ERROR EN DATOS DEL CLIENTE, DOCUMENTO DUPLICADO..."
-                    maxLength={100}
-                    rows={2}
-                    className="w-full px-3 py-2 rounded-lg text-sm resize-none pr-12 transition-colors focus:outline-none"
-                    style={{
-                      background: "var(--kipu-surface)",
-                      border: "1px solid var(--kipu-border)",
-                      color: "var(--kipu-text)",
-                    }}
-                    onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-danger)"}
-                    onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
-                  />
-                  <span className="absolute right-3 bottom-2 text-xs" style={{ color: "var(--kipu-subtle)" }}>
-                    {motivoCustom.length}/100
-                  </span>
-                </div>
-                {/* Sugerencias rápidas */}
-                <div className="flex flex-wrap gap-1.5 mt-2">
-                  {MOTIVOS_ANULACION.filter(m => m !== "OTRO").map((m) => (
-                    <button
-                      key={m}
-                      type="button"
-                      onClick={() => setMotivoCustom(m.slice(0, 100))}
-                      className="text-[10px] px-2 py-1 rounded-lg transition-colors"
-                      style={{
-                        background: "var(--kipu-surface)",
-                        border: "1px solid var(--kipu-border)",
-                        color: "var(--kipu-muted)",
-                      }}
-                      onMouseEnter={e => {
-                        e.currentTarget.style.color = "var(--kipu-text)";
-                        e.currentTarget.style.borderColor = "color-mix(in srgb, var(--kipu-text) 20%, transparent)";
-                      }}
-                      onMouseLeave={e => {
-                        e.currentTarget.style.color = "var(--kipu-muted)";
-                        e.currentTarget.style.borderColor = "var(--kipu-border)";
-                      }}
-                    >
-                      {m}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Confirmación */}
-              <label className="flex items-start gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={confirmado}
-                  onChange={(e) => setConfirmado(e.target.checked)}
-                  className="mt-0.5"
-                  style={{ accentColor: "var(--kipu-danger)" }}
-                />
-                <span className="text-xs" style={{ color: "var(--kipu-muted)" }}>
-                  Confirmo que ya anulé este comprobante en el portal del SRI y que entiendo
-                  que esta acción es <span className="font-medium" style={{ color: "var(--kipu-danger)" }}>irreversible</span> en Kipu.
-                </span>
-              </label>
-
-              {/* Error */}
-              {errorAnular && (
-                <p
-                  className="text-xs px-3 py-2 rounded-lg"
-                  style={{
-                    color: "var(--kipu-danger)",
-                    background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
-                  }}
-                >
-                  {errorAnular}
-                </p>
-              )}
-
-              {/* Acciones */}
-              <div className="flex gap-3 pt-1">
-                <button
-                  type="button"
-                  onClick={() => { setShowAnular(false); setMotivoCustom(""); }}
-                  className="flex-1 py-2.5 rounded-lg text-sm transition-colors"
-                  style={{
-                    border: "1px solid var(--kipu-border)",
-                    color: "var(--kipu-muted)",
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
-                  onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-muted)"}
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  onClick={anular}
-                  disabled={!puedeAnular}
-                  className="flex-1 py-2.5 rounded-lg text-white text-sm font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
-                  style={{ background: "var(--kipu-danger)" }}
-                >
-                  {anulando ? (
-                    <div
-                      className="w-3.5 h-3.5 border-2 border-t-transparent rounded-full animate-spin"
-                      style={{ borderColor: "#FFFFFF", borderTopColor: "transparent" }}
-                    />
-                  ) : (
-                    <Ban size={14} />
-                  )}
-                  Anular comprobante
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

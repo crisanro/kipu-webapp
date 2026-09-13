@@ -12,6 +12,7 @@ import PuntoEmision from "../components/PuntoEmision";
 import ClienteSelector from "../components/ClienteSelector";
 import ItemsEditor, { Item, calcItem, genId, EMPTY_ITEM } from "../components/ItemsEditor";
 import PagosMixtos, { PagoItem, PAGO_INICIAL } from "../components/PagosMixtos";
+import EstadoCobro, { DatosCobro, COBRO_INICIAL } from "../components/EstadoCobro";
 import CamposAdicionales, { CampoAdicional } from "../components/CamposAdicionales";
 import ResumenTotales from "../components/ResumenTotales";
 
@@ -42,6 +43,16 @@ interface Establecimiento {
 // ── Helpers ────────────────────────────────────────────────────────────────────
 const r2  = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 const fmt = (n: number) => r2(n).toFixed(2);
+
+/** Mapea código SRI de forma de pago al label de cobro */
+const FORMA_PAGO_COBRO_MAP: Record<string, string> = {
+  "01": "EFECTIVO",
+  "15": "OTRO",
+  "16": "TARJETA",
+  "17": "TRANSFERENCIA",
+  "19": "TARJETA",
+  "20": "TRANSFERENCIA",
+};
 
 function calcTotales(items: Item[], incluirPropina: boolean) {
   const base = items.reduce(
@@ -83,6 +94,9 @@ export default function NuevaFacturaPage() {
   // ── Estado pagos ────────────────────────────────────────────────────────────
   const [pagos,   setPagos]   = useState<PagoItem[]>([{ ...PAGO_INICIAL }]);
   const [propina, setPropina] = useState(false);
+
+  // ── Estado cobro ────────────────────────────────────────────────────────────
+  const [cobro, setCobro] = useState<DatosCobro>({ ...COBRO_INICIAL });
 
   // ── Estado campos adicionales ───────────────────────────────────────────────
   const [camposAdicionales, setCamposAdicionales] = useState<CampoAdicional[]>([]);
@@ -193,6 +207,7 @@ export default function NuevaFacturaPage() {
     setItems([{ _id: genId(), ...EMPTY_ITEM }]);
     setPagos([{ ...PAGO_INICIAL, _id: Math.random().toString(36).slice(2) }]);
     setPropina(false);
+    setCobro({ ...COBRO_INICIAL });
     setCamposAdicionales([]);
     setProformaId(null);
     setError("");
@@ -234,6 +249,10 @@ export default function NuevaFacturaPage() {
 
     setSubmitting(true);
 
+    // Derivar forma_pago_cobro del primer pago
+    const formaPagoPrincipal = pagos[0]?.forma_pago ?? "01";
+    const formaPagoCobro = FORMA_PAGO_COBRO_MAP[formaPagoPrincipal] ?? "OTRO";
+
     const payload: any = {
       establecimiento: estabSelected,
       punto_emision:   ptoSelected,
@@ -271,6 +290,14 @@ export default function NuevaFacturaPage() {
       ...(propina ? { propina: totales.propina } : {}),
       campos_adicionales: camposAdicionales.filter(c => c.nombre && c.valor),
       ...(proformaId ? { proforma_id: proformaId } : {}),
+
+      // ── Datos de cobro ──
+      estado_cobro:            cobro.estado,
+      forma_pago_cobro:        cobro.estado === "PAGADO" ? formaPagoCobro : null,
+      fecha_pago:              cobro.estado === "PAGADO" ? cobro.fecha_pago : null,
+      numero_comprobante_pago: cobro.estado === "PAGADO" && cobro.referencia.trim()
+                                 ? cobro.referencia.trim()
+                                 : null,
     };
 
     try {
@@ -452,6 +479,12 @@ export default function NuevaFacturaPage() {
             propina={propina}
             onChange={setPagos}
             onPropinaChange={setPropina}
+          />
+
+          {/* Estado de cobro */}
+          <EstadoCobro
+            cobro={cobro}
+            onChange={setCobro}
           />
 
           {/* Campos adicionales */}

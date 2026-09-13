@@ -37,18 +37,23 @@ const TIPOS_IMPUESTO = [
 ];
 
 const PORCENTAJES_RENTA = [
-  { cod: "303",  label: "Honorarios profesionales",        pct: 10 },
-  { cod: "304",  label: "Servicios predomina intelecto",   pct: 8  },
-  { cod: "307",  label: "Servicios predomina mano obra",   pct: 2  },
-  { cod: "309",  label: "Servicios publicidad",            pct: 2  },
-  { cod: "310",  label: "Transporte privado de pasajeros", pct: 1  },
-  { cod: "312",  label: "Transferencia de bienes muebles", pct: 1  },
-  { cod: "319",  label: "Arrendamiento mercantil",         pct: 2  },
-  { cod: "320",  label: "Arrendamiento bienes inmuebles",  pct: 8  },
-  { cod: "322",  label: "Seguros y reaseguros",            pct: 2  },
-  { cod: "323A", label: "Rendimientos financieros",        pct: 2  },
-  { cod: "332",  label: "Compra de bienes",                pct: 2  },
-  { cod: "340",  label: "Otras retenciones",               pct: 2  },
+  { cod: "303",  label: "Honorarios profesionales",              pct: 10 },
+  { cod: "304",  label: "Servicios predomina intelecto",         pct: 8  },
+  { cod: "304A", label: "Servicios profesionales del exterior",  pct: 25 },
+  { cod: "307",  label: "Servicios predomina mano obra",         pct: 2  },
+  { cod: "309",  label: "Servicios publicidad",                  pct: 2  },
+  { cod: "310",  label: "Transporte privado de pasajeros",       pct: 1  },
+  { cod: "312",  label: "Transferencia de bienes muebles",       pct: 1  },
+  { cod: "319",  label: "Arrendamiento mercantil",               pct: 2  },
+  { cod: "320",  label: "Arrendamiento bienes inmuebles",        pct: 8  },
+  { cod: "322",  label: "Seguros y reaseguros",                  pct: 2  },
+  { cod: "323A", label: "Rendimientos financieros",              pct: 2  },
+  { cod: "325",  label: "Pagos al exterior - servicios",         pct: 25 },
+  { cod: "325A", label: "Pagos al exterior - otros conceptos",   pct: 25 },
+  { cod: "332",  label: "Compra de bienes",                      pct: 2  },
+  { cod: "340",  label: "Otras retenciones",                     pct: 2  },
+  { cod: "343",  label: "Pagos al exterior - servicios técnicos", pct: 25 },
+  { cod: "344",  label: "Pagos al exterior - marcas y patentes", pct: 25 },
 ];
 
 const PORCENTAJES_IVA = [
@@ -447,6 +452,9 @@ export default function NuevaRetPage() {
 
   const origenCfg = ORIGEN_CONFIG[origenTipo];
 
+  // 1. INSERCIÓN: Flag esLiqEmitida
+  const esLiqEmitida = origenTipo === "liq_emitida" && docOrigen !== null;
+
   return (
     <div className="p-4 md:p-6 max-w-4xl mx-auto space-y-6">
       <div>
@@ -659,17 +667,28 @@ export default function NuevaRetPage() {
               <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>
                 Impuestos retenidos
               </h2>
-              <button
-                type="button"
-                onClick={addImpuesto}
-                className="flex items-center gap-1 text-xs transition-colors"
-                style={{ color: "var(--kipu-accent)" }}
-                onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent-h)"}
-                onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-accent)"}
-              >
-                <Plus size={13} /> Agregar
-              </button>
+              {/* 2. INSERCIÓN: Ocultar botón "Agregar" cuando es LIQ */}
+              {!esLiqEmitida && (
+                <button
+                  type="button"
+                  onClick={addImpuesto}
+                  className="flex items-center gap-1 text-xs transition-colors"
+                  style={{ color: "var(--kipu-accent)" }}
+                  onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent-h)"}
+                  onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-accent)"}
+                >
+                  <Plus size={13} /> Agregar
+                </button>
+              )}
             </div>
+
+            {/* 5. INSERCIÓN: Nota informativa debajo del header */}
+            {esLiqEmitida && (
+              <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+                Las bases imponibles se calcularon automáticamente desde la liquidación. Puedes ajustar el tipo y porcentaje de retención.
+              </p>
+            )}
+
             {impuestos.map((imp, idx) => {
               const opciones = getOpciones(imp.codigo);
               return (
@@ -685,27 +704,30 @@ export default function NuevaRetPage() {
                     <span className="text-xs font-medium" style={{ color: "var(--kipu-subtle)" }}>
                       Retención #{idx + 1}
                     </span>
-                    <button
-                      type="button"
-                      onClick={() => removeImpuesto(imp._id)}
-                      disabled={impuestos.length === 1}
-                      className="p-1.5 rounded-lg transition-colors disabled:opacity-20"
-                      style={{ color: "var(--kipu-subtle)" }}
-                      onMouseEnter={e => {
-                        if (impuestos.length > 1) {
-                          e.currentTarget.style.color = "var(--kipu-danger)";
-                          e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-danger) 10%, transparent)";
-                        }
-                      }}
-                      onMouseLeave={e => {
-                        if (impuestos.length > 1) {
-                          e.currentTarget.style.color = "var(--kipu-subtle)";
-                          e.currentTarget.style.background = "transparent";
-                        }
-                      }}
-                    >
-                      <Trash2 size={13} />
-                    </button>
+                    {/* 3. INSERCIÓN: Ocultar botón "Eliminar" cuando es LIQ */}
+                    {!esLiqEmitida && (
+                      <button
+                        type="button"
+                        onClick={() => removeImpuesto(imp._id)}
+                        disabled={impuestos.length === 1}
+                        className="p-1.5 rounded-lg transition-colors disabled:opacity-20"
+                        style={{ color: "var(--kipu-subtle)" }}
+                        onMouseEnter={e => {
+                          if (impuestos.length > 1) {
+                            e.currentTarget.style.color = "var(--kipu-danger)";
+                            e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-danger) 10%, transparent)";
+                          }
+                        }}
+                        onMouseLeave={e => {
+                          if (impuestos.length > 1) {
+                            e.currentTarget.style.color = "var(--kipu-subtle)";
+                            e.currentTarget.style.background = "transparent";
+                          }
+                        }}
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    )}
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-1">
@@ -758,10 +780,12 @@ export default function NuevaRetPage() {
                       </label>
                       <div className="relative">
                         <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-sm" style={{ color: "var(--kipu-subtle)" }}>$</span>
+                        {/* 4. INSERCIÓN: Base imponible read-only cuando es LIQ */}
                         <input
                           type="number"
                           value={imp.baseImponible}
                           onChange={e => editImpuesto(imp._id, "baseImponible", parseFloat(e.target.value) || 0)}
+                          readOnly={esLiqEmitida}
                           min={0}
                           step={0.01}
                           className="w-full pl-6 pr-2 py-2 rounded-lg text-sm text-right transition-colors focus:outline-none"
@@ -769,6 +793,8 @@ export default function NuevaRetPage() {
                             background: "var(--kipu-surface)",
                             border: "1px solid var(--kipu-border)",
                             color: "var(--kipu-text)",
+                            opacity: esLiqEmitida ? 0.7 : 1,
+                            cursor: esLiqEmitida ? "not-allowed" : "text",
                           }}
                           onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
                           onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
@@ -783,18 +809,14 @@ export default function NuevaRetPage() {
                         <input
                           type="number"
                           value={imp.porcentajeRetener}
-                          onChange={e => editImpuesto(imp._id, "porcentajeRetener", parseFloat(e.target.value) || 0)}
-                          min={0}
-                          max={100}
-                          step={0.01}
-                          className="w-full px-2 pr-6 py-2 rounded-lg text-sm text-center transition-colors focus:outline-none"
+                          readOnly
+                          className="w-full px-2 pr-6 py-2 rounded-lg text-sm text-center focus:outline-none"
                           style={{
-                            background: "var(--kipu-surface)",
+                            background: "color-mix(in srgb, var(--kipu-text) 4%, transparent)",
                             border: "1px solid var(--kipu-border)",
                             color: "var(--kipu-text)",
+                            cursor: "not-allowed",
                           }}
-                          onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                          onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
                         />
                         <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-sm" style={{ color: "var(--kipu-subtle)" }}>%</span>
                       </div>

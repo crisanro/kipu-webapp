@@ -62,6 +62,13 @@ export default function NuevaNcrPage() {
   // Doc origen
   const [docOrigen, setDocOrigen] = useState<DocOrigen>(null);
 
+  // Validación Consumidor Final
+  const esConsumidorFinal = docOrigen?.tipo === "kipu"
+    ? docOrigen.data.identificacion === "9999999999999"
+    : docOrigen?.tipo === "manual"
+    ? docOrigen.data.cliente?.identificacion === "9999999999999"
+    : false;
+
   // Formulario
   const [motivo,              setMotivo]              = useState(MOTIVOS[0]);
   const [motivoPersonalizado, setMotivoPersonalizado] = useState("");
@@ -147,6 +154,12 @@ export default function NuevaNcrPage() {
             unidad:         det.unidadMedida || "UNIDAD",
           })));
         }
+
+        // Pre-seleccionar mismo punto de emisión de la factura origen
+        const estab = d.datos?.infoTributaria?.estab;
+        const pto   = d.datos?.infoTributaria?.ptoEmi;
+        if (estab) setEstabSelected(estab);
+        if (pto)   setPtoSelected(pto);
       } catch (e) { console.error(e); }
     };
     cargar();
@@ -159,7 +172,7 @@ export default function NuevaNcrPage() {
   };
 
   const reset = () => {
-    idempotencyKey.current = uuidv4(); // Regenerar key al resetear
+    idempotencyKey.current = uuidv4();
     setResultado(null);
     setDocOrigen(null);
     setMotivo(MOTIVOS[0]);
@@ -171,6 +184,11 @@ export default function NuevaNcrPage() {
 
   const emitir = async () => {
     setError("");
+
+    if (esConsumidorFinal) {
+      setError("Por normativa del SRI, no se pueden emitir notas de crédito para comprobantes a Consumidor Final.");
+      return;
+    }
     if (!docOrigen) { setError("Selecciona el documento a modificar."); return; }
     if (!motivoFinal.trim()) { setError("Ingresa el motivo."); return; }
     if (!estabSelected || !ptoSelected) { setError("Configura el punto de emisión."); return; }
@@ -221,7 +239,6 @@ export default function NuevaNcrPage() {
       );
       setResultado(res.data);
     } catch (err: any) {
-      // Regenerar key si ocurre un error durante el envío
       idempotencyKey.current = uuidv4();
 
       const detail = err?.response?.data?.detail;
@@ -345,6 +362,27 @@ export default function NuevaNcrPage() {
             onChange={setDocOrigen}
             label="Factura a modificar"
           />
+
+          {/* Banner Consumidor Final */}
+          {esConsumidorFinal && (
+            <div
+              className="flex items-start gap-3 rounded-xl px-4 py-3"
+              style={{
+                background: "color-mix(in srgb, var(--kipu-danger) 8%, transparent)",
+                border: "1px solid color-mix(in srgb, var(--kipu-danger) 20%, transparent)",
+              }}
+            >
+              <AlertTriangle size={15} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-danger)" }} />
+              <div>
+                <p className="text-xs font-medium" style={{ color: "var(--kipu-danger)" }}>
+                  No disponible para Consumidor Final
+                </p>
+                <p className="text-xs mt-1" style={{ color: "var(--kipu-muted)" }}>
+                  Por normativa del SRI, los comprobantes emitidos a Consumidor Final no pueden ser modificados mediante notas de crédito ni notas de débito.
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Motivo */}
           <div
