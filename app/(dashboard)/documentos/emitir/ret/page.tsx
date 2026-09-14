@@ -6,12 +6,13 @@ import { v4 as uuidv4 } from "uuid";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
 import { CheckCircle2, AlertTriangle, Plus, Trash2, Calendar } from "lucide-react";
-import PuntoEmision    from "../components/PuntoEmision";
+import PuntoEmision from "../components/PuntoEmision";
 import CamposAdicionales, { CampoAdicional } from "../components/CamposAdicionales";
 import DocOrigenSelector, { DocOrigen } from "../components/DocOrigenSelector";
+import { getPaisesOrdenados } from "@/lib/catalogos/paises-sri";
 
-const r2    = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
-const fmt   = (n: number) => r2(n).toFixed(2);
+const r2  = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
+const fmt = (n: number) => r2(n).toFixed(2);
 const genId = () => Math.random().toString(36).slice(2);
 
 interface ImpuestoRet {
@@ -37,9 +38,9 @@ const TIPOS_IMPUESTO = [
 ];
 
 const PORCENTAJES_RENTA = [
-  { cod: "303",  label: "Honorarios profesionales",              pct: 10 },
+  { cod: "303",  label: "Honorarios profesionales",             pct: 10 },
   { cod: "304",  label: "Servicios predomina intelecto",         pct: 8  },
-  { cod: "304A", label: "Servicios profesionales del exterior",  pct: 25 },
+  { cod: "304A", label: "Servicios profesionales del exterior", pct: 25 },
   { cod: "307",  label: "Servicios predomina mano obra",         pct: 2  },
   { cod: "309",  label: "Servicios publicidad",                  pct: 2  },
   { cod: "310",  label: "Transporte privado de pasajeros",       pct: 1  },
@@ -96,10 +97,33 @@ const ORIGEN_CONFIG: Record<OrigenRet, {
   },
 };
 
+const CODIGOS_SUSTENTO = [
+  { value: "01", label: "Crédito tributario para IVA" },
+  { value: "02", label: "Costo o gasto para IR" },
+  { value: "03", label: "Activo fijo — Crédito tributario IVA" },
+  { value: "04", label: "Activo fijo — Costo o gasto IR" },
+  { value: "05", label: "Liquidación gastos viaje/hospedaje" },
+  { value: "06", label: "Inventario — Crédito tributario IVA" },
+  { value: "07", label: "Inventario — Costo o gasto IR" },
+  { value: "00", label: "Casos especiales (sin costo ni gasto)" },
+];
+
+const FORMAS_PAGO_RET = [
+  { value: "01", label: "Sin sistema financiero" },
+  { value: "16", label: "Tarjeta de débito" },
+  { value: "17", label: "Dinero electrónico" },
+  { value: "19", label: "Tarjeta de crédito" },
+  { value: "20", label: "Otros con sistema financiero" },
+  { value: "15", label: "Compensación de deudas" },
+];
+
 export default function NuevaRetPage() {
   const router       = useRouter();
   const searchParams = useSearchParams();
   const empresa      = useAuthStore((s) => s.empresa);
+
+  // Lista de países ordenada desde el módulo externo
+  const paisesOrdenados = getPaisesOrdenados();
 
   // ── Idempotencia ────────────────────────────────────────────────────────────
   const idempotencyKey = useRef(uuidv4());
@@ -113,6 +137,19 @@ export default function NuevaRetPage() {
   const [periodoFiscal, setPeriodoFiscal] = useState(
     `${String(hoy.getMonth() + 1).padStart(2, "0")}/${hoy.getFullYear()}`
   );
+
+  // Estados RET v2.0.0
+  const [codSustento,        setCodSustento]        = useState("01");
+  const [pagoLocExt,         setPagoLocExt]         = useState("01");
+  const [parteRel,           setParteRel]           = useState("NO");
+  const [formaPagoSustento, setFormaPagoSustento] = useState("01");
+
+  // Estados adicionales para pago al exterior (pagoLocExt === "02")
+  const [tipoRegi,           setTipoRegi]           = useState("01");
+  const [paisEfecPago,       setPaisEfecPago]       = useState("372");
+  const [aplicConvDobTrib,   setAplicConvDobTrib]   = useState("NO");
+  const [pagExtSujRetNorLeg, setPagExtSujRetNorLeg] = useState("SI");
+  const [pagoRegFis,         setPagoRegFis]         = useState("NO");
 
   // Impuestos
   const [impuestos, setImpuestos] = useState<ImpuestoRet[]>([{
@@ -183,7 +220,6 @@ export default function NuevaRetPage() {
             }
           });
 
-          // Obtener desglose para la LIQ emitida pre-cargada
           try {
             const resDesglose = await api.get(`/api/v1/app/documentos/${d.id}/desglose`);
             const desglose    = resDesglose.data.data;
@@ -311,12 +347,21 @@ export default function NuevaRetPage() {
   };
 
   const reset = () => {
-    idempotencyKey.current = uuidv4(); // Regenerar key al resetear
+    idempotencyKey.current = uuidv4();
     setResultado(null);
     setDocOrigen(null);
     setOrigenTipo("fac_recibida");
     setImpuestos([{ _id: genId(), codigo: "1", codigoRetencion: "303", baseImponible: 0, porcentajeRetener: 10, valorRetenido: 0 }]);
     setCamposAdicionales([]);
+    setCodSustento("01");
+    setPagoLocExt("01");
+    setParteRel("NO");
+    setFormaPagoSustento("01");
+    setTipoRegi("01");
+    setPaisEfecPago("372");
+    setAplicConvDobTrib("NO");
+    setPagExtSujRetNorLeg("SI");
+    setPagoRegFis("NO");
     setError("");
   };
 
@@ -331,21 +376,27 @@ export default function NuevaRetPage() {
 
     setSubmitting(true);
     try {
-      const codDocSustento = docOrigen.tipo === "kipu"
-        ? docOrigen.data.cod_doc
-        : docOrigen.data.cod_doc;
-
       const payload: any = {
-        establecimiento: estabSelected,
-        punto_emision:   ptoSelected,
-        periodo_fiscal:  periodoFiscal,
+        establecimiento:     estabSelected,
+        punto_emision:       ptoSelected,
+        periodo_fiscal:      periodoFiscal,
+        cod_sustento:        codSustento,
+        pago_loc_ext:        pagoLocExt,
+        forma_pago_sustento: formaPagoSustento,
+        parte_rel:           parteRel,
+        ...(pagoLocExt === "02" ? {
+          tipo_regi:               tipoRegi,
+          pais_efec_pago:          paisEfecPago,
+          aplic_conv_dob_trib:      aplicConvDobTrib,
+          pag_ext_suj_ret_nor_leg: pagExtSujRetNorLeg,
+          pago_reg_fis:            pagoRegFis,
+        } : {}),
         impuestos: impuestos.map(i => ({
           codigo:            i.codigo,
           codigoRetencion:   i.codigoRetencion,
           baseImponible:     i.baseImponible,
           porcentajeRetener: i.porcentajeRetener,
           valorRetenido:     i.valorRetenido,
-          codDocSustento,
         })),
         campos_adicionales: camposAdicionales.filter(c => c.nombre && c.valor),
       };
@@ -381,7 +432,6 @@ export default function NuevaRetPage() {
       );
       setResultado(res.data);
     } catch (err: any) {
-      // Regenerar la clave en caso de error para permitir reintentar con una nueva
       idempotencyKey.current = uuidv4();
 
       const detail = err?.response?.data?.detail;
@@ -389,7 +439,7 @@ export default function NuevaRetPage() {
         ? detail.map((e: any) => `${e.campo}: ${e.mensaje}`).join(" | ")
         : detail ?? "Error al emitir la retención."
       );
-    } finally {
+    } finally  {
       setSubmitting(false);
     }
   };
@@ -451,8 +501,6 @@ export default function NuevaRetPage() {
   }
 
   const origenCfg = ORIGEN_CONFIG[origenTipo];
-
-  // 1. INSERCIÓN: Flag esLiqEmitida
   const esLiqEmitida = origenTipo === "liq_emitida" && docOrigen !== null;
 
   return (
@@ -655,6 +703,247 @@ export default function NuevaRetPage() {
             </p>
           </div>
 
+          {/* Datos documento sustento — RET v2.0.0 */}
+          <div
+            className="rounded-xl p-4 space-y-3"
+            style={{
+              background: "var(--kipu-surface)",
+              border: "1px solid var(--kipu-border)",
+            }}
+          >
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>
+                Clasificación del sustento
+              </h2>
+              <span
+                className="text-[10px] px-1.5 py-0.5 rounded font-medium"
+                style={{
+                  background: "color-mix(in srgb, var(--kipu-text) 8%, transparent)",
+                  color: "var(--kipu-subtle)",
+                }}
+              >
+                {codSustento} · {pagoLocExt === "01" ? "Local" : `Exterior (${paisEfecPago})`} · Parte rel: {parteRel}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {/* Código sustento */}
+              <div className="sm:col-span-2 space-y-1">
+                <label className="text-[10px] uppercase font-semibold tracking-wider" style={{ color: "var(--kipu-subtle)" }}>
+                  Código de sustento (ATS)
+                </label>
+                <select
+                  value={codSustento}
+                  onChange={e => setCodSustento(e.target.value)}
+                  className="w-full px-2.5 py-2 rounded-lg text-sm transition-colors focus:outline-none"
+                  style={{
+                    background: "var(--kipu-surface)",
+                    border: "1px solid var(--kipu-border)",
+                    color: "var(--kipu-text)",
+                  }}
+                  onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                  onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+                >
+                  {CODIGOS_SUSTENTO.map(c => (
+                    <option key={c.value} value={c.value}>{c.value} · {c.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Pago local/exterior */}
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase font-semibold tracking-wider" style={{ color: "var(--kipu-subtle)" }}>
+                  Pago
+                </label>
+                <select
+                  value={pagoLocExt}
+                  onChange={e => setPagoLocExt(e.target.value)}
+                  className="w-full px-2.5 py-2 rounded-lg text-sm transition-colors focus:outline-none"
+                  style={{
+                    background: "var(--kipu-surface)",
+                    border: "1px solid var(--kipu-border)",
+                    color: "var(--kipu-text)",
+                  }}
+                  onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                  onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+                >
+                  <option value="01">Local</option>
+                  <option value="02">Exterior</option>
+                </select>
+              </div>
+            </div>
+
+            {/* ── Campos pago exterior (condicional) ── */}
+            {pagoLocExt === "02" && (
+              <div className="pt-2 border-t space-y-3" style={{ borderColor: "var(--kipu-border)" }}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Tipo régimen fiscal */}
+                  <div className="space-y-1">
+                    <label className="text-[10px] uppercase font-semibold tracking-wider" style={{ color: "var(--kipu-subtle)" }}>
+                      Régimen fiscal exterior
+                    </label>
+                    <select
+                      value={tipoRegi}
+                      onChange={e => setTipoRegi(e.target.value)}
+                      className="w-full px-2.5 py-2 rounded-lg text-sm transition-colors focus:outline-none"
+                      style={{
+                        background: "var(--kipu-surface)",
+                        border: "1px solid var(--kipu-border)",
+                        color: "var(--kipu-text)",
+                      }}
+                      onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                      onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+                    >
+                      <option value="01">01 · General</option>
+                      <option value="02">02 · Paraíso fiscal</option>
+                      <option value="03">03 · Régimen fiscal preferente</option>
+                    </select>
+                  </div>
+
+                  {/* País efectivo del pago */}
+                  <div className="space-y-1">
+                    <label className="text-[10px] uppercase font-semibold tracking-wider" style={{ color: "var(--kipu-subtle)" }}>
+                      País del pago
+                    </label>
+                    <select
+                      value={paisEfecPago}
+                      onChange={e => setPaisEfecPago(e.target.value)}
+                      className="w-full px-2.5 py-2 rounded-lg text-sm transition-colors focus:outline-none"
+                      style={{
+                        background: "var(--kipu-surface)",
+                        border: "1px solid var(--kipu-border)",
+                        color: "var(--kipu-text)",
+                      }}
+                      onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                      onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+                    >
+                      {paisesOrdenados.map(p => (
+                        <option key={p.codigo} value={p.codigo}>{p.codigo} · {p.nombre}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Convenio doble tributación */}
+                  <div className="space-y-1">
+                    <label className="text-[10px] uppercase font-semibold tracking-wider" style={{ color: "var(--kipu-subtle)" }}>
+                      Convenio doble tributación
+                    </label>
+                    <select
+                      value={aplicConvDobTrib}
+                      onChange={e => setAplicConvDobTrib(e.target.value)}
+                      className="w-full px-2.5 py-2 rounded-lg text-sm transition-colors focus:outline-none"
+                      style={{
+                        background: "var(--kipu-surface)",
+                        border: "1px solid var(--kipu-border)",
+                        color: "var(--kipu-text)",
+                      }}
+                      onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                      onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+                    >
+                      <option value="NO">NO</option>
+                      <option value="SI">SI</option>
+                    </select>
+                  </div>
+
+                  {/* Pago a régimen fiscal preferente */}
+                  <div className="space-y-1">
+                    <label className="text-[10px] uppercase font-semibold tracking-wider" style={{ color: "var(--kipu-subtle)" }}>
+                      Pago a régimen fiscal preferente
+                    </label>
+                    <select
+                      value={pagoRegFis}
+                      onChange={e => setPagoRegFis(e.target.value)}
+                      className="w-full px-2.5 py-2 rounded-lg text-sm transition-colors focus:outline-none"
+                      style={{
+                        background: "var(--kipu-surface)",
+                        border: "1px solid var(--kipu-border)",
+                        color: "var(--kipu-text)",
+                      }}
+                      onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                      onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+                    >
+                      <option value="NO">NO</option>
+                      <option value="SI">SI</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Pago sujeto a retención (solo si NO hay convenio) */}
+                {aplicConvDobTrib === "NO" && (
+                  <div className="space-y-1">
+                    <label className="text-[10px] uppercase font-semibold tracking-wider" style={{ color: "var(--kipu-subtle)" }}>
+                      Sujeto a retención por norma legal
+                    </label>
+                    <select
+                      value={pagExtSujRetNorLeg}
+                      onChange={e => setPagExtSujRetNorLeg(e.target.value)}
+                      className="w-full px-2.5 py-2 rounded-lg text-sm transition-colors focus:outline-none"
+                      style={{
+                        background: "var(--kipu-surface)",
+                        border: "1px solid var(--kipu-border)",
+                        color: "var(--kipu-text)",
+                      }}
+                      onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                      onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+                    >
+                      <option value="SI">SI</option>
+                      <option value="NO">NO</option>
+                    </select>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Parte relacionada */}
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase font-semibold tracking-wider" style={{ color: "var(--kipu-subtle)" }}>
+                  Parte relacionada
+                </label>
+                <select
+                  value={parteRel}
+                  onChange={e => setParteRel(e.target.value)}
+                  className="w-full px-2.5 py-2 rounded-lg text-sm transition-colors focus:outline-none"
+                  style={{
+                    background: "var(--kipu-surface)",
+                    border: "1px solid var(--kipu-border)",
+                    color: "var(--kipu-text)",
+                  }}
+                  onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                  onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+                >
+                  <option value="NO">NO</option>
+                  <option value="SI">SI</option>
+                </select>
+              </div>
+
+              {/* Forma de pago del sustento */}
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase font-semibold tracking-wider" style={{ color: "var(--kipu-subtle)" }}>
+                  Forma de pago del documento sustento
+                </label>
+                <select
+                  value={formaPagoSustento}
+                  onChange={e => setFormaPagoSustento(e.target.value)}
+                  className="w-full px-2.5 py-2 rounded-lg text-sm transition-colors focus:outline-none"
+                  style={{
+                    background: "var(--kipu-surface)",
+                    border: "1px solid var(--kipu-border)",
+                    color: "var(--kipu-text)",
+                  }}
+                  onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                  onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+                >
+                  {FORMAS_PAGO_RET.map(f => (
+                    <option key={f.value} value={f.value}>{f.value} · {f.label}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
           {/* Impuestos retenidos */}
           <div
             className="rounded-xl p-4 space-y-3"
@@ -667,7 +956,6 @@ export default function NuevaRetPage() {
               <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>
                 Impuestos retenidos
               </h2>
-              {/* 2. INSERCIÓN: Ocultar botón "Agregar" cuando es LIQ */}
               {!esLiqEmitida && (
                 <button
                   type="button"
@@ -682,7 +970,6 @@ export default function NuevaRetPage() {
               )}
             </div>
 
-            {/* 5. INSERCIÓN: Nota informativa debajo del header */}
             {esLiqEmitida && (
               <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
                 Las bases imponibles se calcularon automáticamente desde la liquidación. Puedes ajustar el tipo y porcentaje de retención.
@@ -704,7 +991,6 @@ export default function NuevaRetPage() {
                     <span className="text-xs font-medium" style={{ color: "var(--kipu-subtle)" }}>
                       Retención #{idx + 1}
                     </span>
-                    {/* 3. INSERCIÓN: Ocultar botón "Eliminar" cuando es LIQ */}
                     {!esLiqEmitida && (
                       <button
                         type="button"
@@ -780,7 +1066,6 @@ export default function NuevaRetPage() {
                       </label>
                       <div className="relative">
                         <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-sm" style={{ color: "var(--kipu-subtle)" }}>$</span>
-                        {/* 4. INSERCIÓN: Base imponible read-only cuando es LIQ */}
                         <input
                           type="number"
                           value={imp.baseImponible}
