@@ -15,7 +15,7 @@ import {
   LayoutDashboard, FileText, Users, Package, Settings, Key,
   LogOut, ChevronRight, ChevronDown, Menu, X, BarChart3,
   AlertTriangle, FileInput, Building2, CreditCard, UserCog,
-  CheckCircle2, Plus, ChevronUp, Shield, FlaskConical,
+  CheckCircle2, Plus, ChevronUp, Shield, FlaskConical, Bell,
   MessageCircle, Wallet, ClipboardList, Sun, Moon,
 } from "lucide-react";
 import { clsx } from "clsx";
@@ -41,9 +41,9 @@ function SoporteWhatsApp({ empresa }: { empresa: any }) {
 
   return (
     <div className="relative">
-      <button
+            <button
         onClick={() => setShowQR(!showQR)}
-        className="hidden lg:flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm transition-colors"
+        className="hidden lg:flex p-2 rounded-lg transition-colors"
         style={{ color: "var(--kipu-muted)" }}
         onMouseEnter={e => {
           e.currentTarget.style.color = "var(--kipu-success)";
@@ -53,9 +53,9 @@ function SoporteWhatsApp({ empresa }: { empresa: any }) {
           e.currentTarget.style.color = "var(--kipu-muted)";
           e.currentTarget.style.background = "transparent";
         }}
+        title="Soporte WhatsApp"
       >
-        <MessageCircle size={16} />
-        Soporte
+        <MessageCircle size={18} />
       </button>
       <a
         href={waUrl}
@@ -808,8 +808,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             )}
           </Link>
 
-          <NotificacionesBadge noLeidas={noLeidas} onClick={() => setDrawerOpen(true)} />
-
           {/* Toggle Sandbox */}
           {firmaOk ? (
             <button
@@ -863,28 +861,60 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
           )}
 
-          <SoporteWhatsApp empresa={empresa} />
+          {/* Barra de iconos: Notificaciones · Soporte · Tema · Cerrar sesión */}
+          <div
+            className="flex items-center justify-between pt-2"
+            style={{ borderTop: "1px solid var(--kipu-border)" }}
+          >
+            {/* Notificaciones */}
+            <button
+              onClick={() => setDrawerOpen(true)}
+              className="relative p-2 rounded-lg transition-colors"
+              style={{ color: "var(--kipu-muted)" }}
+              onMouseEnter={e => {
+                e.currentTarget.style.color = "var(--kipu-text)";
+                e.currentTarget.style.background = "var(--kipu-border)";
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.color = "var(--kipu-muted)";
+                e.currentTarget.style.background = "transparent";
+              }}
+              title="Notificaciones"
+            >
+              <Bell size={18} />
+              {noLeidas > 0 && (
+                <span
+                  className="absolute -top-0.5 -right-0.5 flex items-center justify-center w-4 h-4 rounded-full text-white text-[9px] font-bold"
+                  style={{ background: "var(--kipu-accent)" }}
+                >
+                  {noLeidas > 9 ? "9+" : noLeidas}
+                </span>
+              )}
+            </button>
 
-          <div className="pt-1" style={{ borderTop: "1px solid var(--kipu-border)" }}>
-            <div className="flex items-center gap-1 pt-2">
-              <ThemeToggle />
-              <button
-                onClick={() => setShowLogoutModal(true)}
-                className="flex items-center gap-2 flex-1 px-3 py-2 rounded-lg text-sm transition-colors"
-                style={{ color: "var(--kipu-muted)" }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.color = "var(--kipu-danger)";
-                  e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-danger) 10%, transparent)";
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.color = "var(--kipu-muted)";
-                  e.currentTarget.style.background = "transparent";
-                }}
-              >
-                <LogOut size={16} />
-                Cerrar sesión
-              </button>
-            </div>
+            {/* Soporte WhatsApp */}
+            <SoporteWhatsApp empresa={empresa} />
+
+            {/* Modo oscuro/claro */}
+            <ThemeToggle compact />
+
+            {/* Cerrar sesión */}
+            <button
+              onClick={() => setShowLogoutModal(true)}
+              className="p-2 rounded-lg transition-colors"
+              style={{ color: "var(--kipu-muted)" }}
+              onMouseEnter={e => {
+                e.currentTarget.style.color = "var(--kipu-danger)";
+                e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-danger) 10%, transparent)";
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.color = "var(--kipu-muted)";
+                e.currentTarget.style.background = "transparent";
+              }}
+              title="Cerrar sesión"
+            >
+              <LogOut size={18} />
+            </button>
           </div>
         </div>
       </aside>
@@ -923,7 +953,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               onMouseEnter={e => e.currentTarget.style.background = "var(--kipu-border)"}
               onMouseLeave={e => e.currentTarget.style.background = "transparent"}
             >
-              <NotificacionesBadge noLeidas={noLeidas} onClick={() => setDrawerOpen(true)} />
+              <Bell size={20} />
+              {noLeidas > 0 && (
+                <span
+                  className="absolute -top-0.5 -right-0.5 flex items-center justify-center w-4 h-4 rounded-full text-white text-[9px] font-bold"
+                  style={{ background: "var(--kipu-accent)" }}
+                >
+                  {noLeidas > 9 ? "9+" : noLeidas}
+                </span>
+              )}
             </button>
           </div>
         </header>
