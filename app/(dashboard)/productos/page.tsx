@@ -1,12 +1,15 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+
+import { useState, useEffect, useCallback, lazy, Suspense } from "react";
 import api from "@/lib/api";
 import { usePermiso } from "@/hooks/usePermiso";
 import SinAcceso from "@/components/SinAcceso";
 import {
   Search, Plus, Package, X,
-  Save, Pencil, PowerOff, Power
+  Save, Pencil, PowerOff, Power, Camera
 } from "lucide-react";
+
+const BarcodeScanner = lazy(() => import("@/components/BarcodeScanner"));
 
 interface Producto {
   id:           string;
@@ -33,9 +36,11 @@ const EMPTY_FORM = {
 const UNIDADES = ["UNIDAD", "SERVICIO", "KG", "LB", "LT", "MT", "CM", "CAJA", "PAQUETE", "HORA"];
 const fmt = (n: number) => n?.toFixed(2) ?? "0.00";
 
+// Modo del scanner: "buscar" filtra la lista, "codigo" llena el campo código del modal
+type ScanMode = "buscar" | "codigo";
+
 export default function ProductosPage() {
   const puedeVer = usePermiso("productos");
-  if (!puedeVer) return <SinAcceso />;
 
   const [productos,    setProductos]    = useState<Producto[]>([]);
   const [loading,      setLoading]      = useState(true);
@@ -46,6 +51,8 @@ export default function ProductosPage() {
   const [saving,       setSaving]       = useState(false);
   const [error,        setError]        = useState("");
   const [verInactivos, setVerInactivos] = useState(false);
+  const [showScanner,  setShowScanner]  = useState(false);
+  const [scanMode,     setScanMode]     = useState<ScanMode>("buscar");
 
   const cargar = useCallback(async () => {
     setLoading(true);
@@ -60,6 +67,8 @@ export default function ProductosPage() {
   }, [verInactivos]);
 
   useEffect(() => { cargar(); }, [cargar]);
+
+  if (!puedeVer) return <SinAcceso />;
 
   const filtrados = productos.filter((p) =>
     !query ||
@@ -91,9 +100,36 @@ export default function ProductosPage() {
 
   const stockValue = () => form.stock === "" ? -1 : parseInt(form.stock);
 
+  // ── Scanner handlers ──────────────────────────────────────────────────────
+  const abrirScannerBuscar = () => {
+    setScanMode("buscar");
+    setShowScanner(true);
+  };
+
+  const abrirScannerCodigo = () => {
+    setScanMode("codigo");
+    setShowScanner(true);
+  };
+
+  const handleScan = (code: string) => {
+    setShowScanner(false);
+    if (scanMode === "buscar") {
+      // Poner el código escaneado en el filtro de búsqueda
+      setQuery(code);
+    } else {
+      // Llenar el campo código del formulario
+      setForm(prev => ({ ...prev, codigo: code.toUpperCase() }));
+    }
+  };
+
+  // ── Save ──────────────────────────────────────────────────────────────────
   const handleSave = async () => {
     setError("");
 
+    if (!form.codigo.trim()) {
+      setError("El código es obligatorio.");
+      return;
+    }
     if (!form.descripcion || form.precio === "") {
       setError("Descripción y precio son obligatorios.");
       return;
@@ -102,15 +138,23 @@ export default function ProductosPage() {
       setError("El precio no puede ser negativo.");
       return;
     }
-    if (stockValue() !== -1 && !form.codigo.trim()) {
-      setError("El código es obligatorio cuando el producto maneja stock.");
-      return;
+
+    // Verificar código único (solo si es nuevo o cambió el código)
+    if (!editando || editando.codigo !== form.codigo.trim()) {
+      const existente = productos.find(
+        p => p.codigo?.toUpperCase() === form.codigo.trim().toUpperCase() && p.id !== editando?.id
+      );
+      if (existente) {
+        setError(`El código "${form.codigo}" ya existe (${existente.descripcion}).`);
+        return;
+      }
     }
 
     setSaving(true);
     try {
       const payload = {
         ...form,
+        codigo:       form.codigo.trim().toUpperCase(),
         precio:       parseFloat(form.precio),
         stock:        stockValue(),
         stock_minimo: parseInt(form.stock_minimo) || 0,
@@ -171,7 +215,7 @@ export default function ProductosPage() {
         </button>
       </div>
 
-      {/* Filtros */}
+      {/* Filtros — con botón de scanner */}
       <div className="flex gap-3 mb-4">
         <div className="relative flex-1">
           <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--kipu-subtle)" }} />
@@ -179,7 +223,7 @@ export default function ProductosPage() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Buscar por descripción o código..."
-            className="w-full pl-9 pr-4 py-2.5 rounded-lg text-sm transition-colors focus:outline-none"
+            className="w-full pl-9 pr-10 py-2.5 rounded-lg text-sm transition-colors focus:outline-none"
             style={{
               background: "var(--kipu-surface)",
               border: "1px solid var(--kipu-border)",
@@ -188,6 +232,17 @@ export default function ProductosPage() {
             onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
             onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
           />
+          <button
+            type="button"
+            onClick={abrirScannerBuscar}
+            className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded transition-colors"
+            style={{ color: "var(--kipu-subtle)" }}
+            onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent)"}
+            onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-subtle)"}
+            title="Escanear código de barras para buscar"
+          >
+            <Camera size={16} />
+          </button>
         </div>
         <button
           type="button"
@@ -287,7 +342,6 @@ export default function ProductosPage() {
                 <span className="hidden md:block col-span-1 text-xs text-center" style={{ color: "var(--kipu-muted)" }}>
                   {p.tipo_iva}%
                 </span>
-                {/* Columna Stock */}
                 <span className="hidden md:block col-span-1 text-xs text-center font-medium">
                   {p.stock === -1 ? (
                     <span style={{ color: "var(--kipu-subtle)" }}>—</span>
@@ -388,15 +442,18 @@ export default function ProductosPage() {
       {showModal && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
           <div
-            className="rounded-xl w-full max-w-md"
+            className="rounded-xl w-full max-w-md max-h-[90vh] overflow-y-auto"
             style={{
               background: "var(--kipu-surface)",
               border: "1px solid var(--kipu-border)",
             }}
           >
             <div
-              className="flex items-center justify-between px-5 py-4"
-              style={{ borderBottom: "1px solid var(--kipu-border)" }}
+              className="flex items-center justify-between px-5 py-4 sticky top-0"
+              style={{
+                borderBottom: "1px solid var(--kipu-border)",
+                background: "var(--kipu-surface)",
+              }}
             >
               <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>
                 {editando ? "Editar producto" : "Nuevo producto"}
@@ -414,24 +471,44 @@ export default function ProductosPage() {
             </div>
             <div className="p-5 space-y-3">
               <div className="grid grid-cols-2 gap-3">
+                {/* Código */}
                 <div>
                   <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>
-                    Código {stockValue() !== -1 ? <span style={{ color: "var(--kipu-danger)" }}>*</span> : "(opcional)"}
+                    Código <span style={{ color: "var(--kipu-danger)" }}>*</span>
                   </label>
                   <input
                     value={form.codigo}
-                    onChange={(e) => setForm({ ...form, codigo: e.target.value })}
+                    onChange={(e) => setForm({ ...form, codigo: e.target.value.toUpperCase() })}
                     placeholder="PROD-001"
+                    disabled={Boolean(editando)}
                     className="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none"
                     style={{
                       background: "var(--kipu-surface)",
                       border: "1px solid var(--kipu-border)",
                       color: "var(--kipu-text)",
+                      opacity: editando ? 0.6 : 1,
+                      cursor: editando ? "not-allowed" : "text",
                     }}
                     onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
                     onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
                   />
+                  {/* Botón escanear — solo al crear */}
+                  <button
+                    type="button"
+                    onClick={abrirScannerCodigo}
+                    className="mt-1.5 items-center gap-1.5 text-xs transition-colors"
+                    style={{
+                      display: editando ? "none" : "inline-flex",
+                      color: "var(--kipu-subtle)",
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent)"}
+                    onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-subtle)"}
+                  >
+                    <Camera size={13} />
+                    Escanear
+                  </button>
                 </div>
+                {/* Precio */}
                 <div>
                   <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Precio *</label>
                   <input
@@ -506,7 +583,7 @@ export default function ProductosPage() {
                   </select>
                 </div>
               </div>
-              {/* Campo Stock */}
+              {/* Stock */}
               <div>
                 <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>
                   {editando ? "Stock actual" : "Stock inicial"}
@@ -530,7 +607,7 @@ export default function ProductosPage() {
                 <p className="text-[11px] mt-1" style={{ color: "var(--kipu-subtle)" }}>-1 = sin control de stock</p>
               </div>
 
-              {/* Stock mínimo — solo si maneja stock */}
+              {/* Stock mínimo */}
               {stockValue() !== -1 && (
                 <div>
                   <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>
@@ -608,6 +685,16 @@ export default function ProductosPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Modal Barcode Scanner — compartido entre búsqueda y código */}
+      {showScanner && (
+        <Suspense fallback={null}>
+          <BarcodeScanner
+            onScan={handleScan}
+            onClose={() => setShowScanner(false)}
+          />
+        </Suspense>
       )}
     </div>
   );

@@ -234,6 +234,37 @@ export default function NuevaFacturaPage() {
       setError("Todos los ítems deben tener descripción.");
       return;
     }
+    // Validar descuento no exceda el subtotal
+    const itemDescuentoInvalido = items.find(i => {
+      const subtotal = r2(i.cantidad * i.precio);
+      return i.tipo_descuento === "%"
+        ? i.descuento > 100
+        : i.descuento > subtotal;
+    });
+    if (itemDescuentoInvalido) {
+      setError("El descuento no puede superar el valor del ítem.");
+      return;
+    }
+
+    // Validar código en ítems para catálogo
+    if (items.some(i => i.guardar_catalogo && !i.codigo?.trim())) {
+      setError("Los ítems marcados para guardar en catálogo necesitan un código.");
+      return;
+    }
+
+    // Verificar códigos duplicados en catálogo
+    const itemsParaCatalogo = items.filter(i => i.guardar_catalogo && i.codigo?.trim());
+    if (itemsParaCatalogo.length > 0) {
+      try {
+        const res = await api.get("/api/v1/app/productos?incluir_inactivos=false");
+        const existentes = (res.data.data ?? []).map((p: any) => (p.codigo || "").toUpperCase());
+        const duplicado = itemsParaCatalogo.find(i => existentes.includes(i.codigo.trim().toUpperCase()));
+        if (duplicado) {
+          setError(`El código "${duplicado.codigo}" ya existe en tu catálogo. Cámbialo o desmarca "Guardar en catálogo".`);
+          return;
+        }
+      } catch {}
+    }
     
     const puedeEmitir = empresa?.suscripcion_activa || (empresa?.balance_api ?? 0) > 0;
     if (!puedeEmitir) {
@@ -279,6 +310,7 @@ export default function NuevaFacturaPage() {
           descuento:       c.descuento,
           tipo_iva:        i.tipo_iva,
           unidad_medida:   i.unidad,
+          guardar_catalogo: !!i.guardar_catalogo,
         };
       }),
 

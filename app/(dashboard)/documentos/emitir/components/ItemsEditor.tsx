@@ -1,8 +1,10 @@
 "use client";
 
-import { useRef, useCallback, useState, useEffect } from "react";
+import { useRef, useCallback, useState, useEffect, lazy, Suspense } from "react";
 import api from "@/lib/api";
-import { Search, Plus, Trash2 } from "lucide-react";
+import { Search, Plus, Trash2, Camera } from "lucide-react";
+
+const BarcodeScanner = lazy(() => import("@/components/BarcodeScanner"));
 
 // ── Tipos ──────────────────────────────────────────────────────────────────────
 interface Producto {
@@ -15,16 +17,17 @@ interface Producto {
 }
 
 export interface Item {
-  _id:           string;
-  _fromCatalog?: boolean; // 1. INSERCIÓN: Flag para identificar items del catálogo
-  codigo:        string;
-  descripcion:   string;
-  cantidad:      number;
-  precio:        number;
-  descuento:     number;
-  tipo_descuento: "$" | "%";
-  tipo_iva:      string;
-  unidad:        string;
+  _id:              string;
+  _fromCatalog?:    boolean; // Flag para identificar items del catálogo
+  guardar_catalogo?: boolean; // Flag para guardar nuevos productos en el catálogo
+  codigo:           string;
+  descripcion:      string;
+  cantidad:         number;
+  precio:           number;
+  descuento:        number;
+  tipo_descuento:   "$" | "%";
+  tipo_iva:         string;
+  unidad:           string;
 }
 
 interface Props {
@@ -42,8 +45,8 @@ export function calcItem(item: Item) {
   const subtotal  = r2(item.cantidad * item.precio);
   const descuento = r2(
     item.tipo_descuento === "%"
-      ? subtotal * (item.descuento / 100)
-      : item.descuento
+      ? subtotal * (Math.min(item.descuento, 100) / 100)
+      : Math.min(item.descuento, subtotal)
   );
   const base  = r2(subtotal - descuento);
   const iva   = r2(base * (IVA_RATES[item.tipo_iva] ?? 0.15));
@@ -130,10 +133,12 @@ function InputDecimal({
 
 // ── Componente Principal ───────────────────────────────────────────────────────
 export default function ItemsEditor({ items, onChange }: Props) {
-  const [productoQuery,   setProductoQuery]   = useState("");
-  const [productoResults, setProductoResults] = useState<Producto[]>([]);
-  const [productoLoading, setProductoLoading] = useState(false);
-  const [showProductos,   setShowProductos]   = useState(false);
+  const [productoQuery,     setProductoQuery]     = useState("");
+  const [productoResults,   setProductoResults]   = useState<Producto[]>([]);
+  const [productoLoading,   setProductoLoading]   = useState(false);
+  const [showProductos,     setShowProductos]     = useState(false);
+  const [showScanner,       setShowScanner]       = useState(false);
+  const [codigosExistentes, setCodigosExistentes] = useState<Set<string>>(new Set());
 
   const timer       = useRef<ReturnType<typeof setTimeout> | null>(null);
   const productoRef = useRef<HTMLDivElement>(null);
@@ -147,6 +152,23 @@ export default function ItemsEditor({ items, onChange }: Props) {
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  // ── Verificar código duplicado en catálogo ───────────────────────────────
+  const verificarCodigo = useCallback(async (codigo: string) => {
+    if (!codigo.trim()) return;
+    try {
+      const res = await api.get(`/api/v1/app/productos/buscar?q=${encodeURIComponent(codigo)}`);
+      const existe = (res.data.data ?? []).some(
+        (p: Producto) => p.codigo?.toUpperCase() === codigo.toUpperCase()
+      );
+      setCodigosExistentes((prev) => {
+        const next = new Set(prev);
+        if (existe) next.add(codigo.toUpperCase());
+        else next.delete(codigo.toUpperCase());
+        return next;
+      });
+    } catch {}
   }, []);
 
   // ── Buscar productos ─────────────────────────────────────────────────────────
@@ -171,10 +193,10 @@ export default function ItemsEditor({ items, onChange }: Props) {
   }, [productoQuery, buscarProductos]);
 
   // ── Acciones ─────────────────────────────────────────────────────────────────
-  const seleccionarProducto = (p: Producto) => {
+  const seleccionarProducto = useCallback((p: Producto) => {
     onChange([...items, {
       _id:            genId(),
-      _fromCatalog:   true, // 2. INSERCIÓN: Marcado de origen desde catálogo
+      _fromCatalog:   true,
       codigo:         p.codigo,
       descripcion:    p.descripcion,
       cantidad:       1,
@@ -186,7 +208,49 @@ export default function ItemsEditor({ items, onChange }: Props) {
     }]);
     setProductoQuery("");
     setShowProductos(false);
-  };
+  }, [items, onChange]);
+
+  const handleScan = useCallback((code: string) => {
+    setShowScanner(false);
+    // Buscar en catálogo por código exacto
+    api.get(`/api/v1/app/productos/buscar?q=${encodeURIComponent(code)}`)
+      .then(res => {
+        const match = (res.data.data ?? []).find(
+          (p: Producto) => p.codigo?.toUpperCase() === code.toUpperCase()
+        );
+        if (match) {
+          // Encontrado — agregar del catálogo
+          seleccionarProducto(match);
+        } else {
+          // No encontrado — crear ítem con código pre-llenado
+          onChange([...items, {
+            _id: genId(),
+            codigo: code,
+            descripcion: "",
+            cantidad: 1,
+            precio: 0,
+            descuento: 0,
+            tipo_descuento: "$",
+            tipo_iva: "15",
+            unidad: "UNIDAD",
+          }]);
+        }
+      })
+      .catch(() => {
+        // Error — crear ítem con código pre-llenado
+        onChange([...items, {
+          _id: genId(),
+          codigo: code,
+          descripcion: "",
+          cantidad: 1,
+          precio: 0,
+          descuento: 0,
+          tipo_descuento: "$",
+          tipo_iva: "15",
+          unidad: "UNIDAD",
+        }]);
+      });
+  }, [items, onChange, seleccionarProducto]);
 
   const editItem = (id: string, field: keyof Item, value: any) => {
     onChange(items.map(item => item._id === id ? { ...item, [field]: value } : item));
@@ -235,7 +299,7 @@ export default function ItemsEditor({ items, onChange }: Props) {
             value={productoQuery}
             onChange={(e) => { setProductoQuery(e.target.value); setShowProductos(true); }}
             placeholder="Buscar en catálogo para agregar..."
-            className="w-full pl-9 pr-4 py-2 rounded-lg text-sm transition-colors focus:outline-none"
+            className="w-full pl-9 pr-10 py-2 rounded-lg text-sm transition-colors focus:outline-none"
             style={{
               background: "var(--kipu-surface)",
               border: "1px solid var(--kipu-border)",
@@ -244,11 +308,23 @@ export default function ItemsEditor({ items, onChange }: Props) {
             onFocus={(e) => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
             onBlur={(e) => e.currentTarget.style.borderColor = "var(--kipu-border)"}
           />
-          {productoLoading && (
+          {productoLoading ? (
             <div
               className="w-3.5 h-3.5 border-2 border-t-transparent rounded-full animate-spin absolute right-3 top-1/2 -translate-y-1/2"
               style={{ borderColor: "var(--kipu-accent)", borderTopColor: "transparent" }}
             />
+          ) : (
+            <button
+              type="button"
+              onClick={() => setShowScanner(true)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded transition-colors"
+              style={{ color: "var(--kipu-subtle)" }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = "var(--kipu-accent)")}
+              onMouseLeave={(e) => (e.currentTarget.style.color = "var(--kipu-subtle)")}
+              title="Escanear código de barras o QR"
+            >
+              <Camera size={16} />
+            </button>
           )}
         </div>
 
@@ -296,6 +372,8 @@ export default function ItemsEditor({ items, onChange }: Props) {
       <div className="space-y-3">
         {items.map((item, index) => {
           const c = calcItem(item);
+          const esCodigoDuplicado = codigosExistentes.has(item.codigo.toUpperCase());
+
           return (
             <div
               key={item._id}
@@ -448,7 +526,6 @@ export default function ItemsEditor({ items, onChange }: Props) {
                   >
                     IVA
                   </label>
-                  {/* 3. INSERCIÓN: Bloqueo del selector de IVA cuando el item proviene del catálogo */}
                   <select
                     value={item.tipo_iva}
                     onChange={(e) => editItem(item._id, "tipo_iva", e.target.value)}
@@ -490,6 +567,80 @@ export default function ItemsEditor({ items, onChange }: Props) {
                   </div>
                 </div>
               </div>
+
+              {/* Guardar en catálogo — solo ítems manuales */}
+              {!item._fromCatalog && item.descripcion.trim() && (
+                <div className="flex items-center gap-3 pt-1 flex-wrap">
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={!!item.guardar_catalogo}
+                      onChange={(e) => editItem(item._id, "guardar_catalogo", e.target.checked)}
+                      className="w-3.5 h-3.5 rounded"
+                      style={{ accentColor: "var(--kipu-accent)" }}
+                    />
+                    <span className="text-[11px]" style={{ color: "var(--kipu-subtle)" }}>
+                      Guardar en mi catálogo
+                    </span>
+                  </label>
+
+                                    {item.guardar_catalogo && (
+                    <div className="flex items-center gap-2">
+                      <div className="flex gap-1">
+                        <input
+                          type="text"
+                          value={item.codigo}
+                          onChange={(e) => editItem(item._id, "codigo", e.target.value.toUpperCase())}
+                          onBlur={() => verificarCodigo(item.codigo)}
+                          placeholder="Código *"
+                          maxLength={25}
+                          className="px-2.5 py-1 rounded-lg text-xs w-32 transition-colors focus:outline-none"
+                          style={{
+                            background: "var(--kipu-surface)",
+                            border: esCodigoDuplicado
+                              ? "1px solid var(--kipu-danger)"
+                              : item.codigo.trim()
+                                ? "1px solid var(--kipu-border)"
+                                : "1px solid var(--kipu-danger)",
+                            color: "var(--kipu-text)",
+                          }}
+                          onFocus={(e) => (e.currentTarget.style.borderColor = "var(--kipu-accent)")}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowScanner(true)}
+                          className="px-1.5 rounded-lg transition-colors shrink-0"
+                          style={{
+                            border: "1px solid var(--kipu-border)",
+                            color: "var(--kipu-subtle)",
+                          }}
+                          onMouseEnter={e => {
+                            e.currentTarget.style.color = "var(--kipu-accent)";
+                            e.currentTarget.style.borderColor = "var(--kipu-accent)";
+                          }}
+                          onMouseLeave={e => {
+                            e.currentTarget.style.color = "var(--kipu-subtle)";
+                            e.currentTarget.style.borderColor = "var(--kipu-border)";
+                          }}
+                          title="Escanear código"
+                        >
+                          <Camera size={13} />
+                        </button>
+                      </div>
+                      {esCodigoDuplicado && (
+                        <span className="text-[10px]" style={{ color: "var(--kipu-danger)" }}>
+                          Ya existe en catálogo
+                        </span>
+                      )}
+                      {!esCodigoDuplicado && !item.codigo.trim() && (
+                        <span className="text-[10px]" style={{ color: "var(--kipu-danger)" }}>
+                          Requerido
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           );
         })}
@@ -519,6 +670,16 @@ export default function ItemsEditor({ items, onChange }: Props) {
         <Plus size={16} />
         Agregar ítem manualmente
       </button>
+
+      {/* Modal Barcode Scanner */}
+      {showScanner && (
+        <Suspense fallback={null}>
+          <BarcodeScanner
+            onScan={handleScan}
+            onClose={() => setShowScanner(false)}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }

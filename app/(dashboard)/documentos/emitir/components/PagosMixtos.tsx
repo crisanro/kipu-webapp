@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Plus, Trash2, AlertTriangle } from "lucide-react";
 
 // ── Tipos ──────────────────────────────────────────────────────────────────────
-export type FormaPagoCode = "01" | "15" | "16" | "17" | "19" | "20";
+export type FormaPagoCode = "01" | "15" | "16" | "17" | "18" | "19" | "20" | "21";
 
 export interface PagoItem {
   _id:        string;
@@ -21,12 +21,14 @@ interface Props {
 }
 
 const FORMAS_PAGO: { value: FormaPagoCode; label: string }[] = [
-  { value: "01", label: "Efectivo" },
-  { value: "16", label: "Tarjeta de débito" },
-  { value: "19", label: "Tarjeta de crédito" },
-  { value: "17", label: "Dinero electrónico" },
-  { value: "20", label: "Transferencia bancaria" },
+  { value: "01", label: "Sin utilización del sistema financiero" },
   { value: "15", label: "Compensación de deudas" },
+  { value: "16", label: "Tarjeta de débito" },
+  { value: "17", label: "Dinero electrónico" },
+  { value: "18", label: "Tarjeta prepago" },
+  { value: "19", label: "Tarjeta de crédito" },
+  { value: "20", label: "Otros con utilización del sistema financiero" },
+  { value: "21", label: "Endoso de títulos" },
 ];
 
 const r2  = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
@@ -98,6 +100,52 @@ export default function PagosMixtos({
       }}
     >
       <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>Forma de pago</h2>
+
+      {/* Shortcuts */}
+      <div className="flex gap-2 flex-wrap">
+        {[
+          { code: "01" as FormaPagoCode, label: "Efectivo" },
+          { code: "16" as FormaPagoCode, label: "Débito" },
+          { code: "19" as FormaPagoCode, label: "Crédito" },
+        ].map(sc => (
+          <button
+            key={sc.code}
+            type="button"
+            onClick={() => {
+              // Si solo hay un pago y está vacío (default), cambiar su forma de pago
+              if (pagos.length === 1 && pagos[0].forma_pago === "01" && pagos[0].total === null) {
+                editPago(pagos[0]._id, "forma_pago", sc.code);
+              } else {
+                // Agregar nuevo pago con esta forma
+                const hayUnoSinTotal = pagos.some(p => p.total === null);
+                onChange([...pagos, {
+                  _id: genId(),
+                  forma_pago: sc.code,
+                  total: hayUnoSinTotal ? 0 : null,
+                }]);
+              }
+            }}
+            className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+            style={{
+              border: "1px solid var(--kipu-border)",
+              color: "var(--kipu-muted)",
+              background: "transparent",
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.borderColor = "var(--kipu-accent)";
+              e.currentTarget.style.color = "var(--kipu-accent)";
+              e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-accent) 5%, transparent)";
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.borderColor = "var(--kipu-border)";
+              e.currentTarget.style.color = "var(--kipu-muted)";
+              e.currentTarget.style.background = "transparent";
+            }}
+          >
+            {sc.label}
+          </button>
+        ))}
+      </div>
 
       {/* Lista de pagos */}
       <div className="space-y-2">
