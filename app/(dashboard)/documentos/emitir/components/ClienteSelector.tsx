@@ -2,6 +2,7 @@
 import { useRef, useEffect, useCallback, useState } from "react";
 import api from "@/lib/api";
 import { Search, User, X, Check, AlertCircle, Loader2 } from "lucide-react";
+import { lookupIdentificacion } from "@/lib/identificacion-lookup";
 
 interface Cliente {
   id:                      string;
@@ -90,48 +91,7 @@ function validarIdentificacion(
   return { ok: true, error: "" };
 }
 
-// ── Lookup externo ───────────────────────────────────────────────────────────
-async function buscarIdentificacionExterna(cedula: string): Promise<string | null> {
-  try {
-    // Paso 1: validar que existe
-    const validateRes = await fetch(
-      `https://app3902.privynote.net/api/v1/validate/client?identification=${cedula}&type=30`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Origin": "https://consultasecuador.com",
-          "Referer": "https://consultasecuador.com/",
-        },
-        body: "{}",
-      }
-    );
-    const validateData = await validateRes.json();
-    if (!validateData?.data?.exists) return null;
 
-    // Paso 2: obtener nombre
-    const findRes = await fetch(
-      "https://app3902.privynote.net/api/v2/clients/find-by-id",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Origin": "https://consultasecuador.com",
-          "Referer": "https://consultasecuador.com/",
-        },
-        body: JSON.stringify({ identification: cedula, type: "nm3435" }),
-      }
-    );
-    const findData = await findRes.json();
-    if (findData?.success && findData?.data?.name) {
-      return findData.data.name;
-    }
-    return null;
-  } catch (err) {
-    console.warn("[Lookup externo] Error:", err);
-    return null;
-  }
-}
 
 // ── Componente ───────────────────────────────────────────────────────────────
 export default function ClienteSelector({
@@ -213,48 +173,18 @@ export default function ClienteSelector({
     setLookupLoading(true);
     setLookupMsg("");
 
-    const cedula = clienteNuevo.identificacion.substring(0, 10);
+    const result = await lookupIdentificacion(clienteNuevo.identificacion);
 
-    try {
-      // 1. Buscar en cache del backend
-      const cacheRes = await api.get(
-        `/api/v1/app/clientes/identificaciones/lookup?id=${cedula}`
-      );
-
-      if (cacheRes.data?.found) {
-        onClienteNuevo({
-          ...clienteNuevo,
-          razon_social: cacheRes.data.data.razon_social,
-        });
-        setLookupMsg("✓ Encontrado");
-        setLookupLoading(false);
-        return;
-      }
-
-      // 2. No está en cache — buscar en API externo
-      const nombre = await buscarIdentificacionExterna(cedula);
-
-      if (nombre) {
-        onClienteNuevo({ ...clienteNuevo, razon_social: nombre });
-        setLookupMsg("✓ Encontrado");
-
-        // 3. Guardar en cache para futuras consultas
-        try {
-          await api.post("/api/v1/app/clientes/identificaciones", {
-            identificacion: clienteNuevo.identificacion,
-            razon_social:   nombre,
-          });
-        } catch {
-          // No pasa nada si falla el cache
-        }
-      } else {
-        setLookupMsg("No encontrado — ingresa el nombre manualmente");
-      }
-    } catch {
-      setLookupMsg("Error al consultar — ingresa el nombre manualmente");
-    } finally {
-      setLookupLoading(false);
+    if (result.error) {
+      setLookupMsg(result.error);
+    } else if (result.found && result.nombre) {
+      onClienteNuevo({ ...clienteNuevo, razon_social: result.nombre });
+      setLookupMsg("✓ Encontrado");
+    } else {
+      setLookupMsg("No encontrado — ingresa el nombre manualmente");
     }
+
+    setLookupLoading(false);
   };
 
   // ── Handlers ──────────────────────────────────────────────────────────────

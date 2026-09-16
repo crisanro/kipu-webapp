@@ -6,8 +6,9 @@ import { usePermiso } from "@/hooks/usePermiso";
 import SinAcceso from "@/components/SinAcceso";
 import {
   Search, Plus, Users, X,
-  ChevronDown, Save, AlertCircle, Check
+  ChevronDown, Save, AlertCircle, Check, Loader2
 } from "lucide-react";
+import { lookupIdentificacion } from "@/lib/identificacion-lookup";
 
 interface Persona {
   uid:                     string;
@@ -95,7 +96,7 @@ function validarIdentificacion(tipo: string, valor: string): { ok: boolean; erro
 }
 
 function validarEmail(email: string): boolean {
-  if (!email) return true; // opcional
+  if (!email) return true;
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
@@ -111,7 +112,9 @@ export default function PersonasPage() {
   const [saving,    setSaving]    = useState(false);
   const [error,     setError]     = useState("");
 
-  // Validación reactiva
+  const [lookupLoading, setLookupLoading] = useState(false);
+  const [lookupMsg,     setLookupMsg]     = useState("");
+
   const valId    = validarIdentificacion(form.tipo_identificacion_sri, form.identificacion);
   const emailOk  = validarEmail(form.email);
   const puedeGuardar =
@@ -119,6 +122,11 @@ export default function PersonasPage() {
     emailOk &&
     form.razon_social.trim().length > 0 &&
     !saving;
+
+  const puedeBuscar =
+    ["04", "05"].includes(form.tipo_identificacion_sri) &&
+    valId.ok &&
+    !lookupLoading;
 
   const cargar = useCallback(async () => {
     setLoading(true);
@@ -141,9 +149,29 @@ export default function PersonasPage() {
     c.email?.toLowerCase().includes(query.toLowerCase())
   );
 
-  // Al cambiar tipo, limpiar identificación
   const handleTipoChange = (tipo: string) => {
-    setForm({ ...form, tipo_identificacion_sri: tipo, identificacion: "" });
+    setForm({ ...form, tipo_identificacion_sri: tipo, identificacion: "", razon_social: "" });
+    setLookupMsg("");
+  };
+
+  // ── Lookup ──────────────────────────────────────────────────────────────────
+  const handleLookup = async () => {
+    if (!puedeBuscar) return;
+    setLookupLoading(true);
+    setLookupMsg("");
+
+    const result = await lookupIdentificacion(form.identificacion);
+
+    if (result.error) {
+      setLookupMsg(result.error);
+    } else if (result.found && result.nombre) {
+      setForm((prev) => ({ ...prev, razon_social: result.nombre! }));
+      setLookupMsg("✓ Encontrado");
+    } else {
+      setLookupMsg("No encontrado — ingresa el nombre manualmente");
+    }
+
+    setLookupLoading(false);
   };
 
   const handleSave = async () => {
@@ -163,6 +191,7 @@ export default function PersonasPage() {
       await cargar();
       setShowModal(false);
       setForm(EMPTY_FORM);
+      setLookupMsg("");
     } catch (err: any) {
       setError(err?.response?.data?.detail ?? "Error al guardar.");
     } finally {
@@ -174,6 +203,7 @@ export default function PersonasPage() {
     setShowModal(true);
     setForm(EMPTY_FORM);
     setError("");
+    setLookupMsg("");
   };
 
   return (
@@ -327,7 +357,7 @@ export default function PersonasPage() {
             </div>
 
             <div className="p-5 space-y-3">
-              {/* Tipo + Identificación */}
+              {/* Tipo + Identificación + Buscar */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Tipo ID</label>
@@ -357,46 +387,96 @@ export default function PersonasPage() {
                 </div>
                 <div>
                   <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Identificación *</label>
-                  <div className="relative">
-                    <input
-                      value={form.identificacion}
-                      onChange={(e) => {
-                        const val = ["04", "05"].includes(form.tipo_identificacion_sri)
-                          ? e.target.value.replace(/\D/g, "")
-                          : e.target.value.toUpperCase();
-                        setForm({ ...form, identificacion: val });
-                      }}
-                      placeholder={
-                        form.tipo_identificacion_sri === "04" ? "RUC 13 dígitos" :
-                        form.tipo_identificacion_sri === "05" ? "Cédula 10 dígitos" :
-                        "Número"
-                      }
-                      maxLength={
-                        form.tipo_identificacion_sri === "04" ? 13 :
-                        form.tipo_identificacion_sri === "05" ? 10 : 20
-                      }
-                      className="w-full px-3 py-2 rounded-lg text-sm pr-7 transition-colors focus:outline-none"
-                      style={{
-                        background: "var(--kipu-surface)",
-                        border: valId.error
-                          ? "1px solid color-mix(in srgb, var(--kipu-danger) 70%, transparent)"
-                          : "1px solid var(--kipu-border)",
-                        color: "var(--kipu-text)",
-                      }}
-                      onFocus={e => {
-                        if (!valId.error) e.currentTarget.style.borderColor = "var(--kipu-accent)";
-                      }}
-                      onBlur={e => {
-                        if (!valId.error) e.currentTarget.style.borderColor = "var(--kipu-border)";
-                      }}
-                    />
-                    {valId.ok && form.identificacion && (
-                      <Check size={12} className="absolute right-2.5 top-1/2 -translate-y-1/2" style={{ color: "var(--kipu-success)" }} />
+                  <div className="flex gap-1">
+                    <div className="relative flex-1">
+                      <input
+                        value={form.identificacion}
+                        onChange={(e) => {
+                          const val = ["04", "05"].includes(form.tipo_identificacion_sri)
+                            ? e.target.value.replace(/\D/g, "")
+                            : e.target.value.toUpperCase();
+                          setForm({ ...form, identificacion: val });
+                          setLookupMsg("");
+                        }}
+                        placeholder={
+                          form.tipo_identificacion_sri === "04" ? "RUC 13 dígitos" :
+                          form.tipo_identificacion_sri === "05" ? "Cédula 10 dígitos" :
+                          "Número"
+                        }
+                        maxLength={
+                          form.tipo_identificacion_sri === "04" ? 13 :
+                          form.tipo_identificacion_sri === "05" ? 10 : 20
+                        }
+                        className="w-full px-3 py-2 rounded-lg text-sm pr-7 transition-colors focus:outline-none"
+                        style={{
+                          background: "var(--kipu-surface)",
+                          border: valId.error
+                            ? "1px solid color-mix(in srgb, var(--kipu-danger) 70%, transparent)"
+                            : "1px solid var(--kipu-border)",
+                          color: "var(--kipu-text)",
+                        }}
+                        onFocus={e => {
+                          if (!valId.error) e.currentTarget.style.borderColor = "var(--kipu-accent)";
+                        }}
+                        onBlur={e => {
+                          if (!valId.error) e.currentTarget.style.borderColor = "var(--kipu-border)";
+                        }}
+                      />
+                      {valId.ok && form.identificacion && !["04", "05"].includes(form.tipo_identificacion_sri) && (
+                        <Check size={12} className="absolute right-2.5 top-1/2 -translate-y-1/2" style={{ color: "var(--kipu-success)" }} />
+                      )}
+                    </div>
+
+                    {/* Botón buscar */}
+                    {["04", "05"].includes(form.tipo_identificacion_sri) && (
+                      <button
+                        type="button"
+                        onClick={handleLookup}
+                        disabled={!puedeBuscar}
+                        className="px-2 rounded-lg transition-colors shrink-0 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center"
+                        style={{
+                          border: "1px solid var(--kipu-border)",
+                          color: "var(--kipu-subtle)",
+                          minWidth: "32px",
+                        }}
+                        onMouseEnter={e => {
+                          if (puedeBuscar) {
+                            e.currentTarget.style.color = "var(--kipu-accent)";
+                            e.currentTarget.style.borderColor = "var(--kipu-accent)";
+                          }
+                        }}
+                        onMouseLeave={e => {
+                          if (puedeBuscar) {
+                            e.currentTarget.style.color = "var(--kipu-subtle)";
+                            e.currentTarget.style.borderColor = "var(--kipu-border)";
+                          }
+                        }}
+                        title="Buscar nombre por cédula/RUC"
+                      >
+                        {lookupLoading
+                          ? <Loader2 size={13} className="animate-spin" />
+                          : <Search size={13} />
+                        }
+                      </button>
                     )}
                   </div>
                   {valId.error && (
                     <p className="flex items-center gap-1 mt-1 text-xs" style={{ color: "var(--kipu-danger)" }}>
                       <AlertCircle size={10} /> {valId.error}
+                    </p>
+                  )}
+                  {lookupMsg && (
+                    <p
+                      className="text-xs mt-1"
+                      style={{
+                        color: lookupMsg.startsWith("✓")
+                          ? "var(--kipu-success)"
+                          : lookupMsg.includes("Demasiadas")
+                            ? "var(--kipu-danger)"
+                            : "var(--kipu-subtle)",
+                      }}
+                    >
+                      {lookupMsg}
                     </p>
                   )}
                 </div>

@@ -1,4 +1,3 @@
-// app/manifest.ts
 import { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
@@ -8,8 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description:      "Facturación electrónica SRI para Ecuador",
     start_url:        "/dashboard",
     display:          "standalone",
-    background_color: "#030712",
-    theme_color:      "#4f46e5",
+    background_color: "#0f172a",
+    theme_color:      "#6366f1",
     orientation:      "portrait",
     icons: [
       {
