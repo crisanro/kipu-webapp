@@ -18,8 +18,8 @@ interface Producto {
 
 export interface Item {
   _id:              string;
-  _fromCatalog?:    boolean; // Flag para identificar items del catálogo
-  guardar_catalogo?: boolean; // Flag para guardar nuevos productos en el catálogo
+  _fromCatalog?:    boolean;
+  guardar_catalogo?: boolean;
   codigo:           string;
   descripcion:      string;
   cantidad:         number;
@@ -85,23 +85,16 @@ function InputDecimal({
 }) {
   const [valStr, setValStr] = useState<string>(value === 0 ? "" : String(value));
 
-  // Sincronizar si cambia el estado desde fuera (p. ej. al seleccionar del catálogo)
   useEffect(() => {
     setValStr(value === 0 ? "" : String(value));
   }, [value]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let raw = e.target.value;
-    // Solo permitir números, una sola coma o un solo punto
     raw = raw.replace(/[^0-9.,]/g, "");
-    
-    // Evitar múltiples separadores
     const parts = raw.split(/[.,]/);
     if (parts.length > 2) return;
-
     setValStr(raw);
-
-    // Convertir a número para actualizar el cálculo superior
     const num = parseFloat(raw.replace(",", "."));
     onChange(isNaN(num) ? 0 : num);
   };
@@ -138,12 +131,12 @@ export default function ItemsEditor({ items, onChange }: Props) {
   const [productoLoading,   setProductoLoading]   = useState(false);
   const [showProductos,     setShowProductos]     = useState(false);
   const [showScanner,       setShowScanner]       = useState(false);
+  const [scanForItemId,     setScanForItemId]     = useState<string | null>(null);
   const [codigosExistentes, setCodigosExistentes] = useState<Set<string>>(new Set());
 
   const timer       = useRef<ReturnType<typeof setTimeout> | null>(null);
   const productoRef = useRef<HTMLDivElement>(null);
 
-  // Cerrar dropdown al hacer clic fuera
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (productoRef.current && !productoRef.current.contains(e.target as Node)) {
@@ -154,7 +147,6 @@ export default function ItemsEditor({ items, onChange }: Props) {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  // ── Verificar código duplicado en catálogo ───────────────────────────────
   const verificarCodigo = useCallback(async (codigo: string) => {
     if (!codigo.trim()) return;
     try {
@@ -171,7 +163,6 @@ export default function ItemsEditor({ items, onChange }: Props) {
     } catch {}
   }, []);
 
-  // ── Buscar productos ─────────────────────────────────────────────────────────
   const buscarProductos = useCallback(async (q: string) => {
     if (!q || q.length < 1) { setProductoResults([]); return; }
     setProductoLoading(true);
@@ -192,7 +183,10 @@ export default function ItemsEditor({ items, onChange }: Props) {
     return () => { if (timer.current) clearTimeout(timer.current); };
   }, [productoQuery, buscarProductos]);
 
-  // ── Acciones ─────────────────────────────────────────────────────────────────
+  const editItem = (id: string, field: keyof Item, value: any) => {
+    onChange(items.map(item => item._id === id ? { ...item, [field]: value } : item));
+  };
+
   const seleccionarProducto = useCallback((p: Producto) => {
     onChange([...items, {
       _id:            genId(),
@@ -212,17 +206,24 @@ export default function ItemsEditor({ items, onChange }: Props) {
 
   const handleScan = useCallback((code: string) => {
     setShowScanner(false);
-    // Buscar en catálogo por código exacto
+
+    // Si estamos escaneando para un ítem específico, solo escribir el código en su input
+    if (scanForItemId) {
+      editItem(scanForItemId, "codigo", code.toUpperCase());
+      verificarCodigo(code);
+      setScanForItemId(null);
+      return;
+    }
+
+    // Flujo normal: buscar en catálogo y agregar ítem
     api.get(`/api/v1/app/productos/buscar?q=${encodeURIComponent(code)}`)
       .then(res => {
         const match = (res.data.data ?? []).find(
           (p: Producto) => p.codigo?.toUpperCase() === code.toUpperCase()
         );
         if (match) {
-          // Encontrado — agregar del catálogo
           seleccionarProducto(match);
         } else {
-          // No encontrado — crear ítem con código pre-llenado
           onChange([...items, {
             _id: genId(),
             codigo: code,
@@ -237,7 +238,6 @@ export default function ItemsEditor({ items, onChange }: Props) {
         }
       })
       .catch(() => {
-        // Error — crear ítem con código pre-llenado
         onChange([...items, {
           _id: genId(),
           codigo: code,
@@ -250,11 +250,7 @@ export default function ItemsEditor({ items, onChange }: Props) {
           unidad: "UNIDAD",
         }]);
       });
-  }, [items, onChange, seleccionarProducto]);
-
-  const editItem = (id: string, field: keyof Item, value: any) => {
-    onChange(items.map(item => item._id === id ? { ...item, [field]: value } : item));
-  };
+  }, [items, onChange, seleccionarProducto, scanForItemId, editItem, verificarCodigo]);
 
   const removeItem = (id: string) => {
     if (items.length === 1) return;
@@ -316,7 +312,10 @@ export default function ItemsEditor({ items, onChange }: Props) {
           ) : (
             <button
               type="button"
-              onClick={() => setShowScanner(true)}
+              onClick={() => {
+                setScanForItemId(null);
+                setShowScanner(true);
+              }}
               className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded transition-colors"
               style={{ color: "var(--kipu-subtle)" }}
               onMouseEnter={(e) => (e.currentTarget.style.color = "var(--kipu-accent)")}
@@ -397,7 +396,6 @@ export default function ItemsEditor({ items, onChange }: Props) {
                   #{index + 1}
                 </span>
 
-                {/* Cantidad */}
                 <InputDecimal
                   value={item.cantidad}
                   onChange={(v) => editItem(item._id, "cantidad", v)}
@@ -451,7 +449,6 @@ export default function ItemsEditor({ items, onChange }: Props) {
 
               {/* Fila 2 — precio + descuento + IVA + total */}
               <div className="grid grid-cols-12 gap-2 items-end">
-                {/* Precio unitario */}
                 <div className="col-span-4 sm:col-span-3 space-y-1">
                   <label
                     className="text-[10px] uppercase font-semibold tracking-wider block"
@@ -473,7 +470,6 @@ export default function ItemsEditor({ items, onChange }: Props) {
                   />
                 </div>
 
-                {/* Descuento */}
                 <div className="col-span-4 sm:col-span-4 space-y-1">
                   <label
                     className="text-[10px] uppercase font-semibold tracking-wider block"
@@ -518,7 +514,6 @@ export default function ItemsEditor({ items, onChange }: Props) {
                   </div>
                 </div>
 
-                {/* IVA */}
                 <div className="col-span-4 sm:col-span-2 space-y-1">
                   <label
                     className="text-[10px] uppercase font-semibold tracking-wider block"
@@ -547,7 +542,6 @@ export default function ItemsEditor({ items, onChange }: Props) {
                   </select>
                 </div>
 
-                {/* Total ítem */}
                 <div
                   className="col-span-12 sm:col-span-3 flex sm:flex-col justify-between sm:justify-end items-center sm:items-end pt-2 sm:pt-0"
                   style={{
@@ -584,7 +578,7 @@ export default function ItemsEditor({ items, onChange }: Props) {
                     </span>
                   </label>
 
-                                    {item.guardar_catalogo && (
+                  {item.guardar_catalogo && (
                     <div className="flex items-center gap-2">
                       <div className="flex gap-1">
                         <input
@@ -608,7 +602,10 @@ export default function ItemsEditor({ items, onChange }: Props) {
                         />
                         <button
                           type="button"
-                          onClick={() => setShowScanner(true)}
+                          onClick={() => {
+                            setScanForItemId(item._id);
+                            setShowScanner(true);
+                          }}
                           className="px-1.5 rounded-lg transition-colors shrink-0"
                           style={{
                             border: "1px solid var(--kipu-border)",
@@ -676,7 +673,7 @@ export default function ItemsEditor({ items, onChange }: Props) {
         <Suspense fallback={null}>
           <BarcodeScanner
             onScan={handleScan}
-            onClose={() => setShowScanner(false)}
+            onClose={() => { setShowScanner(false); setScanForItemId(null); }}
           />
         </Suspense>
       )}
