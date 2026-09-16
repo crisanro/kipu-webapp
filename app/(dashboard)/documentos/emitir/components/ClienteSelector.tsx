@@ -1,7 +1,7 @@
 "use client";
 import { useRef, useEffect, useCallback, useState } from "react";
 import api from "@/lib/api";
-import { Search, User, X, Check, AlertCircle } from "lucide-react";
+import { Search, User, X, Check, AlertCircle, Loader2 } from "lucide-react";
 
 interface Cliente {
   id:                      string;
@@ -32,19 +32,17 @@ function validarIdentificacion(
   tipo: string,
   valor: string
 ): { ok: boolean; error: string } {
-  const v = valor.replace(/\D/g, ""); // solo dígitos
+  const v = valor.replace(/\D/g, "");
 
-  if (!v) return { ok: false, error: "" }; // vacío — sin mensaje aún
+  if (!v) return { ok: false, error: "" };
 
   if (tipo === "05") {
-    // Cédula — 10 dígitos, módulo 10
     if (v.length !== 10) return { ok: false, error: "La cédula debe tener 10 dígitos." };
     const prov = parseInt(v.substring(0, 2));
     if ((prov < 1 || prov > 24) && prov !== 30)
       return { ok: false, error: "Provincia inválida (primeros 2 dígitos)." };
     if (parseInt(v[2]) >= 6)
       return { ok: false, error: "Tercer dígito de cédula inválido." };
-    // Módulo 10
     const digitos = v.split("").map(Number);
     const verificador = digitos[9];
     let suma = 0;
@@ -61,15 +59,11 @@ function validarIdentificacion(
   if (tipo === "04") {
     if (v.length !== 13) return { ok: false, error: "El RUC debe tener 13 dígitos." };
     if (!v.endsWith("001")) return { ok: false, error: "El RUC debe terminar en 001." };
-    
     const prov = parseInt(v.substring(0, 2));
     if ((prov < 1 || prov > 24) && prov !== 30)
       return { ok: false, error: "Provincia inválida (primeros 2 dígitos)." };
-    
     const tercero = parseInt(v[2]);
-
     if (tercero >= 0 && tercero <= 5) {
-      // Persona natural — validar módulo 10 sobre los primeros 10 dígitos
       const digitos = v.substring(0, 10).split("").map(Number);
       const verificador = digitos[9];
       let suma = 0;
@@ -81,22 +75,62 @@ function validarIdentificacion(
       const calc = suma % 10 === 0 ? 0 : 10 - (suma % 10);
       if (calc !== verificador) return { ok: false, error: "RUC de persona natural inválido." };
     } else if (tercero === 6 || tercero === 9) {
-      // Jurídico público (6) o privado (9) — no se valida dígito verificador
+      // Jurídico — no se valida dígito verificador
     } else {
-      // 7 u 8 — inválido
       return { ok: false, error: "Tercer dígito de RUC inválido." };
     }
-
     return { ok: true, error: "" };
   }
 
-  // Pasaporte / Exterior — libre, solo que no esté vacío
   if (tipo === "06" || tipo === "08") {
     if (valor.trim().length < 2) return { ok: false, error: "Ingresa la identificación." };
     return { ok: true, error: "" };
   }
 
   return { ok: true, error: "" };
+}
+
+// ── Lookup externo ───────────────────────────────────────────────────────────
+async function buscarIdentificacionExterna(cedula: string): Promise<string | null> {
+  try {
+    // Paso 1: validar que existe
+    const validateRes = await fetch(
+      `https://app3902.privynote.net/api/v1/validate/client?identification=${cedula}&type=30`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Origin": "https://consultasecuador.com",
+          "Referer": "https://consultasecuador.com/",
+        },
+        body: "{}",
+      }
+    );
+    const validateData = await validateRes.json();
+    if (!validateData?.data?.exists) return null;
+
+    // Paso 2: obtener nombre
+    const findRes = await fetch(
+      "https://app3902.privynote.net/api/v2/clients/find-by-id",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Origin": "https://consultasecuador.com",
+          "Referer": "https://consultasecuador.com/",
+        },
+        body: JSON.stringify({ identification: cedula, type: "nm3435" }),
+      }
+    );
+    const findData = await findRes.json();
+    if (findData?.success && findData?.data?.name) {
+      return findData.data.name;
+    }
+    return null;
+  } catch (err) {
+    console.warn("[Lookup externo] Error:", err);
+    return null;
+  }
 }
 
 // ── Componente ───────────────────────────────────────────────────────────────
@@ -109,23 +143,31 @@ export default function ClienteSelector({
   onClienteNuevo,
   onClear,
 }: Props) {
-  const [query,      setQuery]      = useState("");
-  const [results,    setResults]    = useState<Cliente[]>([]);
-  const [loading,    setLoading]    = useState(false);
-  const [showDrop,   setShowDrop]   = useState(false);
-  const [confirmado, setConfirmado] = useState(false);
+  const [query,         setQuery]         = useState("");
+  const [results,       setResults]       = useState<Cliente[]>([]);
+  const [loading,       setLoading]       = useState(false);
+  const [showDrop,      setShowDrop]      = useState(false);
+  const [confirmado,    setConfirmado]    = useState(false);
+  const [lookupLoading, setLookupLoading] = useState(false);
+  const [lookupMsg,     setLookupMsg]     = useState("");
 
   const timer   = useRef<ReturnType<typeof setTimeout> | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
 
-  // Validación en tiempo real
   const validacion = clienteNuevo
     ? validarIdentificacion(clienteNuevo.tipo_identificacion_sri, clienteNuevo.identificacion)
     : { ok: false, error: "" };
 
   const puedeConfirmar =
     !!clienteNuevo?.razon_social.trim() &&
-    (validacion.ok || clienteNuevo?.identificacion === ""); // permite vacío para pasaporte raro
+    (validacion.ok || clienteNuevo?.identificacion === "");
+
+  // Solo cédula o RUC natural son buscables
+  const puedeBuscar =
+    !!clienteNuevo &&
+    ["04", "05"].includes(clienteNuevo.tipo_identificacion_sri) &&
+    validacion.ok &&
+    !lookupLoading;
 
   // ── Sync query ───────────────────────────────────────────────────────────
   useEffect(() => {
@@ -134,7 +176,6 @@ export default function ClienteSelector({
     if (!clienteNuevo)     { setQuery(""); }
   }, [clienteSelected, esConsumidorFinal, clienteNuevo]);
 
-  // ── Cerrar dropdown al clic fuera ────────────────────────────────────────
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (wrapRef.current && !wrapRef.current.contains(e.target as Node))
@@ -144,7 +185,7 @@ export default function ClienteSelector({
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  // ── Búsqueda ─────────────────────────────────────────────────────────────
+  // ── Búsqueda clientes ────────────────────────────────────────────────────
   const buscar = useCallback(async (q: string) => {
     if (!q || q.length < 2) { setResults([]); return; }
     setLoading(true);
@@ -164,6 +205,57 @@ export default function ClienteSelector({
     timer.current = setTimeout(() => buscar(query), 300);
     return () => { if (timer.current) clearTimeout(timer.current); };
   }, [query, buscar]);
+
+  // ── Lookup identificación ────────────────────────────────────────────────
+  const handleLookup = async () => {
+    if (!clienteNuevo || !puedeBuscar) return;
+
+    setLookupLoading(true);
+    setLookupMsg("");
+
+    const cedula = clienteNuevo.identificacion.substring(0, 10);
+
+    try {
+      // 1. Buscar en cache del backend
+      const cacheRes = await api.get(
+        `/api/v1/app/clientes/identificaciones/lookup?id=${cedula}`
+      );
+
+      if (cacheRes.data?.found) {
+        onClienteNuevo({
+          ...clienteNuevo,
+          razon_social: cacheRes.data.data.razon_social,
+        });
+        setLookupMsg("✓ Encontrado");
+        setLookupLoading(false);
+        return;
+      }
+
+      // 2. No está en cache — buscar en API externo
+      const nombre = await buscarIdentificacionExterna(cedula);
+
+      if (nombre) {
+        onClienteNuevo({ ...clienteNuevo, razon_social: nombre });
+        setLookupMsg("✓ Encontrado");
+
+        // 3. Guardar en cache para futuras consultas
+        try {
+          await api.post("/api/v1/app/clientes/identificaciones", {
+            identificacion: clienteNuevo.identificacion,
+            razon_social:   nombre,
+          });
+        } catch {
+          // No pasa nada si falla el cache
+        }
+      } else {
+        setLookupMsg("No encontrado — ingresa el nombre manualmente");
+      }
+    } catch {
+      setLookupMsg("Error al consultar — ingresa el nombre manualmente");
+    } finally {
+      setLookupLoading(false);
+    }
+  };
 
   // ── Handlers ──────────────────────────────────────────────────────────────
   const handleInputChange = (val: string) => {
@@ -193,9 +285,9 @@ export default function ClienteSelector({
     setResults([]);
     setShowDrop(false);
     setConfirmado(false);
+    setLookupMsg("");
   };
 
-  // Confirmar — solo por clic explícito, nunca automático
   const confirmarClienteNuevo = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -357,12 +449,13 @@ export default function ClienteSelector({
                 </button>
               ))}
 
-              {/* Registrar nuevo — siempre al final */}
+              {/* Registrar nuevo */}
               <button
                 type="button"
                 onClick={() => {
                   setShowDrop(false);
                   setConfirmado(false);
+                  setLookupMsg("");
                   onClienteNuevo({
                     tipo_identificacion_sri: "05",
                     identificacion:          "",
@@ -405,7 +498,10 @@ export default function ClienteSelector({
           <div className="grid grid-cols-2 gap-2">
             <select
               value={clienteNuevo.tipo_identificacion_sri}
-              onChange={(e) => onClienteNuevo({ ...clienteNuevo, tipo_identificacion_sri: e.target.value, identificacion: "" })}
+              onChange={(e) => {
+                onClienteNuevo({ ...clienteNuevo, tipo_identificacion_sri: e.target.value, identificacion: "", razon_social: "" });
+                setLookupMsg("");
+              }}
               className="px-2 py-1.5 rounded-lg text-xs focus:outline-none transition-colors"
               style={{
                 background: "var(--kipu-surface)",
@@ -420,38 +516,76 @@ export default function ClienteSelector({
               <option value="06">Pasaporte</option>
               <option value="08">Exterior</option>
             </select>
-            <div className="relative">
-              <input
-                value={clienteNuevo.identificacion}
-                onChange={(e) => {
-                  const val = ["04", "05"].includes(clienteNuevo.tipo_identificacion_sri)
-                    ? e.target.value.replace(/\D/g, "")
-                    : e.target.value.toUpperCase();
-                  onClienteNuevo({ ...clienteNuevo, identificacion: val });
-                }}
-                placeholder={
-                  clienteNuevo.tipo_identificacion_sri === "04" ? "RUC (13 dígitos)" :
-                  clienteNuevo.tipo_identificacion_sri === "05" ? "Cédula (10 dígitos)" :
-                  "Número de pasaporte"
-                }
-                maxLength={clienteNuevo.tipo_identificacion_sri === "04" ? 13 : clienteNuevo.tipo_identificacion_sri === "05" ? 10 : 20}
-                className="w-full px-2 py-1.5 rounded-lg text-xs focus:outline-none transition-colors"
-                style={{
-                  background: "var(--kipu-surface)",
-                  border: validacion.error
-                    ? "1px solid color-mix(in srgb, var(--kipu-danger) 70%, transparent)"
-                    : "1px solid var(--kipu-border)",
-                  color: "var(--kipu-text)",
-                }}
-                onFocus={e => {
-                  if (!validacion.error) e.currentTarget.style.borderColor = "var(--kipu-accent)";
-                }}
-                onBlur={e => {
-                  if (!validacion.error) e.currentTarget.style.borderColor = "var(--kipu-border)";
-                }}
-              />
-              {validacion.ok && clienteNuevo.identificacion && (
-                <Check size={11} className="absolute right-2 top-1/2 -translate-y-1/2" style={{ color: "var(--kipu-success)" }} />
+
+            {/* Input identificación + botón buscar */}
+            <div className="relative flex gap-1">
+              <div className="relative flex-1">
+                <input
+                  value={clienteNuevo.identificacion}
+                  onChange={(e) => {
+                    const val = ["04", "05"].includes(clienteNuevo.tipo_identificacion_sri)
+                      ? e.target.value.replace(/\D/g, "")
+                      : e.target.value.toUpperCase();
+                    onClienteNuevo({ ...clienteNuevo, identificacion: val });
+                    setLookupMsg("");
+                  }}
+                  placeholder={
+                    clienteNuevo.tipo_identificacion_sri === "04" ? "RUC (13 dígitos)" :
+                    clienteNuevo.tipo_identificacion_sri === "05" ? "Cédula (10 dígitos)" :
+                    "Número de pasaporte"
+                  }
+                  maxLength={clienteNuevo.tipo_identificacion_sri === "04" ? 13 : clienteNuevo.tipo_identificacion_sri === "05" ? 10 : 20}
+                  className="w-full px-2 py-1.5 rounded-lg text-xs focus:outline-none transition-colors"
+                  style={{
+                    background: "var(--kipu-surface)",
+                    border: validacion.error
+                      ? "1px solid color-mix(in srgb, var(--kipu-danger) 70%, transparent)"
+                      : "1px solid var(--kipu-border)",
+                    color: "var(--kipu-text)",
+                  }}
+                  onFocus={e => {
+                    if (!validacion.error) e.currentTarget.style.borderColor = "var(--kipu-accent)";
+                  }}
+                  onBlur={e => {
+                    if (!validacion.error) e.currentTarget.style.borderColor = "var(--kipu-border)";
+                  }}
+                />
+                {validacion.ok && clienteNuevo.identificacion && !puedeBuscar && (
+                  <Check size={11} className="absolute right-2 top-1/2 -translate-y-1/2" style={{ color: "var(--kipu-success)" }} />
+                )}
+              </div>
+
+              {/* Botón buscar nombre */}
+              {["04", "05"].includes(clienteNuevo.tipo_identificacion_sri) && (
+                <button
+                  type="button"
+                  onClick={handleLookup}
+                  disabled={!puedeBuscar}
+                  className="px-2 rounded-lg transition-colors shrink-0 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center"
+                  style={{
+                    border: "1px solid var(--kipu-border)",
+                    color: "var(--kipu-subtle)",
+                    minWidth: "32px",
+                  }}
+                  onMouseEnter={e => {
+                    if (puedeBuscar) {
+                      e.currentTarget.style.color = "var(--kipu-accent)";
+                      e.currentTarget.style.borderColor = "var(--kipu-accent)";
+                    }
+                  }}
+                  onMouseLeave={e => {
+                    if (puedeBuscar) {
+                      e.currentTarget.style.color = "var(--kipu-subtle)";
+                      e.currentTarget.style.borderColor = "var(--kipu-border)";
+                    }
+                  }}
+                  title="Buscar nombre por cédula/RUC"
+                >
+                  {lookupLoading
+                    ? <Loader2 size={13} className="animate-spin" />
+                    : <Search size={13} />
+                  }
+                </button>
               )}
             </div>
           </div>
@@ -462,6 +596,20 @@ export default function ClienteSelector({
               <AlertCircle size={11} />
               <p className="text-xs">{validacion.error}</p>
             </div>
+          )}
+
+          {/* Mensaje de lookup */}
+          {lookupMsg && (
+            <p
+              className="text-xs"
+              style={{
+                color: lookupMsg.startsWith("✓")
+                  ? "var(--kipu-success)"
+                  : "var(--kipu-subtle)",
+              }}
+            >
+              {lookupMsg}
+            </p>
           )}
 
           <input
@@ -528,7 +676,7 @@ export default function ClienteSelector({
             </button>
             <button
               type="button"
-              onClick={() => onClienteNuevo(null)}
+              onClick={() => { onClienteNuevo(null); setLookupMsg(""); }}
               className="text-xs transition-colors"
               style={{ color: "var(--kipu-subtle)" }}
               onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
