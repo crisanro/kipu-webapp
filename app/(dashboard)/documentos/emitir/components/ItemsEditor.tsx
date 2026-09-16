@@ -216,6 +216,7 @@ export default function ItemsEditor({ items, onChange }: Props) {
     }
 
     // Flujo normal: buscar en catálogo y agregar ítem
+    setProductoQuery(code);
     api.get(`/api/v1/app/productos/buscar?q=${encodeURIComponent(code)}`)
       .then(res => {
         const match = (res.data.data ?? []).find(
