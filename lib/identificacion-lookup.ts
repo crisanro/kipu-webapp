@@ -6,7 +6,7 @@
 import api from "@/lib/api";
 
 // ── Rate limiter en memoria ────────────────────────────────────────────────
-const LIMIT = 20;
+const LIMIT = 10;
 const WINDOW_MS = 60_000; // 1 minuto
 let timestamps: number[] = [];
 
