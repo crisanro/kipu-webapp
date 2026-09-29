@@ -4,49 +4,78 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { ThemeProvider } from "next-themes";
 import { auth } from "@/lib/firebase";
-import { onAuthStateChanged } from "firebase/auth";
+import { onAuthStateChanged, signOut } from "firebase/auth";
 import { useAuthStore } from "@/store/auth.store";
 import { SWRProvider } from "@/lib/swrConfig";
 import api from "@/lib/api";
 
+const RUTAS_PROTEGIDAS = [
+  "/dashboard", "/documentos", "/personas", "/productos", "/configuracion",
+  "/estructura", "/planes", "/usuarios", "/admin",
+];
+
+const LS_KEYS = ["kipu-ext-token", "kipu-ext-emisor", "kipu-ext-ruc", "kipu-ext-razon"];
+
+// Empresa elegida en esta pestaña (sobrevive recargas, no nuevos logins)
+export const SESSION_EMPRESA_KEY = "kipu-empresa-sesion";
+
+function limpiarStorage() {
+  LS_KEYS.forEach((k) => localStorage.removeItem(k));
+  sessionStorage.removeItem(SESSION_EMPRESA_KEY);
+}
+
 async function cargarEmpresas(token: string) {
   const res = await api.get("/api/v1/app/usuarios/empresas", {
     headers: { Authorization: `Bearer ${token}` },
+    timeout: 15000, // nunca quedarse colgado
   });
   return {
-    empresas: res.data.data ?? [],
-    role:     res.data.role ?? null,
+    empresas:  res.data.data ?? [],
+    role:      res.data.role ?? null,
+    defaultId: res.data.default_id ?? null,
   };
 }
 
 export function AppProviders({ children }: { children: React.ReactNode }) {
   const router   = useRouter();
   const pathname = usePathname();
-  const { empresa, setUser, setEmpresa, setEmpresas, setListo } = useAuthStore();
-  const inicializado = useRef(false);
+  const { setUser, setEmpresa, setEmpresas, setListo } = useAuthStore();
+
+  // uid para el que ya se cargaron empresas con éxito (null = nada cargado)
+  const cargadoPara = useRef<string | null>(null);
+  const pathnameRef = useRef(pathname);
   const [listo, setListoLocal] = useState(false);
+
+  // pathname actualizado sin re-suscribir Firebase en cada navegación
+  useEffect(() => {
+    pathnameRef.current = pathname;
+  }, [pathname]);
 
   useEffect(() => {
     let refreshInterval: NodeJS.Timeout | null = null;
 
+    const marcarListo = () => {
+      setListoLocal(true);
+      setListo(true);
+    };
+
     const unsub = onAuthStateChanged(auth, async (user) => {
+      // ── Sin sesión ─────────────────────────────────────────────
       if (!user) {
-        setListoLocal(true);
-        setListo(true);
-        localStorage.removeItem("kipu-ext-token");
-        localStorage.removeItem("kipu-ext-emisor");
-        localStorage.removeItem("kipu-ext-ruc");
-        localStorage.removeItem("kipu-ext-razon");
-        if (refreshInterval) clearInterval(refreshInterval);
-        const rutasProtegidas = ["/dashboard", "/documentos", "/personas",
-                                 "/productos", "/configuracion", "/estructura",
-                                 "/planes", "/usuarios", "/admin"];
-        if (rutasProtegidas.some(r => pathname.startsWith(r))) {
+        cargadoPara.current = null;
+        limpiarStorage();
+        if (refreshInterval) {
+          clearInterval(refreshInterval);
+          refreshInterval = null;
+        }
+        marcarListo();
+        if (RUTAS_PROTEGIDAS.some((r) => pathnameRef.current.startsWith(r))) {
           router.replace("/login");
         }
         return;
       }
 
+      // ── Con sesión ─────────────────────────────────────────────
       try {
         const token = await user.getIdToken();
         localStorage.setItem("kipu-ext-token", token);
@@ -60,16 +89,15 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
           }, 50 * 60 * 1000);
         }
 
-        if (inicializado.current) {
-          setListoLocal(true);
-          setListo(true);
+        // Ya cargado para este usuario → no repetir
+        if (cargadoPara.current === user.uid) {
           return;
         }
 
-        inicializado.current = true;
         const data = await cargarEmpresas(token);
 
         if (data.empresas.length === 0) {
+          cargadoPara.current = user.uid;
           const params       = new URLSearchParams(window.location.search);
           const empresaParam = params.get("empresa");
           router.replace(empresaParam ? `/bienvenida?empresa=${empresaParam}` : "/bienvenida");
@@ -79,9 +107,12 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
         setUser(user.uid, user.email ?? "", "", data.role);
         setEmpresas(data.empresas);
 
-        const empresaActual = empresa
-          ? data.empresas.find((e: any) => e.id === empresa.id) ?? data.empresas[0]
-          : data.empresas[0];
+        // Prioridad: elegida en esta sesión → predeterminada → primera
+        const empresaSesion = sessionStorage.getItem(SESSION_EMPRESA_KEY);
+        const empresaActual =
+          (empresaSesion && data.empresas.find((e: any) => String(e.id) === empresaSesion)) ||
+          data.empresas.find((e: any) => e.id === data.defaultId) ||
+          data.empresas[0];
 
         setEmpresa({
           id:                    empresaActual.id,
@@ -104,16 +135,18 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
         localStorage.setItem("kipu-ext-ruc",    empresaActual.ruc);
         localStorage.setItem("kipu-ext-razon",  empresaActual.razon_social);
 
+        // Solo se marca como cargado cuando TODO salió bien
+        cargadoPara.current = user.uid;
+
       } catch (error) {
         console.error("[Auth] Error:", error);
-        localStorage.removeItem("kipu-ext-token");
-        localStorage.removeItem("kipu-ext-emisor");
-        localStorage.removeItem("kipu-ext-ruc");
-        localStorage.removeItem("kipu-ext-razon");
+        cargadoPara.current = null;
+        limpiarStorage();
+        // Cerrar sesión para no quedar con Firebase logueado y el store vacío
+        try { await signOut(auth); } catch {}
         router.replace("/login");
       } finally {
-        setListoLocal(true);
-        setListo(true);
+        marcarListo();
       }
     });
 
@@ -121,7 +154,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
       unsub();
       if (refreshInterval) clearInterval(refreshInterval);
     };
-  }, [pathname, router, empresa, setUser, setEmpresa, setEmpresas, setListo]);
+  }, [router, setUser, setEmpresa, setEmpresas, setListo]);
 
   if (!listo) {
     return (

@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { ArrowRight, CheckCircle2, Clock, AlertTriangle, XCircle } from "lucide-react";
+import { ArrowRight, CheckCircle2, Clock, AlertTriangle, XCircle, Ban } from "lucide-react";
 
 interface Props {
   documentos: any[];
@@ -36,6 +36,18 @@ const ESTADO_CONFIG: Record<string, { label: string; color: string; bg: string; 
     color: "var(--kipu-danger)",
     bg: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
     icon: XCircle,
+  },
+  ANULADO: {
+    label: "Anulado",
+    color: "var(--kipu-muted)",
+    bg: "color-mix(in srgb, var(--kipu-muted) 10%, transparent)",
+    icon: Ban,
+  },
+  PENDIENTE: {
+    label: "Pendiente",
+    color: "var(--kipu-subtle)",
+    bg: "color-mix(in srgb, var(--kipu-subtle) 10%, transparent)",
+    icon: Clock,
   },
 };
 
@@ -86,7 +98,7 @@ export default function UltimosDocumentos({ documentos }: Props) {
             Sin comprobantes este mes
           </p>
           <Link
-            href="/documentos/nueva"
+            href="/documentos/emitir/fac"
             className="mt-3 text-xs transition-colors"
             style={{ color: "var(--kipu-accent)" }}
             onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent-h)"}
@@ -98,7 +110,7 @@ export default function UltimosDocumentos({ documentos }: Props) {
       ) : (
         <div>
           {recientes.map((d: any, index: number) => {
-            const estado = ESTADO_CONFIG[d.estado] ?? ESTADO_CONFIG.FIRMADO;
+            const estado = ESTADO_CONFIG[d.estado] ?? ESTADO_CONFIG.PENDIENTE;
             const Icon   = estado.icon;
             return (
               <Link

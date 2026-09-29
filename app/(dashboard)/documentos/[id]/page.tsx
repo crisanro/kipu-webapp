@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { FileText } from "lucide-react";
 import api from "@/lib/api";
-import DetalleShared  from "./components/DetalleShared";
+import DetalleShared, { type FacturaBase } from "./components/DetalleShared";
 import DetalleFactura from "./components/DetalleFactura";
 import DetalleNC      from "./components/DetalleNC";
 import DetalleNDB     from "./components/DetalleNDB";
@@ -62,7 +62,7 @@ export default function DetalleDocumentoPage() {
   }
 
   // Normalizar estructura al modelo unificado
-  const docBase = {
+  const docBase: FacturaBase = {
     id:                      documento.id,
     numero_doc:              documento.numero_doc,
     clave_acceso:            documento.clave_acceso,
@@ -76,14 +76,19 @@ export default function DetalleDocumentoPage() {
     cod_doc:                 documento.cod_doc,
     mensajes_sri:            documento.mensajes_sri,
     fecha_autorizacion:      documento.fecha_autorizacion,
+    motivo_anulacion:        documento.motivo_anulacion ?? null,
+    fecha_anulacion:         documento.fecha_anulacion ?? null,
     importe_total:           documento.importe_total,
     datos:                   documento.datos ?? {},
     doc_origen_emitido_id:   documento.doc_origen_emitido_id,
     doc_origen_recibido_id:  documento.doc_origen_recibido_id,
     documentos_derivados:    documento.documentos_derivados ?? [],
     doc_origen_emitido:      documento.doc_origen_emitido  ?? null,
-    doc_origen_recibido:      documento.doc_origen_recibido ?? null,
+    doc_origen_recibido:     documento.doc_origen_recibido ?? null,
     cliente:                 documento.cliente ?? {},
+    email_comprador:         documento.email_comprador ?? null,
+    es_sandbox:              documento.es_sandbox ?? false,
+    anulacion:               documento.anulacion ?? null,
   };
 
   const renderContenido = () => {

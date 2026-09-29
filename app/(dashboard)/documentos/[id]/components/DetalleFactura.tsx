@@ -1,15 +1,12 @@
 "use client";
-import { useRouter } from "next/navigation";
-import { Copy, RotateCcw } from "lucide-react";
 import {
-  fmt, FORMA_PAGO, TIPO_ID, normalizarTarifa,
+  fmt, FORMA_PAGO, TIPO_ID,
   type FacturaBase
 } from "./DetalleShared";
 
 interface Props { factura: FacturaBase; }
 
 export default function DetalleFactura({ factura }: Props) {
-  const router  = useRouter();
   const datos   = factura.datos ?? {};
   const trib    = datos.infoTributaria ?? {};
   const info    = datos.infoFactura ?? datos.infoLiquidacionCompra ?? {};
@@ -30,41 +27,16 @@ export default function DetalleFactura({ factura }: Props) {
     ? (Array.isArray(datos.infoAdicional.campoAdicional) ? datos.infoAdicional.campoAdicional : [datos.infoAdicional.campoAdicional])
     : [];
 
-  // Cliente desde datos JSONB o desde campo cliente del endpoint
+  // Contraparte: comprador (FAC) o proveedor (LIQ)
+  const esLiq   = factura.tipo_doc === "LIQ";
   const cliente = factura.cliente ?? {};
-  const razon   = info.razonSocialComprador   || datos.legacy_razon_comprador || cliente.razon_social || "—";
-  const idComp  = info.identificacionComprador || datos.legacy_id_comprador   || cliente.identificacion || "—";
-  const tipoId  = info.tipoIdentificacionComprador || "05";
-
-  const duplicar = () => {
-    sessionStorage.setItem("kipu:prefill", JSON.stringify({
-      cliente: idComp === "9999999999999" ? null : {
-        identificacion: idComp,
-        razon_social:    razon,
-        tipo_id:        tipoId,
-      },
-      esConsumidorFinal: idComp === "9999999999999",
-      items: detalles.map((d: any) => {
-        const imp    = d.impuestos?.impuesto;
-        const impArr = Array.isArray(imp) ? imp : [imp];
-        const tarifa = impArr[0]?.tarifa ?? "15";
-        return {
-          codigo:          d.codigoPrincipal !== "S/C" ? d.codigoPrincipal : "",
-          descripcion:    d.descripcion,
-          cantidad:       parseFloat(d.cantidad),
-          precio:         parseFloat(d.precioUnitario),
-          descuento:      parseFloat(d.descuento || 0),
-          tipo_descuento: "$",
-          tipo_iva:       normalizarTarifa(tarifa),
-          unidad:         "UNIDAD",
-        };
-      }),
-      camposAdicionales: adicionales
-        .filter((a: any) => a["@nombre"] !== "PROVEEDOR_SISTEMA_INFORMATICO")
-        .map((a: any) => ({ nombre: a["@nombre"], valor: a["#text"] })),
-    }));
-    router.push("/documentos/emitir/fac");
-  };
+  const razon   = (esLiq ? info.razonSocialProveedor   : info.razonSocialComprador)
+                  || datos.legacy_razon_comprador || cliente.razon_social || "—";
+  const idComp  = (esLiq ? info.identificacionProveedor : info.identificacionComprador)
+                  || datos.legacy_id_comprador   || cliente.identificacion || "—";
+  const tipoId  = (esLiq ? info.tipoIdentificacionProveedor : info.tipoIdentificacionComprador) || "05";
+  const direccion = (esLiq ? info.direccionProveedor : info.direccionComprador)
+                  || cliente.direccion || "—";
 
   return (
     <>
@@ -104,14 +76,15 @@ export default function DetalleFactura({ factura }: Props) {
         }}
       >
         <h2 className="text-xs font-semibold mb-3 uppercase tracking-wide" style={{ color: "var(--kipu-subtle)" }}>
-          Cliente
+          {esLiq ? "Proveedor" : "Cliente"}
         </h2>
         <div className="space-y-2 text-sm">
           {[
             { label: "Razón Social",   value: razon },
             { label: "Tipo ID",        value: TIPO_ID[tipoId] ?? tipoId },
             { label: "Identificación", value: idComp },
-            { label: "Dirección",      value: info.dirEstablecimiento || cliente.direccion || "—" },
+            { label: "Dirección",      value: direccion },
+            ...(factura.email_comprador ? [{ label: "Correo", value: factura.email_comprador }] : []),
           ].map(({ label, value }) => (
             <div key={label} className="flex justify-between">
               <span style={{ color: "var(--kipu-muted)" }}>{label}</span>
