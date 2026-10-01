@@ -9,22 +9,31 @@ import api from "@/lib/api";
 import {
   Search, Plus, FileText, CheckCircle2, Clock,
   XCircle, AlertTriangle, RefreshCw, ChevronDown, ChevronUp,
-  TrendingUp, FlaskConical, Ban  
+  TrendingUp, FlaskConical, Ban, ChevronLeft, ChevronRight
 } from "lucide-react";
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 interface Documento {
-  id:             string;
+  id:              string;
   clave_acceso:   string;
-  numero_doc:     string;
+  numero_doc:      string;
   fecha_emision: string;
   estado_sri:    string;
   tipo_doc:      string;
-  cod_doc:       string;
+  cod_doc:        string;
   razon_social:  string;
   identificacion: string;
   importe_total: number;
   estado_cobro:  string | null;
+}
+
+interface PaginationInfo {
+  page:        number;
+  limit:       number;
+  total_items: number;
+  total_pages: number;
+  has_next:    boolean;
+  has_prev:    boolean;
 }
 
 // ── Configs ───────────────────────────────────────────────────────────────────
@@ -141,8 +150,8 @@ function ResumenTipoCard({ tipo, label, color, data }: {
 // ── Página ─────────────────────────────────────────────────────────────────────
 export default function HistorialPage() {
   const puedeVer = usePermiso("descargar");
-  if (!puedeVer) return <SinAcceso />;
   const searchParams = useSearchParams();
+
   const [documentos,   setDocumentos]   = useState<Documento[]>([]);
   const [resumen,      setResumen]      = useState<any>(null);
   const [loading,      setLoading]      = useState(true);
@@ -151,28 +160,26 @@ export default function HistorialPage() {
   const [filtroEstado, setFiltroEstado] = useState("TODOS");
   const [filtroTipo,   setFiltroTipo]   = useState("TODOS");
 
+  // Paginación
+  const [page, setPage]             = useState(1);
+  const [pagination, setPagination] = useState<PaginationInfo | null>(null);
+
   const { activo: sandboxGlobal } = useSandboxStore();
-  const [sandbox, setSandbox] = useState(sandboxGlobal);
+  const [sandbox, setSandbox]     = useState(sandboxGlobal);
 
-  const [fechaInicio, setFechaInicio] = useState<string>(() => {
+  // Estados temporales de inputs de fecha
+  const [tempFechaInicio, setTempFechaInicio] = useState<string>(() => {
     const fromUrl = searchParams.get("fecha_inicio");
-    if (fromUrl) {
-      guardarFecha(SS_KEY_INICIO, fromUrl);
-      return fromUrl;
-    }
-    return leerFecha(SS_KEY_INICIO);
+    return fromUrl || leerFecha(SS_KEY_INICIO);
   });
-  const [fechaFin, setFechaFin] = useState<string>(() => {
+  const [tempFechaFin, setTempFechaFin] = useState<string>(() => {
     const fromUrl = searchParams.get("fecha_fin");
-    if (fromUrl) {
-      guardarFecha(SS_KEY_FIN, fromUrl);
-      return fromUrl;
-    }
-    return leerFecha(SS_KEY_FIN);
+    return fromUrl || leerFecha(SS_KEY_FIN);
   });
 
-  useEffect(() => { guardarFecha(SS_KEY_INICIO, fechaInicio); }, [fechaInicio]);
-  useEffect(() => { guardarFecha(SS_KEY_FIN,    fechaFin);    }, [fechaFin]);
+  // Fechas activas para peticiones HTTP
+  const [fechaInicio, setFechaInicio] = useState<string>(tempFechaInicio);
+  const [fechaFin, setFechaFin]       = useState<string>(tempFechaFin);
 
   useEffect(() => { setSandbox(sandboxGlobal); }, [sandboxGlobal]);
 
@@ -180,22 +187,28 @@ export default function HistorialPage() {
     ? Math.ceil((new Date(fechaFin).getTime() - new Date(fechaInicio).getTime()) / (1000 * 60 * 60 * 24))
     : 0;
 
+  // Cargar lista paginada (25 elementos por página)
   const cargar = useCallback(async () => {
-    if (diasRango > 45) return;
+    if (diasRango > 365) return;
     setLoading(true);
     try {
       const params = new URLSearchParams();
       if (fechaInicio) params.append("fecha_inicio", fechaInicio);
       if (fechaFin)    params.append("fecha_fin",    fechaFin);
       if (sandbox)     params.append("sandbox",      "true");
+      params.append("page", String(page));
+      params.append("limit", "25");
+
       const res = await api.get(`/api/v1/app/documentos?${params.toString()}`);
       setDocumentos(res.data.data ?? []);
+      setPagination(res.data.pagination ?? null);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
-  }, [fechaInicio, fechaFin, diasRango, sandbox]);
+  }, [fechaInicio, fechaFin, diasRango, sandbox, page]);
 
+  // Cargar resumen fiscal global del rango completo
   const cargarResumen = useCallback(async () => {
-    if (diasRango > 45) return;
+    if (diasRango > 365) return;
     try {
       const params = new URLSearchParams();
       if (fechaInicio) params.append("fecha_inicio", fechaInicio);
@@ -209,6 +222,17 @@ export default function HistorialPage() {
     cargar();
     cargarResumen();
   }, [cargar, cargarResumen]);
+
+  // Manejador del botón "Buscar"
+  const handleBuscar = () => {
+    setPage(1); // Reiniciar a la primera página al cambiar fechas
+    guardarFecha(SS_KEY_INICIO, tempFechaInicio);
+    guardarFecha(SS_KEY_FIN, tempFechaFin);
+    setFechaInicio(tempFechaInicio);
+    setFechaFin(tempFechaFin);
+  };
+
+  if (!puedeVer) return <SinAcceso />;
 
   const filtrados = documentos.filter((d) => {
     const matchEstado = filtroEstado === "TODOS" || d.estado_sri === filtroEstado;
@@ -231,11 +255,13 @@ export default function HistorialPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold" style={{ color: "var(--kipu-text)" }}>Comprobantes Emitidos</h1>
-          <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>{documentos.length} comprobantes encontrados</p>
+          <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>
+            {pagination ? `${pagination.total_items} comprobantes encontrados` : `${documentos.length} comprobantes`}
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setSandbox(!sandbox)}
+            onClick={() => { setPage(1); setSandbox(!sandbox); }}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
             style={{
               background: sandbox
@@ -246,27 +272,19 @@ export default function HistorialPage() {
                 ? "1px solid color-mix(in srgb, #22d3ee 30%, transparent)"
                 : "1px solid var(--kipu-border)",
             }}
-            onMouseEnter={e => {
-              if (!sandbox) e.currentTarget.style.color = "var(--kipu-text)";
-            }}
-            onMouseLeave={e => {
-              if (!sandbox) e.currentTarget.style.color = "var(--kipu-muted)";
-            }}
           >
             <FlaskConical size={14} />
             {sandbox ? "Sandbox" : "Producción"}
           </button>
           <button
             onClick={() => { cargar(); cargarResumen(); }}
-            disabled={diasRango > 45}
+            disabled={diasRango > 365}
             className="p-2 rounded-lg transition-colors disabled:opacity-40"
             style={{
               background: "var(--kipu-surface)",
               border: "1px solid var(--kipu-border)",
               color: "var(--kipu-muted)",
             }}
-            onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
-            onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-muted)"}
           >
             <RefreshCw size={16} />
           </button>
@@ -274,65 +292,67 @@ export default function HistorialPage() {
             href="/documentos/emitir/fac"
             className="flex items-center gap-2 px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors"
             style={{ background: "var(--kipu-accent)" }}
-            onMouseEnter={e => e.currentTarget.style.background = "var(--kipu-accent-h)"}
-            onMouseLeave={e => e.currentTarget.style.background = "var(--kipu-accent)"}
           >
             <Plus size={15} /> Nueva
           </Link>
         </div>
       </div>
 
-      {/* Filtros */}
+      {/* Búsqueda y Rango de Fechas con Botón Buscar */}
       <div className="flex flex-col md:flex-row gap-3">
         <div className="relative flex-1">
           <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--kipu-subtle)" }} />
           <input
             value={query}
             onChange={e => setQuery(e.target.value)}
-            placeholder="Buscar por cliente, RUC o número..."
+            placeholder="Buscar en esta página por cliente, RUC o número..."
             className="w-full pl-9 pr-4 py-2.5 rounded-lg text-sm transition-colors focus:outline-none"
             style={{
               background: "var(--kipu-surface)",
               border: "1px solid var(--kipu-border)",
               color: "var(--kipu-text)",
             }}
-            onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-            onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
           />
         </div>
         <div className="flex gap-2 items-center shrink-0">
           <input
             type="date"
-            value={fechaInicio}
-            onChange={e => setFechaInicio(e.target.value)}
+            value={tempFechaInicio}
+            onChange={e => setTempFechaInicio(e.target.value)}
             className="px-3 py-2 rounded-lg text-sm focus:outline-none transition-colors"
             style={{
               background: "var(--kipu-surface)",
               border: "1px solid var(--kipu-border)",
               color: "var(--kipu-text)",
             }}
-            onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-            onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
           />
           <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>—</span>
           <input
             type="date"
-            value={fechaFin}
-            onChange={e => setFechaFin(e.target.value)}
+            value={tempFechaFin}
+            onChange={e => setTempFechaFin(e.target.value)}
             className="px-3 py-2 rounded-lg text-sm focus:outline-none transition-colors"
             style={{
               background: "var(--kipu-surface)",
               border: "1px solid var(--kipu-border)",
               color: "var(--kipu-text)",
             }}
-            onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-            onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
           />
+          <button
+            type="button"
+            onClick={handleBuscar}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold text-white transition-colors"
+            style={{ background: "var(--kipu-accent)" }}
+          >
+            <Search size={13} /> Buscar
+          </button>
         </div>
       </div>
 
-      {diasRango > 45 && (
-        <p className="text-xs font-medium" style={{ color: "var(--kipu-warning)" }}>El rango máximo es de 45 días.</p>
+      {diasRango > 365 && (
+        <p className="text-xs font-medium" style={{ color: "var(--kipu-warning)" }}>
+          El rango máximo de consulta es de 365 días (1 año).
+        </p>
       )}
 
       {/* Resumen fiscal */}
@@ -347,8 +367,6 @@ export default function HistorialPage() {
           <button
             onClick={() => setResumenOpen(!resumenOpen)}
             className="w-full flex items-center justify-between px-4 py-3 transition-colors"
-            onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 4%, transparent)"}
-            onMouseLeave={e => e.currentTarget.style.background = "transparent"}
           >
             <div className="flex items-center gap-2">
               <TrendingUp size={15} style={{ color: "var(--kipu-accent)" }} />
@@ -459,16 +477,6 @@ export default function HistorialPage() {
                   color: isSelected ? "#FFFFFF" : "var(--kipu-muted)",
                   border: isSelected ? "1px solid var(--kipu-accent)" : "1px solid var(--kipu-border)",
                 }}
-                onMouseEnter={e => {
-                  if (!isSelected) {
-                    e.currentTarget.style.color = "var(--kipu-text)";
-                  }
-                }}
-                onMouseLeave={e => {
-                  if (!isSelected) {
-                    e.currentTarget.style.color = "var(--kipu-muted)";
-                  }
-                }}
               >
                 {estado === "TODOS" ? "Todos" : ESTADO_CONFIG[estado]?.label ?? estado}
               </button>
@@ -487,16 +495,6 @@ export default function HistorialPage() {
                   background: isSelected ? "var(--kipu-accent)" : "var(--kipu-surface)",
                   color: isSelected ? "#FFFFFF" : "var(--kipu-muted)",
                   border: isSelected ? "1px solid var(--kipu-accent)" : "1px solid var(--kipu-border)",
-                }}
-                onMouseEnter={e => {
-                  if (!isSelected) {
-                    e.currentTarget.style.color = "var(--kipu-text)";
-                  }
-                }}
-                onMouseLeave={e => {
-                  if (!isSelected) {
-                    e.currentTarget.style.color = "var(--kipu-muted)";
-                  }
                 }}
               >
                 {tipo === "TODOS" ? "Todos los tipos" : TIPO_COMPROBANTE[tipo]?.label ?? tipo}
@@ -519,30 +517,19 @@ export default function HistorialPage() {
           <FileText size={40} className="mb-3" style={{ color: "var(--kipu-subtle)" }} />
           <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>
             {query || filtroEstado !== "TODOS" || filtroTipo !== "TODOS"
-              ? "No hay comprobantes que coincidan."
+              ? "No hay comprobantes que coincidan con el filtro en esta página."
               : `Sin comprobantes de ${sandbox ? "prueba (Sandbox)" : "producción"} en este rango.`}
           </p>
-          {!query && filtroEstado === "TODOS" && (
-            <Link
-              href="/documentos/emitir/fac"
-              className="mt-4 px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors"
-              style={{ background: "var(--kipu-accent)" }}
-              onMouseEnter={e => e.currentTarget.style.background = "var(--kipu-accent-h)"}
-              onMouseLeave={e => e.currentTarget.style.background = "var(--kipu-accent)"}
-            >
-              Emitir primer comprobante
-            </Link>
-          )}
         </div>
       ) : (
         <div
-          className="rounded-xl overflow-hidden"
+          className="rounded-xl overflow-hidden space-y-0"
           style={{
             background: "var(--kipu-surface)",
             border: "1px solid var(--kipu-border)",
           }}
         >
-          {/* Desktop */}
+          {/* Vista Escritorio */}
           <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -583,8 +570,6 @@ export default function HistorialPage() {
                           href={`/documentos/${d.id}`}
                           className="font-mono text-xs transition-colors hover:underline underline-offset-2"
                           style={{ color: "var(--kipu-accent)" }}
-                          onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent-h)"}
-                          onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-accent)"}
                         >
                           {d.numero_doc ?? "—"}
                         </Link>
@@ -627,7 +612,8 @@ export default function HistorialPage() {
               </tbody>
             </table>
           </div>
-          {/* Móvil */}
+
+          {/* Vista Móvil */}
           <div className="md:hidden">
             {filtrados.map((d, index) => {
               const estado = ESTADO_CONFIG[d.estado_sri] ?? ESTADO_CONFIG.PENDIENTE;
@@ -646,8 +632,6 @@ export default function HistorialPage() {
                       href={`/documentos/${d.id}`}
                       className="font-mono text-xs transition-colors"
                       style={{ color: "var(--kipu-accent)" }}
-                      onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent-h)"}
-                      onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-accent)"}
                     >
                       {d.numero_doc ?? "—"}
                     </Link>
@@ -675,6 +659,53 @@ export default function HistorialPage() {
                 </div>
               );
             })}
+          </div>
+        </div>
+      )}
+
+      {/* Barra de Controles de Paginación */}
+      {pagination && pagination.total_pages > 1 && (
+        <div
+          className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 rounded-xl"
+          style={{
+            background: "var(--kipu-surface)",
+            border: "1px solid var(--kipu-border)",
+          }}
+        >
+          <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+            Mostrando <span className="font-semibold" style={{ color: "var(--kipu-text)" }}>{documentos.length}</span> de{" "}
+            <span className="font-semibold" style={{ color: "var(--kipu-text)" }}>{pagination.total_items}</span> comprobantes
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setPage(p => Math.max(p - 1, 1))}
+              disabled={!pagination.has_prev || loading}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors disabled:opacity-40"
+              style={{
+                background: "var(--kipu-surface)",
+                border: "1px solid var(--kipu-border)",
+                color: "var(--kipu-text)",
+              }}
+            >
+              <ChevronLeft size={14} /> Anterior
+            </button>
+            <span className="text-xs font-medium px-2" style={{ color: "var(--kipu-subtle)" }}>
+              Página {pagination.page} de {pagination.total_pages}
+            </span>
+            <button
+              type="button"
+              onClick={() => setPage(p => Math.min(p + 1, pagination.total_pages))}
+              disabled={!pagination.has_next || loading}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors disabled:opacity-40"
+              style={{
+                background: "var(--kipu-surface)",
+                border: "1px solid var(--kipu-border)",
+                color: "var(--kipu-text)",
+              }}
+            >
+              Siguiente <ChevronRight size={14} />
+            </button>
           </div>
         </div>
       )}
