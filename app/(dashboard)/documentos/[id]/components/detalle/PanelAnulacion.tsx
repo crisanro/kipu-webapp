@@ -1,11 +1,24 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
-  CheckCircle2, Clock, XCircle, Copy, Ban, ExternalLink, Info, ChevronDown, RefreshCw,
+  CheckCircle2, Clock, Copy, Ban, ExternalLink, Info, ChevronDown, RefreshCw,
 } from "lucide-react";
 import api from "@/lib/api";
 import { type FacturaBase, formatearFecha, SRI_EN_LINEA_URL, MOTIVO_LABEL } from "./utils";
+
+// Tiempo mínimo entre consultas al SRI por documento
+const COOLDOWN_SEG = 60;
+const claveCooldown = (id: string | number) => `anulacion_sync_${id}`;
+
+function Spinner({ color = "#FFFFFF" }: { color?: string }) {
+  return (
+    <div
+      className="w-3.5 h-3.5 border-2 border-t-transparent rounded-full animate-spin"
+      style={{ borderColor: color, borderTopColor: "transparent" }}
+    />
+  );
+}
 
 function CampoCopiable({ label, valor }: { label: string; valor: string | null | undefined }) {
   const [copiado, setCopiado] = useState(false);
@@ -53,123 +66,187 @@ export default function PanelAnulacion({ factura, onRecargar }: { factura: Factu
   const router = useRouter();
   const an     = factura.anulacion!;
 
-  const [abierto,       setAbierto]       = useState(false);
-  const [motivo,        setMotivo]        = useState(an.motivos[0] ?? "");
-  const [confirmado,    setConfirmado]    = useState(false);
-  const [enviando,      setEnviando]      = useState<null | "anular" | "aceptada" | "rechazada" | "sincronizar">(null);
-  const [error,         setError]         = useState("");
+  const [abierto,    setAbierto]    = useState(false);
+  const [motivo,     setMotivo]     = useState(an.motivos[0] ?? "");
+  const [confirmado, setConfirmado] = useState(false);
+  const [enviando,   setEnviando]   = useState<null | "anular" | "sincronizar">(null);
+  const [error,      setError]      = useState("");
+  const [infoMsg,    setInfoMsg]    = useState("");
+  const [espera,     setEspera]     = useState(0); // segundos restantes del cooldown
+
+  // ── Cooldown de consulta al SRI ───────────────────────────────────────────
+  const calcularEspera = useCallback(() => {
+    try {
+      const ultimo = Number(sessionStorage.getItem(claveCooldown(factura.id)) ?? 0);
+      if (!ultimo) return 0;
+      const restante = COOLDOWN_SEG - Math.floor((Date.now() - ultimo) / 1000);
+      return restante > 0 ? Math.min(restante, COOLDOWN_SEG) : 0;
+    } catch {
+      return 0;
+    }
+  }, [factura.id]);
+
+  // Al montar, recuperar un cooldown vigente (por si recargaron la página)
+  useEffect(() => { setEspera(calcularEspera()); }, [calcularEspera]);
+
+  // Cuenta regresiva
+  const cooldownActivo = espera > 0;
+  useEffect(() => {
+    if (!cooldownActivo) return;
+    const t = setInterval(() => setEspera(calcularEspera()), 1000);
+    return () => clearInterval(t);
+  }, [cooldownActivo, calcularEspera]);
+
+  // Inicia el cooldown con `segundos` restantes (por defecto 60)
+  const iniciarCooldown = (segundos: number = COOLDOWN_SEG) => {
+    const s = Math.min(Math.max(segundos, 1), COOLDOWN_SEG);
+    try {
+      // Se guarda un timestamp "ajustado" para que el restante sea exactamente `s`
+      sessionStorage.setItem(
+        claveCooldown(factura.id),
+        String(Date.now() - (COOLDOWN_SEG - s) * 1000)
+      );
+    } catch {}
+    setEspera(s);
+  };
 
   const cajaNeutra = {
     background: "var(--kipu-surface)",
     border: "1px solid var(--kipu-border)",
   };
 
-  const Spinner = ({ color = "#FFFFFF" }: { color?: string }) => (
-    <div
-      className="w-3.5 h-3.5 border-2 border-t-transparent rounded-full animate-spin"
-      style={{ borderColor: color, borderTopColor: "transparent" }}
-    />
+  const feedback = (
+    <>
+      {error && (
+        <p
+          className="text-xs px-3 py-2 rounded-lg leading-relaxed"
+          style={{ color: "var(--kipu-danger)", background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)" }}
+        >
+          {error}
+        </p>
+      )}
+      {infoMsg && (
+        <p
+          className="text-xs px-3 py-2 rounded-lg leading-relaxed"
+          style={{ color: "var(--kipu-accent)", background: "color-mix(in srgb, var(--kipu-accent) 10%, transparent)" }}
+        >
+          {infoMsg}
+        </p>
+      )}
+    </>
   );
 
-  const ErrorMsg = () => error ? (
-    <p
-      className="text-xs px-3 py-2 rounded-lg leading-relaxed"
-      style={{ color: "var(--kipu-danger)", background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)" }}
-    >
-      {error}
-    </p>
-  ) : null;
-
-  // 1. Registrar anulación (Valida directo contra el SRI)
+  // 1. Iniciar o verificar anulación
   const registrar = async () => {
     setError("");
+    setInfoMsg("");
     setEnviando("anular");
     try {
-      await api.post(`/api/v1/app/documentos/${factura.id}/anular`, { motivo, confirmado });
-      onRecargar();
+      const res = await api.post(`/api/v1/app/documentos/${factura.id}/anular`, { motivo, confirmado });
+      const { estado, mensaje } = res.data;
+
+      if (estado === "ANULADO") {
+        setInfoMsg("✅ Comprobante verificado y marcado como ANULADO.");
+        setTimeout(() => onRecargar(), 1800);
+      } else if (estado === "PENDIENTE") {
+        setInfoMsg("⏳ Solicitud registrada. El comprobante queda PENDIENTE hasta que el receptor acepte en el SRI.");
+        setTimeout(() => onRecargar(), 2200);
+      } else {
+        setInfoMsg(mensaje || "Operación procesada.");
+        setTimeout(() => onRecargar(), 1800);
+      }
     } catch (err: any) {
-      setError(err?.response?.data?.detail ?? "No se pudo verificar o registrar la anulación.");
+      setError(err?.response?.data?.detail ?? "No se pudo verificar la anulación con el SRI.");
     } finally {
       setEnviando(null);
     }
   };
 
-  // 2. Re-consultar estado de anulación al SRI
+// Re-consultar estado en el SRI mientras está PENDIENTE
   const sincronizarAnulacion = async () => {
+    if (enviando || espera > 0) return;
+
     setError("");
+    setInfoMsg("");
     setEnviando("sincronizar");
     try {
       const res = await api.post(`/api/v1/app/documentos/${factura.id}/anulacion/sincronizar`);
-      if (res.data.cambio) {
-        onRecargar();
+      const { cambio, estado, mensaje } = res.data;
+      iniciarCooldown();
+
+      if (cambio) {
+        if (estado === "AUTORIZADO") {
+          setInfoMsg("ℹ️ El comprobante volvió a estar AUTORIZADO y vigente.");
+        } else if (estado === "ANULADO") {
+          setInfoMsg("✅ El receptor aceptó en el SRI. El comprobante se marcó como ANULADO.");
+        } else {
+          setInfoMsg(mensaje || "Estado actualizado correctamente.");
+        }
+
+        // Se da un tiempo breve para ver el mensaje antes de recargar la vista
+        setTimeout(() => {
+          onRecargar();
+        }, 1800);
       } else {
-        setError(res.data.mensaje || "El SRI aún no refleja un cambio en esta anulación.");
+        // Sigue PENDIENTE en el SRI: no recarga la vista, solo informa
+        setInfoMsg("⏳ El trámite continúa PENDIENTE en el SRI. El receptor aún no responde.");
       }
     } catch (err: any) {
-      setError(err?.response?.data?.detail ?? "No se pudo consultar el estado con el SRI.");
+      if (err?.response?.status === 429) {
+        const retry = Number(err.response.headers?.["retry-after"]) || COOLDOWN_SEG;
+        iniciarCooldown(retry);
+        setInfoMsg(`⏳ Debes esperar ${Math.min(retry, COOLDOWN_SEG)} s antes de volver a consultar.`);
+      } else {
+        setError(err?.response?.data?.detail ?? "No se pudo consultar el estado con el SRI.");
+      }
     } finally {
       setEnviando(null);
     }
   };
 
-  // 3. Resolución manual (por si el usuario lo confirma antes)
-  const resolver = async (aceptada: boolean) => {
-    setError("");
-    setEnviando(aceptada ? "aceptada" : "rechazada");
-    try {
-      await api.post(`/api/v1/app/documentos/${factura.id}/anulacion/resolver`, { aceptada });
-      onRecargar();
-    } catch (err: any) {
-      setError(err?.response?.data?.detail ?? "No se pudo actualizar la solicitud.");
-    } finally {
-      setEnviando(null);
-    }
-  };
-
-// ── A. Solicitud esperando al receptor (Solo verificación contra el SRI) ────
-if (an.estado === "PENDIENTE") {
-  return (
-    <div
-      className="rounded-xl p-4 space-y-3"
-      style={{
-        background: "color-mix(in srgb, var(--kipu-warning) 8%, transparent)",
-        border: "1px solid color-mix(in srgb, var(--kipu-warning) 25%, transparent)",
-      }}
-    >
-      <div className="flex items-start gap-2.5">
-        <Clock size={16} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-warning)" }} />
-        <div className="space-y-1">
-          <p className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>
-            Anulación en espera del receptor
-          </p>
-          <p className="text-xs leading-relaxed" style={{ color: "var(--kipu-muted)" }}>
-            {an.sri.razon_social_receptor || "El receptor"} tiene hasta el{" "}
-            <span className="font-medium" style={{ color: "var(--kipu-text)" }}>
-              {formatearFecha(an.limite_aceptacion)}
-            </span>{" "}
-            para responder en el portal del SRI. Mientras tanto el comprobante sigue vigente.
-          </p>
-        </div>
-      </div>
-
-      <ErrorMsg />
-
-      {/* ÚNICO BOTÓN: Consultar la respuesta oficial directamente en el SRI */}
-      <button
-        type="button"
-        onClick={sincronizarAnulacion}
-        disabled={!!enviando}
-        className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-medium text-white transition-opacity disabled:opacity-50"
-        style={{ background: "var(--kipu-accent)" }}
+  // ── A. Solicitud esperando al receptor ────────────────────────────────────
+  if (an.estado === "PENDIENTE") {
+    return (
+      <div
+        className="rounded-xl p-4 space-y-3"
+        style={{
+          background: "color-mix(in srgb, var(--kipu-warning) 8%, transparent)",
+          border: "1px solid color-mix(in srgb, var(--kipu-warning) 25%, transparent)",
+        }}
       >
-        {enviando === "sincronizar" ? <Spinner /> : <RefreshCw size={13} />}
-        Verificar respuesta en el SRI
-      </button>
-    </div>
-  );
-}
+        <div className="flex items-start gap-2.5">
+          <Clock size={16} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-warning)" }} />
+          <div className="space-y-1">
+            <p className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>
+              Anulación en espera del receptor
+            </p>
+            <p className="text-xs leading-relaxed" style={{ color: "var(--kipu-muted)" }}>
+              {an.sri.razon_social_receptor || "El receptor"} tiene hasta el{" "}
+              <span className="font-medium" style={{ color: "var(--kipu-text)" }}>
+                {formatearFecha(an.limite_aceptacion)}
+              </span>{" "}
+              para aceptar en el SRI. Mientras tanto el comprobante sigue vigente.
+            </p>
+          </div>
+        </div>
 
-  // ── B. No se puede anular ─────────────────────────────────────────────────
+        {feedback}
+
+        <button
+          type="button"
+          onClick={sincronizarAnulacion}
+          disabled={!!enviando || espera > 0}
+          className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-medium text-white transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+          style={{ background: "var(--kipu-accent)" }}
+        >
+          {enviando === "sincronizar" ? <Spinner /> : <RefreshCw size={13} />}
+          {espera > 0 ? `Podrás volver a consultar en ${espera} s` : "Verificar respuesta en el SRI"}
+        </button>
+      </div>
+    );
+  }
+
+  // ── B. Bloqueo de anulación ──────────────────────────────────────────────
   if (!an.puede_anular) {
     if (!an.motivo_bloqueo) return null;
     return (
@@ -198,7 +275,7 @@ if (an.estado === "PENDIENTE") {
     );
   }
 
-  // ── C. Formulario de Solicitud ────────────────────────────────────────────
+  // ── C. Formulario de anulación ───────────────────────────────────────────
   const urgente = an.dias_restantes <= 2;
   const plazoTexto = an.dias_restantes === 0
     ? "hoy es el último día"
@@ -232,19 +309,6 @@ if (an.estado === "PENDIENTE") {
 
       {abierto && (
         <div className="px-4 pb-4 space-y-4" style={{ borderTop: "1px solid var(--kipu-border)" }}>
-
-          {(an.estado === "RECHAZADA" || an.estado === "VENCIDA") && (
-            <p
-              className="text-xs mt-3 px-3 py-2 rounded-lg"
-              style={{ color: "var(--kipu-muted)", background: "color-mix(in srgb, var(--kipu-text) 4%, transparent)" }}
-            >
-              {an.estado === "RECHAZADA"
-                ? "El receptor rechazó la solicitud anterior. Puedes volver a solicitarla dentro del plazo."
-                : "La solicitud anterior venció sin respuesta del receptor. Puedes volver a solicitarla dentro del plazo."}
-            </p>
-          )}
-
-          {/* Paso 1: Datos para el SRI */}
           <div className="space-y-2 pt-3">
             <p className="text-sm font-medium" style={{ color: "var(--kipu-text)" }}>
               1. Ingresa la solicitud en el SRI
@@ -273,7 +337,6 @@ if (an.estado === "PENDIENTE") {
             </a>
           </div>
 
-          {/* Paso 2: Verificar y Registrar en Kipu */}
           <div className="space-y-2">
             <p className="text-sm font-medium" style={{ color: "var(--kipu-text)" }}>
               2. Verificar y registrar en Kipu
@@ -302,7 +365,7 @@ if (an.estado === "PENDIENTE") {
               Ya ingresé la solicitud de anulación en el portal del SRI.
             </label>
 
-            <ErrorMsg />
+            {feedback}
 
             <button
               type="button"

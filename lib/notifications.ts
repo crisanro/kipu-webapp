@@ -98,26 +98,30 @@ export async function escucharPrimerPlano(
     if (!messaging) return () => {};
 
     return onMessage(messaging, async (payload) => {
-      const d      = payload.data ?? {};
-      const titulo = d.title ?? payload.notification?.title ?? "Kipu";
-      const cuerpo = d.body  ?? payload.notification?.body  ?? "";
-      const url    = d.url   ?? "/dashboard";
+      const d = payload.data ?? {};
+      const n = payload.notification ?? {};
+
+      const titulo = n.title || d.title || "Kipu";
+      const cuerpo = n.body || d.body || "";
+      const url = d.url || "/dashboard";
 
       try {
         if (Notification.permission === "granted") {
           const reg = await navigator.serviceWorker.getRegistration();
           if (reg) {
             await reg.showNotification(titulo, {
-              body:  cuerpo,
-              icon:  "/icons/icon-192.png",
-              badge: "/icons/icon-192.png",
-              data:  { url },
+              body: cuerpo,
+              icon: "/icon.svg",
+              badge: "/icon.svg",
+              data: { url },
             });
           } else {
             mostrarNotificacionLocal(titulo, cuerpo, url);
           }
         }
-      } catch {}
+      } catch (e) {
+        console.warn("[FCM] ⚠️ Error al mostrar notificación en primer plano:", e);
+      }
 
       // Avisar al cajón de notificaciones para que recargue la lista
       window.dispatchEvent(new CustomEvent(EVENTO_NOTIF, { detail: payload }));
@@ -134,7 +138,7 @@ export function mostrarNotificacionLocal(titulo: string, cuerpo: string, url?: s
   if (Notification.permission !== "granted") return;
   const notif = new Notification(titulo, {
     body: cuerpo,
-    icon: "/icons/icon-192.png",
+    icon: "/icon.svg"
   });
   if (url) notif.onclick = () => window.open(url, "_blank");
 }

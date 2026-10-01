@@ -27,8 +27,8 @@ messaging.onBackgroundMessage((payload) => {
 
   return self.registration.showNotification(d.title || "Kipu", {
     body:    d.body || "",
-    icon:    "/icons/icon-192.png",
-    badge:   "/icons/icon-192.png",
+    icon:    "/icon.svg",
+    badge:   "/icon.svg",
     data:    { url: d.url || "/dashboard" },
     vibrate: [200, 100, 200],
     actions: [
