@@ -3,34 +3,40 @@
 import { CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
 
 interface Preguntas {
-  requiere_informar?:         boolean;
-  credito_tributario_renta?: boolean;
-  comercio_exterior?:        boolean;
-  notas_credito?:            boolean;
-  tarifa_turismo?:           boolean;
-  ha_realizado_ventas?:      boolean;
-  ventas_tarifa_0?:          boolean;
-  ventas_activos_fijos?:      boolean;
-  ventas_tarifa_nz?:         boolean;
-  ha_realizado_compras?:     boolean;
-  importaciones?:            boolean;
-  compras_activos_fijos?:    boolean;
-  ha_realizado_retenciones?: boolean;
-  materiales_construccion?:  boolean;
+  // IVA
+  requiere_informar?:                  boolean;
+  credito_tributario_renta?:         boolean;
+  comercio_exterior?:                boolean;
+  notas_credito?:                    boolean;
+  tarifa_turismo?:                   boolean;
+  ha_realizado_ventas?:              boolean;
+  ventas_tarifa_0?:                  boolean;
+  ventas_activos_fijos?:             boolean;
+  ventas_tarifa_nz?:                 boolean;
+  ha_realizado_compras?:             boolean;
+  importaciones?:                    boolean;
+  compras_activos_fijos?:            boolean;
+  ha_realizado_retenciones?:         boolean;
+  materiales_construccion?:          boolean;
   // Renta
-  tiene_ingresos?:           boolean;
-  tiene_gastos_deducibles?:  boolean;
-  tiene_retenciones?:        boolean;
-  debe_pagar?:               boolean;
-  tiene_saldo_favor?:        boolean;
-  supera_fraccion_basica?:   boolean;
+  tiene_ingresos?:                   boolean;
+  tiene_gastos_deducibles?:          boolean;
+  tiene_retenciones?:                boolean;
+  debe_pagar?:                        boolean;
+  tiene_saldo_favor?:                boolean;
+  supera_fraccion_basica?:           boolean;
+  obligado_contabilidad?:            boolean;
+  es_rimpe?:                         boolean;
+  requiere_otros_ingresos_rimpe?:    boolean;
+  retenciones_fuente_rimpe?:         boolean;
+  grupo_prioritario_discapacidad?:   boolean;
+  tiene_impuesto_unico_microempresas?: boolean;
   // ATS
-  tiene_ventas?:                   boolean;
-  tiene_compras?:                  boolean;
-  tiene_retenciones_emitidas?:     boolean;
-  tiene_retenciones_recibidas?:    boolean;
-  obligado_contabilidad?:          boolean;
-  [key: string]: boolean | undefined;
+  tiene_ventas?:                     boolean;
+  tiene_compras?:                    boolean;
+  tiene_retenciones_emitidas?:       boolean;
+  tiene_retenciones_recibidas?:      boolean;
+  [key: string]: boolean | number | undefined;
 }
 
 interface Props {
@@ -56,12 +62,19 @@ const LABELS_IVA: Record<string, string> = {
 };
 
 const LABELS_RENTA: Record<string, string> = {
-  tiene_ingresos:          "¿Tuvo ingresos gravados en el año?",
-  tiene_gastos_deducibles: "¿Tuvo gastos deducibles?",
-  tiene_retenciones:       "¿Le realizaron retenciones en la fuente?",
-  supera_fraccion_basica:  "¿Su base imponible supera la fracción básica?",
-  debe_pagar:              "¿Debe pagar impuesto a la renta?",
-  tiene_saldo_favor:       "¿Tiene saldo a favor?",
+  requiere_informar:                  "¿Requiere informar valores en su declaración de este período?",
+  obligado_contabilidad:              "¿Se encuentra obligado a llevar contabilidad?",
+  es_rimpe:                           "¿Se encuentra sujeto al régimen RIMPE?",
+  requiere_otros_ingresos_rimpe:      "¿Requiere informar otros ingresos o créditos tributarios diferentes al RIMPE?",
+  retenciones_fuente_rimpe:           "¿Le han efectuado retenciones en la fuente de Renta por actividades RIMPE?",
+  grupo_prioritario_discapacidad:     "¿Pertenece al grupo prioritario de personas con discapacidad o sustituto?",
+  tiene_impuesto_unico_microempresas: "¿Tiene ingresos sujetos a Impuesto a la Renta Único o Microempresas?",
+  tiene_ingresos:                     "¿Tuvo ingresos gravados en el año?",
+  tiene_gastos_deducibles:            "¿Tuvo gastos deducibles?",
+  tiene_retenciones:                  "¿Le realizaron retenciones en la fuente?",
+  supera_fraccion_basica:             "¿Su base imponible supera la fracción básica desgravada?",
+  debe_pagar:                         "¿Debe pagar impuesto a la renta?",
+  tiene_saldo_favor:                  "¿Tiene saldo a favor?",
 };
 
 const LABELS_ATS: Record<string, string> = {
@@ -80,11 +93,12 @@ const LABELS: Record<string, Record<string, string>> = {
 
 // Preguntas que requieren acción manual si son true
 const REQUIERE_MANUAL: Record<string, string> = {
-  comercio_exterior:       "Completa los casilleros de activos fijos e importaciones manualmente.",
-  ventas_activos_fijos:    "Completa los casilleros 402/412/422 manualmente.",
-  compras_activos_fijos:   "Completa los casilleros 501/511/521 manualmente.",
-  importaciones:            "Completa los casilleros 504/514/524 manualmente.",
-  materiales_construccion: "Consulta con tu contador para el tratamiento correcto.",
+  comercio_exterior:             "Completa los casilleros de activos fijos e importaciones manualmente.",
+  ventas_activos_fijos:          "Completa los casilleros 402/412/422 manualmente.",
+  compras_activos_fijos:         "Completa los casilleros 501/511/521 manualmente.",
+  importaciones:                 "Completa los casilleros 504/514/524 manualmente.",
+  materiales_construccion:       "Consulta con tu contador para el tratamiento correcto.",
+  requiere_otros_ingresos_rimpe: "Deberás ingresar tus otros ingresos (arrendamientos, relación de dependencia) manualmente en el portal del SRI.",
 };
 
 export default function PreguntasSRI({ preguntas, tipo }: Props) {
@@ -105,14 +119,14 @@ export default function PreguntasSRI({ preguntas, tipo }: Props) {
     >
       {/* Header */}
       <div
-        className="px-4 py-3 flex items-center gap-2"
+        className="px-4 py-3 flex items-center justify-between gap-2"
         style={{ borderBottom: "1px solid var(--kipu-border)" }}
       >
         <span className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>
-          Preguntas previas SRI
+          Preguntas previas SRI (Perfilamiento)
         </span>
         <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
-          — respondidas automáticamente con tus documentos
+          — respondidas automáticamente con tu configuración
         </span>
       </div>
 
@@ -120,12 +134,12 @@ export default function PreguntasSRI({ preguntas, tipo }: Props) {
       <div>
         {entries.map(([key, label], idx) => {
           const valor = preguntas[key];
-          if (valor === undefined) return null;
+          if (valor === undefined || typeof valor === "number") return null;
 
           return (
             <div
               key={key}
-              className="flex items-start gap-3 px-4 py-2.5"
+              className="flex items-start gap-3 px-4 py-2.5 transition-colors"
               style={{
                 borderTop: idx > 0 ? "1px solid var(--kipu-border)" : "none",
               }}
@@ -150,8 +164,13 @@ export default function PreguntasSRI({ preguntas, tipo }: Props) {
                 )}
               </div>
               <span
-                className="text-xs font-bold shrink-0"
-                style={{ color: valor ? "var(--kipu-success)" : "var(--kipu-subtle)" }}
+                className="text-xs font-bold shrink-0 px-2 py-0.5 rounded"
+                style={{
+                  color: valor ? "var(--kipu-success)" : "var(--kipu-subtle)",
+                  background: valor
+                    ? "color-mix(in srgb, var(--kipu-success) 10%, transparent)"
+                    : "color-mix(in srgb, var(--kipu-text) 5%, transparent)",
+                }}
               >
                 {valor ? "SÍ" : "NO"}
               </span>
@@ -174,8 +193,7 @@ export default function PreguntasSRI({ preguntas, tipo }: Props) {
             Campos que requieren tu atención manual
           </p>
           <p className="text-xs" style={{ color: "var(--kipu-warning)" }}>
-            Algunos casilleros no se pueden calcular automáticamente.
-            Revísalos antes de declarar en el portal del SRI.
+            Algunos casilleros del SRI requieren información adicional fuera de tus comprobantes electrónicos.
           </p>
         </div>
       )}

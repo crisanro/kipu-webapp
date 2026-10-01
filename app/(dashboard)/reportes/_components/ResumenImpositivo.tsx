@@ -43,6 +43,12 @@ interface Props {
   valoresGuardados?: Record<string, number>;
   onGuardar?: (valores: Record<string, number>) => Promise<void>;
   saldos?: { origen?: string; periodo_anterior?: string | null };
+  resultado?: {
+    impuesto_causado?: number;
+    a_pagar?: number;
+    saldo_favor?: number;
+    [key: string]: any;
+  };
 }
 
 const fmt = (n: number = 0) =>
@@ -162,10 +168,11 @@ export default function ResumenImpositivo({
   casilleros,
   valoresGuardados = {},
   onGuardar,
+  resultado,
 }: Props) {
   const [val605, setVal605] = useState<number>(0);
   const [val606, setVal606] = useState<number>(0);
-  const [val625, setVal625] = useState<number>(0); // Estado del casillero 625
+  const [val625, setVal625] = useState<number>(0);
   const [guardando, setGuardando] = useState(false);
   const [guardado, setGuardado] = useState(false);
   const [dirty, setDirty] = useState(false);
@@ -190,7 +197,7 @@ export default function ResumenImpositivo({
     }
   };
 
-  // --- RECALCULO DE CASILLEROS EN TIEMPO REAL ---
+  // --- RECALCULO DE CASILLEROS EN TIEMPO REAL PARA IVA ---
   const c499 = casilleros["499"] ?? 0;
   const c564 = casilleros["564"] ?? 0;
   const c609 = casilleros["609"] ?? 0;
@@ -199,22 +206,17 @@ export default function ResumenImpositivo({
   const c601 = Math.max(c499 - c564, 0);
   const c602 = Math.max(c564 - c499, 0);
 
-  // Subtotal a pagar (620)
   const subtotalCalculado = c601 - val605 - val606 - c609;
   const c620 = Math.max(subtotalCalculado, 0);
 
-  // Total impuesto a pagar por percepción y retenciones (699)
   const c699 = c620 + c801;
 
-  // Saldos para el próximo mes (615 considerando el ajuste por caducidad del casillero 625)
   const c615 = Math.max(c602 + val605 - val625, 0);
   const c617 = c609 + val606;
 
-  const tieneAPagar = c699 > 0;
-  const tieneSaldo = (c615 + c617) > 0;
-
   return (
     <div className="space-y-4">
+      {/* ── MÓDULO IVA (FORMULARIO 104) ─────────────────────────────────── */}
       {tipo === "IVA" && (
         <div className="rounded-xl overflow-hidden" style={{ background: "var(--kipu-surface)", border: "1px solid var(--kipu-border)" }}>
           <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: "1px solid var(--kipu-border)" }}>
@@ -249,7 +251,7 @@ export default function ResumenImpositivo({
               <FilaCasillero num="602" label="Crédito tributario del período" value={c602} verde />
             )}
 
-            {/* Saldos Anteriores (Casilleros 605 y 606) */}
+            {/* Saldos Anteriores */}
             <div className="pt-3 pb-1 space-y-1.5">
               <p className="text-[11px] font-semibold" style={{ color: "var(--kipu-subtle)" }}>
                 Saldos crédito tributario del mes anterior:
@@ -278,7 +280,7 @@ export default function ResumenImpositivo({
             )}
             <FilaCasillero num="699" label="Total impuesto a pagar por percepción y retenciones" value={c699} subtotal highlight />
 
-            {/* Ajuste por caducidad (Casillero 625) y saldos para el próximo mes */}
+            {/* Ajuste por caducidad y saldos próximo mes */}
             <div className="pt-3 space-y-2">
               <p className="text-[11px] font-semibold" style={{ color: "var(--kipu-subtle)" }}>
                 Ajustes al Crédito Tributario e importes para el próximo mes:
@@ -294,6 +296,33 @@ export default function ResumenImpositivo({
               <FilaCasillero num="615" label="Saldo crédito tributario para el próximo mes (Adquisiciones e Importaciones)" value={c615} verde />
               <FilaCasillero num="617" label="Saldo crédito tributario para el próximo mes (Retenciones en la Fuente)" value={c617} verde />
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── MÓDULO RENTA (FORMULARIO 102) ─────────────────────────────────── */}
+      {tipo === "RENTA" && (
+        <div className="rounded-xl overflow-hidden" style={{ background: "var(--kipu-surface)", border: "1px solid var(--kipu-border)" }}>
+          <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: "1px solid var(--kipu-border)" }}>
+            <div>
+              <p className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>Resumen Impuesto a la Renta</p>
+              <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Personas Naturales (Formulario 102)</p>
+            </div>
+          </div>
+
+          <div className="p-4 space-y-1">
+            <FilaCasillero num="849" label="Base imponible gravada" value={casilleros["849"] ?? 0} subtotal />
+            <FilaCasillero num="850" label="Impuesto a la renta causado" value={casilleros["850"] ?? resultado?.impuesto_causado ?? 0} rojo />
+            <FilaCasillero num="855" label="Retenciones en la fuente que le realizaron" value={casilleros["855"] ?? 0} verde resta />
+            
+            <div className="my-2" style={{ borderTop: "1px solid var(--kipu-border)" }} />
+
+            <FilaCasillero
+              num="859"
+              label="Total Impuesto a la Renta a pagar"
+              value={casilleros["859"] ?? resultado?.a_pagar ?? 0}
+              highlight
+            />
           </div>
         </div>
       )}
