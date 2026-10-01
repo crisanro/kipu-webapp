@@ -6,6 +6,9 @@ import api from "./api";
 const VAPID_KEY = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY;
 const FLAG_SESION = "kipu-fcm-ok";
 
+// Evento global que escucha el cajón de notificaciones para recargarse
+export const EVENTO_NOTIF = "kipu:notificacion";
+
 // ── Generar o recuperar device_id único por dispositivo ───────────────────────
 const getDeviceId = (): string => {
   try {
@@ -115,6 +118,9 @@ export async function escucharPrimerPlano(
           }
         }
       } catch {}
+
+      // Avisar al cajón de notificaciones para que recargue la lista
+      window.dispatchEvent(new CustomEvent(EVENTO_NOTIF, { detail: payload }));
 
       onNueva?.(payload);
     });

@@ -1,13 +1,16 @@
 "use client";
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
-import useSWR from "swr";
+import useSWR, { useSWRConfig } from "swr";
 import { useAuthStore } from "@/store/auth.store";
 import {
   Bell, X, CheckCheck,
-  FileText, CreditCard, AlertTriangle, Info, ClipboardList
+  FileText, CreditCard, Info, ClipboardList, BadgeCheck
 } from "lucide-react";
+import { EVENTO_NOTIF } from "@/lib/notifications";
+
+const NOTIF_URL     = "/api/v1/app/notificaciones";
 
 interface Notificacion {
   id:          number;
@@ -25,8 +28,9 @@ function IconoTipo({ tipo }: { tipo: string }) {
     DECLARACION: { icon: ClipboardList, color: "var(--kipu-accent)",  bg: "color-mix(in srgb, var(--kipu-accent) 20%, transparent)" },
     FACTURA:     { icon: FileText,      color: "var(--kipu-success)", bg: "color-mix(in srgb, var(--kipu-success) 20%, transparent)" },
     CREDITOS:    { icon: CreditCard,    color: "var(--kipu-warning)", bg: "color-mix(in srgb, var(--kipu-warning) 20%, transparent)" },
+    SUSCRIPCION: { icon: BadgeCheck,    color: "var(--kipu-accent)",  bg: "color-mix(in srgb, var(--kipu-accent) 20%, transparent)" },
     SISTEMA:     { icon: Info,          color: "#60a5fa",            bg: "color-mix(in srgb, #60a5fa 20%, transparent)" },
-    DEFAULT:     { icon: AlertTriangle, color: "var(--kipu-subtle)",  bg: "color-mix(in srgb, var(--kipu-text) 10%, transparent)" },
+    DEFAULT:     { icon: Bell,          color: "var(--kipu-subtle)",  bg: "color-mix(in srgb, var(--kipu-text) 10%, transparent)" },
   };
   const c    = config[tipo] ?? config.DEFAULT;
   const Icon = c.icon;
@@ -42,7 +46,9 @@ function IconoTipo({ tipo }: { tipo: string }) {
 
 // ── Tiempo relativo ────────────────────────────────────────────────────────────
 function tiempoRelativo(fecha: string): string {
-  const diff  = Date.now() - new Date(fecha).getTime();
+  const t = new Date(fecha).getTime();
+  if (Number.isNaN(t)) return "—";
+  const diff  = Date.now() - t;
   const mins  = Math.floor(diff / 60000);
   const horas = Math.floor(diff / 3600000);
   const dias  = Math.floor(diff / 86400000);
@@ -50,39 +56,49 @@ function tiempoRelativo(fecha: string): string {
   if (mins < 60)  return `hace ${mins}m`;
   if (horas < 24) return `hace ${horas}h`;
   if (dias < 7)   return `hace ${dias}d`;
-  return new Date(fecha).toLocaleDateString("es-EC");
+  return new Date(t).toLocaleDateString("es-EC");
 }
 
-// ── Hook para notificaciones con SWR ──────────────────────────────────────────
-const fetcher = (url: string) => api.get(url).then(r => r.data);
+// ── Fetcher: la empresa viaja en el header que el backend realmente usa ───────
+const fetcher = ([url, emisorId]: [string, number]) =>
+  api.get(url, { headers: { "X-Emisor-ID": String(emisorId) } }).then(r => r.data);
 
+const esClaveNotif = (key: any) => Array.isArray(key) && key[0] === NOTIF_URL;
+
+// ── Hook para notificaciones con SWR ──────────────────────────────────────────
 export function useNotificaciones(authLoading: boolean = false) {
   const listo   = useAuthStore((s) => s.listo);
   const empresa = useAuthStore((s) => s.empresa);
+  const emisorId = empresa?.id;
 
-  // Incluir emisor_id en la key para que SWR recargue al cambiar empresa
-  const swrKey = !authLoading && listo && empresa?.id
-    ? `/api/v1/app/notificaciones?e=${empresa.id}`
+  // La clave incluye la empresa: al cambiar de empresa, SWR recarga solo
+  const swrKey = !authLoading && listo && emisorId
+    ? [NOTIF_URL, emisorId] as [string, number]
     : null;
 
-  const { data, mutate } = useSWR(
-    swrKey,
-    fetcher,
-    {
-      revalidateOnFocus:     false,
-      revalidateOnReconnect: false,
-      revalidateIfStale:     false,
-      dedupingInterval:      60000, // 1 min
-    }
-  );
+  const { data, mutate } = useSWR(swrKey, fetcher, {
+    revalidateOnFocus:     true,    // al volver a la pestaña
+    revalidateOnReconnect: true,
+    revalidateIfStale:     true,
+    dedupingInterval:      15000,   // evita ráfagas, no deja la lista congelada
+  });
+
+  // Push recibido con la app abierta → recargar
+  useEffect(() => {
+    const recargar = () => mutate();
+    window.addEventListener(EVENTO_NOTIF, recargar);
+    return () => window.removeEventListener(EVENTO_NOTIF, recargar);
+  }, [mutate]);
 
   const notificaciones: Notificacion[] = data?.notificaciones ?? [];
   const noLeidas:        number         = data?.no_leidas        ?? 0;
   const loading                         = !data;
 
+  const headers = emisorId ? { "X-Emisor-ID": String(emisorId) } : undefined;
+
   const marcarLeida = useCallback(async (id: number) => {
     try {
-      await api.patch(`/api/v1/app/notificaciones/${id}/leer`);
+      await api.patch(`${NOTIF_URL}/${id}/leer`, null, { headers });
       mutate(
         (prev: any) => prev ? {
           ...prev,
@@ -94,11 +110,12 @@ export function useNotificaciones(authLoading: boolean = false) {
         false
       );
     } catch (e) { console.error(e); }
-  }, [mutate]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mutate, emisorId]);
 
   const marcarTodasLeidas = useCallback(async () => {
     try {
-      await api.patch("/api/v1/app/notificaciones/leer-todas");
+      await api.patch(`${NOTIF_URL}/leer-todas`, null, { headers });
       mutate(
         (prev: any) => prev ? {
           ...prev,
@@ -108,7 +125,8 @@ export function useNotificaciones(authLoading: boolean = false) {
         false
       );
     } catch (e) { console.error(e); }
-  }, [mutate]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mutate, emisorId]);
 
   return {
     notificaciones,
@@ -178,6 +196,12 @@ export function NotificacionesDrawer({
   onMarcarTodas,
 }: DrawerProps) {
   const router = useRouter();
+  const { mutate } = useSWRConfig();
+
+  // Al abrir el cajón, traer lo último
+  useEffect(() => {
+    if (open) mutate(esClaveNotif);
+  }, [open, mutate]);
 
   const handleClick = (notif: Notificacion) => {
     if (!notif.is_read) onMarcarLeida(notif.id);
