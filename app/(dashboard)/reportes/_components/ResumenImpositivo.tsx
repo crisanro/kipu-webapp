@@ -42,6 +42,8 @@ interface Props {
   onCampoManual?:    (casillero: string, valor: number) => void;
   valoresGuardados?: Record<string, number>;
   onGuardar?:        (valores: Record<string, number>) => Promise<void>;
+  /** De dónde salen los saldos 605/606 (IVA): MANUAL | KIPU | SIN_HISTORIAL */
+  saldos?:           { origen?: string; periodo_anterior?: string | null };
 }
 
 const fmt = (n: number = 0) =>
@@ -238,12 +240,13 @@ function InputManual({
 
 export default function ResumenImpositivo({
   tipo, casilleros, camposManuales, resultado, onCampoManual,
-  valoresGuardados = {}, onGuardar,
+  valoresGuardados = {}, onGuardar, saldos,
 }: Props) {
   const [manuales, setManuales] = useState<Record<string, string>>({});
   const [guardando, setGuardando] = useState(false);
   const [guardado,  setGuardado]  = useState(false);
   const [dirty,     setDirty]     = useState(false);
+  const [ajustando, setAjustando] = useState(false);
 
   useEffect(() => {
     if (dirty) return;
@@ -268,6 +271,7 @@ export default function ResumenImpositivo({
     try {
       const numericos: Record<string, number> = {};
       for (const [k, v] of Object.entries(manuales)) {
+        if (v === "" || v === undefined) continue;   // vacío = sin ajuste manual
         numericos[k] = parseFloat(v) || 0;
       }
       await onGuardar(numericos);
@@ -280,17 +284,20 @@ export default function ResumenImpositivo({
     }
   };
 
-  const c605 = parseFloat(manuales["605"] || "0") || 0;
-  const c606 = parseFloat(manuales["606"] || "0") || 0;
-  const c564 = casilleros["564"] ?? 0;
-  const c499 = casilleros["499"] ?? 0;
-
-  const ivaAPagar = tipo === "IVA"
-    ? Math.max(c499 - c564 - (casilleros["609"] ?? 0) - c605 - c606, 0)
-    : 0;
-  const saldoFavor = tipo === "IVA"
-    ? Math.max(c564 + (casilleros["609"] ?? 0) + c605 + c606 - c499, 0)
-    : 0;
+  // IVA: todo viene calculado del backend (una sola fórmula, la del formulario 104)
+  const ivaAPagar  = tipo === "IVA" ? (casilleros["859"] ?? 0) : 0;
+  const saldoFavor = tipo === "IVA" ? (casilleros["615"] ?? 0) + (casilleros["617"] ?? 0) : 0;
+  const factor     = casilleros["563"] ?? 1;
+  const origen     = saldos?.origen;
+  const quitarAjuste = () => {
+    setManuales(prev => {
+      const n = { ...prev };
+      delete n["605"]; delete n["606"];
+      return n;
+    });
+    setDirty(true);
+    setGuardado(false);
+  };
   const tieneAPagar = tipo === "IVA" ? ivaAPagar > 0  : (resultado?.a_pagar ?? 0) > 0;
   const tieneSaldo   = tipo === "IVA" ? saldoFavor > 0 : (resultado?.saldo_favor ?? 0) > 0;
 
@@ -362,19 +369,76 @@ export default function ResumenImpositivo({
             )}
           </div>
           <div className="p-4 space-y-1">
-            <FilaCasillero num="499" label="Total IVA generado (ventas)"  value={casilleros["499"]} rojo />
-            <FilaCasillero num="564" label="Crédito tributario (compras)" value={casilleros["564"]} verde resta />
-            <FilaCasillero num="609" label="Retenciones IVA recibidas"    value={casilleros["609"]} verde resta />
-            {(camposManuales ?? []).filter(c => ["605","606"].includes(c.casillero)).map(campo => (
-              <InputManual
-                key={campo.casillero}
-                campo={campo}
-                value={manuales[campo.casillero] ?? ""}
-                onChange={handleManual}
-              />
-            ))}
+            <FilaCasillero num="499" label="IVA en ventas"                  value={casilleros["499"]} rojo />
+            <FilaCasillero num="564" label="Crédito tributario por compras" value={casilleros["564"]} verde resta />
+            {factor < 1 && (
+              <p className="text-[11px] px-4 pb-1" style={{ color: "var(--kipu-subtle)" }}>
+                Factor de proporcionalidad {factor.toFixed(4)} (563): ${fmt(casilleros["565"] ?? 0)} del IVA
+                de tus compras no se puede usar porque vendiste con tarifa 0% (565).
+              </p>
+            )}
+            {(casilleros["601"] ?? 0) > 0
+              ? <FilaCasillero num="601" label="Impuesto causado"           value={casilleros["601"]} subtotal />
+              : <FilaCasillero num="602" label="Crédito tributario del periodo" value={casilleros["602"]} verde />}
+
+            {/* Saldos del periodo anterior */}
+            <div className="pt-2 pb-1 px-1 flex items-center justify-between gap-2">
+              <p className="text-[11px]" style={{ color: "var(--kipu-subtle)" }}>
+                {origen === "KIPU"
+                  ? `Saldos de tu declaración de ${saldos?.periodo_anterior ?? "el periodo anterior"}`
+                  : origen === "MANUAL"
+                    ? "Saldos ingresados por ti"
+                    : "Primer periodo en Kipu: ingresa los saldos de tu última declaración"}
+              </p>
+              {onGuardar && origen === "KIPU" && !ajustando && (
+                <button type="button" onClick={() => {
+                    setAjustando(true);
+                    setManuales(prev => ({ ...prev, "605": String(casilleros["605"] ?? 0), "606": String(casilleros["606"] ?? 0) }));
+                    setDirty(true);
+                  }}
+                  className="text-[11px] underline" style={{ color: "var(--kipu-subtle)" }}>
+                  Ajustar
+                </button>
+              )}
+              {onGuardar && origen === "MANUAL" && (
+                <button type="button" onClick={quitarAjuste}
+                  className="text-[11px] underline" style={{ color: "var(--kipu-subtle)" }}>
+                  Usar los de Kipu
+                </button>
+              )}
+            </div>
+            {(origen === "KIPU" && !ajustando) || !onGuardar ? (
+              <>
+                <FilaCasillero num="605" label="Saldo anterior por compras"     value={casilleros["605"]} verde resta />
+                <FilaCasillero num="606" label="Saldo anterior por retenciones" value={casilleros["606"]} verde resta />
+              </>
+            ) : (
+              (camposManuales ?? []).filter(c => ["605","606"].includes(c.casillero)).map(campo => (
+                <InputManual
+                  key={campo.casillero}
+                  campo={campo}
+                  value={manuales[campo.casillero] ?? ""}
+                  onChange={handleManual}
+                />
+              ))
+            )}
+            <FilaCasillero num="609" label="Retenciones de IVA que te hicieron" value={casilleros["609"]} verde resta />
+
             <div className="my-2" style={{ borderTop: "1px solid var(--kipu-border)" }} />
-            <FilaCasillero num="859" label="Total consolidado IVA" value={casilleros["859"]} subtotal />
+            <FilaCasillero num="620" label="Subtotal a pagar"                          value={casilleros["620"]} subtotal />
+            {(casilleros["801"] ?? 0) > 0 && (
+              <FilaCasillero num="801" label="Retenciones de IVA que tú hiciste (a pagar)" value={casilleros["801"]} rojo />
+            )}
+            <FilaCasillero num="859" label="Total a pagar" value={casilleros["859"]} subtotal />
+
+            {/* Lo que pasa al siguiente periodo */}
+            {saldoFavor > 0 && (
+              <>
+                <p className="text-[11px] pt-3 px-1" style={{ color: "var(--kipu-subtle)" }}>Saldo para el próximo periodo</p>
+                <FilaCasillero num="615" label="Crédito por compras"     value={casilleros["615"]} verde />
+                <FilaCasillero num="617" label="Crédito por retenciones" value={casilleros["617"]} verde />
+              </>
+            )}
           </div>
         </div>
       )}
@@ -468,7 +532,9 @@ export default function ResumenImpositivo({
                     <p className="text-sm font-semibold" style={{ color: "var(--kipu-success)" }}>Saldo a favor</p>
                   </div>
                   <p className="text-xs" style={{ color: "var(--kipu-success)" }}>
-                    Puedes usar este saldo como crédito tributario el próximo mes.
+                    {tipo === "IVA"
+                      ? "Este crédito pasa automáticamente a tu próximo periodo (casilleros 605 y 606)."
+                      : "Puedes usar este saldo como crédito tributario en los próximos años."}
                   </p>
                 </>
               ) : (

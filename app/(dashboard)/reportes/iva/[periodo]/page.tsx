@@ -90,6 +90,7 @@ export default function ReporteIVAPage() {
       `/api/v1/app/declaraciones/iva/campos-manuales?periodo=${periodo}`,
       valores
     );
+    await cargar();   // los saldos 605/606 cambian el cálculo: se recalcula en el backend
   };
 
   const marcarDeclarado = async () => {
@@ -154,7 +155,7 @@ export default function ReporteIVAPage() {
 
   // 859 = total consolidado del formulario (IVA en ventas + retenciones que efectuaste)
   const ivaAPagar  = casResumen["859"] ?? 0;
-  const saldoFavor = casResumen["602"] ?? 0;
+  const saldoFavor = (casResumen["615"] ?? 0) + (casResumen["617"] ?? 0);   // pasa al próximo periodo
 
   // Estado real (antes: siempre "Pendiente" si no estaba declarado)
   const estadoBadge: EstadoReporte = declarado ? "DECLARADO"
@@ -330,7 +331,7 @@ export default function ReporteIVAPage() {
           }}
         >
           <p className="text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>
-            {ivaAPagar > 0 ? "A pagar" : saldoFavor > 0 ? "Crédito a favor" : "IVA neto"}
+            {ivaAPagar > 0 ? "A pagar" : saldoFavor > 0 ? "Saldo a favor" : "IVA neto"}
           </p>
           <p
             className="text-base font-bold"
@@ -388,6 +389,7 @@ export default function ReporteIVAPage() {
           camposManuales={reporte.resumen.campos_manuales ?? []}
           valoresGuardados={data?.campos_manuales_valores ?? reporte?.campos_manuales_valores ?? {}}
           onGuardar={esDemo ? undefined : guardarCamposManuales}
+          saldos={reporte.resumen.saldos}
         />
       )}
 

@@ -248,7 +248,7 @@ export default function SeccionCompras({ desglose, casilleros }: Props) {
                     Crédito tributario IVA aplicable
                   </p>
                   <p className="text-[10px] mt-0.5" style={{ color: "var(--kipu-success)" }}>
-                    Casillero 564 — reduce el IVA a pagar
+                    Casillero 520 · antes del factor de proporcionalidad
                   </p>
                 </div>
                 <p className="text-xl font-bold" style={{ color: "var(--kipu-success)" }}>
