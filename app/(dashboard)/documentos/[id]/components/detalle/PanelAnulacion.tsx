@@ -2,12 +2,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  CheckCircle2, Clock, XCircle, Copy, Ban, ExternalLink, Info, ChevronDown,
+  CheckCircle2, Clock, XCircle, Copy, Ban, ExternalLink, Info, ChevronDown, RefreshCw,
 } from "lucide-react";
 import api from "@/lib/api";
 import { type FacturaBase, formatearFecha, SRI_EN_LINEA_URL, MOTIVO_LABEL } from "./utils";
-
-// Anulación: datos para el SRI, registro en Kipu y seguimiento de la aceptación del receptor.
 
 function CampoCopiable({ label, valor }: { label: string; valor: string | null | undefined }) {
   const [copiado, setCopiado] = useState(false);
@@ -55,17 +53,34 @@ export default function PanelAnulacion({ factura, onRecargar }: { factura: Factu
   const router = useRouter();
   const an     = factura.anulacion!;
 
-  const [abierto,    setAbierto]    = useState(false);
-  const [motivo,     setMotivo]     = useState(an.motivos[0] ?? "");
-  const [confirmado, setConfirmado] = useState(false);
-  const [enviando,   setEnviando]   = useState<null | "anular" | "aceptada" | "rechazada">(null);
-  const [error,      setError]      = useState("");
+  const [abierto,       setAbierto]       = useState(false);
+  const [motivo,        setMotivo]        = useState(an.motivos[0] ?? "");
+  const [confirmado,    setConfirmado]    = useState(false);
+  const [enviando,      setEnviando]      = useState<null | "anular" | "aceptada" | "rechazada" | "sincronizar">(null);
+  const [error,         setError]         = useState("");
 
   const cajaNeutra = {
     background: "var(--kipu-surface)",
     border: "1px solid var(--kipu-border)",
   };
 
+  const Spinner = ({ color = "#FFFFFF" }: { color?: string }) => (
+    <div
+      className="w-3.5 h-3.5 border-2 border-t-transparent rounded-full animate-spin"
+      style={{ borderColor: color, borderTopColor: "transparent" }}
+    />
+  );
+
+  const ErrorMsg = () => error ? (
+    <p
+      className="text-xs px-3 py-2 rounded-lg leading-relaxed"
+      style={{ color: "var(--kipu-danger)", background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)" }}
+    >
+      {error}
+    </p>
+  ) : null;
+
+  // 1. Registrar anulación (Valida directo contra el SRI)
   const registrar = async () => {
     setError("");
     setEnviando("anular");
@@ -73,12 +88,31 @@ export default function PanelAnulacion({ factura, onRecargar }: { factura: Factu
       await api.post(`/api/v1/app/documentos/${factura.id}/anular`, { motivo, confirmado });
       onRecargar();
     } catch (err: any) {
-      setError(err?.response?.data?.detail ?? "No se pudo registrar la anulación.");
+      setError(err?.response?.data?.detail ?? "No se pudo verificar o registrar la anulación.");
     } finally {
       setEnviando(null);
     }
   };
 
+  // 2. Re-consultar estado de anulación al SRI
+  const sincronizarAnulacion = async () => {
+    setError("");
+    setEnviando("sincronizar");
+    try {
+      const res = await api.post(`/api/v1/app/documentos/${factura.id}/anulacion/sincronizar`);
+      if (res.data.cambio) {
+        onRecargar();
+      } else {
+        setError(res.data.mensaje || "El SRI aún no refleja un cambio en esta anulación.");
+      }
+    } catch (err: any) {
+      setError(err?.response?.data?.detail ?? "No se pudo consultar el estado con el SRI.");
+    } finally {
+      setEnviando(null);
+    }
+  };
+
+  // 3. Resolución manual (por si el usuario lo confirma antes)
   const resolver = async (aceptada: boolean) => {
     setError("");
     setEnviando(aceptada ? "aceptada" : "rechazada");
@@ -92,23 +126,7 @@ export default function PanelAnulacion({ factura, onRecargar }: { factura: Factu
     }
   };
 
-  const Spinner = ({ color = "#FFFFFF" }: { color?: string }) => (
-    <div
-      className="w-3.5 h-3.5 border-2 border-t-transparent rounded-full animate-spin"
-      style={{ borderColor: color, borderTopColor: "transparent" }}
-    />
-  );
-
-  const ErrorMsg = () => error ? (
-    <p
-      className="text-xs px-3 py-2 rounded-lg"
-      style={{ color: "var(--kipu-danger)", background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)" }}
-    >
-      {error}
-    </p>
-  ) : null;
-
-  // ── 1. Solicitud esperando al receptor ────────────────────────────────────
+  // ── A. Solicitud esperando al receptor ────────────────────────────────────
   if (an.estado === "PENDIENTE") {
     return (
       <div
@@ -129,42 +147,55 @@ export default function PanelAnulacion({ factura, onRecargar }: { factura: Factu
               <span className="font-medium" style={{ color: "var(--kipu-text)" }}>
                 {formatearFecha(an.limite_aceptacion)}
               </span>{" "}
-              para aceptarla en el SRI. Mientras tanto el comprobante sigue vigente y cuenta en tus reportes.
-              Si no responde a tiempo, la solicitud queda sin efecto.
+              para aceptarla en el SRI. Mientras tanto el comprobante sigue vigente.
             </p>
           </div>
         </div>
-        <p className="text-xs" style={{ color: "var(--kipu-muted)" }}>
-          Revisa el estado en el SRI y registra aquí la respuesta:
-        </p>
+
         <ErrorMsg />
-        <div className="flex gap-2">
+
+        <div className="space-y-2 pt-1">
+          {/* Botón principal: Consulta en tiempo real al SRI */}
           <button
             type="button"
-            onClick={() => resolver(true)}
+            onClick={sincronizarAnulacion}
             disabled={!!enviando}
-            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium text-white disabled:opacity-50"
+            className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium text-white transition-opacity disabled:opacity-50"
             style={{ background: "var(--kipu-accent)" }}
           >
-            {enviando === "aceptada" ? <Spinner /> : <CheckCircle2 size={13} />}
-            El receptor aceptó
+            {enviando === "sincronizar" ? <Spinner /> : <RefreshCw size={13} />}
+            Verificar respuesta en el SRI
           </button>
-          <button
-            type="button"
-            onClick={() => resolver(false)}
-            disabled={!!enviando}
-            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs disabled:opacity-50"
-            style={{ border: "1px solid var(--kipu-border)", color: "var(--kipu-muted)", background: "var(--kipu-surface)" }}
-          >
-            {enviando === "rechazada" ? <Spinner color="var(--kipu-muted)" /> : <XCircle size={13} />}
-            El receptor rechazó
-          </button>
+
+          {/* Opciones alternativas manuales */}
+          <div className="flex gap-2 pt-1">
+            <button
+              type="button"
+              onClick={() => resolver(true)}
+              disabled={!!enviando}
+              className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs disabled:opacity-50"
+              style={{ border: "1px solid var(--kipu-border)", color: "var(--kipu-muted)", background: "var(--kipu-surface)" }}
+            >
+              {enviando === "aceptada" ? <Spinner color="var(--kipu-muted)" /> : <CheckCircle2 size={13} />}
+              Marcar Aceptada
+            </button>
+            <button
+              type="button"
+              onClick={() => resolver(false)}
+              disabled={!!enviando}
+              className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs disabled:opacity-50"
+              style={{ border: "1px solid var(--kipu-border)", color: "var(--kipu-muted)", background: "var(--kipu-surface)" }}
+            >
+              {enviando === "rechazada" ? <Spinner color="var(--kipu-muted)" /> : <XCircle size={13} />}
+              Marcar Rechazada
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
-  // ── 2. No se puede anular ─────────────────────────────────────────────────
+  // ── B. No se puede anular ─────────────────────────────────────────────────
   if (!an.puede_anular) {
     if (!an.motivo_bloqueo) return null;
     return (
@@ -193,7 +224,7 @@ export default function PanelAnulacion({ factura, onRecargar }: { factura: Factu
     );
   }
 
-  // ── 3. Se puede anular ────────────────────────────────────────────────────
+  // ── C. Formulario de Solicitud ────────────────────────────────────────────
   const urgente = an.dias_restantes <= 2;
   const plazoTexto = an.dias_restantes === 0
     ? "hoy es el último día"
@@ -239,14 +270,13 @@ export default function PanelAnulacion({ factura, onRecargar }: { factura: Factu
             </p>
           )}
 
-          {/* Paso 1: datos para el SRI */}
+          {/* Paso 1: Datos para el SRI */}
           <div className="space-y-2 pt-3">
             <p className="text-sm font-medium" style={{ color: "var(--kipu-text)" }}>
               1. Ingresa la solicitud en el SRI
             </p>
             <p className="text-xs leading-relaxed" style={{ color: "var(--kipu-muted)" }}>
-              Kipu no puede anular en tu nombre. Entra a SRI en línea, busca la opción de anulación de
-              comprobantes electrónicos y copia estos datos:
+              Entra a SRI en línea, busca la opción de anulación de comprobantes electrónicos y copia estos datos:
             </p>
             <div className="rounded-lg overflow-hidden" style={{ border: "1px solid var(--kipu-border)", borderTop: "none" }}>
               <CampoCopiable label="Tipo de comprobante"         valor={an.sri.tipo_comprobante} />
@@ -267,24 +297,12 @@ export default function PanelAnulacion({ factura, onRecargar }: { factura: Factu
             >
               <ExternalLink size={12} /> Abrir SRI en línea
             </a>
-            {an.requiere_aceptacion && (
-              <p
-                className="text-xs leading-relaxed px-3 py-2 rounded-lg"
-                style={{
-                  color: "var(--kipu-muted)",
-                  background: "color-mix(in srgb, var(--kipu-warning) 8%, transparent)",
-                }}
-              >
-                Este tipo de comprobante necesita que el receptor acepte la anulación en el SRI dentro de
-                5 días hábiles. Avísale para que no se quede sin efecto.
-              </p>
-            )}
           </div>
 
-          {/* Paso 2: registrar en Kipu */}
+          {/* Paso 2: Verificar y Registrar en Kipu */}
           <div className="space-y-2">
             <p className="text-sm font-medium" style={{ color: "var(--kipu-text)" }}>
-              2. Registra la anulación en Kipu
+              2. Verificar y registrar en Kipu
             </p>
             <label className="block text-xs" style={{ color: "var(--kipu-subtle)" }} htmlFor="motivo-anulacion">
               Motivo
@@ -309,7 +327,9 @@ export default function PanelAnulacion({ factura, onRecargar }: { factura: Factu
               />
               Ya ingresé la solicitud de anulación en el portal del SRI.
             </label>
+
             <ErrorMsg />
+
             <button
               type="button"
               onClick={registrar}
@@ -318,7 +338,7 @@ export default function PanelAnulacion({ factura, onRecargar }: { factura: Factu
               style={{ background: "var(--kipu-danger)" }}
             >
               {enviando === "anular" ? <Spinner /> : <Ban size={13} />}
-              {an.requiere_aceptacion ? "Registrar solicitud de anulación" : "Registrar anulación"}
+              Verificar y registrar anulación
             </button>
           </div>
         </div>

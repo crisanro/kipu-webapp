@@ -1,7 +1,7 @@
 // Tipos, configuración y helpers compartidos del detalle de documentos.
 // Sin JSX: se puede importar desde cualquier lado.
 import {
-  CheckCircle2, Clock, XCircle, AlertTriangle, Ban,
+  CheckCircle2, Clock, XCircle, AlertTriangle, Ban, SearchCheck,
 } from "lucide-react";
 
 // =============================================================================
@@ -57,6 +57,8 @@ export interface FacturaBase {
   email_comprador?:          string | null;
   es_sandbox?:               boolean;
   anulacion?:                AnulacionInfo | null;
+  ultimo_error_tecnico?:     string | null;   // detalle de la última falla técnica con el SRI
+  sri_verificado_at?:        string | null;   // última vez que se consultó al SRI
 }
 
 // =============================================================================
@@ -70,6 +72,7 @@ export const ESTADO_CONFIG: Record<string, {
   FIRMADO:    { label: "En cola",            color: "#60a5fa",           bg: "color-mix(in srgb, #60a5fa 20%, transparent)",           border: "color-mix(in srgb, #60a5fa 20%, transparent)",           icon: Clock },
   DEVUELTA:   { label: "Devuelto por SRI",   color: "var(--kipu-warning)", bg: "color-mix(in srgb, var(--kipu-warning) 20%, transparent)", border: "color-mix(in srgb, var(--kipu-warning) 20%, transparent)", icon: AlertTriangle },
   RECHAZADO:  { label: "Rechazado por SRI",  color: "var(--kipu-danger)",  bg: "color-mix(in srgb, var(--kipu-danger) 20%, transparent)",  border: "color-mix(in srgb, var(--kipu-danger) 20%, transparent)",  icon: XCircle },
+  EN_REVISION:{ label: "En revisión",        color: "#f59e0b",           bg: "color-mix(in srgb, #f59e0b 15%, transparent)",           border: "color-mix(in srgb, #f59e0b 25%, transparent)",           icon: SearchCheck },
   ANULADO:    { label: "Anulado",            color: "var(--kipu-subtle)",  bg: "color-mix(in srgb, var(--kipu-subtle) 20%, transparent)",  border: "color-mix(in srgb, var(--kipu-subtle) 20%, transparent)",  icon: Ban },
 };
 
