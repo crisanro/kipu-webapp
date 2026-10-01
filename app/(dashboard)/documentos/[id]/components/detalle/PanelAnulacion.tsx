@@ -126,74 +126,48 @@ export default function PanelAnulacion({ factura, onRecargar }: { factura: Factu
     }
   };
 
-  // ── A. Solicitud esperando al receptor ────────────────────────────────────
-  if (an.estado === "PENDIENTE") {
-    return (
-      <div
-        className="rounded-xl p-4 space-y-3"
-        style={{
-          background: "color-mix(in srgb, var(--kipu-warning) 8%, transparent)",
-          border: "1px solid color-mix(in srgb, var(--kipu-warning) 25%, transparent)",
-        }}
-      >
-        <div className="flex items-start gap-2.5">
-          <Clock size={16} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-warning)" }} />
-          <div className="space-y-1">
-            <p className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>
-              Anulación en espera del receptor
-            </p>
-            <p className="text-xs leading-relaxed" style={{ color: "var(--kipu-muted)" }}>
-              {an.sri.razon_social_receptor || "El receptor"} tiene hasta el{" "}
-              <span className="font-medium" style={{ color: "var(--kipu-text)" }}>
-                {formatearFecha(an.limite_aceptacion)}
-              </span>{" "}
-              para aceptarla en el SRI. Mientras tanto el comprobante sigue vigente.
-            </p>
-          </div>
-        </div>
-
-        <ErrorMsg />
-
-        <div className="space-y-2 pt-1">
-          {/* Botón principal: Consulta en tiempo real al SRI */}
-          <button
-            type="button"
-            onClick={sincronizarAnulacion}
-            disabled={!!enviando}
-            className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium text-white transition-opacity disabled:opacity-50"
-            style={{ background: "var(--kipu-accent)" }}
-          >
-            {enviando === "sincronizar" ? <Spinner /> : <RefreshCw size={13} />}
-            Verificar respuesta en el SRI
-          </button>
-
-          {/* Opciones alternativas manuales */}
-          <div className="flex gap-2 pt-1">
-            <button
-              type="button"
-              onClick={() => resolver(true)}
-              disabled={!!enviando}
-              className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs disabled:opacity-50"
-              style={{ border: "1px solid var(--kipu-border)", color: "var(--kipu-muted)", background: "var(--kipu-surface)" }}
-            >
-              {enviando === "aceptada" ? <Spinner color="var(--kipu-muted)" /> : <CheckCircle2 size={13} />}
-              Marcar Aceptada
-            </button>
-            <button
-              type="button"
-              onClick={() => resolver(false)}
-              disabled={!!enviando}
-              className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs disabled:opacity-50"
-              style={{ border: "1px solid var(--kipu-border)", color: "var(--kipu-muted)", background: "var(--kipu-surface)" }}
-            >
-              {enviando === "rechazada" ? <Spinner color="var(--kipu-muted)" /> : <XCircle size={13} />}
-              Marcar Rechazada
-            </button>
-          </div>
+// ── A. Solicitud esperando al receptor (Solo verificación contra el SRI) ────
+if (an.estado === "PENDIENTE") {
+  return (
+    <div
+      className="rounded-xl p-4 space-y-3"
+      style={{
+        background: "color-mix(in srgb, var(--kipu-warning) 8%, transparent)",
+        border: "1px solid color-mix(in srgb, var(--kipu-warning) 25%, transparent)",
+      }}
+    >
+      <div className="flex items-start gap-2.5">
+        <Clock size={16} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-warning)" }} />
+        <div className="space-y-1">
+          <p className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>
+            Anulación en espera del receptor
+          </p>
+          <p className="text-xs leading-relaxed" style={{ color: "var(--kipu-muted)" }}>
+            {an.sri.razon_social_receptor || "El receptor"} tiene hasta el{" "}
+            <span className="font-medium" style={{ color: "var(--kipu-text)" }}>
+              {formatearFecha(an.limite_aceptacion)}
+            </span>{" "}
+            para responder en el portal del SRI. Mientras tanto el comprobante sigue vigente.
+          </p>
         </div>
       </div>
-    );
-  }
+
+      <ErrorMsg />
+
+      {/* ÚNICO BOTÓN: Consultar la respuesta oficial directamente en el SRI */}
+      <button
+        type="button"
+        onClick={sincronizarAnulacion}
+        disabled={!!enviando}
+        className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-medium text-white transition-opacity disabled:opacity-50"
+        style={{ background: "var(--kipu-accent)" }}
+      >
+        {enviando === "sincronizar" ? <Spinner /> : <RefreshCw size={13} />}
+        Verificar respuesta en el SRI
+      </button>
+    </div>
+  );
+}
 
   // ── B. No se puede anular ─────────────────────────────────────────────────
   if (!an.puede_anular) {
