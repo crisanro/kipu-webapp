@@ -8,7 +8,11 @@ import { useAuthStore } from "@/store/auth.store";
 import { useSandboxStore } from "@/store/sandbox.store";
 import api from "@/lib/api";
 import PWAInstallBanner from "@/components/PWAInstallBanner";
-import { registrarNotificaciones } from "@/lib/notifications";
+import {
+  registrarNotificaciones,
+  desregistrarNotificaciones,
+  escucharPrimerPlano,
+} from "@/lib/notifications";
 import { AlertTriangle, FlaskConical } from "lucide-react";
 import { useTheme } from "next-themes";
 import {
@@ -33,6 +37,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [showSelectorEmp, setShowSelectorEmp] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [emailVerificado, setEmailVerificado] = useState(true);
+  const [reenviando, setReenviando] = useState(false);
 
   useEffect(() => setMounted(true), []);
 
@@ -55,22 +60,45 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { notificaciones, noLeidas, loading: loadingNotifs, marcarLeida, marcarTodasLeidas } =
     useNotificaciones(false);
 
+  // ── Push: registrar dispositivo + escuchar mensajes con la app abierta ──────
   useEffect(() => {
-    registrarNotificaciones().catch(() => {});
+    let cancelado = false;
+    let unsubscribe: (() => void) | undefined;
+
+    registrarNotificaciones()
+      .then(async (ok) => {
+        if (!ok || cancelado) return;
+        const unsub = await escucharPrimerPlano();
+        if (cancelado) unsub();
+        else unsubscribe = unsub;
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelado = true;
+      unsubscribe?.();
+    };
   }, []);
 
   const handleLogout = async () => {
+    // Dar de baja el dispositivo ANTES de cerrar sesión (necesita el token válido)
+    await desregistrarNotificaciones();
     await signOut(auth);
     logout();
     router.replace("/login");
   };
 
   const reenviarVerificacion = async () => {
+    if (reenviando) return;
+    setReenviando(true);
     try {
       await api.post("/api/v1/app/auth/send-verification");
-      alert("Correo de verificación enviado. Revisa tu bandeja.");
-    } catch {
-      alert("Error al enviar el correo. Intenta de nuevo.");
+      alert("Correo de verificación enviado. Revisa tu bandeja y la carpeta de spam.");
+    } catch (e: any) {
+      const detail = e?.response?.data?.detail;
+      alert(typeof detail === "string" ? detail : "Error al enviar el correo. Intenta de nuevo.");
+    } finally {
+      setReenviando(false);
     }
   };
 
@@ -160,10 +188,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </div>
               <button
                 onClick={reenviarVerificacion}
-                className="text-xs underline underline-offset-2 whitespace-nowrap shrink-0"
+                disabled={reenviando}
+                className="text-xs underline underline-offset-2 whitespace-nowrap shrink-0 disabled:opacity-50"
                 style={{ color: "var(--kipu-warning)" }}
               >
-                Reenviar
+                {reenviando ? "Enviando..." : "Reenviar"}
               </button>
             </div>
           )}

@@ -10,7 +10,7 @@ import {
 import PreguntasSRI        from "../../_components/PreguntasSRI";
 import ResumenImpositivo   from "../../_components/ResumenImpositivo";
 import DocumentosIncluidos from "../../_components/DocumentosIncluidos";
-import EstadoBadge         from "../../_components/EstadoBadge";
+import EstadoBadge, { EstadoReporte } from "../../_components/EstadoBadge";
 
 const fmt = (n: number = 0) =>
   n.toLocaleString("es-EC", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -25,6 +25,7 @@ export default function ReporteRentaPage() {
   const [regenerando, setRegenerando] = useState(false);
   const [marcando,    setMarcando]    = useState(false);
   const [declarado,   setDeclarado]   = useState(false);
+  const [decl,        setDecl]        = useState<{ estado: EstadoReporte; dias_restantes: number } | null>(null);
   const [error,       setError]       = useState("");
 
   const cargar = useCallback(async (regen = false) => {
@@ -36,9 +37,15 @@ export default function ReporteRentaPage() {
       const res = await api.get(url);
       setData(res.data);
 
-      // Verificar declarado
-      const resDecl = await api.get(`/api/v1/app/declaraciones/periodo/${anio}/1?tipo=102`);
-      setDeclarado(resDecl.data.data?.declarado ?? false);
+      // Verificar declarado (si el periodo no aplica, no rompe la página)
+      try {
+        const resDecl = await api.get(`/api/v1/app/declaraciones/periodo/${anio}/1?tipo=102`);
+        setDeclarado(resDecl.data.data?.declarado ?? false);
+        setDecl(resDecl.data.data ?? null);
+      } catch {
+        setDeclarado(false);
+        setDecl(null);
+      }
     } catch (e: any) {
       setError(e?.response?.data?.detail ?? "Error al cargar el reporte.");
     } finally {
@@ -52,7 +59,7 @@ export default function ReporteRentaPage() {
   const marcarDeclarado = async () => {
     setMarcando(true);
     try {
-      await api.post("/api/v1/app/declaraciones/declarar?tipo=102");
+      await api.post(`/api/v1/app/declaraciones/declarar?tipo=102&periodo=${anio}`);
       setDeclarado(true);
     } catch (e: any) {
       setError(e?.response?.data?.detail ?? "Error al marcar como declarado.");
@@ -150,7 +157,7 @@ export default function ReporteRentaPage() {
               ) : enCurso ? (
                 <EstadoBadge estado="EN_CURSO" size="sm" />
               ) : (
-                <EstadoBadge estado="PENDIENTE" size="sm" />
+                <EstadoBadge estado={decl?.estado ?? "PENDIENTE"} diasRestantes={decl?.dias_restantes} size="sm" />
               )}
               {enCurso && (
                 <span className="text-[10px]" style={{ color: "var(--kipu-warning)" }}>

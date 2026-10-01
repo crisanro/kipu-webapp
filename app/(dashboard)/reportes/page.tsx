@@ -12,7 +12,6 @@ import {
   FileText,
   ChevronLeft,
   ChevronRight,
-  ChevronRight as ChevronRightIcon,
   Lock,
   Info,
 } from "lucide-react";
@@ -21,23 +20,44 @@ import { EstadoReporte } from "./_components/EstadoBadge";
 
 type Tab = "IVA" | "RENTA" | "ATS";
 
+const TIPO_API: Record<Tab, "104" | "102" | "ATS"> = { IVA: "104", RENTA: "102", ATS: "ATS" };
+
+// Lo que devuelve /declaraciones/historial (todo calculado en el backend, hora Ecuador)
 interface DeclaracionRow {
-  periodo: string;
-  periodo_fmt: string;
-  vencimiento: string;
-  declarado: boolean;
+  id:              number;
+  tipo_periodo:    "MENSUAL" | "SEMESTRAL" | "ANUAL";
+  periodo:         string;   // 2026-08-01
+  periodo_key:     string;   // 2026-08 | 2026-07 | 2025
+  periodo_fmt:     string;   // agosto de 2026
+  vencimiento:     string;
+  dias_restantes:  number;
+  en_curso:        boolean;
+  declarado:       boolean;
   fecha_declarado: string | null;
-  estado: string;
-  totales: any;
+  estado:          EstadoReporte;
 }
+
 interface ReporteRow {
-  tipo: string;
-  periodo: string;
-  cached: boolean;
-  total_doc_emitidos: number;
+  tipo:                string;
+  periodo:             string;
+  total_doc_emitidos:  number;
   total_doc_recibidos: number;
-  generado_at: string;
-  resumen: any;
+  generado_at:         string | null;
+  resumen:             any;
+}
+
+// Lo que devuelve /declaraciones/obligaciones
+interface Obligaciones {
+  iva:              "MENSUAL" | "SEMESTRAL" | "NO_APLICA";
+  ats:              boolean;
+  renta_formulario: "102" | "101";
+  renta_modo:       "CASILLEROS" | "INFORMATIVO";
+  regimen:          string;
+  tipo_emisor:      string;
+  en_produccion:    boolean;
+  inicio:           string;   // YYYY-MM-DD
+  tipos:            string[];
+  advertencias:     string[];
 }
 
 const TAB_CONFIG = {
@@ -63,65 +83,32 @@ const DEMO_CARDS: Record<Tab, { periodo: string; estado: string; monto?: string;
   ],
 };
 
-function periodoFmt(periodo: string, tipo: Tab, periodoIva: string = "MENSUAL"): string {
-  try {
-    if (tipo === "RENTA") return `Año ${periodo.split("-")[0]}`;
-    const [a, m] = periodo.split("-");
-    if (periodoIva === "SEMESTRAL") {
-      return parseInt(m) <= 6
-        ? `1er semestre ${a}`
-        : `2do semestre ${a}`;
-    }
-    return new Date(parseInt(a), parseInt(m) - 1, 1).toLocaleDateString("es-EC", {
-      month: "long", year: "numeric",
-    });
-  } catch { return periodo; }
+const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio",
+               "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+
+const capitalizar = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+/** "2026-03-15" → "marzo de 2026" sin pasar por Date */
+function mesAnio(ymd: string) {
+  const [a, m] = ymd.split("-").map(Number);
+  return a && m ? `${MESES[m - 1]} de ${a}` : ymd;
 }
 
-function periodoKey(decl: DeclaracionRow, tipo: Tab): string {
-  if (tipo === "RENTA") return decl.periodo.split("-")[0];
-  return decl.periodo.slice(0, 7);
-}
-
-function estadoFromDecl(decl: DeclaracionRow): EstadoReporte {
-  switch (decl.estado) {
-    case "DECLARADO": return "DECLARADO";
-    case "VENCIDO":   return "VENCIDO";
-    case "URGENTE":   return "URGENTE";
-    case "PROXIMO":   return "PROXIMO";
-    default:          return "PENDIENTE";
-  }
-}
+const colorTab = (tab: Tab) =>
+  tab === "IVA"
+    ? { base: "var(--kipu-accent)", fuerte: "var(--kipu-accent)", texto: "var(--kipu-accent)" }
+    : tab === "RENTA"
+      ? { base: "#a855f7", fuerte: "#9333ea", texto: "#c084fc" }
+      : { base: "#06b6d4", fuerte: "#0891b2", texto: "#22d3ee" };
 
 // ── Componente demo cards ──────────────────────────────────────────────────────
 function DemoCards({ tab }: { tab: Tab }) {
   const href = tab === "IVA" ? "/reportes/iva/2026-08"
              : tab === "RENTA" ? "/reportes/renta/2025"
              : "/reportes/ats/2026-08";
-
-  const getTabColors = () => {
-    if (tab === "IVA") {
-      return {
-        bg: "color-mix(in srgb, var(--kipu-accent) 20%, transparent)",
-        color: "var(--kipu-accent)",
-        border: "color-mix(in srgb, var(--kipu-accent) 20%, transparent)",
-      };
-    }
-    if (tab === "RENTA") {
-      return {
-        bg: "color-mix(in srgb, #a855f7 20%, transparent)",
-        color: "#c084fc",
-        border: "color-mix(in srgb, #a855f7 20%, transparent)",
-      };
-    }
-    return {
-      bg: "color-mix(in srgb, #06b6d4 20%, transparent)",
-      color: "#22d3ee",
-      border: "color-mix(in srgb, #06b6d4 20%, transparent)",
-    };
-  };
-
-  const colors = getTabColors();
+  const c = colorTab(tab);
+  const bg     = `color-mix(in srgb, ${c.base} 20%, transparent)`;
+  const border = `color-mix(in srgb, ${c.base} 20%, transparent)`;
 
   return (
     <div className="space-y-3">
@@ -130,10 +117,7 @@ function DemoCards({ tab }: { tab: Tab }) {
           key={i}
           href={href}
           className="block rounded-xl p-4 transition-all group"
-          style={{
-            background: "var(--kipu-surface)",
-            border: "1px solid var(--kipu-border)",
-          }}
+          style={{ background: "var(--kipu-surface)", border: "1px solid var(--kipu-border)" }}
           onMouseEnter={e => e.currentTarget.style.borderColor = "color-mix(in srgb, var(--kipu-text) 30%, transparent)"}
           onMouseLeave={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
         >
@@ -141,7 +125,7 @@ function DemoCards({ tab }: { tab: Tab }) {
             <div className="flex items-start gap-3">
               <div
                 className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
-                style={{ background: colors.bg, color: colors.color }}
+                style={{ background: bg, color: c.texto }}
               >
                 <FileText size={16} />
               </div>
@@ -149,11 +133,7 @@ function DemoCards({ tab }: { tab: Tab }) {
                 <div className="flex items-center gap-2 mb-1">
                   <span
                     className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-                    style={{
-                      background: colors.bg,
-                      color: colors.color,
-                      border: `1px solid ${colors.border}`,
-                    }}
+                    style={{ background: bg, color: c.texto, border: `1px solid ${border}` }}
                   >
                     {TAB_CONFIG[tab].label}
                   </span>
@@ -176,18 +156,11 @@ function DemoCards({ tab }: { tab: Tab }) {
             <div className="flex items-center gap-2 shrink-0">
               <span
                 className="text-[10px] font-semibold px-2 py-1 rounded-full"
-                style={{
-                  background: "color-mix(in srgb, var(--kipu-text) 8%, transparent)",
-                  color: "var(--kipu-subtle)",
-                }}
+                style={{ background: "color-mix(in srgb, var(--kipu-text) 8%, transparent)", color: "var(--kipu-subtle)" }}
               >
                 {card.estado}
               </span>
-              <ChevronRightIcon
-                size={14}
-                className="transition-colors"
-                style={{ color: "var(--kipu-subtle)" }}
-              />
+              <ChevronRight size={14} style={{ color: "var(--kipu-subtle)" }} />
             </div>
           </div>
         </Link>
@@ -200,119 +173,132 @@ function DemoCards({ tab }: { tab: Tab }) {
   );
 }
 
+// ── Aviso neutro reutilizable ──────────────────────────────────────────────────
+function Aviso({ tono = "info", titulo, children }: {
+  tono?: "info" | "warning";
+  titulo?: string;
+  children: React.ReactNode;
+}) {
+  const color = tono === "warning" ? "var(--kipu-warning)" : "var(--kipu-subtle)";
+  const Icono = tono === "warning" ? AlertTriangle : Info;
+  return (
+    <div
+      className="flex items-start gap-3 rounded-xl px-4 py-3"
+      style={{
+        background: tono === "warning"
+          ? "color-mix(in srgb, var(--kipu-warning) 10%, transparent)"
+          : "var(--kipu-surface)",
+        border: tono === "warning"
+          ? "1px solid color-mix(in srgb, var(--kipu-warning) 20%, transparent)"
+          : "1px solid var(--kipu-border)",
+      }}
+    >
+      <Icono size={15} className="shrink-0 mt-0.5" style={{ color }} />
+      <div className="text-xs space-y-1" style={{ color: tono === "warning" ? color : "var(--kipu-muted)" }}>
+        {titulo && <p className="text-sm font-semibold" style={{ color: tono === "warning" ? color : "var(--kipu-text)" }}>{titulo}</p>}
+        <div>{children}</div>
+      </div>
+    </div>
+  );
+}
+
 // ── Página principal ───────────────────────────────────────────────────────────
 export default function ReportesPage() {
-  const puedeVer = usePermiso("reportes");
-  if (!puedeVer) return <SinAcceso />;
-
+  // Todos los hooks primero; el return condicional va al final.
+  const puedeVer         = usePermiso("reportes");
   const empresa          = useAuthStore((s) => s.empresa);
   const tieneSuscripcion = empresa?.suscripcion_activa ?? false;
-  // ATS: solo para obligados a llevar contabilidad (tipo_emisor === 2 en Ecuador)
-  const esObligadoContabilidad = empresa?.obligado_contabilidad === "SI";
-  const tieneATS = tieneSuscripcion && esObligadoContabilidad;
 
   const [tab,           setTab]           = useState<Tab>("IVA");
+  const [anio,          setAnio]          = useState(new Date().getFullYear());
+  const [obl,           setObl]           = useState<Obligaciones | null>(null);
   const [declaraciones, setDeclaraciones] = useState<DeclaracionRow[]>([]);
   const [reportes,      setReportes]      = useState<ReporteRow[]>([]);
+  const [motivo,        setMotivo]        = useState<string | null>(null);
   const [loading,       setLoading]       = useState(true);
-  const [anio,          setAnio]          = useState(new Date().getFullYear());
+  const [error,         setError]         = useState("");
+
+  // Qué declara esta empresa (se recarga al cambiar de empresa)
+  useEffect(() => {
+    if (!puedeVer || !tieneSuscripcion) return;
+    api.get("/api/v1/app/declaraciones/obligaciones")
+      .then((r) => setObl(r.data.data))
+      .catch(() => setObl(null));
+  }, [puedeVer, tieneSuscripcion, empresa?.id]);
 
   const cargar = useCallback(async () => {
-    if (!tieneSuscripcion) return;
-    if (tab === "ATS" && !tieneATS) return;
+    if (!puedeVer || !tieneSuscripcion) return;
     setLoading(true);
+    setError("");
     try {
-      const tipoAPI = tab === "IVA" ? "104" : tab === "RENTA" ? "102" : "ATS";
       const [resDecl, resRep] = await Promise.all([
-        api.get(`/api/v1/app/declaraciones/historial?tipo=${tipoAPI}&anio=${anio}`),
+        api.get(`/api/v1/app/declaraciones/historial?tipo=${TIPO_API[tab]}&anio=${anio}`),
         api.get(`/api/v1/app/declaraciones/reportes?tipo=${tab}&anio=${anio}`),
       ]);
       setDeclaraciones(resDecl.data.data ?? []);
+      setMotivo(resDecl.data.aplica === false ? resDecl.data.motivo ?? null : null);
       setReportes(resRep.data.data ?? []);
-    } catch (e) { console.error(e); }
-    finally { setLoading(false); }
-  }, [tab, anio, tieneSuscripcion, tieneATS]);
+    } catch (e: any) {
+      setError(e?.response?.data?.detail ?? "No se pudieron cargar las declaraciones.");
+    } finally {
+      setLoading(false);
+    }
+  }, [tab, anio, puedeVer, tieneSuscripcion, empresa?.id]);
 
   useEffect(() => { cargar(); }, [cargar]);
 
-  const periodoIva = empresa?.periodo_iva ?? "MENSUAL";
+  if (!puedeVer) return <SinAcceso />;
+
+  const anioActual   = new Date().getFullYear();
+  const anioInicio   = obl ? parseInt(obl.inicio.slice(0, 4)) : 2020;
+  const enProduccion = obl?.en_produccion ?? empresa?.ambiente === 2;
+  const tabLabel     = (t: Tab) => t === "RENTA" ? `Renta ${obl?.renta_formulario ?? "102"}` : TAB_CONFIG[t].label;
+  const c            = colorTab(tab);
+
   const items = declaraciones.map((decl) => {
-    const key    = periodoKey(decl, tab);
-    const reporte = reportes.find((r) => r.periodo.startsWith(key));
-    const hoy    = new Date();
-    const venc    = new Date(decl.vencimiento);
-    const dias    = Math.ceil((venc.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
-    const esActual =
-      tab === "RENTA"
-        ? parseInt(key) === hoy.getFullYear()
-        : periodoIva === "SEMESTRAL"
-          ? (key === `${hoy.getFullYear()}-01` && hoy.getMonth() < 6) ||
-            (key === `${hoy.getFullYear()}-07` && hoy.getMonth() >= 6)
-          : key === `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, "0")}`;
+    const reporte = reportes.find((r) => r.periodo.startsWith(decl.periodo_key));
     return {
-      periodo:       key,
-      periodoFmt:    periodoFmt(decl.periodo, tab, periodoIva),
-      estado:        estadoFromDecl(decl) as EstadoReporte,
-      diasRestantes: dias,
-      vencimiento:   decl.vencimiento,
-      declarado:     decl.declarado,
-      cached:        !!reporte,
-      enCurso:       esActual,
-      generadoAt:    reporte?.generado_at,
-      totalDocs:     (reporte?.total_doc_emitidos ?? 0) + (reporte?.total_doc_recibidos ?? 0),
-      resumen:       reporte?.resumen ?? null,
+      decl,
+      reporte,
+      totalDocs: (reporte?.total_doc_emitidos ?? 0) + (reporte?.total_doc_recibidos ?? 0),
     };
   });
 
-  const enProduccion = empresa?.ambiente === 2;
+  const TabsBar = (
+    <div
+      className="flex gap-1 rounded-xl p-1"
+      style={{ background: "var(--kipu-surface)", border: "1px solid var(--kipu-border)" }}
+    >
+      {(Object.keys(TAB_CONFIG) as Tab[]).map((t) => {
+        const activo = tab === t;
+        return (
+          <button
+            key={t}
+            type="button"
+            onClick={() => setTab(t)}
+            className="flex-1 py-2.5 rounded-lg text-sm font-medium transition-colors"
+            style={{
+              background: activo ? colorTab(t).fuerte : "transparent",
+              color:      activo ? "#FFFFFF" : "var(--kipu-subtle)",
+            }}
+            onMouseEnter={e => { if (!activo) e.currentTarget.style.color = "var(--kipu-text)"; }}
+            onMouseLeave={e => { if (!activo) e.currentTarget.style.color = "var(--kipu-subtle)"; }}
+          >
+            {tabLabel(t)}
+          </button>
+        );
+      })}
+    </div>
+  );
 
-  const getTabStyle = (t: Tab) => {
-    const active = tab === t;
-    if (!active) {
-      return {
-        background: "transparent",
-        color: "var(--kipu-subtle)",
-      };
-    }
-    if (t === "IVA") {
-      return {
-        background: "var(--kipu-accent)",
-        color: "#FFFFFF",
-      };
-    }
-    if (t === "RENTA") {
-      return {
-        background: "#9333ea",
-        color: "#FFFFFF",
-      };
-    }
-    return {
-      background: "#0891b2",
-      color: "#FFFFFF",
-    };
-  };
-
-  const getInfoTabStyle = () => {
-    if (tab === "IVA") {
-      return {
-        background: "color-mix(in srgb, var(--kipu-accent) 5%, transparent)",
-        border: "1px solid color-mix(in srgb, var(--kipu-accent) 20%, transparent)",
-        color: "var(--kipu-accent)",
-      };
-    }
-    if (tab === "RENTA") {
-      return {
-        background: "color-mix(in srgb, #a855f7 5%, transparent)",
-        border: "1px solid color-mix(in srgb, #a855f7 20%, transparent)",
-        color: "#c084fc",
-      };
-    }
-    return {
-      background: "color-mix(in srgb, #06b6d4 5%, transparent)",
-      border: "1px solid color-mix(in srgb, #06b6d4 20%, transparent)",
-      color: "#22d3ee",
-    };
-  };
+  const textoInfo =
+    tab === "IVA"
+      ? obl?.iva === "SEMESTRAL"
+        ? "Declaración semestral del IVA — Formulario 104. Enero–junio vence en julio; julio–diciembre, en enero. Día según el noveno dígito del RUC."
+        : "Declaración mensual del IVA — Formulario 104. Vence el mes siguiente, el día que corresponde al noveno dígito del RUC."
+      : tab === "RENTA"
+        ? `Impuesto a la Renta anual — Formulario ${obl?.renta_formulario ?? "102"}. Vence en ${obl?.tipo_emisor === "JURIDICO" ? "abril" : "marzo"} del año siguiente.`
+        : "Anexo Transaccional Simplificado — detalle de compras y ventas. Vence el segundo mes después del periodo.";
 
   return (
     <div className="p-4 md:p-6 max-w-2xl mx-auto space-y-5">
@@ -331,28 +317,14 @@ export default function ReportesPage() {
             <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>Declaraciones organizadas y listas para el SRI</p>
           </div>
         </div>
-        {tieneSuscripcion && !(tab === "ATS" && !tieneATS) && (
+        {tieneSuscripcion && (
           <button
             type="button"
             onClick={cargar}
             disabled={loading}
+            aria-label="Actualizar"
             className="p-2 rounded-lg transition-colors disabled:opacity-40"
-            style={{
-              border: "1px solid var(--kipu-border)",
-              color: "var(--kipu-subtle)",
-            }}
-            onMouseEnter={e => {
-              if (!loading) {
-                e.currentTarget.style.color = "var(--kipu-text)";
-                e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 5%, transparent)";
-              }
-            }}
-            onMouseLeave={e => {
-              if (!loading) {
-                e.currentTarget.style.color = "var(--kipu-subtle)";
-                e.currentTarget.style.background = "transparent";
-              }
-            }}
+            style={{ border: "1px solid var(--kipu-border)", color: "var(--kipu-subtle)" }}
           >
             {loading ? (
               <div
@@ -369,7 +341,6 @@ export default function ReportesPage() {
       {/* ── SIN SUSCRIPCIÓN ────────────────────────────────────────────────── */}
       {!tieneSuscripcion && (
         <>
-          {/* Banner upgrade */}
           <div
             className="relative overflow-hidden rounded-2xl p-5"
             style={{
@@ -401,7 +372,7 @@ export default function ReportesPage() {
                       className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
                       style={{
                         background: `color-mix(in srgb, ${color} 10%, transparent)`,
-                        color: color,
+                        color,
                         border: `1px solid color-mix(in srgb, ${color} 20%, transparent)`,
                       }}
                     >
@@ -411,67 +382,25 @@ export default function ReportesPage() {
                 </div>
                 <Link
                   href="/planes"
-                  className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-white text-sm font-semibold transition-colors shadow-lg"
-                  style={{
-                    background: "var(--kipu-accent)",
-                    boxShadow: "0 10px 15px -3px color-mix(in srgb, var(--kipu-accent) 20%, transparent)",
-                  }}
+                  className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-white text-sm font-semibold transition-colors"
+                  style={{ background: "var(--kipu-accent)" }}
                   onMouseEnter={e => e.currentTarget.style.background = "var(--kipu-accent-h)"}
                   onMouseLeave={e => e.currentTarget.style.background = "var(--kipu-accent)"}
                 >
                   Ver planes y suscribirme
-                  <ChevronRightIcon size={15} />
+                  <ChevronRight size={15} />
                 </Link>
                 <p className="text-[10px] mt-2" style={{ color: "var(--kipu-subtle)" }}>$69/año + IVA · Cancela cuando quieras</p>
               </div>
             </div>
-            <div
-              className="absolute -bottom-6 -right-6 w-32 h-32 rounded-full blur-2xl pointer-events-none"
-              style={{ background: "color-mix(in srgb, var(--kipu-accent) 10%, transparent)" }}
-            />
           </div>
 
-          {/* Tabs demo — los 3 visibles */}
-          <div
-            className="flex gap-1 rounded-xl p-1"
-            style={{
-              background: "var(--kipu-surface)",
-              border: "1px solid var(--kipu-border)",
-            }}
-          >
-            {(Object.keys(TAB_CONFIG) as Tab[]).map((t) => (
-              <button
-                key={t}
-                type="button"
-                onClick={() => setTab(t)}
-                className="flex-1 py-2.5 rounded-lg text-sm font-medium transition-colors"
-                style={getTabStyle(t)}
-                onMouseEnter={e => {
-                  if (tab !== t) e.currentTarget.style.color = "var(--kipu-text)";
-                }}
-                onMouseLeave={e => {
-                  if (tab !== t) e.currentTarget.style.color = "var(--kipu-subtle)";
-                }}
-              >
-                {TAB_CONFIG[t].label}
-              </button>
-            ))}
-          </div>
+          {TabsBar}
 
-          {/* Info ATS en demo */}
           {tab === "ATS" && (
-            <div
-              className="flex items-start gap-3 rounded-xl px-4 py-3"
-              style={{
-                background: "color-mix(in srgb, #06b6d4 10%, transparent)",
-                border: "1px solid color-mix(in srgb, #06b6d4 20%, transparent)",
-              }}
-            >
-              <Info size={15} className="shrink-0 mt-0.5" style={{ color: "#22d3ee" }} />
-              <p className="text-xs" style={{ color: "#67e8f9" }}>
-                El ATS aplica solo para personas <strong>obligadas a llevar contabilidad</strong>. Si tu negocio supera los umbrales del SRI, este reporte es obligatorio mensualmente.
-              </p>
-            </div>
+            <Aviso>
+              El ATS aplica solo a <strong>obligados a llevar contabilidad</strong> y sociedades.
+            </Aviso>
           )}
 
           <DemoCards tab={tab} />
@@ -482,214 +411,147 @@ export default function ReportesPage() {
       {tieneSuscripcion && (
         <>
           {!enProduccion && (
-            <div
-              className="flex items-start gap-3 rounded-xl px-4 py-3"
-              style={{
-                background: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)",
-                border: "1px solid color-mix(in srgb, var(--kipu-warning) 20%, transparent)",
-              }}
-            >
-              <AlertTriangle size={15} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-warning)" }} />
-              <p className="text-sm" style={{ color: "var(--kipu-warning)" }}>
-                Los reportes tributarios solo aplican en ambiente de producción.
-              </p>
-            </div>
+            <Aviso tono="warning">Los reportes tributarios solo aplican en ambiente de producción.</Aviso>
           )}
 
-          {/* Tabs — con suscripción, los 3 siempre visibles */}
+          {obl?.advertencias?.map((a) => (
+            <Aviso key={a} tono="warning">
+              {a}{" "}
+              <Link href="/configuracion" className="underline" style={{ color: "var(--kipu-warning)" }}>
+                Ir a configuración
+              </Link>
+            </Aviso>
+          ))}
+
+          {TabsBar}
+
+          {/* Selector de año */}
           <div
-            className="flex gap-1 rounded-xl p-1"
-            style={{
-              background: "var(--kipu-surface)",
-              border: "1px solid var(--kipu-border)",
-            }}
+            className="flex items-center justify-between rounded-xl px-4 py-2.5"
+            style={{ background: "var(--kipu-surface)", border: "1px solid var(--kipu-border)" }}
           >
-            {(Object.keys(TAB_CONFIG) as Tab[]).map((t) => (
-              <button
-                key={t}
-                type="button"
-                onClick={() => setTab(t)}
-                className="flex-1 py-2.5 rounded-lg text-sm font-medium transition-colors"
-                style={getTabStyle(t)}
-                onMouseEnter={e => {
-                  if (tab !== t) e.currentTarget.style.color = "var(--kipu-text)";
-                }}
-                onMouseLeave={e => {
-                  if (tab !== t) e.currentTarget.style.color = "var(--kipu-subtle)";
-                }}
-              >
-                {TAB_CONFIG[t].label}
-              </button>
-            ))}
+            <button
+              type="button"
+              onClick={() => setAnio((a) => a - 1)}
+              disabled={anio <= anioInicio}
+              aria-label="Año anterior"
+              className="p-1.5 rounded-lg transition-colors disabled:opacity-30"
+              style={{ color: "var(--kipu-subtle)" }}
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <span className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>{anio}</span>
+            <button
+              type="button"
+              onClick={() => setAnio((a) => Math.min(a + 1, anioActual))}
+              disabled={anio >= anioActual}
+              aria-label="Año siguiente"
+              className="p-1.5 rounded-lg transition-colors disabled:opacity-30"
+              style={{ color: "var(--kipu-subtle)" }}
+            >
+              <ChevronRight size={16} />
+            </button>
           </div>
 
-          {/* ATS — no es obligado a contabilidad */}
-          {tab === "ATS" && !esObligadoContabilidad && (
-            <>
+          {/* Info contextual */}
+          <div
+            className="rounded-xl px-4 py-3 text-xs"
+            style={{
+              background: `color-mix(in srgb, ${c.base} 5%, transparent)`,
+              border: `1px solid color-mix(in srgb, ${c.base} 20%, transparent)`,
+              color: c.texto,
+            }}
+          >
+            {textoInfo}
+          </div>
+
+          {/* Contenido */}
+          {loading ? (
+            <div className="flex items-center justify-center py-16">
               <div
-                className="relative overflow-hidden rounded-2xl p-5"
-                style={{
-                  background: "color-mix(in srgb, #06b6d4 10%, transparent)",
-                  border: "1px solid color-mix(in srgb, #06b6d4 30%, transparent)",
-                }}
-              >
-                <div className="flex items-start gap-4">
-                  <div
-                    className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                    style={{ background: "color-mix(in srgb, #06b6d4 30%, transparent)" }}
-                  >
-                    <Info size={18} style={{ color: "#67e8f9" }} />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-bold mb-1" style={{ color: "var(--kipu-text)" }}>El ATS no aplica para tu perfil</p>
-                    <p className="text-xs mb-3" style={{ color: "var(--kipu-subtle)" }}>
-                      El Anexo Transaccional Simplificado es obligatorio solo para personas <strong style={{ color: "var(--kipu-text)" }}>obligadas a llevar contabilidad</strong> según el SRI — generalmente quienes superan $300.000 en ingresos anuales o tienen capital propio mayor a $60.000.
-                    </p>
-                    <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
-                      Si crees que deberías presentarlo, consulta con tu contador o revisa tu RUC en el portal del SRI.
-                    </p>
-                  </div>
-                </div>
-              </div>
-              {/* Demo ATS igual para que vea cómo se vería */}
-              <p className="text-xs text-center" style={{ color: "var(--kipu-subtle)" }}>Así se vería si fueras obligado a contabilidad:</p>
-              <DemoCards tab="ATS" />
+                className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin"
+                style={{ borderColor: "var(--kipu-accent)", borderTopColor: "transparent" }}
+              />
+            </div>
+          ) : error ? (
+            <Aviso tono="warning" titulo="No se pudo cargar">{error}</Aviso>
+          ) : motivo ? (
+            <>
+              <Aviso titulo={tab === "ATS" ? "El ATS no aplica para tu perfil" : "No aplica para tu empresa"}>
+                {motivo}
+                {tab === "ATS" && " Si crees que deberías presentarlo, revisa tu RUC en el portal del SRI o consulta con tu contador."}
+              </Aviso>
+              {tab === "ATS" && (
+                <>
+                  <p className="text-xs text-center" style={{ color: "var(--kipu-subtle)" }}>Así se vería si aplicara:</p>
+                  <DemoCards tab="ATS" />
+                </>
+              )}
             </>
-          )}
-
-          {/* IVA, RENTA — o ATS con obligado */}
-          {(tab !== "ATS" || tieneATS) && (
-            <>
-              {/* Selector año */}
-              <div
-                className="flex items-center justify-between rounded-xl px-4 py-2.5"
-                style={{
-                  background: "var(--kipu-surface)",
-                  border: "1px solid var(--kipu-border)",
-                }}
-              >
-                <button
-                  type="button"
-                  onClick={() => setAnio((a) => a - 1)}
-                  className="p-1.5 rounded-lg transition-colors"
-                  style={{ color: "var(--kipu-subtle)" }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.color = "var(--kipu-text)";
-                    e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 5%, transparent)";
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.color = "var(--kipu-subtle)";
-                    e.currentTarget.style.background = "transparent";
-                  }}
-                >
-                  <ChevronLeft size={16} />
-                </button>
-                <span className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>{anio}</span>
-                <button
-                  type="button"
-                  onClick={() => setAnio((a) => Math.min(a + 1, new Date().getFullYear()))}
-                  disabled={anio >= new Date().getFullYear()}
-                  className="p-1.5 rounded-lg transition-colors disabled:opacity-30"
-                  style={{ color: "var(--kipu-subtle)" }}
-                  onMouseEnter={e => {
-                    if (anio < new Date().getFullYear()) {
-                      e.currentTarget.style.color = "var(--kipu-text)";
-                      e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 5%, transparent)";
-                    }
-                  }}
-                  onMouseLeave={e => {
-                    if (anio < new Date().getFullYear()) {
-                      e.currentTarget.style.color = "var(--kipu-subtle)";
-                      e.currentTarget.style.background = "transparent";
-                    }
-                  }}
-                >
-                  <ChevronRight size={16} />
-                </button>
-              </div>
-
-              {/* Info contextual por tab */}
-              <div
-                className="rounded-xl px-4 py-3 text-xs"
-                style={getInfoTabStyle()}
-              >
-                {tab === "IVA" && (
-                  periodoIva === "SEMESTRAL"
-                    ? "Declaración semestral del IVA — Formulario 104. Enero–junio y julio–diciembre. Vence según el noveno dígito del RUC."
-                    : "Declaración mensual del IVA — Formulario 104. Vence según el noveno dígito del RUC."
-                )}
-                {tab === "RENTA" && "Declaración anual del Impuesto a la Renta — Formulario 102. Vence entre marzo y abril del año siguiente."}
-                {tab === "ATS"   && "Anexo Transaccional Simplificado — Detalle de todas tus compras y ventas. Solo obligados a contabilidad."}
-              </div>
-
-              {loading ? (
-                <div className="flex items-center justify-center py-16">
-                  <div
-                    className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin"
-                    style={{ borderColor: "var(--kipu-accent)", borderTopColor: "transparent" }}
-                  />
-                </div>
-              ) : items.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 text-center">
-                  <FileText size={40} className="mb-3" style={{ color: "var(--kipu-subtle)" }} />
-                  <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>No hay declaraciones registradas para {anio}</p>
-                  <p className="text-xs mt-1" style={{ color: "var(--kipu-subtle)" }}>
-                    Las declaraciones se crean automáticamente cuando emites documentos en producción.
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {items.map((item) => (
-                    <ReporteCard
-                      key={item.periodo}
-                      tipo={tab}
-                      periodo={item.periodo}
-                      periodoFmt={item.periodoFmt}
-                      estado={item.estado}
-                      diasRestantes={item.diasRestantes}
-                      vencimiento={item.vencimiento}
-                      declarado={item.declarado}
-                      cached={item.cached}
-                      enCurso={item.enCurso}
-                      generadoAt={item.generadoAt}
-                      resumen={item.resumen ? {
-                        ivaAPagar:        item.resumen?.resultado?.a_pagar          ?? item.resumen?.casilleros?.["859"] ?? 0,
-                        saldoFavor:       item.resumen?.resultado?.saldo_favor       ?? 0,
-                        impuestoCausado:  item.resumen?.resultado?.impuesto_causado  ?? 0,
-                        totalDocs:        item.totalDocs,
-                      } : undefined}
-                    />
-                  ))}
-                </div>
+          ) : items.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <FileText size={40} className="mb-3" style={{ color: "var(--kipu-subtle)" }} />
+              <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>No hay periodos por declarar en {anio}</p>
+              {obl && anio <= anioInicio && (
+                <p className="text-xs mt-1" style={{ color: "var(--kipu-subtle)" }}>
+                  Tus declaraciones en Kipu empiezan en {mesAnio(obl.inicio)}.
+                </p>
               )}
+            </div>
+          ) : (
+            <>
+              <div className="space-y-3">
+                {items.map(({ decl, reporte, totalDocs }) => (
+                  <ReporteCard
+                    key={decl.periodo_key}
+                    tipo={tab}
+                    periodo={decl.periodo_key}
+                    periodoFmt={capitalizar(decl.periodo_fmt)}
+                    estado={decl.estado}
+                    diasRestantes={decl.dias_restantes}
+                    vencimiento={decl.vencimiento}
+                    declarado={decl.declarado}
+                    cached={!!reporte}
+                    enCurso={decl.en_curso}
+                    generadoAt={reporte?.generado_at ?? undefined}
+                    resumen={reporte ? {
+                      ivaAPagar:       reporte.resumen?.resultado?.a_pagar ?? reporte.resumen?.casilleros?.["859"] ?? 0,
+                      saldoFavor:      reporte.resumen?.resultado?.saldo_favor ?? 0,
+                      impuestoCausado: reporte.resumen?.resultado?.impuesto_causado ?? 0,
+                      totalDocs,
+                    } : undefined}
+                  />
+                ))}
+              </div>
 
-              {!loading && items.length > 0 && (
-                <div
-                  className="rounded-xl p-4"
-                  style={{
-                    background: "var(--kipu-surface)",
-                    border: "1px solid var(--kipu-border)",
-                  }}
-                >
-                  <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "var(--kipu-subtle)" }}>
-                    Resumen {anio}
-                  </p>
-                  <div className="grid grid-cols-3 gap-3 text-center">
-                    <div>
-                      <p className="text-lg font-bold" style={{ color: "var(--kipu-text)" }}>{items.filter((i) => i.declarado).length}</p>
-                      <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Declarados</p>
-                    </div>
-                    <div>
-                      <p className="text-lg font-bold" style={{ color: "var(--kipu-warning)" }}>{items.filter((i) => !i.declarado && !i.enCurso).length}</p>
-                      <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Pendientes</p>
-                    </div>
-                    <div>
-                      <p className="text-lg font-bold" style={{ color: "var(--kipu-accent)" }}>{items.filter((i) => i.cached).length}</p>
-                      <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Con reporte</p>
-                    </div>
+              <div
+                className="rounded-xl p-4"
+                style={{ background: "var(--kipu-surface)", border: "1px solid var(--kipu-border)" }}
+              >
+                <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "var(--kipu-subtle)" }}>
+                  Resumen {anio}
+                </p>
+                <div className="grid grid-cols-3 gap-3 text-center">
+                  <div>
+                    <p className="text-lg font-bold" style={{ color: "var(--kipu-text)" }}>
+                      {items.filter(({ decl }) => decl.declarado).length}
+                    </p>
+                    <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Declarados</p>
+                  </div>
+                  <div>
+                    <p className="text-lg font-bold" style={{ color: "var(--kipu-warning)" }}>
+                      {items.filter(({ decl }) => !decl.declarado && !decl.en_curso).length}
+                    </p>
+                    <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Pendientes</p>
+                  </div>
+                  <div>
+                    <p className="text-lg font-bold" style={{ color: "var(--kipu-danger)" }}>
+                      {items.filter(({ decl }) => decl.estado === "VENCIDO").length}
+                    </p>
+                    <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Vencidos</p>
                   </div>
                 </div>
-              )}
+              </div>
             </>
           )}
         </>

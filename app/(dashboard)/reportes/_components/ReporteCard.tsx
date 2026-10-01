@@ -34,6 +34,23 @@ const TIPO_CONFIG = {
 const fmt = (n: number) =>
   n.toLocaleString("es-EC", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+const MESES_CORTOS = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+
+/** "2026-09-28" → "28 sep 2026" sin pasar por Date (evita correrse un día por la zona horaria) */
+function fmtFecha(ymd?: string) {
+  if (!ymd) return "";
+  const [a, m, d] = ymd.slice(0, 10).split("-").map(Number);
+  return a && m && d ? `${d} ${MESES_CORTOS[m - 1]} ${a}` : ymd;
+}
+
+/** Timestamp del backend → "28 sep" en hora de Ecuador */
+function fmtGenerado(iso?: string) {
+  if (!iso) return "";
+  const d = new Date(iso.replace(" ", "T"));
+  if (isNaN(d.getTime())) return "";
+  return d.toLocaleDateString("es-EC", { day: "2-digit", month: "short", timeZone: "America/Guayaquil" });
+}
+
 function href(tipo: string, periodo: string) {
   if (tipo === "RENTA") return `/reportes/renta/${periodo}`;
   if (tipo === "ATS")   return `/reportes/ats/${periodo}`;
@@ -124,9 +141,7 @@ export default function ReporteCard({
                            estado === "PROXIMO" ? "var(--kipu-warning)" : "var(--kipu-subtle)",
                   }}
                 >
-                  Vence: {new Date(vencimiento).toLocaleDateString("es-EC", {
-                    day: "2-digit", month: "short", year: "numeric"
-                  })}
+                  Vence: {fmtFecha(vencimiento)}
                 </p>
               </div>
             )}
@@ -172,9 +187,7 @@ export default function ReporteCard({
               <div className="flex items-center gap-1.5 mt-1">
                 <Shield size={11} style={{ color: "var(--kipu-subtle)" }} />
                 <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
-                  Generado {new Date(generadoAt).toLocaleDateString("es-EC", {
-                    day: "2-digit", month: "short"
-                  })}
+                  Generado {fmtGenerado(generadoAt)}
                 </p>
               </div>
             )}

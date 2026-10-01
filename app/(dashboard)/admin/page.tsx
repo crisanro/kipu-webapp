@@ -4,11 +4,10 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import api from "@/lib/api";
-import { useAuthStore } from "@/store/auth.store";
 import {
   Users, FileText, CreditCard, TrendingUp,
-  Search, Bell, ChevronRight,
-  Building2, CheckCircle2, Clock
+  Search, ChevronRight,
+  Building2, CheckCircle2, Clock, UserCircle
 } from "lucide-react";
 
 const fmtK = (n: any) => {
@@ -17,18 +16,13 @@ const fmtK = (n: any) => {
 };
 
 export default function AdminPage() {
-  const router  = useRouter();
+  const router = useRouter();
 
   const [stats,    setStats]    = useState<any>(null);
   const [emisores, setEmisores] = useState<any[]>([]);
   const [query,    setQuery]    = useState("");
   const [loading,  setLoading]  = useState(true);
   const [tab,      setTab]      = useState<"todos" | "produccion" | "pruebas">("todos");
-
-  // ── Guard superadmin ─────────────────────────────────────────────────────────
-  useEffect(() => {
-    // Lo verificamos via API — si da 403 redirigimos
-  }, []);
 
   const cargar = async () => {
     setLoading(true);
@@ -79,28 +73,19 @@ export default function AdminPage() {
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-6xl mx-auto">
 
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold" style={{ color: "var(--kipu-text)" }}>Panel Admin</h1>
-          <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>Gestión interna de Kipu</p>
-        </div>
-        <Link
-          href="/admin/notificaciones"
-          className="flex items-center gap-2 px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors"
-          style={{ background: "var(--kipu-accent)" }}
-          onMouseEnter={e => e.currentTarget.style.background = "var(--kipu-accent-h)"}
-          onMouseLeave={e => e.currentTarget.style.background = "var(--kipu-accent)"}
-        >
-          <Bell size={15} />
-          Notificaciones
-        </Link>
-      </div>
-
       {/* Stats globales */}
       {stats && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
           {[
+            {
+              label: "Usuarios",
+              value: fmtK(stats.total_usuarios),
+              sub:   `${stats.usuarios_sin_empresa} sin empresa`,
+              icon:  UserCircle,
+              color: "#a78bfa",
+              bg:    "color-mix(in srgb, #a78bfa 10%, transparent)",
+              href:  "/admin/usuarios",
+            },
             {
               label: "Total emisores",
               value: fmtK(stats.total_emisores),
@@ -133,26 +118,41 @@ export default function AdminPage() {
               color: "var(--kipu-warning)",
               bg:    "color-mix(in srgb, var(--kipu-warning) 10%, transparent)",
             },
-          ].map(({ label, value, sub, icon: Icon, color, bg }) => (
-            <div
-              key={label}
-              className="rounded-xl p-4"
-              style={{
-                background: "var(--kipu-surface)",
-                border: "1px solid var(--kipu-border)",
-              }}
-            >
-              <div
-                className="w-8 h-8 rounded-lg flex items-center justify-center mb-3"
-                style={{ background: bg }}
+          ].map(({ label, value, sub, icon: Icon, color, bg, href }) => {
+            const contenido = (
+              <>
+                <div
+                  className="w-8 h-8 rounded-lg flex items-center justify-center mb-3"
+                  style={{ background: bg }}
+                >
+                  <Icon size={16} style={{ color }} />
+                </div>
+                <p className="text-2xl font-bold" style={{ color: "var(--kipu-text)" }}>{value}</p>
+                <p className="text-xs mt-0.5" style={{ color: "var(--kipu-subtle)" }}>{label}</p>
+                <p className="text-xs mt-0.5" style={{ color: "var(--kipu-subtle)" }}>{sub}</p>
+              </>
+            );
+            const cardStyle = {
+              background: "var(--kipu-surface)",
+              border:     "1px solid var(--kipu-border)",
+            };
+            return href ? (
+              <Link
+                key={label}
+                href={href}
+                className="rounded-xl p-4 block transition-colors"
+                style={cardStyle}
+                onMouseEnter={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                onMouseLeave={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
               >
-                <Icon size={16} style={{ color }} />
+                {contenido}
+              </Link>
+            ) : (
+              <div key={label} className="rounded-xl p-4" style={cardStyle}>
+                {contenido}
               </div>
-              <p className="text-2xl font-bold" style={{ color: "var(--kipu-text)" }}>{value}</p>
-              <p className="text-xs mt-0.5" style={{ color: "var(--kipu-subtle)" }}>{label}</p>
-              <p className="text-xs mt-0.5" style={{ color: "var(--kipu-subtle)" }}>{sub}</p>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -187,15 +187,9 @@ export default function AdminPage() {
                   onClick={() => setTab(t)}
                   className="px-3 py-2 rounded-lg text-xs font-medium transition-colors capitalize"
                   style={{
-                    background: active
-                      ? "var(--kipu-accent)"
-                      : "var(--kipu-surface)",
-                    color: active
-                      ? "#FFFFFF"
-                      : "var(--kipu-subtle)",
-                    border: active
-                      ? "none"
-                      : "1px solid var(--kipu-border)",
+                    background: active ? "var(--kipu-accent)" : "var(--kipu-surface)",
+                    color:      active ? "#FFFFFF" : "var(--kipu-subtle)",
+                    border:     active ? "none" : "1px solid var(--kipu-border)",
                   }}
                   onMouseEnter={e => {
                     if (!active) {
@@ -270,9 +264,7 @@ export default function AdminPage() {
                           background: e.ambiente === 2
                             ? "color-mix(in srgb, var(--kipu-success) 20%, transparent)"
                             : "color-mix(in srgb, var(--kipu-warning) 20%, transparent)",
-                          color: e.ambiente === 2
-                            ? "var(--kipu-success)"
-                            : "var(--kipu-warning)",
+                          color: e.ambiente === 2 ? "var(--kipu-success)" : "var(--kipu-warning)",
                         }}
                       >
                         {e.ambiente === 2
@@ -284,9 +276,7 @@ export default function AdminPage() {
                     <td className="px-4 py-3 text-right">
                       <span
                         className="text-sm font-semibold"
-                        style={{
-                          color: e.balance_emision <= 5 ? "var(--kipu-danger)" : "var(--kipu-text)",
-                        }}
+                        style={{ color: e.balance_emision <= 5 ? "var(--kipu-danger)" : "var(--kipu-text)" }}
                       >
                         {e.balance_emision}
                       </span>
@@ -322,9 +312,7 @@ export default function AdminPage() {
                 key={e.id}
                 href={`/admin/emisores/${e.id}`}
                 className="flex items-center gap-3 px-4 py-3 transition-colors"
-                style={{
-                  borderTop: idx > 0 ? "1px solid var(--kipu-border)" : "none",
-                }}
+                style={{ borderTop: idx > 0 ? "1px solid var(--kipu-border)" : "none" }}
                 onMouseEnter={ev => ev.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 4%, transparent)"}
                 onMouseLeave={ev => ev.currentTarget.style.background = "transparent"}
               >
@@ -341,9 +329,7 @@ export default function AdminPage() {
                       background: e.ambiente === 2
                         ? "color-mix(in srgb, var(--kipu-success) 20%, transparent)"
                         : "color-mix(in srgb, var(--kipu-warning) 20%, transparent)",
-                      color: e.ambiente === 2
-                        ? "var(--kipu-success)"
-                        : "var(--kipu-warning)",
+                      color: e.ambiente === 2 ? "var(--kipu-success)" : "var(--kipu-warning)",
                     }}
                   >
                     {e.ambiente === 2 ? "Prod" : "Pruebas"}

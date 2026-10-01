@@ -11,20 +11,28 @@ firebase.initializeApp({
   appId:             "1:264857219159:web:b9e58d8e4d1b70a923f312",
 });
 
+// Activar la versión nueva del SW de inmediato
+self.addEventListener("install",  () => self.skipWaiting());
+self.addEventListener("activate", (event) => event.waitUntil(self.clients.claim()));
+
 const messaging = firebase.messaging();
 
+// El backend manda mensajes SOLO DE DATOS: aquí decidimos cómo mostrarlos.
 messaging.onBackgroundMessage((payload) => {
-  console.log("[SW] Notificación background:", payload);
-  const { title, body } = payload.notification ?? {};
-  self.registration.showNotification(title ?? "Kipu", {
-    body:    body ?? "",
+  const d = payload.data || {};
+
+  // Compatibilidad: si llega un mensaje con bloque "notification" (formato viejo),
+  // el SDK ya lo muestra solo. No lo duplicamos.
+  if (payload.notification && !d.title) return;
+
+  return self.registration.showNotification(d.title || "Kipu", {
+    body:    d.body || "",
     icon:    "/icons/icon-192.png",
     badge:   "/icons/icon-192.png",
-    image:   "/icons/icon-512.png",
-    data:    payload.data ?? {},
+    data:    { url: d.url || "/dashboard" },
     vibrate: [200, 100, 200],
     actions: [
-      { action: "open", title: "Ver en Kipu" },
+      { action: "open",  title: "Ver en Kipu" },
       { action: "close", title: "Cerrar" },
     ],
   });
@@ -32,22 +40,23 @@ messaging.onBackgroundMessage((payload) => {
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-
   if (event.action === "close") return;
 
-  const url = event.notification.data?.url ?? "/dashboard";
+  const ruta    = (event.notification.data && event.notification.data.url) || "/dashboard";
+  const destino = new URL(ruta, self.location.origin).href;
+
   event.waitUntil(
-    clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
-      // Si ya hay una pestaña de Kipu abierta — enfocarla
-      for (const client of clientList) {
-        if (client.url.includes("kipu.ec") && "focus" in client) {
-          client.focus();
-          client.navigate(url);
-          return;
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((lista) => {
+      // Si ya hay una pestaña de Kipu abierta (mismo origen) — enfocarla y navegar
+      for (const client of lista) {
+        if (client.url.startsWith(self.location.origin) && "focus" in client) {
+          return client.focus()
+            .then((c) => (c && "navigate" in c ? c.navigate(destino) : c))
+            .catch(() => self.clients.openWindow(destino));
         }
       }
       // Si no hay pestaña abierta — abrir una nueva
-      if (clients.openWindow) return clients.openWindow(url);
+      return self.clients.openWindow(destino);
     })
   );
 });

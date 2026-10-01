@@ -3,10 +3,15 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
-import { Zap, Building2, CheckCircle2, Search, Loader2 } from "lucide-react";
+import { Zap, Building2, CheckCircle2, Search, Loader2, MessageCircle } from "lucide-react";
 import { lookupIdentificacion } from "@/lib/identificacion-lookup";
 
 const PASOS = ["Empresa", "Confirmar"];
+
+// ── Soporte ───────────────────────────────────────────────────────────────────
+const SOPORTE_WA = "593960585581";
+const waSoporte  = (texto: string) =>
+  `https://wa.me/${SOPORTE_WA}?text=${encodeURIComponent(texto)}`;
 
 const limpiarTexto = (texto: string): string => {
   return texto
@@ -36,6 +41,56 @@ const validarRuc = (ruc: string): string | null => {
   }
   return null;
 };
+
+// ── Caja de error — siempre con salida a soporte ──────────────────────────────
+function ErrorBox({ error, ruc }: { error: string; ruc: string }) {
+  const texto = error.includes("REGISTRADO")
+    ? `Hola, intento registrar el RUC ${ruc} en Kipu pero dice que ya está registrado. ¿Me pueden ayudar?`
+    : `Hola, estoy configurando mi empresa en Kipu${ruc ? ` (RUC ${ruc})` : ""} y me sale este error: "${error}". ¿Me pueden ayudar?`;
+
+  return (
+    <div
+      className="rounded-lg px-3 py-2.5 space-y-2"
+      style={{ background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)" }}
+    >
+      <p className="text-sm font-medium" style={{ color: "var(--kipu-danger)" }}>
+        {error}
+      </p>
+      <a
+        href={waSoporte(texto)}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-1.5 text-xs font-medium transition-colors"
+        style={{ color: "var(--kipu-accent)" }}
+        onMouseEnter={e => e.currentTarget.style.opacity = "0.8"}
+        onMouseLeave={e => e.currentTarget.style.opacity = "1"}
+      >
+        💬 Contactar soporte
+      </a>
+    </div>
+  );
+}
+
+// ── Pie de soporte — visible en todos los pasos ───────────────────────────────
+function SoporteFooter({ ruc }: { ruc: string }) {
+  const texto = `Hola, necesito ayuda para configurar mi empresa en Kipu${ruc ? ` (RUC ${ruc})` : ""}.`;
+  return (
+    <div className="mt-6 text-center">
+      <a
+        href={waSoporte(texto)}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-1.5 text-xs transition-colors"
+        style={{ color: "var(--kipu-subtle)" }}
+        onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent)"}
+        onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-subtle)"}
+      >
+        <MessageCircle size={13} />
+        ¿Problemas? Escríbenos por WhatsApp
+      </a>
+    </div>
+  );
+}
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -136,7 +191,7 @@ export default function OnboardingPage() {
   // ── Formulario ─────────────────────────────────────────────────────────────
   return (
     <div
-      className="min-h-screen flex items-center justify-center px-4"
+      className="min-h-screen flex items-center justify-center px-4 py-10"
       style={{ background: "var(--kipu-bg)" }}
     >
       <div className="w-full max-w-md">
@@ -364,31 +419,7 @@ export default function OnboardingPage() {
               />
             </div>
 
-            {error && (
-              <div
-                className="rounded-lg px-3 py-2.5 space-y-2"
-                style={{
-                  background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
-                }}
-              >
-                <p className="text-sm font-medium" style={{ color: "var(--kipu-danger)" }}>
-                  {error}
-                </p>
-                {error.includes("REGISTRADO") && (
-                  <a
-                    href={`https://wa.me/593960585581?text=${encodeURIComponent(`Hola, intento registrar el RUC ${form.ruc} en Kipu pero dice que ya está registrado. ¿Me pueden ayudar?`)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 text-xs font-medium transition-colors"
-                    style={{ color: "var(--kipu-accent)" }}
-                    onMouseEnter={e => e.currentTarget.style.opacity = "0.8"}
-                    onMouseLeave={e => e.currentTarget.style.opacity = "1"}
-                  >
-                    💬 Contactar soporte
-                  </a>
-                )}
-              </div>
-            )}
+            {error && <ErrorBox error={error} ruc={form.ruc} />}
 
             <button
               type="button"
@@ -431,43 +462,7 @@ export default function OnboardingPage() {
               ))}
             </div>
 
-            <div
-              className="rounded-lg px-4 py-3"
-              style={{
-                background: "color-mix(in srgb, var(--kipu-accent) 10%, transparent)",
-                border: "1px solid color-mix(in srgb, var(--kipu-accent) 20%, transparent)",
-              }}
-            >
-              <p className="text-xs" style={{ color: "var(--kipu-accent)" }}>
-                🎁 Recibirás <strong>10 créditos gratis</strong> para empezar a facturar.
-              </p>
-            </div>
-
-            {error && (
-              <div
-                className="rounded-lg px-3 py-2.5 space-y-2"
-                style={{
-                  background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
-                }}
-              >
-                <p className="text-sm font-medium" style={{ color: "var(--kipu-danger)" }}>
-                  {error}
-                </p>
-                {error.includes("REGISTRADO") && (
-                  <a
-                    href={`https://wa.me/593960585581?text=${encodeURIComponent(`Hola, intento registrar el RUC ${form.ruc} en Kipu pero dice que ya está registrado. ¿Me pueden ayudar?`)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 text-xs font-medium transition-colors"
-                    style={{ color: "var(--kipu-accent)" }}
-                    onMouseEnter={e => e.currentTarget.style.opacity = "0.8"}
-                    onMouseLeave={e => e.currentTarget.style.opacity = "1"}
-                  >
-                    💬 Contactar soporte
-                  </a>
-                )}
-              </div>
-            )}
+            {error && <ErrorBox error={error} ruc={form.ruc} />}
 
             <div className="flex gap-3">
               <button
@@ -517,6 +512,9 @@ export default function OnboardingPage() {
             </div>
           </div>
         )}
+
+        {/* Soporte siempre visible */}
+        <SoporteFooter ruc={form.ruc} />
       </div>
     </div>
   );

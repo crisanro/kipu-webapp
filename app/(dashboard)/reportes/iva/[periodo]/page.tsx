@@ -3,9 +3,8 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import api from "@/lib/api";
 import {
-  ArrowLeft, RefreshCw, CheckCircle2, AlertTriangle,
+  ArrowLeft, RefreshCw, CheckCircle2, AlertTriangle, Info, Calendar,
 } from "lucide-react";
-import { useAuthStore } from "@/store/auth.store";
 
 import PreguntasSRI        from "../../_components/PreguntasSRI";
 import SeccionVentas       from "../../_components/SeccionVentas";
@@ -13,56 +12,76 @@ import SeccionCompras      from "../../_components/SeccionCompras";
 import SeccionRetenciones  from "../../_components/SeccionRetenciones";
 import ResumenImpositivo   from "../../_components/ResumenImpositivo";
 import DocumentosIncluidos from "../../_components/DocumentosIncluidos";
-import EstadoBadge         from "../../_components/EstadoBadge";
+import EstadoBadge, { EstadoReporte } from "../../_components/EstadoBadge";
 
 const fmt = (n: number = 0) =>
   n.toLocaleString("es-EC", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio",
+               "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+
+/** "2026-10-26" → "26 de octubre de 2026" sin pasar por Date */
+function fechaLarga(ymd?: string) {
+  if (!ymd) return "";
+  const [a, m, d] = ymd.slice(0, 10).split("-").map(Number);
+  return a && m && d ? `${d} de ${MESES[m - 1]} de ${a}` : ymd;
+}
+
+/** Nombre del periodo según lo que dice el backend (MENSUAL | SEMESTRAL) */
+function nombrePeriodo(periodo: string, tipo?: string) {
+  const [a, m] = periodo.split("-").map(Number);
+  if (!a || !m) return periodo;
+  if (tipo === "SEMESTRAL") return m <= 6 ? `1er semestre ${a}` : `2do semestre ${a}`;
+  return `${MESES[m - 1]} de ${a}`;
+}
+
+// Lo que devuelve /declaraciones/periodo
+interface DeclaracionPeriodo {
+  declarado:      boolean;
+  en_curso:       boolean;
+  estado:         EstadoReporte;
+  dias_restantes: number;
+  vencimiento:    string;
+  periodo_fmt:    string;
+}
+
 export default function ReporteIVAPage() {
-  const empresa = useAuthStore((s) => s.empresa);
   const params  = useParams();
   const router  = useRouter();
-  const periodo = params.periodo as string;  // "2026-08"
+  const periodo = params.periodo as string;  // "2026-08" (o "2026-07" para el 2do semestre)
 
   const [data,        setData]        = useState<any>(null);
+  const [decl,        setDecl]        = useState<DeclaracionPeriodo | null>(null);
   const [loading,     setLoading]     = useState(true);
   const [regenerando, setRegenerando] = useState(false);
   const [marcando,    setMarcando]    = useState(false);
   const [error,       setError]       = useState("");
-  const [declarado,   setDeclarado]   = useState(false);
-
-  const periodoFmt = (() => {
-    try {
-      const [a, m] = periodo.split("-");
-      if (empresa?.periodo_iva === "SEMESTRAL") {
-        return parseInt(m) <= 6 ? `1er semestre ${a}` : `2do semestre ${a}`;
-      }
-      return new Date(parseInt(a), parseInt(m) - 1, 1)
-        .toLocaleDateString("es-EC", { month: "long", year: "numeric" });
-    } catch { return periodo; }
-  })();
 
   const cargar = useCallback(async (regen = false) => {
     setError("");
     if (regen) setRegenerando(true);
     else setLoading(true);
     try {
-      const tipoPeriodo = empresa?.periodo_iva === "SEMESTRAL" ? "SEMESTRAL" : "MENSUAL";
-      const url = `/api/v1/app/declaraciones/iva?periodo=${periodo}&tipo_periodo=${tipoPeriodo}${regen ? "&regenerar=true" : ""}`;
+      // El backend decide mensual/semestral según la configuración de la empresa
+      const url = `/api/v1/app/declaraciones/iva?periodo=${periodo}${regen ? "&regenerar=true" : ""}`;
       const res = await api.get(url);
       setData(res.data);
 
-      // Verificar si ya está declarado
-      const [a, m] = periodo.split("-");
-      const resDecl = await api.get(`/api/v1/app/declaraciones/periodo/${a}/${m}?tipo=104`);
-      setDeclarado(resDecl.data.data?.declarado ?? false);
+      // Estado de la declaración (vencimiento, declarado). Si no aplica, no rompe la página.
+      try {
+        const [a, m] = periodo.split("-");
+        const resDecl = await api.get(`/api/v1/app/declaraciones/periodo/${a}/${parseInt(m)}?tipo=104`);
+        setDecl(resDecl.data.data ?? null);
+      } catch {
+        setDecl(null);
+      }
     } catch (e: any) {
       setError(e?.response?.data?.detail ?? "Error al cargar el reporte.");
     } finally {
       setLoading(false);
       setRegenerando(false);
     }
-  }, [periodo, empresa?.periodo_iva]);
+  }, [periodo]);
 
   useEffect(() => { cargar(); }, [cargar]);
 
@@ -75,12 +94,16 @@ export default function ReporteIVAPage() {
 
   const marcarDeclarado = async () => {
     setMarcando(true);
+    setError("");
     try {
-      await api.post("/api/v1/app/declaraciones/declarar?tipo=104");
-      setDeclarado(true);
+      // Siempre con el periodo que se está viendo (antes marcaba "el que toca ahora")
+      await api.post(`/api/v1/app/declaraciones/declarar?tipo=104&periodo=${periodo}`);
+      setDecl(d => d ? { ...d, declarado: true, estado: "DECLARADO" } : d);
     } catch (e: any) {
       setError(e?.response?.data?.detail ?? "Error al marcar como declarado.");
-    } finally { setMarcando(false); }
+    } finally {
+      setMarcando(false);
+    }
   };
 
   if (loading) {
@@ -115,21 +138,28 @@ export default function ReporteIVAPage() {
   }
 
   const reporte       = data?.data;
-  const cached        = data?.cached        ?? false;
-  const enCurso       = data?.en_curso      ?? false;
+  const esDemo        = data?.demo ?? false;
+  const cached        = data?.cached ?? false;
+  const enCurso       = decl?.en_curso ?? data?.en_curso ?? false;
+  const declarado     = decl?.declarado ?? false;
   const totalEmit     = data?.total_doc_emitidos  ?? 0;
   const totalRecib    = data?.total_doc_recibidos ?? 0;
   const generadoAt    = data?.generado_at;
   const regeneradoAt  = data?.regenerado_at;
+  const periodoFmt    = nombrePeriodo(periodo, reporte?.periodo?.tipo);
 
-  const casVentas  = reporte?.ventas?.casilleros    ?? {};
-  const casCompras = reporte?.compras?.casilleros   ?? {};
-  const casResumen = reporte?.resumen?.casilleros   ?? {};
+  const casVentas  = reporte?.ventas?.casilleros  ?? {};
+  const casCompras = reporte?.compras?.casilleros ?? {};
+  const casResumen = reporte?.resumen?.casilleros ?? {};
 
-  const ivaAPagar  = casResumen["601"] > 0
-    ? Math.max((casResumen["601"] ?? 0) - (casResumen["609"] ?? 0), 0)
-    : 0;
+  // 859 = total consolidado del formulario (IVA en ventas + retenciones que efectuaste)
+  const ivaAPagar  = casResumen["859"] ?? 0;
   const saldoFavor = casResumen["602"] ?? 0;
+
+  // Estado real (antes: siempre "Pendiente" si no estaba declarado)
+  const estadoBadge: EstadoReporte = declarado ? "DECLARADO"
+                                   : enCurso   ? "EN_CURSO"
+                                   : decl?.estado ?? "PENDIENTE";
 
   return (
     <div className="p-4 md:p-6 max-w-2xl mx-auto space-y-5">
@@ -140,6 +170,7 @@ export default function ReporteIVAPage() {
           <button
             type="button"
             onClick={() => router.push("/reportes")}
+            aria-label="Volver a reportes"
             className="p-2 rounded-lg transition-colors mt-0.5"
             style={{
               border: "1px solid var(--kipu-border)",
@@ -172,12 +203,12 @@ export default function ReporteIVAPage() {
               <h1 className="text-xl font-bold capitalize" style={{ color: "var(--kipu-text)" }}>{periodoFmt}</h1>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
-              {declarado ? (
-                <EstadoBadge estado="DECLARADO" size="sm" />
-              ) : enCurso ? (
-                <EstadoBadge estado="EN_CURSO" size="sm" />
-              ) : (
-                <EstadoBadge estado="PENDIENTE" size="sm" />
+              {!esDemo && (
+                <EstadoBadge
+                  estado={estadoBadge}
+                  diasRestantes={declarado || enCurso ? null : decl?.dias_restantes}
+                  size="sm"
+                />
               )}
               {cached && (
                 <span className="text-[10px]" style={{ color: "var(--kipu-subtle)" }}>
@@ -186,7 +217,12 @@ export default function ReporteIVAPage() {
               )}
               {enCurso && (
                 <span className="text-[10px]" style={{ color: "var(--kipu-warning)" }}>
-                  · Período en curso — valores preliminares
+                  · Periodo en curso — valores preliminares
+                </span>
+              )}
+              {decl?.vencimiento && !declarado && !esDemo && (
+                <span className="flex items-center gap-1 text-[10px]" style={{ color: "var(--kipu-subtle)" }}>
+                  <Calendar size={10} /> Vence el {fechaLarga(decl.vencimiento)}
                 </span>
               )}
             </div>
@@ -194,34 +230,53 @@ export default function ReporteIVAPage() {
         </div>
 
         {/* Regenerar */}
-        <button
-          type="button"
-          onClick={() => cargar(true)}
-          disabled={regenerando}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs transition-colors disabled:opacity-40 shrink-0 font-medium"
+        {!esDemo && (
+          <button
+            type="button"
+            onClick={() => cargar(true)}
+            disabled={regenerando}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs transition-colors disabled:opacity-40 shrink-0 font-medium"
+            style={{
+              border: "1px solid var(--kipu-border)",
+              color: "var(--kipu-muted)",
+              background: "transparent",
+            }}
+            onMouseEnter={e => {
+              if (!regenerando) e.currentTarget.style.color = "var(--kipu-text)";
+            }}
+            onMouseLeave={e => {
+              if (!regenerando) e.currentTarget.style.color = "var(--kipu-muted)";
+            }}
+          >
+            {regenerando ? (
+              <div
+                className="w-3.5 h-3.5 border-2 border-t-transparent rounded-full animate-spin"
+                style={{ borderColor: "currentColor", borderTopColor: "transparent" }}
+              />
+            ) : (
+              <RefreshCw size={13} />
+            )}
+            {regenerando ? "Calculando..." : "Regenerar"}
+          </button>
+        )}
+      </div>
+
+      {/* Datos de ejemplo */}
+      {esDemo && (
+        <div
+          className="flex items-start gap-3 rounded-xl px-4 py-3"
           style={{
-            border: "1px solid var(--kipu-border)",
-            color: "var(--kipu-muted)",
-            background: "transparent",
-          }}
-          onMouseEnter={e => {
-            if (!regenerando) e.currentTarget.style.color = "var(--kipu-text)";
-          }}
-          onMouseLeave={e => {
-            if (!regenerando) e.currentTarget.style.color = "var(--kipu-muted)";
+            background: "color-mix(in srgb, var(--kipu-accent) 10%, transparent)",
+            border: "1px solid color-mix(in srgb, var(--kipu-accent) 20%, transparent)",
           }}
         >
-          {regenerando ? (
-            <div
-              className="w-3.5 h-3.5 border-2 border-t-transparent rounded-full animate-spin"
-              style={{ borderColor: "currentColor", borderTopColor: "transparent" }}
-            />
-          ) : (
-            <RefreshCw size={13} />
-          )}
-          {regenerando ? "Calculando..." : "Regenerar"}
-        </button>
-      </div>
+          <Info size={15} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-accent)" }} />
+          <p className="text-xs" style={{ color: "var(--kipu-muted)" }}>
+            <span className="font-semibold" style={{ color: "var(--kipu-text)" }}>Estos son datos de ejemplo. </span>
+            Suscríbete para ver tu declaración de IVA calculada con tus comprobantes reales.
+          </p>
+        </div>
+      )}
 
       {/* Alerta error */}
       {error && (
@@ -275,7 +330,7 @@ export default function ReporteIVAPage() {
           }}
         >
           <p className="text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>
-            {ivaAPagar > 0 ? "A pagar" : saldoFavor > 0 ? "Saldo favor" : "IVA neto"}
+            {ivaAPagar > 0 ? "A pagar" : saldoFavor > 0 ? "Crédito a favor" : "IVA neto"}
           </p>
           <p
             className="text-base font-bold"
@@ -331,20 +386,22 @@ export default function ReporteIVAPage() {
           tipo="IVA"
           casilleros={reporte.resumen.casilleros ?? {}}
           camposManuales={reporte.resumen.campos_manuales ?? []}
-          valoresGuardados={data?.campos_manuales_valores ?? {}}
-          onGuardar={guardarCamposManuales}
+          valoresGuardados={data?.campos_manuales_valores ?? reporte?.campos_manuales_valores ?? {}}
+          onGuardar={esDemo ? undefined : guardarCamposManuales}
         />
       )}
 
       {/* Documentos incluidos */}
-      <DocumentosIncluidos
-        totalEmitidos={totalEmit}
-        totalRecibidos={totalRecib}
-        periodo={periodo}
-        tipo="IVA"
-        generadoAt={generadoAt}
-        regeneradoAt={regeneradoAt}
-      />
+      {!esDemo && (
+        <DocumentosIncluidos
+          totalEmitidos={totalEmit}
+          totalRecibidos={totalRecib}
+          periodo={periodo}
+          tipo="IVA"
+          generadoAt={generadoAt}
+          regeneradoAt={regeneradoAt}
+        />
+      )}
 
       {/* Notas */}
       {reporte?.notas?.length > 0 && (
@@ -365,7 +422,7 @@ export default function ReporteIVAPage() {
       )}
 
       {/* Botón marcar declarado */}
-      {!declarado && !enCurso && (
+      {!esDemo && decl && !declarado && !enCurso && (
         <div
           className="rounded-xl p-4"
           style={{
@@ -375,8 +432,8 @@ export default function ReporteIVAPage() {
         >
           <p className="text-sm font-medium mb-1" style={{ color: "var(--kipu-text)" }}>¿Ya declaraste en el SRI?</p>
           <p className="text-xs mb-3" style={{ color: "var(--kipu-subtle)" }}>
-            Marca este período como declarado para mantener tu historial al día.
-            Esto no declara por ti — solo registra que ya lo hiciste en el portal del SRI.
+            Marca {periodoFmt} como declarado para mantener tu historial al día.
+            Esto no declara por ti: solo registra que ya lo hiciste en el portal del SRI.
           </p>
           <button
             type="button"
@@ -395,7 +452,7 @@ export default function ReporteIVAPage() {
               </>
             ) : (
               <>
-                <CheckCircle2 size={14} /> Marcar como declarado
+                <CheckCircle2 size={14} /> Marcar {periodoFmt} como declarado
               </>
             )}
           </button>
@@ -413,7 +470,7 @@ export default function ReporteIVAPage() {
         >
           <CheckCircle2 size={16} className="shrink-0" style={{ color: "var(--kipu-success)" }} />
           <p className="text-sm font-medium" style={{ color: "var(--kipu-success)" }}>
-            Período declarado ante el SRI ✓
+            IVA de {periodoFmt} declarado ante el SRI ✓
           </p>
         </div>
       )}
