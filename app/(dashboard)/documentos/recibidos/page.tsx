@@ -7,7 +7,8 @@ import SinAcceso from "@/components/SinAcceso";
 import {
   Plus, FileText, RefreshCw, Search,
   ChevronDown, ChevronUp, TrendingUp, ArrowUpRight,
-  Receipt, ExternalLink, ChevronLeft, ChevronRight
+  Receipt, ExternalLink, ChevronLeft, ChevronRight,
+  AlertTriangle, CreditCard
 } from "lucide-react";
 
 // ── Tipos ──────────────────────────────────────────────────────────────────────
@@ -15,7 +16,7 @@ interface DocRecibido {
   id:                     string;
   razon_social_proveedor: string;
   tipo_doc:               string;
-  numero_doc:             string;
+  numero_doc:              string;
   fecha_emision:          string;
   subtotal_base:          number;
   valor_iva_total:        number;
@@ -42,6 +43,8 @@ interface PaginationInfo {
   has_next:    boolean;
   has_prev:    boolean;
 }
+
+const UMBRAL_BANCARIZACION = 500.00;
 
 const fmt = (n: any) => parseFloat(String(n ?? 0)).toFixed(2);
 
@@ -88,8 +91,56 @@ function guardarFecha(key: string, val: string) {
   try { sessionStorage.setItem(key, val); } catch {}
 }
 
+// ── Componente Insignia de Bancarización ────────────────────────────────────────
+function BadgeBancarizacion({ doc }: { doc: DocRecibido }) {
+  const requiereBancarizacion = 
+    ["FAC", "NDB"].includes(doc.tipo_doc) && 
+    doc.importe_total > UMBRAL_BANCARIZACION;
+
+  if (!requiereBancarizacion) return null;
+
+  return (
+    <div className="relative group inline-block">
+      <span
+        className="text-[10px] px-1.5 py-0.5 rounded font-semibold flex items-center gap-1 cursor-help"
+        style={{
+          color: "var(--kipu-warning)",
+          background: "color-mix(in srgb, var(--kipu-warning) 12%, transparent)",
+          border: "1px solid color-mix(in srgb, var(--kipu-warning) 30%, transparent)",
+        }}
+      >
+        <CreditCard size={10} /> {">"} $500 Bancarizable
+      </span>
+
+      {/* Tooltip explicativo al pasar el mouse */}
+      <div 
+        className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-2.5 rounded-lg text-[11px] leading-tight shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity z-50 text-left"
+        style={{
+          background: "var(--kipu-surface)",
+          border: "1px solid color-mix(in srgb, var(--kipu-warning) 40%, transparent)",
+          color: "var(--kipu-text)",
+        }}
+      >
+        <p className="font-bold flex items-center gap-1 mb-1" style={{ color: "var(--kipu-warning)" }}>
+          <AlertTriangle size={12} /> Requiere Bancarización (Art. 103 LRTI)
+        </p>
+        <p style={{ color: "var(--kipu-subtle)" }}>
+          Al superar $500.00, debe pagarse mediante el sistema financiero (transferencia, tarjeta o cheque) para ser deducible de Renta y conservar el Crédito Tributario de IVA.
+        </p>
+        {/* Triángulo indicador del tooltip */}
+        <div 
+          className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-x-4 border-x-transparent border-t-4"
+          style={{ borderTopColor: "var(--kipu-surface)" }}
+        />
+      </div>
+    </div>
+  );
+}
+
 // ── Box expandido ──────────────────────────────────────────────────────────────
 function DocExpandido({ doc, onVerDetalle }: { doc: DocRecibido; onVerDetalle: () => void }) {
+  const requiereBanc = ["FAC", "NDB"].includes(doc.tipo_doc) && doc.importe_total > UMBRAL_BANCARIZACION;
+
   return (
     <div
       style={{
@@ -161,6 +212,22 @@ function DocExpandido({ doc, onVerDetalle }: { doc: DocRecibido; onVerDetalle: (
           </p>
         </div>
       </div>
+
+      {requiereBanc && (
+        <div 
+          className="mx-4 mb-3 p-2.5 rounded-lg flex items-start gap-2 text-xs"
+          style={{
+            background: "color-mix(in srgb, var(--kipu-warning) 8%, transparent)",
+            border: "1px solid color-mix(in srgb, var(--kipu-warning) 25%, transparent)",
+            color: "var(--kipu-warning)",
+          }}
+        >
+          <AlertTriangle size={14} className="shrink-0 mt-0.5" />
+          <p>
+            <strong>Atención:</strong> Al superar $500.00, asegúrate de conservar el comprobante bancario (transferencia o cheque) para respaldar la deducibilidad ante el SRI.
+          </p>
+        </div>
+      )}
 
       {["FAC", "LIQ"].includes(doc.tipo_doc) && doc.estado_pago && (
         <div
@@ -508,11 +575,11 @@ export default function FacturasRecibidasPage() {
                       {doc.tipo_doc}
                     </span>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <p className="text-sm font-medium truncate" style={{ color: "var(--kipu-text)" }}>
                           {doc.razon_social_proveedor}
                         </p>
-                        <div className="flex gap-1 shrink-0">
+                        <div className="flex gap-1 shrink-0 items-center">
                           {doc.deducible_renta && (
                             <span
                               className="text-[10px] px-1.5 py-0.5 rounded"
@@ -535,6 +602,8 @@ export default function FacturasRecibidasPage() {
                               CT IVA
                             </span>
                           )}
+                          {/* Insignia de Bancarización */}
+                          <BadgeBancarizacion doc={doc} />
                         </div>
                       </div>
                       <p className="text-xs font-mono" style={{ color: "var(--kipu-subtle)" }}>
