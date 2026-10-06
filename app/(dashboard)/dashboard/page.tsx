@@ -1,4 +1,3 @@
-// app/(dashboard)/dashboard/page.tsx
 "use client";
 import { useEffect } from "react";
 import useSWR from "swr";
@@ -38,7 +37,7 @@ export default function DashboardPage() {
     `/api/v1/app/dashboard?fecha_inicio=${primerDia}&fecha_fin=${hoyStr}&sandbox=${sandbox}`,
     fetcher,
     {
-      revalidateOnFocus:     false,
+      revalidateOnFocus:     true,
       revalidateOnReconnect: true,
       revalidateOnMount:     true,
       dedupingInterval:      5000,

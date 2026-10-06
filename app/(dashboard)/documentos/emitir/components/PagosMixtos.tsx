@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Plus, Trash2, AlertTriangle } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Plus, Trash2, AlertTriangle, Info } from "lucide-react";
 
 // ── Tipos ──────────────────────────────────────────────────────────────────────
 export type FormaPagoCode = "01" | "15" | "16" | "17" | "18" | "19" | "20" | "21";
@@ -31,6 +31,11 @@ const FORMAS_PAGO: { value: FormaPagoCode; label: string }[] = [
   { value: "21", label: "Endoso de títulos" },
 ];
 
+// ── Regla tributaria: >= $500 debe usar sistema financiero ──────────────────
+const LIMITE_EFECTIVO = 500;
+const COD_EFECTIVO: FormaPagoCode = "01";
+const COD_DEFAULT_FINANCIERO: FormaPagoCode = "20"; // fallback cuando se bloquea efectivo
+
 const r2  = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 const fmt = (n: number) => r2(n).toFixed(2);
 const genId = () => Math.random().toString(36).slice(2);
@@ -51,21 +56,45 @@ export default function PagosMixtos({
 }: Props) {
   const [showPropinaWarning, setShowPropinaWarning] = useState(false);
 
+  // ── Regla $500: efectivo bloqueado si total >= LIMITE ─────────────────────
+  const efectivoBloqueado = totalFactura >= LIMITE_EFECTIVO;
+
+  // Auto-corregir: si el total sube a >= $500 y algún pago es efectivo, cambiarlo
+  useEffect(() => {
+    if (!efectivoBloqueado) return;
+    const tieneEfectivo = pagos.some(p => p.forma_pago === COD_EFECTIVO);
+    if (tieneEfectivo) {
+      onChange(
+        pagos.map(p =>
+          p.forma_pago === COD_EFECTIVO
+            ? { ...p, forma_pago: COD_DEFAULT_FINANCIERO }
+            : p
+        )
+      );
+    }
+  }, [efectivoBloqueado]);
+
+  // Formas de pago disponibles (filtra efectivo si está bloqueado)
+  const formasPagoDisponibles = efectivoBloqueado
+    ? FORMAS_PAGO.filter(f => f.value !== COD_EFECTIVO)
+    : FORMAS_PAGO;
+
   // Calcular saldo cubierto y restante
   const totalCubierto = pagos.reduce((s, p) => s + (p.total ?? 0), 0);
   const saldoRestante = r2(totalFactura - totalCubierto);
 
   const editPago = (id: string, field: keyof PagoItem, value: any) => {
+    // Bloquear si intentan poner efectivo con total >= $500
+    if (field === "forma_pago" && value === COD_EFECTIVO && efectivoBloqueado) return;
     onChange(pagos.map(p => p._id === id ? { ...p, [field]: value } : p));
   };
 
   const addPago = () => {
-    // Solo se puede agregar si ya hay un pago con monto fijo — el nuevo recibe el saldo
-    // Si ya existe uno sin total, el nuevo debe tener monto
     const hayUnoSinTotal = pagos.some(p => p.total === null);
+    const formaPagoDefault: FormaPagoCode = efectivoBloqueado ? "19" : "19";
     onChange([...pagos, {
       _id:        genId(),
-      forma_pago: "19",
+      forma_pago: formaPagoDefault,
       total:      hayUnoSinTotal ? 0 : null,
     }]);
   };
@@ -73,7 +102,6 @@ export default function PagosMixtos({
   const removePago = (id: string) => {
     if (pagos.length === 1) return;
     const nuevos = pagos.filter(p => p._id !== id);
-    // Si ninguno quedó sin total, el último recibe el saldo
     if (!nuevos.some(p => p.total === null)) {
       nuevos[nuevos.length - 1] = { ...nuevos[nuevos.length - 1], total: null };
     }
@@ -81,7 +109,6 @@ export default function PagosMixtos({
   };
 
   const convertirASaldo = (id: string) => {
-    // Quitar el "sin total" anterior y asignar monto, luego este pasa a sin total
     onChange(pagos.map(p => {
       if (p._id === id) return { ...p, total: null };
       if (p.total === null) return { ...p, total: 0 };
@@ -101,50 +128,71 @@ export default function PagosMixtos({
     >
       <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>Forma de pago</h2>
 
+      {/* Alerta $500 */}
+      {efectivoBloqueado && (
+        <div
+          className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg"
+          style={{
+            color: "var(--kipu-accent)",
+            background: "color-mix(in srgb, var(--kipu-accent) 8%, transparent)",
+            border: "1px solid color-mix(in srgb, var(--kipu-accent) 20%, transparent)",
+          }}
+        >
+          <Info size={13} className="shrink-0" />
+          Transacciones ≥ ${fmt(LIMITE_EFECTIVO)} deben utilizar el sistema financiero.
+        </div>
+      )}
+
       {/* Shortcuts */}
       <div className="flex gap-2 flex-wrap">
         {[
           { code: "01" as FormaPagoCode, label: "Efectivo" },
+          { code: "20" as FormaPagoCode, label: "Transferencia" },
           { code: "16" as FormaPagoCode, label: "Débito" },
           { code: "19" as FormaPagoCode, label: "Crédito" },
-        ].map(sc => (
-          <button
-            key={sc.code}
-            type="button"
-            onClick={() => {
-              // Si solo hay un pago y está vacío (default), cambiar su forma de pago
-              if (pagos.length === 1 && pagos[0].forma_pago === "01" && pagos[0].total === null) {
-                editPago(pagos[0]._id, "forma_pago", sc.code);
-              } else {
-                // Agregar nuevo pago con esta forma
-                const hayUnoSinTotal = pagos.some(p => p.total === null);
-                onChange([...pagos, {
-                  _id: genId(),
-                  forma_pago: sc.code,
-                  total: hayUnoSinTotal ? 0 : null,
-                }]);
-              }
-            }}
-            className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
-            style={{
-              border: "1px solid var(--kipu-border)",
-              color: "var(--kipu-muted)",
-              background: "transparent",
-            }}
-            onMouseEnter={e => {
-              e.currentTarget.style.borderColor = "var(--kipu-accent)";
-              e.currentTarget.style.color = "var(--kipu-accent)";
-              e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-accent) 5%, transparent)";
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.borderColor = "var(--kipu-border)";
-              e.currentTarget.style.color = "var(--kipu-muted)";
-              e.currentTarget.style.background = "transparent";
-            }}
-          >
-            {sc.label}
-          </button>
-        ))}
+        ].map(sc => {
+          const disabled = sc.code === COD_EFECTIVO && efectivoBloqueado;
+          return (
+            <button
+              key={sc.code}
+              type="button"
+              disabled={disabled}
+              onClick={() => {
+                if (disabled) return;
+                if (pagos.length === 1 && pagos[0].total === null) {
+                  editPago(pagos[0]._id, "forma_pago", sc.code);
+                } else {
+                  const hayUnoSinTotal = pagos.some(p => p.total === null);
+                  onChange([...pagos, {
+                    _id: genId(),
+                    forma_pago: sc.code,
+                    total: hayUnoSinTotal ? 0 : null,
+                  }]);
+                }
+              }}
+              className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              style={{
+                border: "1px solid var(--kipu-border)",
+                color: "var(--kipu-muted)",
+                background: "transparent",
+              }}
+              onMouseEnter={e => {
+                if (disabled) return;
+                e.currentTarget.style.borderColor = "var(--kipu-accent)";
+                e.currentTarget.style.color = "var(--kipu-accent)";
+                e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-accent) 5%, transparent)";
+              }}
+              onMouseLeave={e => {
+                if (disabled) return;
+                e.currentTarget.style.borderColor = "var(--kipu-border)";
+                e.currentTarget.style.color = "var(--kipu-muted)";
+                e.currentTarget.style.background = "transparent";
+              }}
+            >
+              {sc.label}
+            </button>
+          );
+        })}
       </div>
 
       {/* Lista de pagos */}
@@ -178,7 +226,7 @@ export default function PagosMixtos({
                 onFocus={(e) => (e.currentTarget.style.borderColor = "var(--kipu-accent)")}
                 onBlur={(e) => (e.currentTarget.style.borderColor = "var(--kipu-border)")}
               >
-                {FORMAS_PAGO.map(({ value, label }) => (
+                {formasPagoDisponibles.map(({ value, label }) => (
                   <option key={value} value={value}>{label}</option>
                 ))}
               </select>

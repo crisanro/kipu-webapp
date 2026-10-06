@@ -70,6 +70,12 @@ const inputDisStyle = {
 
 export default function TabEstructura({ estructura, onActualizar }: Props) {
 
+  // ── Helper: invalida caché local + refresca datos ────────────────────────────
+  const invalidarEstructuraLocal = () => {
+    sessionStorage.removeItem("kipu:estructura");
+    onActualizar();
+  };
+
   // ── Modales ──────────────────────────────────────────────────────────────────
   type ModalState =
     | { tipo: "crearEstab" }
@@ -98,7 +104,7 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
     setError(""); setSaving(true);
     try {
       await api.post("/api/v1/app/estructura/establecimientos", estabForm);
-      onActualizar(); cerrar();
+      invalidarEstructuraLocal(); cerrar();
       setEstabForm({ codigo: "001", nombre_comercial: "", direccion: "" });
     } catch (e: any) {
       setError(e?.response?.data?.detail ?? "Error al crear.");
@@ -110,7 +116,7 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
     setError(""); setSaving(true);
     try {
       await api.put(`/api/v1/app/estructura/establecimientos/${estabId}`, editEstab);
-      onActualizar(); cerrar();
+      invalidarEstructuraLocal(); cerrar();
     } catch (e: any) {
       setError(e?.response?.data?.detail ?? "Error al actualizar.");
     } finally { setSaving(false); }
@@ -121,7 +127,7 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
     setError(""); setSaving(true);
     try {
       await api.post("/api/v1/app/estructura/puntos-emision", puntoForm);
-      onActualizar(); cerrar();
+      invalidarEstructuraLocal(); cerrar();
     } catch (e: any) {
       setError(e?.response?.data?.detail ?? "Error al crear.");
     } finally { setSaving(false); }
@@ -132,7 +138,7 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
     setError(""); setSaving(true);
     try {
       await api.put(`/api/v1/app/estructura/puntos-emision/${puntoId}`, editPunto);
-      onActualizar(); cerrar();
+      invalidarEstructuraLocal(); cerrar();
     } catch (e: any) {
       setError(e?.response?.data?.detail ?? "Error al actualizar.");
     } finally { setSaving(false); }
@@ -143,7 +149,7 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
     setToggling(estabId);
     try {
       await api.put(`/api/v1/app/estructura/establecimientos/${estabId}`, { is_active: !activo });
-      onActualizar();
+      invalidarEstructuraLocal();
     } catch (e: any) {
       alert(e?.response?.data?.detail ?? "Error.");
     } finally { setToggling(null); }
@@ -153,7 +159,7 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
     setToggling(puntoId);
     try {
       await api.put(`/api/v1/app/estructura/puntos-emision/${puntoId}`, { is_active: !activo });
-      onActualizar();
+      invalidarEstructuraLocal();
     } catch (e: any) {
       alert(e?.response?.data?.detail ?? "Error.");
     } finally { setToggling(null); }
@@ -820,7 +826,7 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
                     `/api/v1/app/estructura/puntos-emision/${modal.punto.id}/secuencial`,
                     { secuenciales: { produccion, pruebas } }
                   );
-                  onActualizar(); cerrar();
+                  invalidarEstructuraLocal(); cerrar();
                 } catch (e: any) {
                   setError(e?.response?.data?.detail ?? "Error al actualizar secuenciales.");
                 } finally { setSaving(false); }

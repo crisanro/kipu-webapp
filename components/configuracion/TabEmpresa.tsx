@@ -562,7 +562,12 @@ export default function TabEmpresa({ legal, health, onActualizar }: Props) {
                 await api.post(`/api/v1/app/emisor/produccion?pin=${pin}`);
                 setProdMsg("¡Bienvenido a producción!");
                 setShowProdModal(false);
-                onActualizar();
+
+                // Limpiar todas las cachés del frontend y reload completo
+                // Evento único en la vida de la cuenta — reload garantiza
+                // que auth store, SWR, y sessionStorage se refresquen
+                sessionStorage.removeItem("kipu:estructura");
+                setTimeout(() => window.location.href = "/dashboard", 1500);
               }}
             />
           </div>
