@@ -15,9 +15,11 @@ const PERMISOS_LABELS: Record<string, string> = {
   descargar:             "Descargar PDF/XML",
   clientes:              "Ver y editar clientes",
   productos:             "Ver y editar productos",
+  estructura:            "Establecimientos y puntos",
   declaraciones:         "Ver declaraciones SRI",
   reportes:              "Ver reportes",
   documentos_recibidos:  "Documentos recibidos",
+  auditoria:             "Auditoría",
   configuracion:         "Configuración",
   api_keys:              "API Keys",
   usuarios:              "Gestionar usuarios",
@@ -26,12 +28,14 @@ const PERMISOS_LABELS: Record<string, string> = {
 const PERMISOS_POR_ROL: Record<string, Record<string, boolean>> = {
   contador: {
     emitir: true, descargar: true, clientes: true, productos: true,
-    declaraciones: true, reportes: true, documentos_recibidos: true,
+    estructura: true, declaraciones: true, reportes: true,
+    documentos_recibidos: true, auditoria: false,
     configuracion: false, api_keys: false, usuarios: false,
   },
   emisor: {
     emitir: true, descargar: true, clientes: true, productos: true,
-    documentos_recibidos: true, declaraciones: false, reportes: false,
+    estructura: true, documentos_recibidos: true,
+    declaraciones: false, reportes: false, auditoria: false,
     configuracion: false, api_keys: false, usuarios: false,
   },
 };
@@ -67,7 +71,6 @@ export default function TabUsuarios({ empresaId }: Props) {
 
   useEffect(() => { cargar(); }, [empresaId]);
 
-  // ── Validación email en tiempo real ──────────────────────────────────────────
   const handleEmailChange = (val: string) => {
     const lower = val.toLowerCase();
     setInvEmail(lower);
@@ -78,7 +81,6 @@ export default function TabUsuarios({ empresaId }: Props) {
     }
   };
 
-  // ── Invitar ───────────────────────────────────────────────────────────────────
   const invitar = async () => {
     setInvMsg("");
     setInvError("");
@@ -101,7 +103,6 @@ export default function TabUsuarios({ empresaId }: Props) {
     }
   };
 
-  // ── Remover ───────────────────────────────────────────────────────────────────
   const remover = async (profileId: string, nombre: string) => {
     if (!confirm(`¿Remover a ${nombre} de la empresa?`)) return;
     setRemoviendo(profileId);
@@ -115,7 +116,6 @@ export default function TabUsuarios({ empresaId }: Props) {
     }
   };
 
-  // ── Permisos ──────────────────────────────────────────────────────────────────
   const getPermisos = (u: any): Record<string, boolean> => {
     return permisosCambiados[u.profile_id] ?? u.permisos ?? {};
   };
@@ -332,7 +332,6 @@ export default function TabUsuarios({ empresaId }: Props) {
                     >
                       {esAdmin ? <><Shield size={10} /> Admin</> : <><User size={10} /> {u.rol}</>}
                     </span>
-                    {/* Expandir permisos — solo no admin */}
                     {!esAdmin && (
                       <button
                         type="button"
