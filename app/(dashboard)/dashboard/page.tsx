@@ -90,42 +90,14 @@ export default function DashboardPage() {
         </Link>
       </div>
 
-      {/* Checklist onboarding */}
-      {data?.health && !data.health.listo_produccion && (
-        <Checklist health={data.health} compact />
+      {/* Checklist onboarding (incluye paso 6: activar producción) */}
+      {data?.health && !data.health.en_produccion && (
+        <Checklist health={data.health} compact onUpdate={() => mutate()} />
       )}
 
       {/* Widget declaraciones */}
       {declaracion && (
         <DeclaracionWidget data={declaracion} onDeclarado={() => mutate()} />
-      )}
-
-      {/* Alerta pruebas */}
-      {!esProduccion && (
-        <div
-          className="flex items-start gap-3 rounded-xl px-4 py-3"
-          style={{
-            background: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)",
-            border:     "1px solid color-mix(in srgb, var(--kipu-warning) 20%, transparent)",
-          }}
-        >
-          <AlertTriangle size={16} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-warning)" }} />
-          <div>
-            <p className="text-sm font-semibold" style={{ color: "var(--kipu-warning)" }}>
-              Estás en ambiente de pruebas
-            </p>
-            <p className="text-xs mt-0.5" style={{ color: "color-mix(in srgb, var(--kipu-warning) 70%, transparent)" }}>
-              Los comprobantes no son válidos ante el SRI.{" "}
-              <Link
-                href="/configuracion"
-                className="underline"
-                style={{ color: "var(--kipu-warning)" }}
-              >
-                Activar producción
-              </Link>
-            </p>
-          </div>
-        </div>
       )}
 
       {/* Alerta suscripción inactiva */}

@@ -11,21 +11,17 @@ firebase.initializeApp({
   appId:             "1:264857219159:web:b9e58d8e4d1b70a923f312",
 });
 
-// Activar la versión nueva del SW de inmediato
 self.addEventListener("install",  () => self.skipWaiting());
 self.addEventListener("activate", (event) => event.waitUntil(self.clients.claim()));
 
 const messaging = firebase.messaging();
 
-// El backend manda mensajes SOLO DE DATOS: aquí decidimos cómo mostrarlos.
+// El backend manda mensajes SOLO DE DATOS — aquí decidimos cómo mostrarlos.
 messaging.onBackgroundMessage((payload) => {
   const d = payload.data || {};
+  if (!d.title) return;
 
-  // Compatibilidad: si llega un mensaje con bloque "notification" (formato viejo),
-  // el SDK ya lo muestra solo. No lo duplicamos.
-  if (payload.notification && !d.title) return;
-
-  return self.registration.showNotification(d.title || "Kipu", {
+  return self.registration.showNotification(d.title, {
     body:    d.body || "",
     icon:    "/icon.svg",
     badge:   "/icon.svg",
@@ -47,7 +43,6 @@ self.addEventListener("notificationclick", (event) => {
 
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((lista) => {
-      // Si ya hay una pestaña de Kipu abierta (mismo origen) — enfocarla y navegar
       for (const client of lista) {
         if (client.url.startsWith(self.location.origin) && "focus" in client) {
           return client.focus()
@@ -55,7 +50,6 @@ self.addEventListener("notificationclick", (event) => {
             .catch(() => self.clients.openWindow(destino));
         }
       }
-      // Si no hay pestaña abierta — abrir una nueva
       return self.clients.openWindow(destino);
     })
   );

@@ -11,6 +11,7 @@ import SinAcceso from "@/components/SinAcceso";
 export default function ConfiguracionPage() {
   const puedeVer = usePermiso("configuracion");
   if (!puedeVer) return <SinAcceso />;
+
   const [loading, setLoading] = useState(true);
   const [config,  setConfig]  = useState<any>(null);
   const [health,  setHealth]  = useState<HealthData | null>(null);
@@ -28,7 +29,6 @@ export default function ConfiguracionPage() {
       setConfig(resConfig.data.data);
       setHealth(resDash.data.data?.health ?? null);
 
-      // Actualizar store con firma_ok real desde el backend
       const firma = resConfig.data.data?.firma;
       const firmaOk = firma?.configurada && firma?.estado !== "EXPIRADA";
       if (empresa) {
@@ -42,6 +42,16 @@ export default function ConfiguracionPage() {
   };
 
   useEffect(() => { cargar(); }, []);
+
+  // Scroll a cualquier sección por hash (#firma, #produccion, etc.)
+  useEffect(() => {
+    if (!loading && window.location.hash) {
+      const id = window.location.hash.slice(1);
+      setTimeout(() => {
+        document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 100);
+    }
+  }, [loading]);
 
   if (loading) {
     return (
@@ -64,10 +74,12 @@ export default function ConfiguracionPage() {
         health={health}
         onActualizar={cargar}
       />
-      <TabFirma
-        firma={config?.firma}
-        onActualizar={cargar}
-      />
+      <div id="firma">
+        <TabFirma
+          firma={config?.firma}
+          onActualizar={cargar}
+        />
+      </div>
     </div>
   );
 }

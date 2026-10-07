@@ -2,13 +2,11 @@
 import { useState } from "react";
 import {
   Pencil, X, Check, Loader2,
-  Building2, FileText, Calendar, Rocket,
-  ShieldCheck, HelpCircle, ChevronRight,
+  Building2, FileText, Calendar,
+  ShieldCheck, HelpCircle,
 } from "lucide-react";
 import api from "@/lib/api";
 import Checklist, { HealthData } from "@/components/Checklist";
-import PinInput from "@/components/PinInput";
-import { useAuthStore } from "@/store/auth.store";
 
 interface Props {
   legal:        any;
@@ -23,7 +21,7 @@ interface CampoFiscal {
   tipo?:     "select";
   opciones?: string[];
   render?:   (v: any) => string;
-  span?:     boolean;           // ocupa ancho completo en el grid
+  span?:     boolean;
 }
 
 const CAMPOS_FISCALES: CampoFiscal[] = [
@@ -43,26 +41,20 @@ const REGIMEN_OPCIONES = [
 ];
 
 export default function TabEmpresa({ legal, health, onActualizar }: Props) {
-  const [prodMsg,        setProdMsg]        = useState("");
-  const [showProdModal,  setShowProdModal]  = useState(false);
   const [periodoIva,     setPeriodoIva]     = useState<string>(legal?.periodo_iva ?? "MENSUAL");
   const [guardando,      setGuardando]      = useState(false);
   const [msgPeriodo,     setMsgPeriodo]     = useState("");
 
-  // Edición inline
   const [editando,       setEditando]       = useState<string | null>(null);
   const [editValor,      setEditValor]      = useState("");
   const [guardandoCampo, setGuardandoCampo] = useState(false);
   const [errorCampo,     setErrorCampo]     = useState("");
 
-  // Leyendas SRI
   const [leyendaMsg,        setLeyendaMsg]        = useState("");
   const [guardandoLeyenda,  setGuardandoLeyenda]  = useState(false);
   const [agenteRetencion,   setAgenteRetencion]   = useState(legal?.agente_retencion ?? "");
   const [regimenRimpe,      setRegimenRimpe]      = useState(legal?.regimen_rimpe ?? "");
   const [granContribuyente, setGranContribuyente]  = useState(legal?.gran_contribuyente_resolucion ?? "");
-
-  const email = useAuthStore((s) => s.email) ?? "";
 
   if (!legal) return null;
 
@@ -70,7 +62,6 @@ export default function TabEmpresa({ legal, health, onActualizar }: Props) {
   const periodoEfectivo    = esObligado ? "MENSUAL" : periodoIva;
   const puedeEditarPeriodo = !esObligado;
 
-  // ── Guardar campo individual ────────────────────────────────────
   const guardarCampo = async (key: string, valor: string) => {
     setGuardandoCampo(true);
     setErrorCampo("");
@@ -91,7 +82,6 @@ export default function TabEmpresa({ legal, health, onActualizar }: Props) {
     setErrorCampo("");
   };
 
-  // ── Guardar leyendas SRI ────────────────────────────────────────
   const guardarLeyendas = async () => {
     setGuardandoLeyenda(true);
     setLeyendaMsg("");
@@ -110,7 +100,6 @@ export default function TabEmpresa({ legal, health, onActualizar }: Props) {
     }
   };
 
-  // ── Guardar período IVA ─────────────────────────────────────────
   const guardarPeriodo = async (nuevo: string) => {
     if (nuevo === legal.periodo_iva) return;
     setGuardando(true);
@@ -127,7 +116,6 @@ export default function TabEmpresa({ legal, health, onActualizar }: Props) {
     }
   };
 
-  // ── Detectar si leyendas tienen cambios sin guardar ─────────────
   const leyendasModificadas =
     agenteRetencion   !== (legal?.agente_retencion ?? "") ||
     regimenRimpe      !== (legal?.regimen_rimpe ?? "") ||
@@ -135,9 +123,10 @@ export default function TabEmpresa({ legal, health, onActualizar }: Props) {
 
   return (
     <div className="space-y-6">
-      {/* Checklist */}
-      {health && !health.listo_produccion && (
-        <Checklist health={health} />
+
+      {/* Checklist (incluye paso 6 y modal de producción) */}
+      {health && !health.en_produccion && (
+        <Checklist health={health} onUpdate={onActualizar} />
       )}
 
       {/* ══ Card 1: Datos Fiscales ════════════════════════════════ */}
@@ -292,7 +281,6 @@ export default function TabEmpresa({ legal, health, onActualizar }: Props) {
         </div>
 
         <div className="space-y-5">
-          {/* Régimen RIMPE */}
           <div>
             <label
               className="block text-[11px] font-semibold uppercase tracking-wider mb-2"
@@ -333,7 +321,6 @@ export default function TabEmpresa({ legal, health, onActualizar }: Props) {
             </div>
           </div>
 
-          {/* Agente de Retención + Gran Contribuyente */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label
@@ -386,7 +373,6 @@ export default function TabEmpresa({ legal, health, onActualizar }: Props) {
             </div>
           </div>
 
-          {/* Botón guardar */}
           <div className="flex items-center gap-3 pt-1">
             <button
               onClick={guardarLeyendas}
@@ -489,90 +475,6 @@ export default function TabEmpresa({ legal, health, onActualizar }: Props) {
           )}
         </div>
       </section>
-
-      {/* ══ Card 4: Activar Producción ═════════════════════════════ */}
-      {health?.listo_produccion && legal.ambiente !== 2 && (
-        <section
-          className="rounded-2xl p-5 md:p-6 relative overflow-hidden"
-          style={{
-            background: "linear-gradient(135deg, color-mix(in srgb, var(--kipu-success) 12%, transparent), var(--kipu-surface))",
-            border: "1px solid color-mix(in srgb, var(--kipu-success) 30%, transparent)",
-          }}
-        >
-          <div className="flex items-start gap-3">
-            <div
-              className="p-2.5 rounded-xl shrink-0"
-              style={{ background: "color-mix(in srgb, var(--kipu-success) 15%, transparent)", color: "var(--kipu-success)" }}
-            >
-              <Rocket size={22} />
-            </div>
-            <div className="flex-1">
-              <h3 className="text-sm font-bold mb-1" style={{ color: "var(--kipu-text)" }}>
-                ¡Todo listo para producción!
-              </h3>
-              <p className="text-xs mb-3 leading-relaxed" style={{ color: "var(--kipu-subtle)" }}>
-                Completaste todos los requisitos. Al activar producción podrás emitir comprobantes reales autorizados por el SRI.
-              </p>
-              <button
-                type="button"
-                onClick={() => setShowProdModal(true)}
-                className="px-5 py-2 rounded-xl text-white text-xs font-bold transition-all flex items-center gap-1.5"
-                style={{ background: "var(--kipu-success)" }}
-              >
-                Activar producción <ChevronRight size={14} />
-              </button>
-              {prodMsg && (
-                <p className="mt-2 text-xs font-medium" style={{ color: "var(--kipu-success)" }}>{prodMsg}</p>
-              )}
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* ══ Modal PIN ══════════════════════════════════════════════ */}
-      {showProdModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div
-            className="rounded-2xl w-full max-w-sm p-6 relative"
-            style={{
-              background: "var(--kipu-surface)",
-              border: "1px solid var(--kipu-border)",
-            }}
-          >
-            <div className="text-center mb-5">
-              <div
-                className="w-11 h-11 rounded-xl flex items-center justify-center mx-auto mb-3"
-                style={{ background: "color-mix(in srgb, var(--kipu-success) 12%, transparent)", color: "var(--kipu-success)" }}
-              >
-                <Rocket size={20} />
-              </div>
-              <h3 className="text-sm font-bold mb-0.5" style={{ color: "var(--kipu-text)" }}>
-                Confirmar pase a producción
-              </h3>
-              <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
-                Ingresa el PIN enviado a tu correo.
-              </p>
-            </div>
-            <PinInput
-              tipoAccion="ACTIVAR_PRODUCCION"
-              email={email}
-              label="activar producción"
-              onCancelar={() => setShowProdModal(false)}
-              onConfirmar={async (pin) => {
-                await api.post(`/api/v1/app/emisor/produccion?pin=${pin}`);
-                setProdMsg("¡Bienvenido a producción!");
-                setShowProdModal(false);
-
-                // Limpiar todas las cachés del frontend y reload completo
-                // Evento único en la vida de la cuenta — reload garantiza
-                // que auth store, SWR, y sessionStorage se refresquen
-                sessionStorage.removeItem("kipu:estructura");
-                setTimeout(() => window.location.href = "/dashboard", 1500);
-              }}
-            />
-          </div>
-        </div>
-      )}
     </div>
   );
 }
