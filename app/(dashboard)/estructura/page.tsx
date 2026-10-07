@@ -8,7 +8,7 @@ import { usePermiso } from "@/hooks/usePermiso";
 import SinAcceso from "@/components/SinAcceso";
 
 export default function EstructuraPage() {
-  const puedeVer = usePermiso("estructura");
+  const puedeVer = usePermiso(["emitir", "estructura"]);
   if (!puedeVer) return <SinAcceso />;
 
   const [estructura, setEstructura] = useState<any[]>([]);

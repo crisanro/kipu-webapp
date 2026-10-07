@@ -15,6 +15,10 @@ import {
   Settings,
 } from "lucide-react";
 
+// permiso: string       → usuario necesita ESE permiso
+// permiso: string[]     → usuario necesita AL MENOS UNO (OR)
+// permiso: null          → visible para todos
+
 export const NAV_GROUPS = [
   {
     items: [
@@ -51,27 +55,30 @@ export const NAV_GROUPS = [
   },
   {
     items: [
-      { href: "/personas", label: "Personas", icon: Users, permiso: "clientes" },
-      { href: "/cuentas", label: "Cuentas", icon: Wallet, permiso: "clientes" },
-      { href: "/productos", label: "Productos", icon: Package, permiso: "productos" },
+      { href: "/personas",  label: "Personas",  icon: Users,    permiso: ["emitir", "clientes"] },
+      { href: "/cuentas",   label: "Cuentas",    icon: Wallet,   permiso: ["emitir", "clientes"] },
+      { href: "/productos", label: "Productos",  icon: Package,  permiso: ["emitir", "productos"] },
     ],
   },
   {
     separator: true,
     items: [
-      { href: "/estructura", label: "Estructura", icon: Building2, permiso: "estructura" },
-      { href: "/planes", label: "Planes", icon: CreditCard, permiso: null },
-      { href: "/reportes", label: "Reportes", icon: BarChart3, permiso: "reportes" },
-      { href: "/usuarios", label: "Usuarios", icon: UserCog, permiso: "usuarios" },
-      { href: "/api-keys", label: "API Keys", icon: Key, permiso: "api_keys" },
-      { href: "/auditoria", label: "Auditoría", icon: Shield, permiso: "auditoria" },
-      { href: "/configuracion", label: "Configuración", icon: Settings, permiso: "configuracion" },
+      { href: "/estructura",    label: "Estructura",    icon: Building2, permiso: ["emitir", "estructura"] },
+      { href: "/planes",        label: "Planes",        icon: CreditCard, permiso: null },
+      { href: "/reportes",      label: "Reportes",      icon: BarChart3, permiso: "reportes" },
+      { href: "/usuarios",      label: "Usuarios",      icon: UserCog,   permiso: "usuarios" },
+      { href: "/api-keys",      label: "API Keys",      icon: Key,       permiso: "api_keys" },
+      { href: "/auditoria",     label: "Auditoría",     icon: Shield,    permiso: "auditoria" },
+      { href: "/configuracion", label: "Configuración", icon: Settings,  permiso: "configuracion" },
     ],
   },
 ];
 
-export function tienePermiso(empresa: any, permiso: string | null): boolean {
+export function tienePermiso(empresa: any, permiso: string | string[] | null): boolean {
   if (!permiso) return true;
   if (empresa?.rol === "admin") return true;
+  if (Array.isArray(permiso)) {
+    return permiso.some(p => empresa?.permisos?.[p] === true);
+  }
   return empresa?.permisos?.[permiso] === true;
 }

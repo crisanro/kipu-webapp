@@ -13,9 +13,9 @@ interface Props {
 const PERMISOS_LABELS: Record<string, string> = {
   emitir:                "Emitir comprobantes",
   descargar:             "Descargar PDF/XML",
-  clientes:              "Ver y editar clientes",
-  productos:             "Ver y editar productos",
-  estructura:            "Establecimientos y puntos",
+  clientes:              "Editar clientes",
+  productos:             "Editar productos",
+  estructura:            "Editar establecimientos",
   declaraciones:         "Ver declaraciones SRI",
   reportes:              "Ver reportes",
   documentos_recibidos:  "Documentos recibidos",
@@ -26,16 +26,22 @@ const PERMISOS_LABELS: Record<string, string> = {
 };
 
 const PERMISOS_POR_ROL: Record<string, Record<string, boolean>> = {
+  emisor: {
+    emitir: true, descargar: true, documentos_recibidos: true,
+    clientes: false, productos: false, estructura: false,
+    declaraciones: false, reportes: false, auditoria: false,
+    configuracion: false, api_keys: false, usuarios: false,
+  },
+  asistente: {
+    emitir: true, descargar: true, clientes: true, productos: true,
+    estructura: true, documentos_recibidos: true,
+    declaraciones: false, reportes: false, auditoria: false,
+    configuracion: false, api_keys: false, usuarios: false,
+  },
   contador: {
     emitir: true, descargar: true, clientes: true, productos: true,
     estructura: true, declaraciones: true, reportes: true,
     documentos_recibidos: true, auditoria: false,
-    configuracion: false, api_keys: false, usuarios: false,
-  },
-  emisor: {
-    emitir: true, descargar: true, clientes: true, productos: true,
-    estructura: true, documentos_recibidos: true,
-    declaraciones: false, reportes: false, auditoria: false,
     configuracion: false, api_keys: false, usuarios: false,
   },
 };
@@ -215,6 +221,7 @@ export default function TabUsuarios({ empresaId }: Props) {
             onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
           >
             <option value="emisor">Emisor</option>
+            <option value="asistente">Asistente</option>
             <option value="contador">Contador</option>
             <option value="admin">Admin</option>
           </select>
@@ -305,7 +312,6 @@ export default function TabUsuarios({ empresaId }: Props) {
                   key={u.profile_id}
                   style={{ borderTop: idx > 0 ? "1px solid var(--kipu-border)" : "none" }}
                 >
-                  {/* Fila principal */}
                   <div className="flex items-center gap-3 px-5 py-3">
                     <div
                       className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
@@ -378,7 +384,6 @@ export default function TabUsuarios({ empresaId }: Props) {
                     </button>
                   </div>
 
-                  {/* Panel de permisos expandido */}
                   {abierto && !esAdmin && (
                     <div
                       className="px-5 pb-4"
@@ -387,49 +392,31 @@ export default function TabUsuarios({ empresaId }: Props) {
                         borderTop: "1px solid var(--kipu-border)",
                       }}
                     >
-                      {/* Plantillas rápidas */}
                       <div className="flex items-center gap-2 py-3">
                         <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Plantilla:</span>
-                        <button
-                          type="button"
-                          onClick={() => aplicarPlantilla(u.profile_id, "emisor")}
-                          className="text-xs px-2 py-1 rounded-lg transition-colors"
-                          style={{
-                            background: "color-mix(in srgb, var(--kipu-text) 10%, transparent)",
-                            color: "var(--kipu-muted)",
-                          }}
-                          onMouseEnter={e => {
-                            e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 15%, transparent)";
-                            e.currentTarget.style.color = "var(--kipu-text)";
-                          }}
-                          onMouseLeave={e => {
-                            e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 10%, transparent)";
-                            e.currentTarget.style.color = "var(--kipu-muted)";
-                          }}
-                        >
-                          Emisor
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => aplicarPlantilla(u.profile_id, "contador")}
-                          className="text-xs px-2 py-1 rounded-lg transition-colors"
-                          style={{
-                            background: "color-mix(in srgb, var(--kipu-text) 10%, transparent)",
-                            color: "var(--kipu-muted)",
-                          }}
-                          onMouseEnter={e => {
-                            e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 15%, transparent)";
-                            e.currentTarget.style.color = "var(--kipu-text)";
-                          }}
-                          onMouseLeave={e => {
-                            e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 10%, transparent)";
-                            e.currentTarget.style.color = "var(--kipu-muted)";
-                          }}
-                        >
-                          Contador
-                        </button>
+                        {["emisor", "asistente", "contador"].map(rol => (
+                          <button
+                            key={rol}
+                            type="button"
+                            onClick={() => aplicarPlantilla(u.profile_id, rol)}
+                            className="text-xs px-2 py-1 rounded-lg transition-colors capitalize"
+                            style={{
+                              background: "color-mix(in srgb, var(--kipu-text) 10%, transparent)",
+                              color: "var(--kipu-muted)",
+                            }}
+                            onMouseEnter={e => {
+                              e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 15%, transparent)";
+                              e.currentTarget.style.color = "var(--kipu-text)";
+                            }}
+                            onMouseLeave={e => {
+                              e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 10%, transparent)";
+                              e.currentTarget.style.color = "var(--kipu-muted)";
+                            }}
+                          >
+                            {rol.charAt(0).toUpperCase() + rol.slice(1)}
+                          </button>
+                        ))}
                       </div>
-                      {/* Grid de permisos */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         {Object.entries(PERMISOS_LABELS).map(([key, label]) => {
                           const activo = permisos[key] ?? false;
@@ -446,9 +433,7 @@ export default function TabUsuarios({ empresaId }: Props) {
                                 border: activo
                                   ? "1px solid color-mix(in srgb, var(--kipu-accent) 40%, transparent)"
                                   : "1px solid var(--kipu-border)",
-                                color: activo
-                                  ? "var(--kipu-accent)"
-                                  : "var(--kipu-subtle)",
+                                color: activo ? "var(--kipu-accent)" : "var(--kipu-subtle)",
                               }}
                               onMouseEnter={e => {
                                 if (!activo) {
@@ -478,7 +463,6 @@ export default function TabUsuarios({ empresaId }: Props) {
                           );
                         })}
                       </div>
-                      {/* Guardar */}
                       {conCambios && (
                         <div className="flex gap-2 mt-3">
                           <button
