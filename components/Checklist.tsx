@@ -6,11 +6,12 @@ import { usePathname } from "next/navigation";
 import {
   CheckCircle2, Circle, Mail, Building2,
   Shield, Store, ChevronRight, Rocket, Lock,
-  Upload, Loader2, X
+  Upload, Loader2, X, UserCog
 } from "lucide-react";
 import api from "@/lib/api";
 import PinInput from "@/components/PinInput";
 import { useAuthStore } from "@/store/auth.store";
+import { usePermiso } from "@/hooks/usePermiso";
 
 export interface HealthData {
   email_verificado:              boolean;
@@ -31,19 +32,24 @@ interface Props {
 }
 
 interface ChecklistItem {
-  key:      string;
-  label:    string;
-  desc:     string;
-  done:     boolean;
-  href:     string;
-  icon:     React.ElementType;
-  locked?:  boolean;
-  action?:  () => void;
+  key:       string;
+  label:     string;
+  desc:      string;
+  done:      boolean;
+  href:      string;
+  icon:      React.ElementType;
+  locked?:   boolean;
+  action?:   () => void;
+  noAcceso?: boolean;  // usuario no tiene permiso para esta acción
 }
 
 export default function Checklist({ health, compact = false, onUpdate }: Props) {
   const pathname = usePathname();
   const email = useAuthStore((s) => s.email) ?? "";
+  const empresa = useAuthStore((s) => s.empresa);
+
+  const puedeConfig     = usePermiso("configuracion");
+  const puedeEstructura = usePermiso("estructura");
 
   // ── Estado modal producción ─────────────────────────────────────
   const [showProdModal, setShowProdModal] = useState(false);
@@ -98,20 +104,22 @@ export default function Checklist({ health, compact = false, onUpdate }: Props) 
   // ── Items ───────────────────────────────────────────────────────
   const items: ChecklistItem[] = [
     {
-      key:   "email_verificado",
-      label: "Verificar email",
-      desc:  "Necesario para acciones de seguridad",
-      done:  health.email_verificado ?? false,
-      href:  "/configuracion",
-      icon:  Mail,
+      key:      "email_verificado",
+      label:    "Verificar email",
+      desc:     "Necesario para acciones de seguridad",
+      done:     health.email_verificado ?? false,
+      href:     "/configuracion",
+      icon:     Mail,
+      noAcceso: !puedeConfig,
     },
     {
-      key:   "datos_empresa",
-      label: "Datos de empresa",
-      desc:  "RUC, razón social y dirección",
-      done:  health.ruc ?? false,
-      href:  "/configuracion",
-      icon:  Building2,
+      key:      "datos_empresa",
+      label:    "Datos de empresa",
+      desc:     puedeConfig ? "RUC, razón social y dirección" : "Pide al administrador que complete este paso",
+      done:     health.ruc ?? false,
+      href:     "/configuracion",
+      icon:     Building2,
+      noAcceso: !puedeConfig,
     },
     {
       key:    "firma",
@@ -123,32 +131,35 @@ export default function Checklist({ health, compact = false, onUpdate }: Props) 
       action: !firmaOk ? () => setShowFirmaModal(true) : undefined,
     },
     {
-      key:   "establecimiento",
-      label: "Establecimiento",
-      desc:  "Al menos un establecimiento activo",
-      done:  health.establecimientos_configurados ?? false,
-      href:  "/estructura",
-      icon:  Store,
+      key:      "establecimiento",
+      label:    "Establecimiento",
+      desc:     puedeEstructura ? "Al menos un establecimiento activo" : "Pide al administrador que complete este paso",
+      done:     health.establecimientos_configurados ?? false,
+      href:     "/estructura",
+      icon:     Store,
+      noAcceso: !puedeEstructura,
     },
     {
-      key:   "punto_emision",
-      label: "Punto de emisión",
-      desc:  "Al menos un punto de emisión activo",
-      done:  health.puntos_emision_configurados ?? false,
-      href:  "/estructura",
-      icon:  Store,
+      key:      "punto_emision",
+      label:    "Punto de emisión",
+      desc:     puedeEstructura ? "Al menos un punto de emisión activo" : "Pide al administrador que complete este paso",
+      done:     health.puntos_emision_configurados ?? false,
+      href:     "/estructura",
+      icon:     Store,
+      noAcceso: !puedeEstructura,
     },
     {
-      key:    "activar_produccion",
-      label:  "Activar producción",
-      desc:   pasos1a5Completos
-                ? "¡Todo listo! Emite comprobantes reales ante el SRI"
-                : "Completa los pasos anteriores primero",
-      done:   health.en_produccion ?? false,
-      href:   "#",
-      icon:   Rocket,
-      locked: !pasos1a5Completos,
-      action: pasos1a5Completos ? () => setShowProdModal(true) : undefined,
+      key:      "activar_produccion",
+      label:    "Activar producción",
+      desc:     pasos1a5Completos
+                  ? "¡Todo listo! Emite comprobantes reales ante el SRI"
+                  : "Completa los pasos anteriores primero",
+      done:     health.en_produccion ?? false,
+      href:     "#",
+      icon:     Rocket,
+      locked:   !pasos1a5Completos,
+      action:   pasos1a5Completos ? () => setShowProdModal(true) : undefined,
+      noAcceso: !puedeConfig,
     },
   ];
 
@@ -159,7 +170,7 @@ export default function Checklist({ health, compact = false, onUpdate }: Props) 
   if (health.en_produccion) return null;
 
   const handleClick = (e: React.MouseEvent, item: ChecklistItem) => {
-    if (item.done || item.locked) {
+    if (item.done || item.locked || item.noAcceso) {
       e.preventDefault();
       return;
     }
@@ -185,7 +196,6 @@ export default function Checklist({ health, compact = false, onUpdate }: Props) 
           border: "1px solid var(--kipu-border)",
         }}
       >
-        {/* Header */}
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-3">
             <div
@@ -215,7 +225,6 @@ export default function Checklist({ health, compact = false, onUpdate }: Props) 
         </div>
 
         <div className="space-y-4">
-          {/* Drop zone */}
           <div
             onClick={() => fileRef.current?.click()}
             className="border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition-colors"
@@ -246,7 +255,6 @@ export default function Checklist({ health, compact = false, onUpdate }: Props) 
             />
           </div>
 
-          {/* Password */}
           <div>
             <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--kipu-subtle)" }}>
               Contraseña del certificado
@@ -268,7 +276,6 @@ export default function Checklist({ health, compact = false, onUpdate }: Props) 
             />
           </div>
 
-          {/* Error */}
           {firmaError && (
             <p
               className="text-xs px-3 py-2 rounded-lg"
@@ -281,7 +288,6 @@ export default function Checklist({ health, compact = false, onUpdate }: Props) 
             </p>
           )}
 
-          {/* Buttons */}
           <div className="flex gap-2 pt-1">
             <button
               type="button"
@@ -372,9 +378,99 @@ export default function Checklist({ health, compact = false, onUpdate }: Props) 
     </div>
   );
 
+  // ── Render de un item ───────────────────────────────────────────
+  const renderItem = (item: ChecklistItem, idx: number, isCompact: boolean) => {
+    const { key, label, desc, done, href, icon: Icon, locked, noAcceso } = item;
+    const isProduccion = key === "activar_produccion";
+    const esActivo     = !done && !locked && !noAcceso;
+    const esListo      = isProduccion && esActivo;
+    const bloqueado    = done || locked || noAcceso;
+
+    if (isCompact) {
+      // En compact solo mostramos el "siguiente"
+      return null;
+    }
+
+    return (
+      <Link
+        key={key}
+        href={bloqueado ? "#" : href}
+        onClick={(e) => handleClick(e, item)}
+        className="flex items-center gap-4 px-5 py-4 transition-colors"
+        style={{
+          borderTop: idx > 0 ? "1px solid var(--kipu-border)" : "none",
+          background: esListo
+            ? "color-mix(in srgb, var(--kipu-success) 5%, transparent)"
+            : "transparent",
+          opacity: done ? 0.6 : (locked || noAcceso) ? 0.4 : 1,
+          cursor: bloqueado ? "default" : "pointer",
+          pointerEvents: bloqueado ? "none" : "auto",
+        }}
+        onMouseEnter={e => {
+          if (esActivo)
+            e.currentTarget.style.background = esListo
+              ? "color-mix(in srgb, var(--kipu-success) 10%, transparent)"
+              : "color-mix(in srgb, var(--kipu-text) 4%, transparent)";
+        }}
+        onMouseLeave={e => {
+          if (esActivo)
+            e.currentTarget.style.background = esListo
+              ? "color-mix(in srgb, var(--kipu-success) 5%, transparent)"
+              : "transparent";
+        }}
+      >
+        <div
+          className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
+          style={{
+            background: done
+              ? "color-mix(in srgb, var(--kipu-success) 20%, transparent)"
+              : (locked || noAcceso)
+                ? "color-mix(in srgb, var(--kipu-text) 5%, transparent)"
+                : esListo
+                  ? "color-mix(in srgb, var(--kipu-success) 15%, transparent)"
+                  : "color-mix(in srgb, var(--kipu-text) 8%, transparent)",
+          }}
+        >
+          {done ? (
+            <CheckCircle2 size={16} style={{ color: "var(--kipu-success)" }} />
+          ) : noAcceso ? (
+            <UserCog size={14} style={{ color: "var(--kipu-subtle)" }} />
+          ) : locked ? (
+            <Lock size={14} style={{ color: "var(--kipu-subtle)" }} />
+          ) : (
+            <Icon size={15} style={{ color: esListo ? "var(--kipu-success)" : "var(--kipu-subtle)" }} />
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p
+            className="text-sm font-medium"
+            style={{
+              color: done
+                ? "var(--kipu-subtle)"
+                : esListo
+                  ? "var(--kipu-success)"
+                  : (locked || noAcceso)
+                    ? "var(--kipu-subtle)"
+                    : "var(--kipu-text)",
+              textDecoration: done ? "line-through" : "none",
+            }}
+          >
+            {label}
+          </p>
+          <p className="text-xs mt-0.5" style={{ color: "var(--kipu-subtle)" }}>{desc}</p>
+        </div>
+        {esActivo && (
+          <ChevronRight size={14} className="shrink-0" style={{ color: esListo ? "var(--kipu-success)" : "var(--kipu-subtle)" }} />
+        )}
+      </Link>
+    );
+  };
+
   // ── Compact (dashboard) ─────────────────────────────────────────
   if (compact) {
-    const pendiente = items.find((i) => !i.done && !i.locked);
+    // Buscar el siguiente paso que el usuario SÍ puede hacer
+    const pendiente = items.find((i) => !i.done && !i.locked && !i.noAcceso);
+    // Si no hay paso accionable, mostrar el primer paso pendiente (aunque sea bloqueado)
     const siguiente = pendiente ?? items.find((i) => !i.done);
 
     return (
@@ -414,48 +510,50 @@ export default function Checklist({ health, compact = false, onUpdate }: Props) 
 
           {siguiente && (
             <Link
-              href={siguiente.locked ? "#" : siguiente.href}
+              href={(siguiente.locked || siguiente.noAcceso) ? "#" : siguiente.href}
               onClick={(e) => handleClick(e, siguiente)}
               className="flex items-center justify-between rounded-lg px-3 py-2.5 transition-colors group"
               style={{
-                background: siguiente.locked
+                background: (siguiente.locked || siguiente.noAcceso)
                   ? "color-mix(in srgb, var(--kipu-text) 3%, transparent)"
                   : siguiente.key === "activar_produccion"
                     ? "color-mix(in srgb, var(--kipu-success) 10%, transparent)"
                     : "color-mix(in srgb, var(--kipu-text) 5%, transparent)",
-                border: siguiente.key === "activar_produccion"
+                border: siguiente.key === "activar_produccion" && !siguiente.locked
                   ? "1px solid color-mix(in srgb, var(--kipu-success) 25%, transparent)"
                   : "none",
-                opacity: siguiente.locked ? 0.5 : 1,
-                cursor: siguiente.locked ? "not-allowed" : "pointer",
+                opacity: (siguiente.locked || siguiente.noAcceso) ? 0.5 : 1,
+                cursor: (siguiente.locked || siguiente.noAcceso) ? "not-allowed" : "pointer",
               }}
               onMouseEnter={e => {
-                if (!siguiente.locked)
+                if (!siguiente.locked && !siguiente.noAcceso)
                   e.currentTarget.style.background = siguiente.key === "activar_produccion"
                     ? "color-mix(in srgb, var(--kipu-success) 18%, transparent)"
                     : "color-mix(in srgb, var(--kipu-text) 10%, transparent)";
               }}
               onMouseLeave={e => {
-                if (!siguiente.locked)
+                if (!siguiente.locked && !siguiente.noAcceso)
                   e.currentTarget.style.background = siguiente.key === "activar_produccion"
                     ? "color-mix(in srgb, var(--kipu-success) 10%, transparent)"
                     : "color-mix(in srgb, var(--kipu-text) 5%, transparent)";
               }}
             >
               <div className="flex items-center gap-2.5">
-                {siguiente.locked ? (
+                {siguiente.noAcceso ? (
+                  <UserCog size={14} className="shrink-0" style={{ color: "var(--kipu-subtle)" }} />
+                ) : siguiente.locked ? (
                   <Lock size={14} className="shrink-0" style={{ color: "var(--kipu-subtle)" }} />
                 ) : (
                   <Circle size={14} className="shrink-0" style={{ color: siguiente.key === "activar_produccion" ? "var(--kipu-success)" : "var(--kipu-subtle)" }} />
                 )}
                 <div>
-                  <p className="text-xs font-medium" style={{ color: siguiente.key === "activar_produccion" ? "var(--kipu-success)" : "var(--kipu-text)" }}>
-                    Siguiente: {siguiente.label}
+                  <p className="text-xs font-medium" style={{ color: siguiente.noAcceso ? "var(--kipu-subtle)" : siguiente.key === "activar_produccion" ? "var(--kipu-success)" : "var(--kipu-text)" }}>
+                    {siguiente.noAcceso ? `${siguiente.label} — requiere administrador` : `Siguiente: ${siguiente.label}`}
                   </p>
                   <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>{siguiente.desc}</p>
                 </div>
               </div>
-              {!siguiente.locked && (
+              {!siguiente.locked && !siguiente.noAcceso && (
                 <ChevronRight size={14} className="transition-colors" style={{ color: siguiente.key === "activar_produccion" ? "var(--kipu-success)" : "var(--kipu-subtle)" }} />
               )}
             </Link>
@@ -505,84 +603,7 @@ export default function Checklist({ health, compact = false, onUpdate }: Props) 
         </div>
 
         <div>
-          {items.map((item, idx) => {
-            const { key, label, desc, done, href, icon: Icon, locked } = item;
-            const isProduccion = key === "activar_produccion";
-            const esActivo     = !done && !locked;
-            const esListo      = isProduccion && esActivo;
-
-            return (
-              <Link
-                key={key}
-                href={done || locked ? "#" : href}
-                onClick={(e) => handleClick(e, item)}
-                className="flex items-center gap-4 px-5 py-4 transition-colors"
-                style={{
-                  borderTop: idx > 0 ? "1px solid var(--kipu-border)" : "none",
-                  background: esListo
-                    ? "color-mix(in srgb, var(--kipu-success) 5%, transparent)"
-                    : "transparent",
-                  opacity: done ? 0.6 : locked ? 0.4 : 1,
-                  cursor: done || locked ? "default" : "pointer",
-                  pointerEvents: done || locked ? "none" : "auto",
-                }}
-                onMouseEnter={e => {
-                  if (esActivo)
-                    e.currentTarget.style.background = esListo
-                      ? "color-mix(in srgb, var(--kipu-success) 10%, transparent)"
-                      : "color-mix(in srgb, var(--kipu-text) 4%, transparent)";
-                }}
-                onMouseLeave={e => {
-                  if (esActivo)
-                    e.currentTarget.style.background = esListo
-                      ? "color-mix(in srgb, var(--kipu-success) 5%, transparent)"
-                      : "transparent";
-                }}
-              >
-                <div
-                  className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
-                  style={{
-                    background: done
-                      ? "color-mix(in srgb, var(--kipu-success) 20%, transparent)"
-                      : locked
-                        ? "color-mix(in srgb, var(--kipu-text) 5%, transparent)"
-                        : esListo
-                          ? "color-mix(in srgb, var(--kipu-success) 15%, transparent)"
-                          : "color-mix(in srgb, var(--kipu-text) 8%, transparent)",
-                  }}
-                >
-                  {done ? (
-                    <CheckCircle2 size={16} style={{ color: "var(--kipu-success)" }} />
-                  ) : locked ? (
-                    <Lock size={14} style={{ color: "var(--kipu-subtle)" }} />
-                  ) : (
-                    <Icon size={15} style={{ color: esListo ? "var(--kipu-success)" : "var(--kipu-subtle)" }} />
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p
-                    className="text-sm font-medium"
-                    style={{
-                      color: done
-                        ? "var(--kipu-subtle)"
-                        : esListo
-                          ? "var(--kipu-success)"
-                          : locked
-                            ? "var(--kipu-subtle)"
-                            : "var(--kipu-text)",
-                      textDecoration: done ? "line-through" : "none",
-                    }}
-                  >
-                    {label}
-                  </p>
-                  <p className="text-xs mt-0.5" style={{ color: "var(--kipu-subtle)" }}>{desc}</p>
-                </div>
-                {esActivo && (
-                  <ChevronRight size={14} className="shrink-0" style={{ color: esListo ? "var(--kipu-success)" : "var(--kipu-subtle)" }} />
-                )}
-              </Link>
-            );
-          })}
+          {items.map((item, idx) => renderItem(item, idx, false))}
         </div>
       </div>
       {modalFirma}

@@ -1,4 +1,3 @@
-//app/(dashboard)/estructura/page.tsx
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -9,19 +8,18 @@ import { usePermiso } from "@/hooks/usePermiso";
 import SinAcceso from "@/components/SinAcceso";
 
 export default function EstructuraPage() {
-  const puedeVer = usePermiso("configuracion");
+  const puedeVer = usePermiso("estructura");
   if (!puedeVer) return <SinAcceso />;
+
   const [estructura, setEstructura] = useState<any[]>([]);
   const [loading,    setLoading]    = useState(true);
 
   const cargar = useCallback(async () => {
     try {
-      // Limpiar cache de sessionStorage para que se refresque
       sessionStorage.removeItem("kipu:estructura");
       const res = await api.get("/api/v1/app/estructura");
       const data = res.data.data ?? [];
       setEstructura(data);
-      // Actualizar cache
       sessionStorage.setItem("kipu:estructura", JSON.stringify(data));
     } catch (e) {
       console.error(e);
@@ -34,8 +32,6 @@ export default function EstructuraPage() {
 
   return (
     <div className="p-4 md:p-6 max-w-3xl mx-auto space-y-5">
-
-      {/* Header */}
       <div className="flex items-center gap-3">
         <div
           className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
@@ -51,7 +47,6 @@ export default function EstructuraPage() {
         </div>
       </div>
 
-      {/* Contenido */}
       {loading ? (
         <div className="flex items-center justify-center py-20">
           <div
@@ -65,7 +60,6 @@ export default function EstructuraPage() {
           onActualizar={cargar}
         />
       )}
-
     </div>
   );
 }

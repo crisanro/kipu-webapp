@@ -59,7 +59,7 @@ export const NAV_GROUPS = [
   {
     separator: true,
     items: [
-      { href: "/estructura", label: "Estructura", icon: Building2, permiso: "configuracion" },
+      { href: "/estructura", label: "Estructura", icon: Building2, permiso: "estructura" },
       { href: "/planes", label: "Planes", icon: CreditCard, permiso: null },
       { href: "/reportes", label: "Reportes", icon: BarChart3, permiso: "reportes" },
       { href: "/usuarios", label: "Usuarios", icon: UserCog, permiso: "usuarios" },
