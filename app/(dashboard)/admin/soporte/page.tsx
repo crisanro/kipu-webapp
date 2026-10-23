@@ -7,7 +7,8 @@ import api from "@/lib/api";
 import {
   Search, Mail, ShieldCheck, KeyRound, Copy, Check,
   MessageCircle, AlertTriangle, ExternalLink, Building2,
-  CheckCircle2, XCircle, LifeBuoy, RotateCw, ChevronRight
+  CheckCircle2, XCircle, LifeBuoy, RotateCw, ChevronRight,
+  AtSign
 } from "lucide-react";
 
 // ── Estados del embudo ─────────────────────────────────────────────────────────
@@ -117,6 +118,11 @@ export default function AdminSoportePage() {
   const [verifOpen,  setVerifOpen]  = useState(false);
   const [motivo,     setMotivo]     = useState("");
 
+  // ── Cambio de correo ──
+  const [emailOpen,    setEmailOpen]    = useState(false);
+  const [nuevoEmail,   setNuevoEmail]   = useState("");
+  const [emailMotivo,  setEmailMotivo]  = useState("");
+
   const manejarError = (e: any, prefijo = "") => {
     if (e?.response?.status === 403) {
       router.replace("/dashboard");
@@ -130,6 +136,9 @@ export default function AdminSoportePage() {
     setLink(null);
     setVerifOpen(false);
     setMotivo("");
+    setEmailOpen(false);
+    setNuevoEmail("");
+    setEmailMotivo("");
   };
 
   // ── Detalle exacto ──────────────────────────────────────────────────────────
@@ -223,6 +232,33 @@ export default function AdminSoportePage() {
       });
       setMensaje(res.data.mensaje);
       await cargarDetalle(resultado.email, true);
+    } catch (e: any) {
+      manejarError(e);
+    } finally {
+      setAccion(null);
+    }
+  };
+
+  const cambiarCorreo = async () => {
+    if (!resultado) return;
+    const nuevo = nuevoEmail.trim().toLowerCase();
+    if (!EMAIL_RE.test(nuevo)) { setError("El correo nuevo no es válido."); return; }
+    if (nuevo === resultado.email) { setError("El correo nuevo es igual al actual."); return; }
+    if (emailMotivo.trim().length < 5) { setError("Escribe un motivo (mínimo 5 caracteres)."); return; }
+
+    setAccion("cambiar-email");
+    setError(null);
+    setMensaje(null);
+    try {
+      const res = await api.post("/api/v1/admin/panel/soporte/cambiar-correo", {
+        email_actual: resultado.email,
+        email_nuevo:  nuevo,
+        motivo:       emailMotivo.trim(),
+      });
+      setMensaje(res.data.mensaje || `Correo actualizado a ${nuevo}.`);
+      // Recargar detalle con el nuevo correo
+      setTermino(nuevo);
+      await cargarDetalle(nuevo, true);
     } catch (e: any) {
       manejarError(e);
     } finally {
@@ -524,7 +560,20 @@ export default function AdminSoportePage() {
                     Verificar manualmente
                   </button>
                 )}
-                {!puedeVerif && !esPassword && (
+
+                {/* Cambiar correo — siempre disponible si tiene Firebase */}
+                <button
+                  type="button"
+                  onClick={() => setEmailOpen(v => !v)}
+                  disabled={!!accion}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium"
+                  style={{ ...btnSecStyle, opacity: accion ? 0.6 : 1 }}
+                >
+                  <AtSign size={13} />
+                  Cambiar correo
+                </button>
+
+                {!puedeVerif && !esPassword && !emailOpen && (
                   <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
                     Correo verificado y acceso con Google. No hay acciones de acceso pendientes.
                   </p>
@@ -572,6 +621,95 @@ export default function AdminSoportePage() {
                       }}
                     >
                       {accion === "verificar" ? "Verificando..." : "Confirmar verificación"}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Cambiar correo */}
+              {emailOpen && (
+                <div
+                  className="rounded-lg p-3 space-y-2"
+                  style={{ border: "1px solid var(--kipu-border)" }}
+                >
+                  <p className="text-xs" style={{ color: "var(--kipu-text)" }}>
+                    Actualiza el correo en Firebase y en Kipu. El nuevo correo queda verificado automáticamente.
+                    Queda registrado en auditoría.
+                  </p>
+                  <div className="space-y-2">
+                    <div>
+                      <label className="text-[11px] mb-1 block" style={{ color: "var(--kipu-subtle)" }}>
+                        Correo actual
+                      </label>
+                      <p className="text-xs font-mono px-3 py-2 rounded-lg"
+                        style={{ background: "color-mix(in srgb, var(--kipu-text) 4%, transparent)", color: "var(--kipu-subtle)" }}>
+                        {resultado.email}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-[11px] mb-1 block" style={{ color: "var(--kipu-subtle)" }}>
+                        Correo nuevo
+                      </label>
+                      <input
+                        value={nuevoEmail}
+                        onChange={(e) => setNuevoEmail(e.target.value)}
+                        placeholder="nuevo@correo.com"
+                        type="email"
+                        className="w-full px-3 py-2 rounded-lg text-xs focus:outline-none"
+                        style={{
+                          background: "var(--kipu-surface)",
+                          border: "1px solid var(--kipu-border)",
+                          color: "var(--kipu-text)",
+                        }}
+                        onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                        onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] mb-1 block" style={{ color: "var(--kipu-subtle)" }}>
+                        Motivo del cambio
+                      </label>
+                      <input
+                        value={emailMotivo}
+                        onChange={(e) => setEmailMotivo(e.target.value)}
+                        placeholder="Ej: cliente solicitó cambio por WhatsApp, correo anterior no tiene acceso"
+                        className="w-full px-3 py-2 rounded-lg text-xs focus:outline-none"
+                        style={{
+                          background: "var(--kipu-surface)",
+                          border: "1px solid var(--kipu-border)",
+                          color: "var(--kipu-text)",
+                        }}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-2 justify-end pt-1">
+                    <button
+                      type="button"
+                      onClick={() => { setEmailOpen(false); setNuevoEmail(""); setEmailMotivo(""); }}
+                      className="px-3 py-1.5 rounded-lg text-xs font-medium"
+                      style={btnSecStyle}
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={cambiarCorreo}
+                      disabled={
+                        !EMAIL_RE.test(nuevoEmail.trim()) ||
+                        emailMotivo.trim().length < 5 ||
+                        accion === "cambiar-email"
+                      }
+                      className="px-3 py-1.5 rounded-lg text-xs font-medium text-white"
+                      style={{
+                        background: "var(--kipu-accent)",
+                        opacity:
+                          !EMAIL_RE.test(nuevoEmail.trim()) ||
+                          emailMotivo.trim().length < 5 ||
+                          accion === "cambiar-email"
+                            ? 0.5 : 1,
+                      }}
+                    >
+                      {accion === "cambiar-email" ? "Actualizando..." : "Confirmar cambio"}
                     </button>
                   </div>
                 </div>
