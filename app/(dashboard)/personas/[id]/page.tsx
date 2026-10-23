@@ -7,8 +7,10 @@ import {
   ArrowLeft, User, Mail, Phone, MapPin, FileText,
   CheckCircle2, Clock, AlertTriangle, XCircle,
   Edit2, Save, X, Plus, Wallet, TrendingUp, TrendingDown, AlertCircle, Check,
-  Copy, Key
+  Copy, Key, ChevronDown, Loader2
 } from "lucide-react";
+
+const FACTURAS_LIMIT = 10; // ← Cambia a 20 cuando estés listo
 
 const TIPO_ID: Record<string, string> = {
   "04": "RUC",
@@ -56,6 +58,11 @@ export default function DetallePersonaPage() {
   const [resumenCuentas, setResumenCuentas] = useState({ por_cobrar: 0, por_pagar: 0 });
   const [loadingCuentas, setLoadingCuentas] = useState(true);
 
+  // Paginación "cargar más" facturas
+  const [allFacturas,   setAllFacturas]   = useState<any[]>([]);
+  const [nextCursor,    setNextCursor]    = useState<string | null>(null);
+  const [loadingMore,   setLoadingMore]   = useState(false);
+
   // Validación reactiva del form de edición
   const emailOk      = validarEmail(form.email);
   const nombreOk     = form.razon_social.trim().length > 0;
@@ -64,8 +71,10 @@ export default function DetallePersonaPage() {
   const cargar = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.get(`/api/v1/app/clientes/detalle/${id}`);
+      const res = await api.get(`/api/v1/app/clientes/detalle/${id}?facturas_limit=${FACTURAS_LIMIT}`);
       setData(res.data);
+      setAllFacturas(res.data.facturas ?? []);
+      setNextCursor(res.data.next_cursor ?? null);
       setForm({
         razon_social: res.data.cliente.razon_social    ?? "",
         email:        res.data.cliente.email           ?? "",
@@ -91,6 +100,23 @@ export default function DetallePersonaPage() {
       setLoadingCuentas(false);
     }
   }, [id]);
+
+  const cargarMas = async () => {
+    if (!nextCursor || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const res = await api.get(
+        `/api/v1/app/clientes/detalle/${id}/facturas?limit=${FACTURAS_LIMIT}&cursor=${encodeURIComponent(nextCursor)}`
+      );
+      const nuevas = res.data.facturas ?? [];
+      setAllFacturas(prev => [...prev, ...nuevas]);
+      setNextCursor(res.data.next_cursor ?? null);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   useEffect(() => {
     cargar();
@@ -188,7 +214,8 @@ export default function DetallePersonaPage() {
     );
   }
 
-  const { cliente, resumen, facturas } = data;
+  const { cliente, resumen } = data;
+  const hayMas = nextCursor !== null;
 
   // ── Campo editable inline ─────────────────────────────────────────────────
   const CampoEditable = ({
@@ -472,16 +499,23 @@ export default function DetallePersonaPage() {
           border: "1px solid var(--kipu-border)",
         }}
       >
-        <div className="px-4 py-3" style={{ borderBottom: "1px solid var(--kipu-border)" }}>
-          <h2 className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--kipu-subtle)" }}>Historial de facturas</h2>
+        <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: "1px solid var(--kipu-border)" }}>
+          <h2 className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--kipu-subtle)" }}>
+            Últimas facturas
+          </h2>
+          {resumen.total_documentos > 0 && (
+            <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+              {allFacturas.length} de {resumen.total_documentos}
+            </span>
+          )}
         </div>
-        {facturas.length === 0 ? (
+        {allFacturas.length === 0 ? (
           <div className="px-4 py-8 text-center">
             <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Sin facturas emitidas a esta persona.</p>
           </div>
         ) : (
           <div>
-            {facturas.map((f: any, idx: number) => {
+            {allFacturas.map((f: any, idx: number) => {
               const estado = ESTADO_CONFIG[f.estado_sri] ?? ESTADO_CONFIG.FIRMADO;
               const Icon   = estado.icon;
               return (
@@ -512,6 +546,37 @@ export default function DetallePersonaPage() {
                 </Link>
               );
             })}
+
+            {/* Cargar más — solo si hay más facturas */}
+            {hayMas && (
+              <button
+                onClick={cargarMas}
+                disabled={loadingMore}
+                className="w-full flex items-center justify-center gap-1.5 py-3 text-xs font-medium transition-colors disabled:opacity-50"
+                style={{
+                  color: "var(--kipu-accent)",
+                  borderTop: "1px solid var(--kipu-border)",
+                }}
+                onMouseEnter={e => {
+                  if (!loadingMore) e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-accent) 5%, transparent)";
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = "transparent";
+                }}
+              >
+                {loadingMore ? (
+                  <>
+                    <Loader2 size={13} className="animate-spin" />
+                    Cargando...
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown size={13} />
+                    Cargar más facturas
+                  </>
+                )}
+              </button>
+            )}
           </div>
         )}
       </div>

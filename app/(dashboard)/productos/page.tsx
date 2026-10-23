@@ -34,6 +34,8 @@ const EMPTY_FORM = {
 };
 
 const UNIDADES = ["UNIDAD", "SERVICIO", "KG", "LB", "LT", "MT", "CM", "CAJA", "PAQUETE", "HORA"];
+const PRODUCTOS_LIMIT = 50;
+
 const fmt = (n: number) => n?.toFixed(2) ?? "0.00";
 
 // Modo del scanner: "buscar" filtra la lista, "codigo" llena el campo código del modal
@@ -44,6 +46,9 @@ export default function ProductosPage() {
 
   const [productos,    setProductos]    = useState<Producto[]>([]);
   const [loading,      setLoading]      = useState(true);
+  const [total,        setTotal]        = useState(0);
+  const [loadingMore,  setLoadingMore]  = useState(false);
+
   const [query,        setQuery]        = useState("");
   const [showModal,    setShowModal]    = useState(false);
   const [editando,     setEditando]     = useState<Producto | null>(null);
@@ -54,19 +59,26 @@ export default function ProductosPage() {
   const [showScanner,  setShowScanner]  = useState(false);
   const [scanMode,     setScanMode]     = useState<ScanMode>("buscar");
 
-  const cargar = useCallback(async () => {
-    setLoading(true);
+  const cargar = useCallback(async (append = false) => {
+    if (append) setLoadingMore(true); else setLoading(true);
     try {
-      const res = await api.get(`/api/v1/app/productos?incluir_inactivos=${verInactivos}`);
-      setProductos(res.data.data ?? []);
+      const offset = append ? productos.length : 0;
+      const res = await api.get(
+        `/api/v1/app/productos?incluir_inactivos=${verInactivos}&limit=${PRODUCTOS_LIMIT}&offset=${offset}`
+      );
+      const nuevos = res.data.data ?? [];
+      setTotal(res.data.total ?? 0);
+      setProductos(prev => append ? [...prev, ...nuevos] : nuevos);
     } catch (e) {
       console.error(e);
     } finally {
-      setLoading(false);
+      if (append) setLoadingMore(false); else setLoading(false);
     }
-  }, [verInactivos]);
+  }, [verInactivos, productos.length]);
 
-  useEffect(() => { cargar(); }, [cargar]);
+  useEffect(() => {
+    cargar();
+  }, [verInactivos]);
 
   if (!puedeVer) return <SinAcceso />;
 
@@ -200,7 +212,9 @@ export default function ProductosPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-bold" style={{ color: "var(--kipu-text)" }}>Productos y Servicios</h1>
-          <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>{productos.filter(p => p.activo).length} activos</p>
+          <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>
+            {total > 0 ? `${total} producto${total !== 1 ? "s" : ""}` : "0 productos"}
+          </p>
         </div>
         <button
           type="button"
@@ -292,150 +306,170 @@ export default function ProductosPage() {
           )}
         </div>
       ) : (
-        <div
-          className="rounded-xl overflow-hidden"
-          style={{
-            background: "var(--kipu-surface)",
-            border: "1px solid var(--kipu-border)",
-          }}
-        >
-          {/* Header tabla */}
+        <>
           <div
-            className="hidden md:grid grid-cols-12 gap-3 px-4 py-2.5 text-xs"
+            className="rounded-xl overflow-hidden"
             style={{
-              borderBottom: "1px solid var(--kipu-border)",
-              color: "var(--kipu-subtle)",
+              background: "var(--kipu-surface)",
+              border: "1px solid var(--kipu-border)",
             }}
           >
-            <span className="col-span-2">Código</span>
-            <span className="col-span-4">Descripción</span>
-            <span className="col-span-2 text-center">Precio</span>
-            <span className="col-span-1 text-center">IVA</span>
-            <span className="col-span-1 text-center">Stock</span>
-            <span className="col-span-2 text-right">Acciones</span>
+            {/* Header tabla */}
+            <div
+              className="hidden md:grid grid-cols-12 gap-3 px-4 py-2.5 text-xs"
+              style={{
+                borderBottom: "1px solid var(--kipu-border)",
+                color: "var(--kipu-subtle)",
+              }}
+            >
+              <span className="col-span-2">Código</span>
+              <span className="col-span-4">Descripción</span>
+              <span className="col-span-2 text-center">Precio</span>
+              <span className="col-span-1 text-center">IVA</span>
+              <span className="col-span-1 text-center">Stock</span>
+              <span className="col-span-2 text-right">Acciones</span>
+            </div>
+            <div>
+              {filtrados.map((p, idx) => (
+                <div
+                  key={p.id}
+                  className="flex md:grid md:grid-cols-12 gap-3 items-center px-4 py-3 transition-colors"
+                  style={{
+                    borderTop: idx > 0 ? "1px solid var(--kipu-border)" : "none",
+                    opacity: !p.activo ? 0.5 : 1,
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 4%, transparent)"}
+                  onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                >
+                  <span className="hidden md:block col-span-2 text-xs font-mono truncate" style={{ color: "var(--kipu-subtle)" }}>
+                    {p.codigo || "—"}
+                  </span>
+                  <div className="flex-1 md:col-span-4 min-w-0">
+                    <p className="text-sm truncate" style={{ color: "var(--kipu-text)" }}>{p.descripcion}</p>
+                    <p className="text-xs md:hidden" style={{ color: "var(--kipu-subtle)" }}>
+                      {p.codigo || "Sin código"} · IVA {p.tipo_iva}% · {p.unidad}
+                      {p.stock !== -1 && ` · Stock: ${p.stock}`}
+                    </p>
+                  </div>
+                  <span className="hidden md:block col-span-2 text-sm font-semibold text-center" style={{ color: "var(--kipu-text)" }}>
+                    ${fmt(p.precio)}
+                  </span>
+                  <span className="hidden md:block col-span-1 text-xs text-center" style={{ color: "var(--kipu-muted)" }}>
+                    {p.tipo_iva}%
+                  </span>
+                  <span className="hidden md:block col-span-1 text-xs text-center font-medium">
+                    {p.stock === -1 ? (
+                      <span style={{ color: "var(--kipu-subtle)" }}>—</span>
+                    ) : p.stock === 0 ? (
+                      <span
+                        className="px-2 py-0.5 rounded-full"
+                        style={{
+                          color: "var(--kipu-danger)",
+                          background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
+                        }}
+                      >
+                        Sin stock
+                      </span>
+                    ) : (
+                      <span
+                        className="px-2 py-0.5 rounded-full"
+                        style={{
+                          color: (p.stock_minimo > 0 && p.stock <= p.stock_minimo)
+                            ? "var(--kipu-danger)"
+                            : p.stock <= 5
+                            ? "var(--kipu-warning)"
+                            : "var(--kipu-success)",
+                          background: (p.stock_minimo > 0 && p.stock <= p.stock_minimo)
+                            ? "color-mix(in srgb, var(--kipu-danger) 10%, transparent)"
+                            : p.stock <= 5
+                            ? "color-mix(in srgb, var(--kipu-warning) 10%, transparent)"
+                            : "color-mix(in srgb, var(--kipu-success) 10%, transparent)",
+                        }}
+                      >
+                        {p.stock}
+                      </span>
+                    )}
+                  </span>
+                  <div className="md:col-span-2 flex items-center justify-end gap-2 shrink-0">
+                    <span className="text-sm font-semibold md:hidden" style={{ color: "var(--kipu-text)" }}>${fmt(p.precio)}</span>
+                    <button
+                      type="button"
+                      onClick={() => abrirEditar(p)}
+                      className="p-1.5 rounded transition-colors"
+                      style={{ color: "var(--kipu-subtle)" }}
+                      onMouseEnter={e => {
+                        e.currentTarget.style.color = "var(--kipu-text)";
+                        e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 10%, transparent)";
+                      }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.color = "var(--kipu-subtle)";
+                        e.currentTarget.style.background = "transparent";
+                      }}
+                      title="Editar"
+                    >
+                      <Pencil size={14} />
+                    </button>
+                    {p.activo ? (
+                      <button
+                        type="button"
+                        onClick={() => desactivar(p.id)}
+                        className="p-1.5 rounded transition-colors"
+                        style={{ color: "var(--kipu-subtle)" }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.color = "var(--kipu-danger)";
+                          e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-danger) 10%, transparent)";
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.color = "var(--kipu-subtle)";
+                          e.currentTarget.style.background = "transparent";
+                        }}
+                        title="Desactivar"
+                      >
+                        <PowerOff size={14} />
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => reactivar(p.id)}
+                        className="p-1.5 rounded transition-colors"
+                        style={{ color: "var(--kipu-subtle)" }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.color = "var(--kipu-success)";
+                          e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-success) 10%, transparent)";
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.color = "var(--kipu-subtle)";
+                          e.currentTarget.style.background = "transparent";
+                        }}
+                        title="Reactivar"
+                      >
+                        <Power size={14} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
-          <div>
-            {filtrados.map((p, idx) => (
-              <div
-                key={p.id}
-                className="flex md:grid md:grid-cols-12 gap-3 items-center px-4 py-3 transition-colors"
+
+          {/* Cargar más */}
+          {!loading && productos.length < total && (
+            <div className="flex justify-center mt-4">
+              <button
+                type="button"
+                onClick={() => cargar(true)}
+                disabled={loadingMore}
+                className="px-6 py-2.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
                 style={{
-                  borderTop: idx > 0 ? "1px solid var(--kipu-border)" : "none",
-                  opacity: !p.activo ? 0.5 : 1,
+                  border: "1px solid var(--kipu-border)",
+                  color: "var(--kipu-accent)",
                 }}
-                onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 4%, transparent)"}
-                onMouseLeave={e => e.currentTarget.style.background = "transparent"}
               >
-                <span className="hidden md:block col-span-2 text-xs font-mono truncate" style={{ color: "var(--kipu-subtle)" }}>
-                  {p.codigo || "—"}
-                </span>
-                <div className="flex-1 md:col-span-4 min-w-0">
-                  <p className="text-sm truncate" style={{ color: "var(--kipu-text)" }}>{p.descripcion}</p>
-                  <p className="text-xs md:hidden" style={{ color: "var(--kipu-subtle)" }}>
-                    {p.codigo || "Sin código"} · IVA {p.tipo_iva}% · {p.unidad}
-                    {p.stock !== -1 && ` · Stock: ${p.stock}`}
-                  </p>
-                </div>
-                <span className="hidden md:block col-span-2 text-sm font-semibold text-center" style={{ color: "var(--kipu-text)" }}>
-                  ${fmt(p.precio)}
-                </span>
-                <span className="hidden md:block col-span-1 text-xs text-center" style={{ color: "var(--kipu-muted)" }}>
-                  {p.tipo_iva}%
-                </span>
-                <span className="hidden md:block col-span-1 text-xs text-center font-medium">
-                  {p.stock === -1 ? (
-                    <span style={{ color: "var(--kipu-subtle)" }}>—</span>
-                  ) : p.stock === 0 ? (
-                    <span
-                      className="px-2 py-0.5 rounded-full"
-                      style={{
-                        color: "var(--kipu-danger)",
-                        background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
-                      }}
-                    >
-                      Sin stock
-                    </span>
-                  ) : (
-                    <span
-                      className="px-2 py-0.5 rounded-full"
-                      style={{
-                        color: (p.stock_minimo > 0 && p.stock <= p.stock_minimo)
-                          ? "var(--kipu-danger)"
-                          : p.stock <= 5
-                          ? "var(--kipu-warning)"
-                          : "var(--kipu-success)",
-                        background: (p.stock_minimo > 0 && p.stock <= p.stock_minimo)
-                          ? "color-mix(in srgb, var(--kipu-danger) 10%, transparent)"
-                          : p.stock <= 5
-                          ? "color-mix(in srgb, var(--kipu-warning) 10%, transparent)"
-                          : "color-mix(in srgb, var(--kipu-success) 10%, transparent)",
-                      }}
-                    >
-                      {p.stock}
-                    </span>
-                  )}
-                </span>
-                <div className="md:col-span-2 flex items-center justify-end gap-2 shrink-0">
-                  <span className="text-sm font-semibold md:hidden" style={{ color: "var(--kipu-text)" }}>${fmt(p.precio)}</span>
-                  <button
-                    type="button"
-                    onClick={() => abrirEditar(p)}
-                    className="p-1.5 rounded transition-colors"
-                    style={{ color: "var(--kipu-subtle)" }}
-                    onMouseEnter={e => {
-                      e.currentTarget.style.color = "var(--kipu-text)";
-                      e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 10%, transparent)";
-                    }}
-                    onMouseLeave={e => {
-                      e.currentTarget.style.color = "var(--kipu-subtle)";
-                      e.currentTarget.style.background = "transparent";
-                    }}
-                    title="Editar"
-                  >
-                    <Pencil size={14} />
-                  </button>
-                  {p.activo ? (
-                    <button
-                      type="button"
-                      onClick={() => desactivar(p.id)}
-                      className="p-1.5 rounded transition-colors"
-                      style={{ color: "var(--kipu-subtle)" }}
-                      onMouseEnter={e => {
-                        e.currentTarget.style.color = "var(--kipu-danger)";
-                        e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-danger) 10%, transparent)";
-                      }}
-                      onMouseLeave={e => {
-                        e.currentTarget.style.color = "var(--kipu-subtle)";
-                        e.currentTarget.style.background = "transparent";
-                      }}
-                      title="Desactivar"
-                    >
-                      <PowerOff size={14} />
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => reactivar(p.id)}
-                      className="p-1.5 rounded transition-colors"
-                      style={{ color: "var(--kipu-subtle)" }}
-                      onMouseEnter={e => {
-                        e.currentTarget.style.color = "var(--kipu-success)";
-                        e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-success) 10%, transparent)";
-                      }}
-                      onMouseLeave={e => {
-                        e.currentTarget.style.color = "var(--kipu-subtle)";
-                        e.currentTarget.style.background = "transparent";
-                      }}
-                      title="Reactivar"
-                    >
-                      <Power size={14} />
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+                {loadingMore ? "Cargando..." : `Cargar más (${productos.length} de ${total})`}
+              </button>
+            </div>
+          )}
+        </>
       )}
 
       {/* Modal crear/editar */}

@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import api from "@/lib/api";
 import { usePermiso } from "@/hooks/usePermiso";
@@ -16,7 +16,7 @@ interface DocRecibido {
   id:                     string;
   razon_social_proveedor: string;
   tipo_doc:               string;
-  numero_doc:              string;
+  numero_doc:             string;
   fecha_emision:          string;
   subtotal_base:          number;
   valor_iva_total:        number;
@@ -299,20 +299,33 @@ export default function FacturasRecibidasPage() {
   const [fechaInicio, setFechaInicio] = useState<string>(tempFechaInicio);
   const [fechaFin, setFechaFin]       = useState<string>(tempFechaFin);
 
+  // Búsqueda remota con debounce
+  const [query, setQuery]             = useState("");
+  const [queryActivo, setQueryActivo] = useState("");
+  const debounceRef                   = useRef<NodeJS.Timeout | null>(null);
+
   const [docs, setDocs]               = useState<DocRecibido[]>([]);
   const [resumen, setResumen]         = useState<Resumen | null>(null);
   const [loading, setLoading]         = useState(true);
-  const [query, setQuery]             = useState("");
   const [expandido, setExpandido]     = useState<string | null>(null);
   const [resumenOpen, setResumenOpen] = useState(false);
 
   // Paginación
-  const [page, setPage]             = useState(1);
-  const [pagination, setPagination] = useState<PaginationInfo | null>(null);
+  const [page, setPage]               = useState(1);
+  const [pagination, setPagination]   = useState<PaginationInfo | null>(null);
 
   const diasRango = fechaInicio && fechaFin
     ? Math.ceil((new Date(fechaFin).getTime() - new Date(fechaInicio).getTime()) / (1000 * 60 * 60 * 24))
     : 0;
+
+  const handleQueryChange = (val: string) => {
+    setQuery(val);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setPage(1);
+      setQueryActivo(val.trim());
+    }, 400);
+  };
 
   const cargar = useCallback(async () => {
     if (diasRango > 365) return;
@@ -321,6 +334,7 @@ export default function FacturasRecibidasPage() {
       const params = new URLSearchParams();
       if (fechaInicio) params.append("fecha_inicio", fechaInicio);
       if (fechaFin)    params.append("fecha_fin",    fechaFin);
+      if (queryActivo) params.append("q",            queryActivo);
       params.append("page", String(page));
       params.append("limit", "25");
 
@@ -333,7 +347,7 @@ export default function FacturasRecibidasPage() {
     } finally {
       setLoading(false);
     }
-  }, [fechaInicio, fechaFin, diasRango, page]);
+  }, [fechaInicio, fechaFin, diasRango, page, queryActivo]);
 
   useEffect(() => {
     cargar();
@@ -349,11 +363,7 @@ export default function FacturasRecibidasPage() {
 
   if (!puedeVer) return <SinAcceso />;
 
-  const filtrados = docs.filter(d =>
-    !query ||
-    d.razon_social_proveedor?.toLowerCase().includes(query.toLowerCase()) ||
-    d.numero_doc?.includes(query)
-  );
+  const filtrados = docs;
 
   return (
     <div className="p-4 md:p-6 space-y-5">
@@ -394,7 +404,7 @@ export default function FacturasRecibidasPage() {
           <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--kipu-subtle)" }} />
           <input
             value={query}
-            onChange={e => setQuery(e.target.value)}
+            onChange={e => handleQueryChange(e.target.value)}
             placeholder="Buscar por proveedor o número..."
             className="w-full pl-9 pr-4 py-2.5 rounded-lg text-sm transition-colors focus:outline-none"
             style={{
@@ -531,9 +541,9 @@ export default function FacturasRecibidasPage() {
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <FileText size={40} className="mb-3" style={{ color: "var(--kipu-subtle)" }} />
           <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>
-            {query ? "No hay documentos que coincidan en esta página." : "Sin documentos recibidos en este período."}
+            {queryActivo ? "No hay documentos que coincidan en esta página." : "Sin documentos recibidos en este período."}
           </p>
-          {!query && (
+          {!queryActivo && (
             <button
               onClick={() => router.push("/documentos/recibidos/nueva")}
               className="mt-4 px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors"
