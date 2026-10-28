@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { CodeBlock } from "./_components/CodeBlock";
 
-const QUICKSTART_CURL = `curl -X POST https://api.kipufacturacion.com/api/v1/public/emit \\
+const QUICKSTART_CURL = `curl -X POST https://core.kipu.ec/api/v1/public/emit \\
   -H "Content-Type: application/json" \\
   -H "X-Api-Key: kp_live_••••••••••••••••" \\
   -H "X-Idempotency-Key: $(uuidgen)" \\
@@ -77,7 +77,7 @@ export default function DevPage() {
 
         <div className="flex flex-wrap gap-3">
           <Link
-            href="https://app.kipufacturacion.com/register"
+            href="https://app.kipu.ec/register"
             className="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2.5 rounded-lg text-sm font-medium transition-colors"
           >
             Crear cuenta gratis
@@ -119,7 +119,7 @@ export default function DevPage() {
             {
               n: "1",
               title: "Crea tu cuenta y activa tu empresa en el panel",
-              sub: "Ve a app.kipufacturacion.com → Empresa → Configuración SRI",
+              sub: "Ve a app.kipu.ec → Empresa → Configuración SRI",
             },
             {
               n: "2",

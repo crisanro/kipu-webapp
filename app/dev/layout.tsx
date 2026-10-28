@@ -39,13 +39,13 @@ export default function DevLayout({ children }: { children: ReactNode }) {
 
           <div className="flex items-center gap-3">
             <Link
-              href="https://app.kipufacturacion.com"
+              href="https://app.kipu.ec"
               className="text-xs text-slate-400 hover:text-slate-200 transition-colors"
             >
               Panel →
             </Link>
             <Link
-              href="https://app.kipufacturacion.com/register"
+              href="https://app.kipu.ec/register"
               className="text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-1.5 rounded-md font-medium transition-colors"
             >
               Crear cuenta

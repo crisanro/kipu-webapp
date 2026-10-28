@@ -126,7 +126,7 @@ const RETRY_EXAMPLE = `async function emitirConRetry(payload, maxRetries = 3) {
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
       const res = await fetch(
-        "https://api.kipufacturacion.com/api/v1/public/emit",
+        "https://core.kipu.ec/api/v1/public/emit",
         {
           method: "POST",
           headers: {

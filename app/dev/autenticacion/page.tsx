@@ -2,7 +2,7 @@ import { CodeBlock } from "../_components/CodeBlock";
 import { AlertBox } from "../_components/EndpointBadge";
 
 const EXAMPLES = {
-  curl: `curl -X POST https://api.kipufacturacion.com/api/v1/public/emit \\
+  curl: `curl -X POST https://core.kipu.ec/api/v1/public/emit \\
   -H "Content-Type: application/json" \\
   -H "X-Api-Key: kp_live_tu_clave_aqui" \\
   -H "X-Idempotency-Key: f47ac10b-58cc-4372-a567-0e02b2c3d479" \\
@@ -11,7 +11,7 @@ const EXAMPLES = {
   javascript: `import { randomUUID } from "crypto";
 
 const response = await fetch(
-  "https://api.kipufacturacion.com/api/v1/public/emit",
+  "https://core.kipu.ec/api/v1/public/emit",
   {
     method: "POST",
     headers: {
@@ -37,7 +37,7 @@ import uuid
 KIPU_API_KEY = "kp_live_tu_clave_aqui"   # mejor desde env
 
 response = httpx.post(
-    "https://api.kipufacturacion.com/api/v1/public/emit",
+    "https://core.kipu.ec/api/v1/public/emit",
     headers={
         "X-Api-Key": KIPU_API_KEY,
         "X-Idempotency-Key": str(uuid.uuid4()),
@@ -80,7 +80,7 @@ export default function AutenticacionPage() {
             <span className="text-indigo-400 font-mono shrink-0">01.</span>
             Inicia sesión en{" "}
             <strong className="text-slate-200">
-              app.kipufacturacion.com
+              app.kipu.ec
             </strong>
           </li>
           <li className="flex gap-2">

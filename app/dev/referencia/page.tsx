@@ -1,7 +1,7 @@
 import { MethodBadge, AlertBox } from "../_components/EndpointBadge";
 import { CodeBlock } from "../_components/CodeBlock";
 
-const BASE_URL = "https://api.kipufacturacion.com";
+const BASE_URL = "https://core.kipu.ec";
 
 interface Endpoint {
   method: "GET" | "POST" | "PUT" | "DELETE" | "PATCH";

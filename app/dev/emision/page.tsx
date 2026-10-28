@@ -159,8 +159,8 @@ const RESPONSE_EXAMPLE = `// HTTP 201 Created
   "fecha_autorizacion": "2024-01-15T14:32:10-05:00",
   "ambiente": "produccion",
   "estado": "AUTORIZADO",
-  "xml_url": "https://r2.kipufacturacion.com/xml/cmp_01hx7....xml",
-  "pdf_url": "https://r2.kipufacturacion.com/pdf/cmp_01hx7....pdf",
+  "xml_url": "https://core.kipu.ec/api/v1/public/xml/1501202401234567890011234567890112345678",
+  "pdf_url": "https://core.kipu.ec/api/v1/public/pdf/1501202401234567890011234567890112345678",
   "totales": {
     "subtotal_iva_15": 300.00,
     "subtotal_iva_0": 0,
