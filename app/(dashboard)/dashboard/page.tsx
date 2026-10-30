@@ -1,5 +1,4 @@
 "use client";
-import { useEffect } from "react";
 import useSWR from "swr";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
@@ -52,8 +51,8 @@ export default function DashboardPage() {
       },
     }
   );
-
-  useEffect(() => { mutate(); }, [sandbox, mutate]);
+  // sandbox va en la clave: al cambiarlo SWR recarga solo (un mutate() aquí
+  // duplicaba la petición al abrir el dashboard)
 
   const nombre      = empresa?.nombre_comercial || empresa?.razon_social || "tu empresa";
   const esProduccion = empresa?.ambiente === 2;

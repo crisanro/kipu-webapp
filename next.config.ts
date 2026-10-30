@@ -6,7 +6,8 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "https://core.kipu.ec";
 const cspReportOnly = [
   "default-src 'self'",
   // Next.js inyecta scripts inline; Firebase Auth carga de apis.google.com
-  "script-src 'self' 'unsafe-inline' https://apis.google.com https://www.gstatic.com",
+  // static.cloudflareinsights.com: Cloudflare Web Analytics (lo inyecta Cloudflare)
+  "script-src 'self' 'unsafe-inline' https://apis.google.com https://www.gstatic.com https://static.cloudflareinsights.com",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
@@ -14,6 +15,7 @@ const cspReportOnly = [
     "connect-src 'self'", API_URL,
     "https://*.googleapis.com",                  // Firebase Auth, FCM, installations
     "https://app3902.privynote.net",             // consulta de cédulas (riesgo aceptado)
+    "https://cloudflareinsights.com",            // envío de métricas de Cloudflare Web Analytics
   ].join(" "),
   "frame-src https://*.firebaseapp.com https://www.youtube.com",
   "worker-src 'self' blob:",
