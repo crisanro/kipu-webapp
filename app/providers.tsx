@@ -45,6 +45,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
   const cargadoPara = useRef<string | null>(null);
   const pathnameRef = useRef(pathname);
   const [listo, setListoLocal] = useState(false);
+  const [errorCarga, setErrorCarga] = useState<string | null>(null);
 
   // pathname actualizado sin re-suscribir Firebase en cada navegación
   useEffect(() => {
@@ -138,13 +139,23 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
         // Solo se marca como cargado cuando TODO salió bien
         cargadoPara.current = user.uid;
 
-      } catch (error) {
+      } catch (error: any) {
         console.error("[Auth] Error:", error);
         cargadoPara.current = null;
-        limpiarStorage();
-        // Cerrar sesión para no quedar con Firebase logueado y el store vacío
-        try { await signOut(auth); } catch {}
-        router.replace("/login");
+        const status = error?.response?.status;
+        if (status === 401 || status === 403) {
+          // Sesión inválida: cerrar para no quedar con Firebase logueado y el store vacío
+          limpiarStorage();
+          try { await signOut(auth); } catch {}
+          router.replace("/login");
+        } else {
+          // Timeout, red, 5xx o 429: problema temporal, la sesión sigue siendo válida
+          setErrorCarga(
+            status === 429
+              ? "Demasiadas solicitudes. Espera un momento y vuelve a intentar."
+              : "No pudimos conectar con Kipu. Revisa tu conexión y vuelve a intentar."
+          );
+        }
       } finally {
         marcarListo();
       }
@@ -155,6 +166,22 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
       if (refreshInterval) clearInterval(refreshInterval);
     };
   }, [router, setUser, setEmpresa, setEmpresas, setListo]);
+
+  if (errorCarga) {
+    return (
+      <div className="h-screen flex flex-col items-center justify-center gap-4 p-6 text-center"
+           style={{ background: "var(--kipu-bg)", color: "var(--kipu-text)" }}>
+        <p className="text-sm max-w-xs" style={{ color: "var(--kipu-muted)" }}>{errorCarga}</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="px-4 py-2 rounded-lg text-sm font-semibold text-white"
+          style={{ background: "var(--kipu-accent)" }}
+        >
+          Reintentar
+        </button>
+      </div>
+    );
+  }
 
   if (!listo) {
     return (

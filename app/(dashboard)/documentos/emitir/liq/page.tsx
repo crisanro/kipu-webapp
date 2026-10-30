@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
+import { debeRenovarClave, mensajeErrorEmision } from "@/lib/emision";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
 import { CheckCircle2, AlertTriangle, User, Search, X } from "lucide-react";
@@ -238,14 +239,10 @@ export default function NuevaLiqPage() {
       );
       setResultado(res.data);
     } catch (err: any) {
-      // Regenerar la clave en caso de error para permitir un nuevo intento limpio
-      idempotencyKey.current = uuidv4();
-
-      const detail = err?.response?.data?.detail;
-      setError(Array.isArray(detail)
-        ? detail.map((e: any) => `${e.campo}: ${e.mensaje}`).join(" | ")
-        : detail ?? "Error al emitir la liquidación."
-      );
+      // Solo con un rechazo definitivo se usa otra clave; ante timeout, red,
+      // 5xx o 409 se reintenta con la misma para no duplicar el comprobante
+      if (debeRenovarClave(err)) idempotencyKey.current = uuidv4();
+      setError(mensajeErrorEmision(err, "Error al emitir la liquidación."));
     } finally {
       setSubmitting(false);
     }

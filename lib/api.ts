@@ -45,6 +45,18 @@ api.interceptors.response.use(
       auth.signOut();
       window.location.href = "/login";
     }
+    // Rate limit: las pantallas muestran response.data.detail; si el 429 no lo
+    // trae (p. ej. lo respondió Cloudflare), se completa con un mensaje claro
+    if (error.response?.status === 429) {
+      const data = error.response.data;
+      if (!data || typeof data !== "object" || !data.detail) {
+        const espera = Number(error.response.headers?.["retry-after"]) || 60;
+        error.response.data = {
+          ...(data && typeof data === "object" ? data : {}),
+          detail: `Demasiadas solicitudes. Intenta de nuevo en ${espera} segundos.`,
+        };
+      }
+    }
     return Promise.reject(error);
   }
 );

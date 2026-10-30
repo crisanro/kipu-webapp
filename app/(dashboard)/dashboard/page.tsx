@@ -23,7 +23,7 @@ interface DashboardData {
   periodo?: { desde: string; hasta: string };
 }
 
-const fetcher = (url: string) => api.get(url).then((r) => r.data.data ?? r.data);
+const fetcher = ([url]: [string, number]) => api.get(url).then((r) => r.data.data ?? r.data);
 
 export default function DashboardPage() {
   const empresa = useAuthStore((s) => s.empresa);
@@ -33,8 +33,11 @@ export default function DashboardPage() {
   const [anio, mes] = hoyStr.split("-");
   const primerDia = `${anio}-${mes}-01`;
 
+  // La clave incluye la empresa: nunca se muestran cifras de otra empresa
   const { data, isLoading, error, mutate } = useSWR<DashboardData>(
-    `/api/v1/app/dashboard?fecha_inicio=${primerDia}&fecha_fin=${hoyStr}&sandbox=${sandbox}`,
+    empresa?.id
+      ? [`/api/v1/app/dashboard?fecha_inicio=${primerDia}&fecha_fin=${hoyStr}&sandbox=${sandbox}`, empresa.id]
+      : null,
     fetcher,
     {
       revalidateOnFocus:     true,

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
+import { debeRenovarClave, mensajeErrorEmision } from "@/lib/emision";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
 import { CheckCircle2, AlertTriangle } from "lucide-react";
@@ -344,14 +345,10 @@ export default function NuevaFacturaPage() {
       );
       setResultado(res.data);
     } catch (err: any) {
-      idempotencyKey.current = uuidv4();
-
-      const detail = err?.response?.data?.detail;
-      if (Array.isArray(detail)) {
-        setError(detail.map((e: any) => `${e.campo}: ${e.mensaje}`).join(" | "));
-      } else {
-        setError(detail ?? "Error al emitir la factura.");
-      }
+      // Solo con un rechazo definitivo se usa otra clave; ante timeout, red,
+      // 5xx o 409 se reintenta con la misma para no duplicar el comprobante
+      if (debeRenovarClave(err)) idempotencyKey.current = uuidv4();
+      setError(mensajeErrorEmision(err, "Error al emitir la factura."));
     } finally {
       setSubmitting(false);
     }
