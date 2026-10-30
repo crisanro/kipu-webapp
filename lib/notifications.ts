@@ -23,15 +23,28 @@ const getDeviceId = (): string => {
   }
 };
 
+// ── Estado del permiso ────────────────────────────────────────────────────────
+export type PermisoNotificaciones = NotificationPermission | "no-soportado";
+
+export function permisoNotificaciones(): PermisoNotificaciones {
+  if (typeof window === "undefined" || !("Notification" in window) || !("serviceWorker" in navigator)) {
+    return "no-soportado";
+  }
+  return Notification.permission;
+}
+
 // ── Pedir permiso y registrar token FCM ───────────────────────────────────────
+// Chrome deja pedir el permiso al cargar. Firefox y Safari solo desde un clic del
+// usuario: por eso el layout muestra un botón si el permiso sigue sin decidirse.
+// Llamar directo desde el handler del clic (sin awaits antes) para que cuente.
 export async function registrarNotificaciones(): Promise<boolean> {
   try {
     // Si ya registramos en esta sesión, no volver a hacerlo
     const yaRegistrado = sessionStorage.getItem(FLAG_SESION);
     if (yaRegistrado) return true;
 
-    if (!("Notification" in window)) return false;
-    if (!("serviceWorker" in navigator)) return false;
+    const estado = permisoNotificaciones();
+    if (estado === "no-soportado" || estado === "denied") return false;
 
     const permiso = await Notification.requestPermission();
     if (permiso !== "granted") return false;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { auth } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
@@ -12,8 +12,9 @@ import {
   registrarNotificaciones,
   desregistrarNotificaciones,
   escucharPrimerPlano,
+  permisoNotificaciones,
 } from "@/lib/notifications";
-import { AlertTriangle, FlaskConical } from "lucide-react";
+import { AlertTriangle, Bell, FlaskConical } from "lucide-react";
 import { useTheme } from "next-themes";
 import {
   useNotificaciones,
@@ -23,6 +24,19 @@ import {
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { MobileHeader } from "@/components/dashboard/MobileHeader";
 import { ModalLogout, SelectorEmpresa } from "@/components/dashboard/DashboardModals";
+
+// "Ahora no" en el aviso de notificaciones: no volver a mostrarlo por 7 días
+const NOTIF_POSPUESTAS = "kipu-notif-pospuestas";
+const DIAS_POSPUESTAS  = 7;
+
+function notifPospuestas(): boolean {
+  try {
+    const t = Number(localStorage.getItem(NOTIF_POSPUESTAS));
+    return !!t && Date.now() - t < DIAS_POSPUESTAS * 864e5;
+  } catch {
+    return false;
+  }
+}
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -61,24 +75,46 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     useNotificaciones(false);
 
   // ── Push: registrar dispositivo + escuchar mensajes con la app abierta ──────
-  useEffect(() => {
-    let cancelado = false;
-    let unsubscribe: (() => void) | undefined;
+  const [botonNotif, setBotonNotif] = useState(false);
+  const desuscribirPush = useRef<(() => void) | undefined>(undefined);
+  const montado = useRef(true);
 
-    registrarNotificaciones()
-      .then(async (ok) => {
-        if (!ok || cancelado) return;
-        const unsub = await escucharPrimerPlano();
-        if (cancelado) unsub();
-        else unsubscribe = unsub;
+  const activarPush = useCallback(async (): Promise<boolean> => {
+    const ok = await registrarNotificaciones();
+    if (ok && montado.current && !desuscribirPush.current) {
+      desuscribirPush.current = await escucharPrimerPlano();
+    }
+    return ok;
+  }, []);
+
+  useEffect(() => {
+    montado.current = true;
+    // Intento automático (Chrome muestra la pregunta). Si el permiso sigue sin
+    // decidirse (Firefox/Safari lo exigen desde un clic), se ofrece el botón.
+    activarPush()
+      .then((ok) => {
+        if (!ok && montado.current && permisoNotificaciones() === "default" && !notifPospuestas()) {
+          setBotonNotif(true);
+        }
       })
       .catch(() => {});
 
     return () => {
-      cancelado = true;
-      unsubscribe?.();
+      montado.current = false;
+      desuscribirPush.current?.();
+      desuscribirPush.current = undefined;
     };
-  }, []);
+  }, [activarPush]);
+
+  const activarNotificaciones = () => {
+    setBotonNotif(false);
+    activarPush().catch(() => {});   // dentro del clic: el navegador permite preguntar
+  };
+
+  const posponerNotificaciones = () => {
+    setBotonNotif(false);
+    try { localStorage.setItem(NOTIF_POSPUESTAS, String(Date.now())); } catch {}
+  };
 
   const handleLogout = async () => {
     // Dar de baja el dispositivo ANTES de cerrar sesión (necesita el token válido)
@@ -194,6 +230,38 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               >
                 {reenviando ? "Enviando..." : "Reenviar"}
               </button>
+            </div>
+          )}
+
+          {/* Activar notificaciones (Firefox/Safari solo preguntan tras un clic) */}
+          {botonNotif && (
+            <div
+              className="w-full px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 shrink-0"
+              style={{
+                background: "color-mix(in srgb, var(--kipu-accent) 10%, transparent)",
+                borderBottom: "1px solid color-mix(in srgb, var(--kipu-accent) 20%, transparent)",
+              }}
+            >
+              <div className="flex items-center gap-2 text-xs" style={{ color: "var(--kipu-text)" }}>
+                <Bell size={14} className="shrink-0" style={{ color: "var(--kipu-accent)" }} />
+                <span>Activa las notificaciones para saber cuándo el SRI autoriza tus comprobantes.</span>
+              </div>
+              <div className="flex items-center gap-3 shrink-0">
+                <button
+                  onClick={posponerNotificaciones}
+                  className="text-xs underline underline-offset-2"
+                  style={{ color: "var(--kipu-muted)" }}
+                >
+                  Ahora no
+                </button>
+                <button
+                  onClick={activarNotificaciones}
+                  className="text-xs font-semibold text-white px-3 py-1.5 rounded-lg"
+                  style={{ background: "var(--kipu-accent)" }}
+                >
+                  Activar notificaciones
+                </button>
+              </div>
             </div>
           )}
 
