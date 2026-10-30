@@ -5,10 +5,14 @@ import { useSandboxStore } from "@/store/sandbox.store";
 import { useAuthStore } from "@/store/auth.store";
 
 const api = axios.create({
+  // Sin NEXT_PUBLIC_API_URL: en producción el backend oficial; en desarrollo,
+  // el puerto 8000 del mismo host
   baseURL: process.env.NEXT_PUBLIC_API_URL
-    ?? (typeof window !== "undefined"
-        ? `${window.location.protocol}//${window.location.hostname}:8000`
-        : "http://localhost:8000"),
+    ?? (process.env.NODE_ENV === "production"
+        ? "https://core.kipu.ec"
+        : typeof window !== "undefined"
+          ? `${window.location.protocol}//${window.location.hostname}:8000`
+          : "http://localhost:8000"),
   timeout:         30000,
   maxRedirects:    5,
   withCredentials: false,

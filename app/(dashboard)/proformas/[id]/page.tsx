@@ -93,12 +93,15 @@ export default function DetalleProformaPage() {
     if (!contenido) return;
     const ventana = window.open("", "_blank", "width=900,height=700");
     if (!ventana) return;
+    // El cuerpo es innerHTML de React (ya escapado); el título se escapa aparte
+    const titulo = String(data?.numero ?? "Proforma")
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
     ventana.document.write(`
       <!DOCTYPE html>
       <html>
       <head>
         <meta charset="utf-8" />
-        <title>${data?.numero ?? "Proforma"}</title>
+        <title>${titulo}</title>
         <style>
           * { margin: 0; padding: 0; box-sizing: border-box; }
           body { font-family: Arial, sans-serif; font-size: 11px; color: #111; background: #fff; }

@@ -9,10 +9,12 @@ import { useAuthStore } from "@/store/auth.store";
 import { SWRProvider } from "@/lib/swrConfig";
 import api from "@/lib/api";
 
-const RUTAS_PROTEGIDAS = [
-  "/dashboard", "/documentos", "/personas", "/productos", "/configuracion",
-  "/estructura", "/planes", "/usuarios", "/admin",
-];
+// Todo lo demás requiere sesión. Lista de públicas (y no de protegidas) para
+// que una pantalla nueva quede protegida por defecto.
+const RUTAS_PUBLICAS = ["/", "/login", "/register", "/reset"];
+
+const esRutaPublica = (path: string) =>
+  RUTAS_PUBLICAS.some((r) => path === r || (r !== "/" && path.startsWith(r + "/")));
 
 const LS_KEYS = ["kipu-ext-token", "kipu-ext-emisor", "kipu-ext-ruc", "kipu-ext-razon"];
 
@@ -65,12 +67,15 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
       if (!user) {
         cargadoPara.current = null;
         limpiarStorage();
+        // El store persistido (empresa, empresas, permisos) no debe sobrevivir
+        // a la sesión: si expiró sin pasar por "Cerrar sesión", seguía visible
+        useAuthStore.getState().logout();
         if (refreshInterval) {
           clearInterval(refreshInterval);
           refreshInterval = null;
         }
         marcarListo();
-        if (RUTAS_PROTEGIDAS.some((r) => pathnameRef.current.startsWith(r))) {
+        if (!esRutaPublica(pathnameRef.current)) {
           router.replace("/login");
         }
         return;
@@ -101,7 +106,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
           cargadoPara.current = user.uid;
           const params       = new URLSearchParams(window.location.search);
           const empresaParam = params.get("empresa");
-          router.replace(empresaParam ? `/bienvenida?empresa=${empresaParam}` : "/bienvenida");
+          router.replace(empresaParam ? `/bienvenida?empresa=${encodeURIComponent(empresaParam)}` : "/bienvenida");
           return;
         }
 

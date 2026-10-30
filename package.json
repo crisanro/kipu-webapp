@@ -9,7 +9,6 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@tanstack/react-query": "^5.101.4",
     "axios": "^1.21.0",
     "clsx": "^2.1.1",
     "firebase": "^12.17.0",
