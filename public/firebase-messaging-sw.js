@@ -23,7 +23,7 @@ messaging.onBackgroundMessage((payload) => {
 
   return self.registration.showNotification(d.title, {
     body:    d.body || "",
-    icon:    "/icon.svg",
+    icon:    "/icons/icon-192.png",
     badge:   "/icon.svg",
     data:    { url: d.url || "/dashboard" },
     vibrate: [200, 100, 200],

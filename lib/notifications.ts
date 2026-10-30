@@ -111,7 +111,7 @@ export async function escucharPrimerPlano(
           if (reg) {
             await reg.showNotification(titulo, {
               body: cuerpo,
-              icon: "/icon.svg",
+              icon: "/icons/icon-192.png",
               badge: "/icon.svg",
               data: { url },
             });
@@ -138,7 +138,7 @@ export function mostrarNotificacionLocal(titulo: string, cuerpo: string, url?: s
   if (Notification.permission !== "granted") return;
   const notif = new Notification(titulo, {
     body: cuerpo,
-    icon: "/icon.svg"
+    icon: "/icons/icon-192.png"
   });
   if (url) notif.onclick = () => window.open(url, "_blank");
 }

@@ -7,18 +7,19 @@ export default function manifest(): MetadataRoute.Manifest {
     description:      "Facturación electrónica SRI para Ecuador",
     start_url:        "/dashboard",
     display:          "standalone",
-    background_color: "#0f172a",
-    theme_color:      "#6366f1",
+    background_color: "#FAFAF8",   // --kipu-bg
+    theme_color:      "#059669",   // --kipu-accent
     orientation:      "portrait",
     icons: [
+      // maskable: logo con margen extra para que Android lo recorte sin cortarlo
       {
-        src:     "/icons/icon-192.png",
+        src:     "/icons/icon-maskable-192.png",
         sizes:   "192x192",
         type:    "image/png",
         purpose: "maskable",
       },
       {
-        src:     "/icons/icon-512.png",
+        src:     "/icons/icon-maskable-512.png",
         sizes:   "512x512",
         type:    "image/png",
         purpose: "maskable",
@@ -34,15 +35,6 @@ export default function manifest(): MetadataRoute.Manifest {
         sizes:   "512x512",
         type:    "image/png",
         purpose: "any",
-      },
-    ],
-    screenshots: [
-      {
-        src:          "/screenshots/dashboard.png",
-        sizes:        "390x844",
-        type:         "image/png",
-        form_factor:  "narrow",
-        label:        "Dashboard de Kipu",
       },
     ],
     categories: ["finance", "business", "productivity"],

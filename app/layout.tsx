@@ -27,8 +27,9 @@ export const metadata: Metadata = {
     icon: [
       { url: "/icon.svg", type: "image/svg+xml" },
     ],
+    // iOS no acepta SVG como ícono de pantalla de inicio
     apple: [
-      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/icons/apple-icon.png", sizes: "180x180", type: "image/png" },
     ],
   },
 };
