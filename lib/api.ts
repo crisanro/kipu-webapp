@@ -41,6 +41,10 @@ api.interceptors.request.use(async (config) => {
   return config;
 });
 
+// Mismo texto que SIN_ACCESO_EMPRESA en el backend (app/core/security.py)
+const SIN_ACCESO_EMPRESA = "Ya no tienes acceso a esta empresa.";
+let redirigiendo = false;   // varias peticiones pueden fallar a la vez: un solo aviso
+
 // Interceptor — manejo global de errores
 api.interceptors.response.use(
   (response) => response,
@@ -48,6 +52,16 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       auth.signOut();
       window.location.href = "/login";
+    }
+    // Lo removieron de la empresa activa (el backend envía este texto exacto):
+    // olvidar esa empresa y recargar para que entre a otra de las suyas
+    if (error.response?.status === 403 &&
+        error.response.data?.detail === SIN_ACCESO_EMPRESA &&
+        typeof window !== "undefined" && !redirigiendo) {
+      redirigiendo = true;
+      try { sessionStorage.removeItem("kipu-empresa-sesion"); } catch {}  // = SESSION_EMPRESA_KEY
+      alert("Ya no tienes acceso a esta empresa. Te llevamos a otra de tus empresas.");
+      window.location.href = "/dashboard";
     }
     // Rate limit: las pantallas muestran response.data.detail; si el 429 no lo
     // trae (p. ej. lo respondió Cloudflare), se completa con un mensaje claro
