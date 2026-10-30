@@ -11,6 +11,14 @@ const nextConfig = {
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },
+  // La documentación para integradores vive en el backend (se genera del código).
+  // /dev se mantiene como redirección para no romper enlaces existentes.
+  async redirects() {
+    return [
+      { source: "/dev",        destination: "https://core.kipu.ec/api-docs", permanent: true },
+      { source: "/dev/:path*", destination: "https://core.kipu.ec/api-docs", permanent: true },
+    ];
+  },
 };
 
 
