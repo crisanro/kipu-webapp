@@ -8,6 +8,7 @@ import { onAuthStateChanged, signOut } from "firebase/auth";
 import { useAuthStore } from "@/store/auth.store";
 import { SWRProvider } from "@/lib/swrConfig";
 import api from "@/lib/api";
+import { olvidarDispositivoLocal } from "@/lib/notifications";
 
 // Todo lo demás requiere sesión. Lista de públicas (y no de protegidas) para
 // que una pantalla nueva quede protegida por defecto.
@@ -151,6 +152,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
         if (status === 401 || status === 403) {
           // Sesión inválida: cerrar para no quedar con Firebase logueado y el store vacío
           limpiarStorage();
+          await olvidarDispositivoLocal();   // que el navegador deje de recibir avisos
           try { await signOut(auth); } catch {}
           router.replace("/login");
         } else {

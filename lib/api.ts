@@ -50,8 +50,14 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      auth.signOut();
-      window.location.href = "/login";
+      // Import dinámico: notifications.ts importa este mismo módulo
+      import("./notifications")
+        .then(m => m.olvidarDispositivoLocal())
+        .catch(() => {})
+        .finally(() => {
+          auth.signOut();
+          window.location.href = "/login";
+        });
     }
     // Lo removieron de la empresa activa (el backend envía este texto exacto):
     // olvidar esa empresa y recargar para que entre a otra de las suyas

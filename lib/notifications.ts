@@ -101,6 +101,21 @@ export async function desregistrarNotificaciones(): Promise<void> {
   }
 }
 
+// ── Olvidar el token solo en este navegador (sesión expirada / 401) ───────────
+// Sin sesión válida el backend no acepta la baja, y llamarlo desde el
+// interceptor del 401 entraría en bucle. Basta con invalidar el token local:
+// FCM responde UNREGISTERED en el próximo envío y el backend lo borra. Sin
+// esto, un navegador con la sesión vencida seguía recibiendo los avisos.
+export async function olvidarDispositivoLocal(): Promise<void> {
+  try {
+    sessionStorage.removeItem(FLAG_SESION);
+  } catch {}
+  try {
+    const messaging = await getFirebaseMessaging();
+    if (messaging) await deleteToken(messaging);
+  } catch {}
+}
+
 // ── Mensajes con la app abierta (primer plano) ────────────────────────────────
 // Sin esto, si la pestaña está activa el push llega pero no se muestra nada.
 export async function escucharPrimerPlano(
