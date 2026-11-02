@@ -11,6 +11,8 @@ interface Preguntas {
   tarifa_turismo?:                   boolean;
   ha_realizado_ventas?:              boolean;
   ventas_tarifa_0?:                  boolean;
+  exportaciones?:                    boolean;
+  financiamiento_directo?:           boolean;
   ventas_activos_fijos?:             boolean;
   ventas_tarifa_nz?:                 boolean;
   ha_realizado_compras?:             boolean;
@@ -44,21 +46,30 @@ interface Props {
   tipo:      "IVA" | "RENTA" | "ATS";
 }
 
+// Mismo texto y orden que las preguntas previas del 104 en el portal del SRI
 const LABELS_IVA: Record<string, string> = {
-  requiere_informar:        "¿Requiere informar valores en su declaración?",
-  credito_tributario_renta: "¿Tiene crédito tributario de IVA para renta?",
-  comercio_exterior:        "¿Realizó transacciones de comercio exterior o activos fijos?",
+  requiere_informar:        "¿Requiere informar valores en su declaración de este período?",
+  credito_tributario_renta: "¿Requiere registrar valores que se consideren como gasto deducible de Impuesto a la Renta, los cuales corresponden a crédito tributario de IVA?",
+  comercio_exterior:        "¿Ha realizado transacciones relacionadas con comercio exterior, o activos fijos?",
   notas_credito:            "¿Emitió y/o recibió notas de crédito?",
-  tarifa_turismo:           "¿Realizó ventas con IVA tarifa diferenciada (turismo)?",
+  tarifa_turismo:           "¿Realizó ventas y/o compras con IVA tarifa diferenciada por servicios definidos como actividades turísticas?",
   ha_realizado_ventas:      "¿Ha realizado ventas en este período?",
-  ventas_tarifa_0:          "¿Realizó ventas con tarifa 0% o exentas?",
-  ventas_activos_fijos:     "¿Ha realizado ventas de activos fijos?",
+  ventas_tarifa_0:          "¿Realizó ventas con tarifa 0%, exentas o no objeto de IVA?",
+  exportaciones:            "¿Ha realizado exportaciones en este período?",
+  ventas_activos_fijos:     "¿Ha realizado ventas de activos fijos en este período?",
   ventas_tarifa_nz:         "¿Realizó ventas con IVA tarifa diferente de 0%?",
+  financiamiento_directo:   "¿Otorgó financiamiento directo en sus ventas?",
   ha_realizado_compras:     "¿Ha realizado compras en este período?",
-  importaciones:            "¿Ha realizado importaciones?",
+  importaciones:            "¿Ha realizado importaciones en este período?",
   compras_activos_fijos:    "¿Ha realizado compras de activos fijos?",
   ha_realizado_retenciones: "¿Ha realizado retenciones en este período?",
-  materiales_construccion:  "¿Realiza operaciones de materiales de construcción?",
+  materiales_construccion:  "¿Realiza operaciones de compra y/o ventas locales de materiales de construcción?",
+};
+
+// Aclaraciones que se muestran aunque la respuesta sea NO
+const NOTA_SIEMPRE: Record<string, string> = {
+  financiamiento_directo:   "Kipu declara tus ventas como de contado. Responde Sí solo si vas a diferir el IVA de ventas a crédito (casilleros 481/485/486).",
+  ha_realizado_retenciones: "Se refiere a retenciones que TÚ hiciste. Las que te hicieron van en el casillero 609 de todas formas.",
 };
 
 const LABELS_RENTA: Record<string, string> = {
@@ -93,7 +104,7 @@ const LABELS: Record<string, Record<string, string>> = {
 
 // Preguntas que requieren acción manual si son true
 const REQUIERE_MANUAL: Record<string, string> = {
-  comercio_exterior:             "Tus exportaciones de servicios ya están en 408/418. Si además tuviste importaciones o activos fijos, complétalos manualmente.",
+  comercio_exterior:             "Tus exportaciones de servicios (408/418) y compras de activos fijos (501/521) ya están calculadas. Si tuviste importaciones o ventas de activos fijos, complétalas manualmente.",
   ventas_activos_fijos:          "Completa los casilleros 402/412/422 manualmente.",
   compras_activos_fijos:         "Ya están en 501/511/521 las compras que marcaste como activo fijo. Revisa que no falte ninguna.",
   importaciones:                 "Completa los casilleros 504/514/524 manualmente.",
@@ -160,6 +171,11 @@ export default function PreguntasSRI({ preguntas, tipo }: Props) {
                   <p className="text-[10px] mt-0.5 flex items-center gap-1 font-medium" style={{ color: "var(--kipu-warning)" }}>
                     <AlertTriangle size={10} />
                     {REQUIERE_MANUAL[key]}
+                  </p>
+                )}
+                {tipo === "IVA" && NOTA_SIEMPRE[key] && (
+                  <p className="text-[10px] mt-0.5" style={{ color: "var(--kipu-subtle)" }}>
+                    {NOTA_SIEMPRE[key]}
                   </p>
                 )}
               </div>
