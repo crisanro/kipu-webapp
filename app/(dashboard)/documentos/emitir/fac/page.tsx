@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { r2 } from "@/lib/dinero";
 import { useRouter } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
 import { debeRenovarClave, mensajeErrorEmision } from "@/lib/emision";
@@ -13,7 +14,7 @@ import PuntoEmision from "../components/PuntoEmision";
 import ClienteSelector from "../components/ClienteSelector";
 import ItemsEditor, { Item, calcItem, genId, EMPTY_ITEM } from "../components/ItemsEditor";
 import PagosMixtos, { PagoItem, PAGO_INICIAL } from "../components/PagosMixtos";
-import EstadoCobro, { DatosCobro, COBRO_INICIAL } from "../components/EstadoCobro";
+import EstadoCobro, { DatosCobro, cobroInicial } from "../components/EstadoCobro";
 import CamposAdicionales, { CampoAdicional } from "../components/CamposAdicionales";
 import ResumenTotales from "../components/ResumenTotales";
 
@@ -42,7 +43,6 @@ interface Establecimiento {
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
-const r2  = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 const fmt = (n: number) => r2(n).toFixed(2);
 
 /** Mapea código SRI de forma de pago al label de cobro */
@@ -97,7 +97,7 @@ export default function NuevaFacturaPage() {
   const [propina, setPropina] = useState(false);
 
   // ── Estado cobro ────────────────────────────────────────────────────────────
-  const [cobro, setCobro] = useState<DatosCobro>({ ...COBRO_INICIAL });
+  const [cobro, setCobro] = useState<DatosCobro>(cobroInicial);
 
   // ── Estado campos adicionales ───────────────────────────────────────────────
   const [camposAdicionales, setCamposAdicionales] = useState<CampoAdicional[]>([]);
@@ -208,7 +208,7 @@ export default function NuevaFacturaPage() {
     setItems([{ _id: genId(), ...EMPTY_ITEM }]);
     setPagos([{ ...PAGO_INICIAL, _id: Math.random().toString(36).slice(2) }]);
     setPropina(false);
-    setCobro({ ...COBRO_INICIAL });
+    setCobro(cobroInicial());
     setCamposAdicionales([]);
     setProformaId(null);
     setError("");

@@ -11,6 +11,12 @@ import SinAcceso from "@/components/SinAcceso";
 export default function ConfiguracionPage() {
   const puedeVer = usePermiso("configuracion");
   if (!puedeVer) return <SinAcceso />;
+  return <ConfiguracionContenido />;
+}
+
+// Separado del chequeo de permiso: los hooks se llaman siempre en el mismo orden
+// aunque el permiso cambie con la página abierta (antes React lanzaba un error).
+function ConfiguracionContenido() {
 
   const [loading, setLoading] = useState(true);
   const [config,  setConfig]  = useState<any>(null);

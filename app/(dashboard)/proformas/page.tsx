@@ -34,6 +34,12 @@ const fmt = (n: number) => `$${n.toFixed(2)}`;
 export default function ProformasPage() {
   const puedeVer = usePermiso("emitir");
   if (!puedeVer) return <SinAcceso />;
+  return <ProformasContenido />;
+}
+
+// Separado del chequeo de permiso: los hooks se llaman siempre en el mismo orden
+// aunque el permiso cambie con la página abierta (antes React lanzaba un error).
+function ProformasContenido() {
 
   const router = useRouter();
   const [proformas, setProformas] = useState<Proforma[]>([]);

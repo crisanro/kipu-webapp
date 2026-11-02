@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useCallback, useState, useEffect, lazy, Suspense } from "react";
+import { r2 } from "@/lib/dinero";
 import api from "@/lib/api";
 import { Search, Plus, Trash2, Camera } from "lucide-react";
 
@@ -36,10 +37,9 @@ interface Props {
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
-const r2  = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 const fmt = (n: number) => r2(n).toFixed(2);
 
-const IVA_RATES: Record<string, number> = { "0": 0, "5": 0.05, "15": 0.15 };
+const IVA_RATES: Record<string, number> = { "0": 0, "5": 0.05, "8": 0.08, "15": 0.15 };
 
 export function calcItem(item: Item) {
   const subtotal  = r2(item.cantidad * item.precio);

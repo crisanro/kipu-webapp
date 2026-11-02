@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { r2 } from "@/lib/dinero";
 import { useRouter, useSearchParams } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
 import { debeRenovarClave, mensajeErrorEmision } from "@/lib/emision";
@@ -9,11 +10,10 @@ import { useAuthStore } from "@/store/auth.store";
 import { CheckCircle2, AlertTriangle, Plus, Trash2, ChevronDown } from "lucide-react";
 import PuntoEmision from "../components/PuntoEmision";
 import CamposAdicionales, { CampoAdicional } from "../components/CamposAdicionales";
-import EstadoCobro, { DatosCobro, COBRO_INICIAL } from "../components/EstadoCobro";
+import EstadoCobro, { DatosCobro, cobroInicial } from "../components/EstadoCobro";
 import ResumenTotales from "../components/ResumenTotales";
 import DocOrigenSelector, { DocOrigen } from "../components/DocOrigenSelector";
 
-const r2  = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 const fmt = (n: number) => r2(n).toFixed(2);
 const genId = () => Math.random().toString(36).slice(2);
 
@@ -114,7 +114,7 @@ export default function NuevaNdbPage() {
   const [camposAdicionales, setCamposAdicionales] = useState<CampoAdicional[]>([]);
 
   // Estado cobro
-  const [cobro, setCobro] = useState<DatosCobro>({ ...COBRO_INICIAL });
+  const [cobro, setCobro] = useState<DatosCobro>(cobroInicial);
 
   // Establecimiento
   const [establecimientos, setEstablecimientos] = useState<Establecimiento[]>([]);
@@ -207,7 +207,7 @@ export default function NuevaNdbPage() {
     setDocOrigen(null);
     setMotivos([{ _id: genId(), razon: "", valor: 0, tipo_iva: "15" }]);
     setCamposAdicionales([]);
-    setCobro({ ...COBRO_INICIAL });
+    setCobro(cobroInicial());
     setError("");
   };
 

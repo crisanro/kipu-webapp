@@ -93,7 +93,7 @@ const LABELS: Record<string, Record<string, string>> = {
 
 // Preguntas que requieren acción manual si son true
 const REQUIERE_MANUAL: Record<string, string> = {
-  comercio_exterior:             "Completa los casilleros de activos fijos e importaciones manualmente.",
+  comercio_exterior:             "Tus exportaciones de servicios ya están en 408/418. Si además tuviste importaciones o activos fijos, complétalos manualmente.",
   ventas_activos_fijos:          "Completa los casilleros 402/412/422 manualmente.",
   compras_activos_fijos:         "Completa los casilleros 501/511/521 manualmente.",
   importaciones:                 "Completa los casilleros 504/514/524 manualmente.",

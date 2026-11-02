@@ -21,7 +21,9 @@ export default function DocumentosIncluidos({
 
   const total    = totalEmitidos + totalRecibidos;
   const periodoFmt = periodo.length === 7
-    ? new Date(periodo + "-01").toLocaleDateString("es-EC", { month: "long", year: "numeric" })
+    // new Date("2026-08-01") es medianoche UTC = 31 de julio en Ecuador
+    ? new Date(parseInt(periodo.slice(0, 4)), parseInt(periodo.slice(5, 7)) - 1, 1)
+        .toLocaleDateString("es-EC", { month: "long", year: "numeric" })
     : periodo;
 
   // Links al historial filtrado por período

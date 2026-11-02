@@ -10,6 +10,7 @@ interface Props {
 
 const TIPO_LABEL: Record<string, string> = {
   FAC: "Factura",
+  NVE: "Nota de venta",
   NCR: "Nota de Crédito",
   NDB: "Nota de Débito",
   RET: "Retención",

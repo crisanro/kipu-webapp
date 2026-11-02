@@ -104,6 +104,12 @@ function validarEmail(email: string): boolean {
 export default function PersonasPage() {
   const puedeVer = usePermiso("clientes");
   if (!puedeVer) return <SinAcceso />;
+  return <PersonasContenido />;
+}
+
+// Separado del chequeo de permiso: los hooks se llaman siempre en el mismo orden
+// aunque el permiso cambie con la página abierta (antes React lanzaba un error).
+function PersonasContenido() {
   const [personas,  setPersonas]  = useState<Persona[]>([]);
   const [loading,   setLoading]   = useState(true);
   const [query,     setQuery]     = useState("");

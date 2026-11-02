@@ -63,7 +63,7 @@ export default function DetalleProformaPage() {
         cantidad:        it.cantidad,
         precio:          it.precio_unitario,
         tipo_iva:        String(it.tipo_iva),
-        descuento:       0,
+        descuento:       it.descuento ?? 0,   // la factura debe salir con el mismo total que la proforma
         tipo_descuento:  "$",
         unidad:          "UNIDAD",
         codigo:          "",

@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { r2 } from "@/lib/dinero";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
@@ -29,7 +30,6 @@ interface ClienteNuevo {
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
-const r2  = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 const fmt = (n: number) => r2(n).toFixed(2);
 
 function calcTotales(items: Item[]) {
@@ -162,6 +162,7 @@ export default function NuevaProformaPage() {
             descripcion:     i.descripcion,
             cantidad:        i.cantidad,
             precio_unitario: i.precio,
+            descuento:       calcItem(i).descuento,   // en dólares, aunque se haya ingresado en %
             tipo_iva:        parseInt(i.tipo_iva) || 0,
           };
         }),

@@ -10,6 +10,12 @@ import SinAcceso from "@/components/SinAcceso";
 export default function EstructuraPage() {
   const puedeVer = usePermiso(["emitir", "estructura"]);
   if (!puedeVer) return <SinAcceso />;
+  return <EstructuraContenido />;
+}
+
+// Separado del chequeo de permiso: los hooks se llaman siempre en el mismo orden
+// aunque el permiso cambie con la página abierta (antes React lanzaba un error).
+function EstructuraContenido() {
 
   const [estructura, setEstructura] = useState<any[]>([]);
   const [loading,    setLoading]    = useState(true);

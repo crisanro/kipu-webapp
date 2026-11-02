@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { AlertTriangle, CheckCircle2, TrendingDown, TrendingUp, Info, Save } from "lucide-react";
+import { useState } from "react";
+import { Info, Save } from "lucide-react";
 
 interface CampoManual {
   casillero: string;
@@ -41,7 +41,7 @@ interface Props {
   casilleros: CasillerosResumen;
   camposManuales?: CampoManual[];
   valoresGuardados?: Record<string, number>;
-  onGuardar?: (valores: Record<string, number>) => Promise<void>;
+  onGuardar?: (valores: Record<string, number | null>) => Promise<void>;
   saldos?: { origen?: string; periodo_anterior?: string | null };
   resultado?: {
     impuesto_causado?: number;
@@ -130,11 +130,15 @@ function InputCampoAjuste({
   label,
   value,
   onChange,
+  manual = false,
+  onRestaurar,
 }: {
   num: string;
   label: string;
   value: number;
   onChange: (val: number) => void;
+  manual?: boolean;
+  onRestaurar?: () => void;
 }) {
   return (
     <div className="flex items-center justify-between gap-3 px-4 py-2 rounded-lg" style={{ background: "color-mix(in srgb, var(--kipu-warning) 5%, transparent)", border: "1px solid color-mix(in srgb, var(--kipu-warning) 20%, transparent)" }}>
@@ -142,9 +146,19 @@ function InputCampoAjuste({
         <span className="text-[10px] font-bold px-2 py-0.5 rounded shrink-0" style={{ background: "color-mix(in srgb, var(--kipu-warning) 20%, transparent)", color: "var(--kipu-warning)" }}>
           {num}
         </span>
-        <span className="text-xs truncate font-medium" style={{ color: "var(--kipu-warning)" }}>
-          {label}
-        </span>
+        <div className="min-w-0">
+          <span className="block text-xs truncate font-medium" style={{ color: "var(--kipu-warning)" }}>
+            {label}
+          </span>
+          <span className="block text-[10px]" style={{ color: "var(--kipu-subtle)" }}>
+            {manual ? "Ingresado a mano · " : "Calculado por Kipu"}
+            {manual && onRestaurar && (
+              <button type="button" onClick={onRestaurar} className="underline" style={{ color: "var(--kipu-accent)" }}>
+                usar cálculo automático
+              </button>
+            )}
+          </span>
+        </div>
       </div>
       <div className="flex items-center gap-1 shrink-0">
         <span className="text-xs font-semibold" style={{ color: "var(--kipu-warning)" }}>$</span>
@@ -163,56 +177,54 @@ function InputCampoAjuste({
   );
 }
 
+type Ajustable = "605" | "606" | "625";
+
 export default function ResumenImpositivo({
   tipo,
   casilleros,
   valoresGuardados = {},
   onGuardar,
+  saldos,
   resultado,
 }: Props) {
-  const [val605, setVal605] = useState<number>(0);
-  const [val606, setVal606] = useState<number>(0);
-  const [val625, setVal625] = useState<number>(0);
+  // Solo los casilleros que el usuario editó y aún no guardó. Todo lo demás
+  // (incluido el resultado) viene del backend: aquí no se recalcula nada, para
+  // que la cifra que se copia al SRI sea una sola.
+  const [editados, setEditados] = useState<Partial<Record<Ajustable, number | null>>>({});
   const [guardando, setGuardando] = useState(false);
-  const [guardado, setGuardado] = useState(false);
-  const [dirty, setDirty] = useState(false);
+  const [error, setError] = useState("");
 
-  useEffect(() => {
-    setVal605(valoresGuardados["605"] ?? casilleros["605"] ?? 0);
-    setVal606(valoresGuardados["606"] ?? casilleros["606"] ?? 0);
-    setVal625(valoresGuardados["625"] ?? casilleros["625"] ?? 0);
-  }, [valoresGuardados, casilleros]);
+  const dirty = Object.keys(editados).length > 0;
+  const esManual = (c: Ajustable) =>
+    editados[c] !== undefined ? editados[c] !== null : c in valoresGuardados;
+  const valorCampo = (c: Ajustable) => {
+    const e = editados[c];
+    if (e !== undefined && e !== null) return e;
+    return casilleros[c] ?? 0;
+  };
+  const editar = (c: Ajustable, v: number | null) => {
+    setEditados(prev => ({ ...prev, [c]: v }));
+    setError("");
+  };
 
   const ejecutarGuardado = async () => {
-    if (!onGuardar) return;
+    if (!onGuardar || !dirty) return;
     setGuardando(true);
+    setError("");
     try {
-      await onGuardar({ "605": val605, "606": val606, "625": val625 });
-      setGuardado(true);
-      setDirty(false);
-    } catch (e) {
-      console.error("Error guardando ajustes manuales:", e);
+      // null = volver al cálculo automático (el backend lo quita de los manuales)
+      await onGuardar(editados as Record<string, number | null>);
+      setEditados({});
+    } catch (e: any) {
+      setError(e?.response?.data?.detail ?? "No se pudieron guardar los valores.");
     } finally {
       setGuardando(false);
     }
   };
 
-  // --- RECALCULO DE CASILLEROS EN TIEMPO REAL PARA IVA ---
-  const c499 = casilleros["499"] ?? 0;
-  const c564 = casilleros["564"] ?? 0;
-  const c609 = casilleros["609"] ?? 0;
-  const c801 = casilleros["801"] ?? 0;
-
-  const c601 = Math.max(c499 - c564, 0);
-  const c602 = Math.max(c564 - c499, 0);
-
-  const subtotalCalculado = c601 - val605 - val606 - c609;
-  const c620 = Math.max(subtotalCalculado, 0);
-
-  const c699 = c620 + c801;
-
-  const c615 = Math.max(c602 + val605 - val625, 0);
-  const c617 = c609 + val606;
+  const c = (n: string) => casilleros[n] ?? 0;
+  const c601 = c("601");
+  const c801 = c("801");
 
   return (
     <div className="space-y-4">
@@ -228,73 +240,88 @@ export default function ResumenImpositivo({
               <button
                 type="button"
                 onClick={ejecutarGuardado}
-                disabled={guardando || (!dirty && guardado)}
+                disabled={guardando || !dirty}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50"
                 style={{
-                  background: dirty ? "var(--kipu-warning)" : guardado ? "color-mix(in srgb, var(--kipu-success) 20%, transparent)" : "color-mix(in srgb, var(--kipu-text) 10%, transparent)",
-                  color: dirty ? "var(--kipu-surface)" : guardado ? "var(--kipu-success)" : "var(--kipu-text)",
+                  background: dirty ? "var(--kipu-warning)" : "color-mix(in srgb, var(--kipu-text) 10%, transparent)",
+                  color: dirty ? "var(--kipu-surface)" : "var(--kipu-text)",
                 }}
               >
                 <Save size={13} />
-                {guardando ? "Guardando..." : guardado && !dirty ? "Guardado" : "Guardar valores"}
+                {guardando ? "Recalculando..." : "Guardar y recalcular"}
               </button>
             )}
           </div>
 
           <div className="p-4 space-y-1">
-            <FilaCasillero num="499" label="Total IVA generado en ventas" value={c499} rojo />
-            <FilaCasillero num="564" label="Crédito tributario aplicable por compras" value={c564} verde resta />
+            {dirty && (
+              <div className="flex items-start gap-2 rounded-lg px-3 py-2 mb-2" style={{ background: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)" }}>
+                <Info size={13} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-warning)" }} />
+                <p className="text-[11px]" style={{ color: "var(--kipu-warning)" }}>
+                  Tienes cambios sin guardar. Los totales de abajo se actualizan al guardar.
+                </p>
+              </div>
+            )}
+            {error && (
+              <p className="text-[11px] px-1 pb-1" style={{ color: "var(--kipu-danger)" }}>{error}</p>
+            )}
+
+            <FilaCasillero num="499" label="Total IVA generado en ventas" value={c("499")} rojo />
+            <FilaCasillero num="564" label="Crédito tributario aplicable por compras" value={c("564")} verde resta />
 
             {c601 > 0 ? (
               <FilaCasillero num="601" label="Impuesto causado" value={c601} subtotal />
             ) : (
-              <FilaCasillero num="602" label="Crédito tributario del período" value={c602} verde />
+              <FilaCasillero num="602" label="Crédito tributario del período" value={c("602")} verde />
             )}
 
             {/* Saldos Anteriores */}
             <div className="pt-3 pb-1 space-y-1.5">
               <p className="text-[11px] font-semibold" style={{ color: "var(--kipu-subtle)" }}>
-                Saldos crédito tributario del mes anterior:
+                Saldos crédito tributario del mes anterior
+                {saldos?.origen === "KIPU" && saldos.periodo_anterior ? ` (tomados de ${saldos.periodo_anterior})` : ""}:
               </p>
-              <InputCampoAjuste
-                num="605"
-                label="Por adquisiciones e importaciones"
-                value={val605}
-                onChange={val => { setVal605(val); setDirty(true); setGuardado(false); }}
-              />
-              <InputCampoAjuste
-                num="606"
-                label="Por retenciones en la fuente de IVA"
-                value={val606}
-                onChange={val => { setVal606(val); setDirty(true); setGuardado(false); }}
-              />
+              {(["605", "606"] as const).map(cas => (
+                <InputCampoAjuste
+                  key={cas}
+                  num={cas}
+                  label={cas === "605" ? "Por adquisiciones e importaciones" : "Por retenciones en la fuente de IVA"}
+                  value={valorCampo(cas)}
+                  manual={esManual(cas)}
+                  onChange={v => editar(cas, v)}
+                  onRestaurar={onGuardar ? () => editar(cas, null) : undefined}
+                />
+              ))}
             </div>
 
-            <FilaCasillero num="609" label="Retenciones de IVA que le han sido efectuadas" value={c609} verde resta />
+            <FilaCasillero num="609" label="Retenciones de IVA que le han sido efectuadas" value={c("609")} verde resta />
 
             <div className="my-2" style={{ borderTop: "1px solid var(--kipu-border)" }} />
 
-            <FilaCasillero num="620" label="Subtotal a pagar" value={c620} subtotal />
+            <FilaCasillero num="620" label="Subtotal a pagar" value={c("620")} subtotal />
+            <FilaCasillero num="699" label="Total impuesto a pagar por percepción" value={c("699")} subtotal />
             {c801 > 0 && (
               <FilaCasillero num="801" label="Retenciones de IVA que tú hiciste (a pagar)" value={c801} rojo />
             )}
-            <FilaCasillero num="699" label="Total impuesto a pagar por percepción y retenciones" value={c699} subtotal highlight />
+            <FilaCasillero num="859" label="Total a pagar" value={c("859")} subtotal highlight />
 
             {/* Ajuste por caducidad y saldos próximo mes */}
             <div className="pt-3 space-y-2">
               <p className="text-[11px] font-semibold" style={{ color: "var(--kipu-subtle)" }}>
                 Ajustes al Crédito Tributario e importes para el próximo mes:
               </p>
-              
+
               <InputCampoAjuste
                 num="625"
                 label="Ajuste crédito tributario adquisiciones superior a 5 años (caducado)"
-                value={val625}
-                onChange={val => { setVal625(val); setDirty(true); setGuardado(false); }}
+                value={valorCampo("625")}
+                manual={esManual("625")}
+                onChange={v => editar("625", v)}
+                onRestaurar={onGuardar ? () => editar("625", null) : undefined}
               />
 
-              <FilaCasillero num="615" label="Saldo crédito tributario para el próximo mes (Adquisiciones e Importaciones)" value={c615} verde />
-              <FilaCasillero num="617" label="Saldo crédito tributario para el próximo mes (Retenciones en la Fuente)" value={c617} verde />
+              <FilaCasillero num="615" label="Saldo crédito tributario para el próximo mes (Adquisiciones e Importaciones)" value={c("615")} verde />
+              <FilaCasillero num="617" label="Saldo crédito tributario para el próximo mes (Retenciones en la Fuente)" value={c("617")} verde />
             </div>
           </div>
         </div>

@@ -18,6 +18,7 @@ interface CasillerosCompras {
   "540"?: number; "550"?: number; "560"?: number;
   "502"?: number; "512"?: number; "522"?: number;
   "507"?: number; "517"?: number;
+  "508"?: number; "518"?: number;
   "509"?: number; "519"?: number; "529"?: number;
   "115"?: number; "117"?: number; "119"?: number;
   [key: string]: number | undefined;
@@ -92,6 +93,9 @@ export default function SeccionCompras({ desglose, casilleros }: Props) {
     if (tarifa === 5) {
       return { brutoNum: "540", netoNum: "550", ivaNum: "560" };
     }
+    if (tarifa === 8) {
+      return { brutoNum: "530", netoNum: "533", ivaNum: "534" };   // igual que el backend
+    }
     return { brutoNum: "500", netoNum: "510", ivaNum: "520" };
   };
 
@@ -127,6 +131,7 @@ export default function SeccionCompras({ desglose, casilleros }: Props) {
             </p>
             <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
               {fmtN(casilleros["115"])} comprobantes recibidos
+              {(casilleros["117"] ?? 0) > 0 && ` · ${fmtN(casilleros["117"])} notas de venta`}
               {(casilleros["119"] ?? 0) > 0 && ` · ${fmtN(casilleros["119"])} liquidaciones`}
             </p>
           </div>
@@ -248,6 +253,24 @@ export default function SeccionCompras({ desglose, casilleros }: Props) {
                   value={casilleros["517"] ?? 0}
                   dimmed
                 />
+              </div>
+            </div>
+          )}
+
+          {/* Compras a negocios populares RIMPE (notas de venta) */}
+          {(casilleros["508"] ?? 0) > 0 && (
+            <div className="space-y-2 pt-2" style={{ borderTop: "1px solid var(--kipu-border)" }}>
+              <div>
+                <span className="text-xs font-semibold" style={{ color: "var(--kipu-text)" }}>
+                  Adquisiciones a negocios populares (RIMPE)
+                </span>
+                <p className="text-[10px]" style={{ color: "var(--kipu-subtle)" }}>
+                  Notas de venta y facturas de negocios populares. No dan crédito tributario.
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <CeldaCasillero num="508" label="Valor Bruto" value={casilleros["508"] ?? 0} dimmed />
+                <CeldaCasillero num="518" label="Valor Neto"  value={casilleros["518"] ?? 0} dimmed />
               </div>
             </div>
           )}

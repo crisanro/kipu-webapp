@@ -4,6 +4,7 @@ import {
   CheckCircle2, Clock, DollarSign, Pencil,
 } from "lucide-react";
 import api from "@/lib/api";
+import { hoyEC } from "@/lib/fecha";
 import { type FacturaBase, COBRO_CONFIG } from "./utils";
 
 const FORMAS_PAGO_COBRO = [
@@ -19,7 +20,7 @@ export default function SeccionCobro({ factura, onRecargar }: { factura: Factura
   const [editandoCobro,   setEditandoCobro]   = useState(false);
   const [cobroEstado,     setCobroEstado]     = useState(factura.estado_cobro ?? "PENDIENTE");
   const [cobroFormaPago,  setCobroFormaPago]  = useState(factura.forma_pago_cobro ?? "EFECTIVO");
-  const [cobroFecha,      setCobroFecha]      = useState(factura.fecha_pago ?? new Date().toISOString().split("T")[0]);
+  const [cobroFecha,      setCobroFecha]      = useState(factura.fecha_pago ?? hoyEC());
   const [cobroReferencia, setCobroReferencia] = useState(factura.numero_comprobante_pago ?? "");
   const [guardandoCobro,  setGuardandoCobro]  = useState(false);
   const [errorCobro,      setErrorCobro]      = useState("");
@@ -29,7 +30,7 @@ export default function SeccionCobro({ factura, onRecargar }: { factura: Factura
   const abrirEdicionCobro = () => {
     setCobroEstado(factura.estado_cobro ?? "PENDIENTE");
     setCobroFormaPago(factura.forma_pago_cobro ?? "EFECTIVO");
-    setCobroFecha(factura.fecha_pago ?? new Date().toISOString().split("T")[0]);
+    setCobroFecha(factura.fecha_pago ?? hoyEC());
     setCobroReferencia(factura.numero_comprobante_pago ?? "");
     setErrorCobro("");
     setEditandoCobro(true);

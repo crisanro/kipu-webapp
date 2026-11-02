@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { r2 } from "@/lib/dinero";
 import { useRouter } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
 import { debeRenovarClave, mensajeErrorEmision } from "@/lib/emision";
@@ -14,7 +15,6 @@ import CamposAdicionales, { CampoAdicional } from "../components/CamposAdicional
 import ResumenTotales from "../components/ResumenTotales";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-const r2  = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 const fmt = (n: number) => r2(n).toFixed(2);
 
 function calcTotales(items: Item[]) {

@@ -9,6 +9,12 @@ import SinAcceso from "@/components/SinAcceso";
 export default function UsuariosPage() {
   const puedeVer = usePermiso("usuarios");
   if (!puedeVer) return <SinAcceso />;
+  return <UsuariosContenido />;
+}
+
+// Separado del chequeo de permiso: los hooks se llaman siempre en el mismo orden
+// aunque el permiso cambie con la página abierta (antes React lanzaba un error).
+function UsuariosContenido() {
   const empresa = useAuthStore((s) => s.empresa);
 
   if (!empresa) {

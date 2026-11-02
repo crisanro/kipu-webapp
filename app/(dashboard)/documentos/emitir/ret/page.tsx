@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { r2 } from "@/lib/dinero";
 import { useRouter, useSearchParams } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
 import { debeRenovarClave, mensajeErrorEmision } from "@/lib/emision";
@@ -12,7 +13,6 @@ import CamposAdicionales, { CampoAdicional } from "../components/CamposAdicional
 import DocOrigenSelector, { DocOrigen } from "../components/DocOrigenSelector";
 import { getPaisesOrdenados } from "@/lib/catalogos/paises-sri";
 
-const r2  = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 const fmt = (n: number) => r2(n).toFixed(2);
 const genId = () => Math.random().toString(36).slice(2);
 
@@ -23,6 +23,31 @@ interface ImpuestoRet {
   baseImponible:     number;
   porcentajeRetener: number;
   valorRetenido:     number;
+}
+
+// Retenciones sugeridas para una compra: la de renta va sobre la base SIN IVA
+// (sobre el total retenía de más: 10% de $115 en vez de $100) y la de IVA
+// sobre el IVA. El usuario ajusta códigos y porcentajes antes de emitir.
+function retencionesSugeridas(base: number, iva: number): ImpuestoRet[] {
+  const lineas: ImpuestoRet[] = [{
+    _id: genId(), codigo: "1", codigoRetencion: "303",
+    baseImponible: r2(base), porcentajeRetener: 10, valorRetenido: r2(base * 0.10),
+  }];
+  if (iva > 0) {
+    lineas.push({
+      _id: genId(), codigo: "2", codigoRetencion: "1",
+      baseImponible: r2(iva), porcentajeRetener: 30, valorRetenido: r2(iva * 0.30),
+    });
+  }
+  return lineas;
+}
+
+// Base e IVA de un recibido; si el backend no los manda (registros viejos),
+// el total se toma como base sin IVA.
+function baseEIva(d: { importe_total: number; subtotal_base?: number; valor_iva_total?: number }) {
+  const base = Number(d.subtotal_base);
+  if (Number.isFinite(base) && base > 0) return { base, iva: Number(d.valor_iva_total) || 0 };
+  return { base: Number(d.importe_total) || 0, iva: 0 };
 }
 
 interface Establecimiento {
@@ -287,11 +312,8 @@ export default function NuevaRetPage() {
               estado_sri:     d.estado_sri || "AUTORIZADO",
             }
           });
-          setImpuestos([{
-            _id: genId(), codigo: "1", codigoRetencion: "303",
-            baseImponible: d.importe_total, porcentajeRetener: 10,
-            valorRetenido: r2(d.importe_total * 0.10),
-          }]);
+          const { base, iva } = baseEIva(d);
+          setImpuestos(retencionesSugeridas(base, iva));
         } catch (e) { console.error(e); }
       };
       cargar();
@@ -642,24 +664,12 @@ export default function NuevaRetPage() {
 
                     setImpuestos(nuevasRet);
                   } else {
-                    setImpuestos([{
-                      _id:                genId(),
-                      codigo:            "1",
-                      codigoRetencion:   "303",
-                      baseImponible:     r2(selected.data.importe_total),
-                      porcentajeRetener: 10,
-                      valorRetenido:     r2(selected.data.importe_total * 0.10),
-                    }]);
+                    const { base, iva } = baseEIva(selected.data);
+                    setImpuestos(retencionesSugeridas(base, iva));
                   }
                 } catch {
-                  setImpuestos([{
-                    _id:                genId(),
-                    codigo:            "1",
-                    codigoRetencion:   "303",
-                    baseImponible:     r2(selected.data.importe_total),
-                    porcentajeRetener: 10,
-                    valorRetenido:     r2(selected.data.importe_total * 0.10),
-                  }]);
+                  const { base, iva } = baseEIva(selected.data);
+                  setImpuestos(retencionesSugeridas(base, iva));
                 }
               }
             }}

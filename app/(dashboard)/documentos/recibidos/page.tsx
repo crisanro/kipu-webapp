@@ -50,6 +50,7 @@ const fmt = (n: any) => parseFloat(String(n ?? 0)).toFixed(2);
 
 const TIPO_COLOR: Record<string, { color: string; bg: string }> = {
   FAC: { color: "var(--kipu-muted)", bg: "color-mix(in srgb, var(--kipu-muted) 10%, transparent)" },
+  NVE: { color: "var(--kipu-muted)", bg: "color-mix(in srgb, var(--kipu-muted) 10%, transparent)" },
   LIQ: { color: "#22d3ee", bg: "color-mix(in srgb, #22d3ee 10%, transparent)" },
   NCR: { color: "#c084fc", bg: "color-mix(in srgb, #c084fc 10%, transparent)" },
   NDB: { color: "#fb923c", bg: "color-mix(in srgb, #fb923c 10%, transparent)" },

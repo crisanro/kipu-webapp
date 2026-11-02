@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { r2 } from "@/lib/dinero";
 import { Plus, Trash2, AlertTriangle, Info } from "lucide-react";
 
 // ── Tipos ──────────────────────────────────────────────────────────────────────
@@ -36,7 +37,6 @@ const LIMITE_EFECTIVO = 500;
 const COD_EFECTIVO: FormaPagoCode = "01";
 const COD_DEFAULT_FINANCIERO: FormaPagoCode = "20"; // fallback cuando se bloquea efectivo
 
-const r2  = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 const fmt = (n: number) => r2(n).toFixed(2);
 const genId = () => Math.random().toString(36).slice(2);
 

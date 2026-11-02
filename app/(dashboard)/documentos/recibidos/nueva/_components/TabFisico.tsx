@@ -165,7 +165,7 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
       formData.append("numero_doc",             numeroDoc.trim());
       formData.append("fecha_emision",          fechaEmision);
       formData.append("deducible_renta",        String(esRet ? false : deducibleRenta));
-      formData.append("credito_tributario_iva", String(esRet ? lineasRet.some(l => l.tipo === "2") : creditoTributarioIva));
+      formData.append("credito_tributario_iva", String(esRet ? lineasRet.some(l => l.tipo === "2") : tipoDoc === "NVE" ? false : creditoTributarioIva));
       if (notas) formData.append("notas", notas);
 
       if (esRet) {
@@ -174,6 +174,8 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
         formData.append("tarifa_iva",    "0");
         formData.append("valor_iva",     "0");
         formData.append("importe_total", fmt(totalRetenido));
+        // Sin las líneas el backend no sabe cuánto es IVA (casillero 609) y cuánto renta
+        formData.append("lineas_ret",    JSON.stringify(lineasRet));
       } else {
         formData.append("subtotal_0",    subtotal0    || "0");
         formData.append("subtotal_iva",  subtotalIva  || "0");
@@ -202,8 +204,8 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
       {/* Tipo */}
       <div>
         <label className="block text-xs font-medium mb-2" style={{ color: "var(--kipu-subtle)" }}>Tipo de documento</label>
-        <div className="grid grid-cols-4 gap-1.5">
-          {["FAC","NCR","NDB","RET"].map(tipo => {
+        <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5">
+          {["FAC","NVE","NCR","NDB","RET"].map(tipo => {
             const isSelected = tipoDoc === tipo;
             return (
               <button
@@ -225,7 +227,7 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
               >
                 <span className="block">{tipo}</span>
                 <span className="block text-[9px] font-normal mt-0.5 opacity-70">
-                  {tipo === "FAC" ? "Factura" : tipo === "NCR" ? "Nota Crédito" : tipo === "NDB" ? "Nota Débito" : "Retención"}
+                  {tipo === "FAC" ? "Factura" : tipo === "NVE" ? "Nota de venta" : tipo === "NCR" ? "Nota Crédito" : tipo === "NDB" ? "Nota Débito" : "Retención"}
                 </span>
               </button>
             );
@@ -331,7 +333,13 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
           }}
         >
           <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--kipu-subtle)" }}>Totales</h2>
-          <div className="grid grid-cols-2 gap-3">
+          {tipoDoc === "NVE" && (
+            <p className="text-[11px]" style={{ color: "var(--kipu-subtle)" }}>
+              Las notas de venta de negocios populares (RIMPE) no desglosan IVA: ingresa solo el total.
+              Se declaran en el casillero 508 del 104, sin crédito tributario.
+            </p>
+          )}
+          <div className="grid grid-cols-2 gap-3" style={{ display: tipoDoc === "NVE" ? "none" : undefined }}>
             <div>
               <label className="block text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>Subtotal 0%</label>
               <input
@@ -591,7 +599,7 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
               />
             </button>
           </div>
-          {parseFloat(valorIva) > 0 && (
+          {parseFloat(valorIva) > 0 && tipoDoc !== "NVE" && (
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm" style={{ color: "var(--kipu-text)" }}>Crédito tributario IVA</p>
@@ -754,7 +762,7 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
             Guardando...
           </>
         ) : (
-          `Registrar ${tipoDoc === "RET" ? `Retención · $${fmt(totalRetenido)}` : tipoDoc === "FAC" ? "Factura" : tipoDoc === "NCR" ? "Nota de Crédito" : "Nota de Débito"}${tipoDoc !== "RET" && importeTotal ? ` · $${fmt(importeTotal)}` : ""}`
+          `Registrar ${tipoDoc === "RET" ? `Retención · $${fmt(totalRetenido)}` : tipoDoc === "FAC" ? "Factura" : tipoDoc === "NVE" ? "Nota de venta" : tipoDoc === "NCR" ? "Nota de Crédito" : "Nota de Débito"}${tipoDoc !== "RET" && importeTotal ? ` · $${fmt(importeTotal)}` : ""}`
         )}
       </button>
     </div>

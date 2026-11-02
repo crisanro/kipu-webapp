@@ -31,7 +31,8 @@ interface RetEnRecibida {
   razon_agente:  string;
   impuestos:     {
     codigo_porcentaje: string;
-    tarifa:            string;
+    tarifa?:           string;
+    porcentaje?:       number;   // lo que envía el backend
     base_imponible:    number;
     valor:             number;
     aplica_credito:    boolean;
@@ -459,7 +460,7 @@ export default function SeccionRetenciones({
                             {ret.impuestos.map((imp, i) => (
                               <div key={i} className="flex items-center justify-between text-[10px]">
                                 <span style={{ color: "var(--kipu-subtle)" }}>
-                                  {imp.tarifa}% · Base ${fmt(imp.base_imponible)}
+                                  {imp.porcentaje ?? imp.tarifa}% · Base ${fmt(imp.base_imponible)}
                                   {imp.aplica_credito && (
                                     <span className="ml-1 font-medium" style={{ color: "var(--kipu-success)" }}>
                                       · crédito

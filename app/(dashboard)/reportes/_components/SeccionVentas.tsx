@@ -89,6 +89,9 @@ export default function SeccionVentas({ desglose, casilleros }: Props) {
     if (tarifa === 5) {
       return { brutoNum: "425", netoNum: "435", ivaNum: "445" };
     }
+    if (tarifa === 8) {
+      return { brutoNum: "410", netoNum: "420", ivaNum: "430" };   // igual que el backend
+    }
     return { brutoNum: "401", netoNum: "411", ivaNum: "421" };
   };
 
@@ -208,6 +211,24 @@ export default function SeccionVentas({ desglose, casilleros }: Props) {
                   label="Valor Neto"
                   value={tarifa0.neto}
                 />
+              </div>
+            </div>
+          )}
+
+          {/* Exportación de servicios: ventas 0% a clientes del exterior */}
+          {(casilleros["408"] ?? 0) > 0 && (
+            <div className="space-y-2 pt-2" style={{ borderTop: "1px solid var(--kipu-border)" }}>
+              <div>
+                <span className="text-xs font-semibold" style={{ color: "var(--kipu-text)" }}>
+                  Exportaciones de servicios
+                </span>
+                <p className="text-[10px]" style={{ color: "var(--kipu-subtle)" }}>
+                  Facturas al 0% a clientes con identificación del exterior. Dan derecho a crédito tributario.
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <CeldaCasillero num="408" label="Valor Bruto" value={casilleros["408"] ?? 0} />
+                <CeldaCasillero num="418" label="Valor Neto"  value={casilleros["418"] ?? 0} />
               </div>
             </div>
           )}

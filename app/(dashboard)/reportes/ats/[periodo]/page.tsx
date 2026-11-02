@@ -4,7 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import api from "@/lib/api";
 import {
   ArrowLeft, RefreshCw, AlertTriangle,
-  FileText, ChevronDown, ChevronUp,
+  FileText, ChevronDown, ChevronUp, Download, Info,
 } from "lucide-react";
 
 import PreguntasSRI        from "../../_components/PreguntasSRI";
@@ -145,8 +145,10 @@ export default function ReporteATSPage() {
   const periodo = params.periodo as string;
 
   const [data,        setData]        = useState<any>(null);
+  const [decl,        setDecl]        = useState<any>(null);
   const [loading,     setLoading]     = useState(true);
   const [regenerando, setRegenerando] = useState(false);
+  const [descargando, setDescargando] = useState(false);
   const [error,       setError]       = useState("");
 
   const periodoFmt = (() => {
@@ -165,6 +167,15 @@ export default function ReporteATSPage() {
       const url = `/api/v1/app/declaraciones/ats?periodo=${periodo}${regen ? "&regenerar=true" : ""}`;
       const res = await api.get(url);
       setData(res.data);
+
+      // Estado real de la declaración (antes "Declarado" = "ya se abrió una vez")
+      try {
+        const [a, m] = periodo.split("-");
+        const resDecl = await api.get(`/api/v1/app/declaraciones/periodo/${a}/${parseInt(m)}?tipo=ATS`);
+        setDecl(resDecl.data.data ?? null);
+      } catch {
+        setDecl(null);
+      }
     } catch (e: any) {
       setError(e?.response?.data?.detail ?? "Error al cargar el ATS.");
     } finally {
@@ -174,6 +185,27 @@ export default function ReporteATSPage() {
   }, [periodo]);
 
   useEffect(() => { cargar(); }, [cargar]);
+
+  // Genera el XML con los datos actuales y lo descarga (zip para subir al SRI)
+  const descargarATS = async () => {
+    setDescargando(true);
+    setError("");
+    try {
+      const res = await api.post(`/api/v1/app/declaraciones/ats/generar?periodo=${periodo}`);
+      const url = res.data?.download_url;
+      if (!url) throw new Error("sin url");
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = res.data?.nombre_zip ?? `ATS-${periodo}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    } catch (e: any) {
+      setError(e?.response?.data?.detail ?? "No se pudo generar el archivo del ATS.");
+    } finally {
+      setDescargando(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -207,8 +239,9 @@ export default function ReporteATSPage() {
   }
 
   const reporte      = data?.data;
-  const cached       = data?.cached   ?? false;
-  const enCurso      = data?.en_curso ?? false;
+  const esDemo       = data?.demo     ?? false;
+  const enCurso      = decl?.en_curso ?? data?.en_curso ?? false;
+  const declarado    = decl?.declarado ?? false;
   const totalEmit    = data?.total_doc_emitidos  ?? 0;
   const totalRecib   = data?.total_doc_recibidos ?? 0;
   const generadoAt   = data?.generado_at;
@@ -257,7 +290,7 @@ export default function ReporteATSPage() {
     ...r,
     base_iva_nz:  `$${fmt(r.base_iva_nz)}`,
     iva_credito:  `$${fmt(r.iva_credito)}`,
-    fuente:       r.fuente === "FISICO" ? "📄 Físico" : "🔵 XML",
+    fuente:       r.fuente === "FISICO" ? "📄 Físico" : r.fuente === "EMITIDA" ? "🧾 Liquidación emitida" : "🔵 XML",
   }));
 
   return (
@@ -301,12 +334,12 @@ export default function ReporteATSPage() {
               <h1 className="text-xl font-bold capitalize" style={{ color: "var(--kipu-text)" }}>{periodoFmt}</h1>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
-              {enCurso ? (
-                <EstadoBadge estado="EN_CURSO" size="sm" />
-              ) : cached ? (
-                <EstadoBadge estado="DECLARADO" size="sm" />
-              ) : (
-                <EstadoBadge estado="PENDIENTE" size="sm" />
+              {!esDemo && (
+                <EstadoBadge
+                  estado={declarado ? "DECLARADO" : enCurso ? "EN_CURSO" : decl?.estado ?? "PENDIENTE"}
+                  diasRestantes={declarado || enCurso ? null : decl?.dias_restantes}
+                  size="sm"
+                />
               )}
               {enCurso && (
                 <span className="text-[10px]" style={{ color: "var(--kipu-warning)" }}>
@@ -344,8 +377,44 @@ export default function ReporteATSPage() {
             )}
             {regenerando ? "Generando..." : "Regenerar"}
           </button>
+          {!esDemo && !enCurso && (
+            <button
+              type="button"
+              onClick={descargarATS}
+              disabled={descargando}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-colors disabled:opacity-40"
+              style={{ background: "var(--kipu-accent)", color: "#FFFFFF" }}
+            >
+              <Download size={13} />
+              {descargando ? "Generando..." : "Descargar ATS (.zip)"}
+            </button>
+          )}
         </div>
       </div>
+
+      {esDemo && (
+        <div
+          className="flex items-start gap-3 rounded-xl px-4 py-3"
+          style={{
+            background: "color-mix(in srgb, var(--kipu-accent) 10%, transparent)",
+            border: "1px solid color-mix(in srgb, var(--kipu-accent) 20%, transparent)",
+          }}
+        >
+          <Info size={15} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-accent)" }} />
+          <p className="text-xs" style={{ color: "var(--kipu-muted)" }}>
+            <span className="font-semibold" style={{ color: "var(--kipu-text)" }}>Estos son datos de ejemplo. </span>
+            {data?.motivo === "no_obligado"
+              ? "El ATS lo presentan los obligados a llevar contabilidad y las sociedades; según tu configuración no te corresponde."
+              : "Suscríbete para ver tu ATS calculado con tus comprobantes reales y descargar el archivo para el SRI."}
+          </p>
+        </div>
+      )}
+
+      {!esDemo && !enCurso && (
+        <p className="text-[11px]" style={{ color: "var(--kipu-subtle)" }}>
+          Antes de presentarlo, valida el archivo en el DIMM Anexos del SRI. Si te marca algún error, avísanos.
+        </p>
+      )}
 
       {error && (
         <div

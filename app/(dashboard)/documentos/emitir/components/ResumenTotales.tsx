@@ -1,5 +1,6 @@
 "use client";
 import { AlertTriangle } from "lucide-react";
+import { r2 } from "@/lib/dinero";
 import Link from "next/link";
 
 interface Totales {
@@ -24,7 +25,6 @@ interface Props {
   onEmitir:          () => void;
 }
 
-const r2  = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 const fmt = (n: number) => r2(n).toFixed(2);
 
 export default function ResumenTotales({

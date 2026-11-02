@@ -1,6 +1,7 @@
 "use client";
 
 import { CheckCircle2, Clock } from "lucide-react";
+import { hoyEC } from "@/lib/fecha";
 
 // ── Tipos ──────────────────────────────────────────────────────────────────────
 export interface DatosCobro {
@@ -15,13 +16,13 @@ interface Props {
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
-const hoy = () => new Date().toISOString().split("T")[0];
-
-export const COBRO_INICIAL: DatosCobro = {
+// Función y no constante: una pestaña abierta desde ayer debe usar la fecha de
+// hoy, y en hora de Ecuador (toISOString es UTC: después de las 19:00 da mañana).
+export const cobroInicial = (): DatosCobro => ({
   estado:     "PAGADO",
-  fecha_pago: hoy(),
+  fecha_pago: hoyEC(),
   referencia: "",
-};
+});
 
 // ── Componente ─────────────────────────────────────────────────────────────────
 export default function EstadoCobro({ cobro, onChange }: Props) {
@@ -31,7 +32,7 @@ export default function EstadoCobro({ cobro, onChange }: Props) {
     onChange({
       ...cobro,
       estado,
-      fecha_pago: estado === "PAGADO" ? (cobro.fecha_pago || hoy()) : "",
+      fecha_pago: estado === "PAGADO" ? (cobro.fecha_pago || hoyEC()) : "",
       referencia: estado === "PENDIENTE" ? "" : cobro.referencia,
     });
   };

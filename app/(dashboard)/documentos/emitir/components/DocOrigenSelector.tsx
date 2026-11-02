@@ -10,6 +10,8 @@ export interface DocOrigenKipu {
   cod_doc:        string;
   fecha_emision:  string;
   importe_total:  number;
+  subtotal_base?:   number;   // solo recibidos: base sin IVA (para retenciones)
+  valor_iva_total?: number;
   razon_social:   string;
   identificacion: string;
   estado_sri:     string;
@@ -173,6 +175,8 @@ export default function DocOrigenSelector({
           cod_doc:        d.cod_doc     || "01",
           fecha_emision: d.fecha_emision,
           importe_total: d.importe_total,
+          subtotal_base:   d.subtotal_base,
+          valor_iva_total: d.valor_iva_total,
           razon_social:   d.razon_social || d.razon_social_proveedor || "",
           identificacion: d.identificacion || d.ruc_proveedor || "",
           estado_sri:     d.estado_sri || "",

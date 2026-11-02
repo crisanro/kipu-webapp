@@ -85,7 +85,7 @@ export default function ReporteIVAPage() {
 
   useEffect(() => { cargar(); }, [cargar]);
 
-  const guardarCamposManuales = async (valores: Record<string, number>) => {
+  const guardarCamposManuales = async (valores: Record<string, number | null>) => {
     await api.patch(
       `/api/v1/app/declaraciones/iva/campos-manuales?periodo=${periodo}`,
       valores
@@ -234,7 +234,14 @@ export default function ReporteIVAPage() {
         {!esDemo && (
           <button
             type="button"
-            onClick={() => cargar(true)}
+            onClick={() => {
+              if (declarado && !window.confirm(
+                "Este periodo ya está declarado. Regenerar reemplaza los valores guardados y puede " +
+                "cambiar el saldo a favor de los meses siguientes. Hazlo solo si vas a presentar una " +
+                "declaración sustitutiva. ¿Continuar?"
+              )) return;
+              cargar(true);
+            }}
             disabled={regenerando}
             className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs transition-colors disabled:opacity-40 shrink-0 font-medium"
             style={{
