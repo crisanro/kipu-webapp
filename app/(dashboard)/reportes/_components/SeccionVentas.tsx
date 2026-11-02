@@ -233,6 +233,24 @@ export default function SeccionVentas({ desglose, casilleros }: Props) {
             </div>
           )}
 
+          {/* No objeto / exentas: se informan aparte, no suman al total 409 */}
+          {(casilleros["431"] ?? 0) > 0 && (
+            <div className="space-y-2 pt-2" style={{ borderTop: "1px solid var(--kipu-border)" }}>
+              <div>
+                <span className="text-xs font-semibold" style={{ color: "var(--kipu-text)" }}>
+                  Ventas no objeto o exentas de IVA
+                </span>
+                <p className="text-[10px]" style={{ color: "var(--kipu-subtle)" }}>
+                  Se informan aparte: no suman al total de ventas ni al factor de proporcionalidad.
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <CeldaCasillero num="431" label="Valor Bruto" value={casilleros["431"] ?? 0} />
+                <CeldaCasillero num="441" label="Valor Neto"  value={casilleros["441"] ?? 0} />
+              </div>
+            </div>
+          )}
+
           {/* Totales Consolidados de la Sección */}
           <div className="pt-3" style={{ borderTop: "1px solid var(--kipu-border)" }}>
             <p className="text-xs font-semibold uppercase tracking-wider mb-2.5" style={{ color: "var(--kipu-subtle)" }}>

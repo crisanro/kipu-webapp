@@ -302,6 +302,7 @@ export default function DetalleRecibidoPage() {
   const [doc,      setDoc]      = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [editando, setEditando] = useState(false);
+  const [guardandoAf, setGuardandoAf] = useState(false);
 
   const cargar = useCallback(async () => {
     setLoading(true);
@@ -466,6 +467,42 @@ export default function DetalleRecibidoPage() {
             <p className="text-base font-bold" style={{ color: "var(--kipu-accent)" }}>${fmt(totalCredito)}</p>
           </div>
         </div>
+
+        {/* Activo fijo: computador, vehículo, maquinaria… (104: 501/511/521) */}
+        {["FAC", "NDB", "NCR"].includes(doc.tipo_doc) && (
+          <div className="mt-3 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm" style={{ color: "var(--kipu-text)" }}>Es un activo fijo</p>
+              <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+                Equipos, vehículos o maquinaria que usarás más de un año. Se declara en el casillero 501.
+              </p>
+            </div>
+            <button
+              type="button"
+              aria-pressed={!!doc.datos?.activo_fijo}
+              disabled={guardandoAf}
+              onClick={async () => {
+                setGuardandoAf(true);
+                try {
+                  await api.patch(`/api/v1/app/recibidos/${doc.id}`, { activo_fijo: !doc.datos?.activo_fijo });
+                  await cargar();
+                } catch (e) { console.error(e); }
+                finally { setGuardandoAf(false); }
+              }}
+              className="w-10 h-5 rounded-full transition-colors relative shrink-0 disabled:opacity-50"
+              style={{
+                background: doc.datos?.activo_fijo
+                  ? "var(--kipu-accent)"
+                  : "color-mix(in srgb, var(--kipu-text) 15%, transparent)",
+              }}
+            >
+              <span
+                className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all"
+                style={{ left: doc.datos?.activo_fijo ? "20px" : "2px" }}
+              />
+            </button>
+          </div>
+        )}
 
         {/* Ítems */}
         {(doc.items_detalle ?? []).length > 0 && (

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { TIPOS_IVA } from "@/lib/iva";
 import { r2 } from "@/lib/dinero";
 import { useRouter } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
@@ -63,13 +64,15 @@ function calcTotales(items: Item[], incluirPropina: boolean) {
       acc.descuento   = r2(acc.descuento + c.descuento);
       acc.iva         = r2(acc.iva + c.iva);
       acc.subtotal_0  = r2(acc.subtotal_0  + (item.tipo_iva === "0"  ? c.base : 0));
+      acc.subtotal_no_objeto = r2(acc.subtotal_no_objeto + (item.tipo_iva === "NA" ? c.base : 0));
+      acc.subtotal_exento    = r2(acc.subtotal_exento    + (item.tipo_iva === "EX" ? c.base : 0));
       acc.subtotal_5  = r2(acc.subtotal_5  + (item.tipo_iva === "5"  ? c.base : 0));
       acc.subtotal_15 = r2(acc.subtotal_15 + (item.tipo_iva === "15" ? c.base : 0));
       acc.iva_5       = r2(acc.iva_5  + (item.tipo_iva === "5"  ? c.iva : 0));
       acc.iva_15      = r2(acc.iva_15 + (item.tipo_iva === "15" ? c.iva : 0));
       return acc;
     },
-    { subtotal: 0, descuento: 0, iva: 0, subtotal_0: 0, subtotal_5: 0, subtotal_15: 0, iva_5: 0, iva_15: 0 }
+    { subtotal: 0, descuento: 0, iva: 0, subtotal_0: 0, subtotal_no_objeto: 0, subtotal_exento: 0, subtotal_5: 0, subtotal_15: 0, iva_5: 0, iva_15: 0 }
   );
   const propina = incluirPropina ? r2(base.subtotal * 0.10) : 0;
   const total   = r2(base.subtotal + base.iva + propina);
@@ -161,7 +164,7 @@ export default function NuevaFacturaPage() {
           precio:          parseFloat(i.precio)    || 0,
           descuento:       parseFloat(i.descuento) || 0,
           tipo_descuento: (i.tipo_descuento === "%" ? "%" : "$") as "$" | "%",
-          tipo_iva:        ["0","5","15"].includes(String(i.tipo_iva)) ? String(i.tipo_iva) : "15",
+          tipo_iva:        TIPOS_IVA.includes(String(i.tipo_iva)) ? String(i.tipo_iva) : "15",
           unidad:          String(i.unidad ?? "UNIDAD"),
         })));
       }

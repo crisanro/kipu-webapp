@@ -95,7 +95,7 @@ const LABELS: Record<string, Record<string, string>> = {
 const REQUIERE_MANUAL: Record<string, string> = {
   comercio_exterior:             "Tus exportaciones de servicios ya están en 408/418. Si además tuviste importaciones o activos fijos, complétalos manualmente.",
   ventas_activos_fijos:          "Completa los casilleros 402/412/422 manualmente.",
-  compras_activos_fijos:         "Completa los casilleros 501/511/521 manualmente.",
+  compras_activos_fijos:         "Ya están en 501/511/521 las compras que marcaste como activo fijo. Revisa que no falte ninguna.",
   importaciones:                 "Completa los casilleros 504/514/524 manualmente.",
   materiales_construccion:       "Consulta con tu contador para el tratamiento correcto.",
   requiere_otros_ingresos_rimpe: "Deberás ingresar tus otros ingresos (arrendamientos, relación de dependencia) manualmente en el portal del SRI.",

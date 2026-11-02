@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, lazy, Suspense } from "react";
+import { etiquetaIva } from "@/lib/iva";
 import api from "@/lib/api";
 import { usePermiso } from "@/hooks/usePermiso";
 import SinAcceso from "@/components/SinAcceso";
@@ -347,7 +348,7 @@ export default function ProductosPage() {
                   <div className="flex-1 md:col-span-4 min-w-0">
                     <p className="text-sm truncate" style={{ color: "var(--kipu-text)" }}>{p.descripcion}</p>
                     <p className="text-xs md:hidden" style={{ color: "var(--kipu-subtle)" }}>
-                      {p.codigo || "Sin código"} · IVA {p.tipo_iva}% · {p.unidad}
+                      {p.codigo || "Sin código"} · IVA {etiquetaIva(p.tipo_iva)} · {p.unidad}
                       {p.stock !== -1 && ` · Stock: ${p.stock}`}
                     </p>
                   </div>
@@ -355,7 +356,7 @@ export default function ProductosPage() {
                     ${fmt(p.precio)}
                   </span>
                   <span className="hidden md:block col-span-1 text-xs text-center" style={{ color: "var(--kipu-muted)" }}>
-                    {p.tipo_iva}%
+                    {etiquetaIva(p.tipo_iva)}
                   </span>
                   <span className="hidden md:block col-span-1 text-xs text-center font-medium">
                     {p.stock === -1 ? (
@@ -597,6 +598,8 @@ export default function ProductosPage() {
                     <option value="0">0%</option>
                     <option value="5">5%</option>
                     <option value="15">15%</option>
+                    <option value="NA">No objeto de IVA</option>
+                    <option value="EX">Exento de IVA</option>
                   </select>
                 </div>
                 <div>

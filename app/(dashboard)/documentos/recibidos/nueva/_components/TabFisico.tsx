@@ -63,6 +63,7 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
   const [notas,                 setNotas]                 = useState("");
   const [deducibleRenta,        setDeducibleRenta]        = useState(true);
   const [creditoTributarioIva, setCreditoTributarioIva]  = useState(false);
+  const [activoFijo,           setActivoFijo]            = useState(false);
 
   // Campos FAC / NCR / NDB
   const [subtotal0,    setSubtotal0]    = useState("");
@@ -139,7 +140,7 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
     setSubtotal0(""); setSubtotalIva(""); setTarifaIva("15");
     setValorIva(""); setImporteTotal("");
     setLineasRet([{ tipo: "1", base_imponible: "", porcentaje: "", valor_retenido: "" }]);
-    setImagenFile(null); setImagenPreview(null); setError("");
+    setImagenFile(null); setImagenPreview(null); setError(""); setActivoFijo(false);
   };
 
   const guardar = async () => {
@@ -167,6 +168,7 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
       formData.append("deducible_renta",        String(esRet ? false : deducibleRenta));
       formData.append("credito_tributario_iva", String(esRet ? lineasRet.some(l => l.tipo === "2") : tipoDoc === "NVE" ? false : creditoTributarioIva));
       if (notas) formData.append("notas", notas);
+      if (activoFijo && !esRet && tipoDoc !== "NVE") formData.append("activo_fijo", "true");
 
       if (esRet) {
         formData.append("subtotal_0",    "0");
@@ -618,6 +620,30 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
                 <span
                   className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all"
                   style={{ left: creditoTributarioIva ? "20px" : "2px" }}
+                />
+              </button>
+            </div>
+          )}
+          {tipoDoc !== "NVE" && (
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm" style={{ color: "var(--kipu-text)" }}>Es un activo fijo</p>
+                <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Equipos, vehículos o maquinaria (casillero 501)</p>
+              </div>
+              <button
+                type="button"
+                aria-pressed={activoFijo}
+                onClick={() => setActivoFijo(!activoFijo)}
+                className="w-10 h-5 rounded-full transition-colors relative"
+                style={{
+                  background: activoFijo
+                    ? "var(--kipu-accent)"
+                    : "color-mix(in srgb, var(--kipu-text) 15%, transparent)",
+                }}
+              >
+                <span
+                  className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all"
+                  style={{ left: activoFijo ? "20px" : "2px" }}
                 />
               </button>
             </div>

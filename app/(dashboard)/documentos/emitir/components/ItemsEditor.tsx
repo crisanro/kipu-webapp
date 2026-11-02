@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useCallback, useState, useEffect, lazy, Suspense } from "react";
+import { etiquetaIva } from "@/lib/iva";
 import { r2 } from "@/lib/dinero";
 import api from "@/lib/api";
 import { Search, Plus, Trash2, Camera } from "lucide-react";
@@ -39,7 +40,8 @@ interface Props {
 // ── Helpers ────────────────────────────────────────────────────────────────────
 const fmt = (n: number) => r2(n).toFixed(2);
 
-const IVA_RATES: Record<string, number> = { "0": 0, "5": 0.05, "8": 0.08, "15": 0.15 };
+// NA = no objeto de IVA, EX = exento: sin IVA como el 0%, pero se declaran aparte (431/531/532)
+const IVA_RATES: Record<string, number> = { "0": 0, "5": 0.05, "8": 0.08, "15": 0.15, "NA": 0, "EX": 0 };
 
 export function calcItem(item: Item) {
   const subtotal  = r2(item.cantidad * item.precio);
@@ -356,7 +358,7 @@ export default function ItemsEditor({ items, onChange }: Props) {
                     {p.descripcion}
                   </p>
                   <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
-                    {p.codigo || p.unidad} · IVA {p.tipo_iva}%
+                    {p.codigo || p.unidad} · IVA {etiquetaIva(p.tipo_iva)}
                   </p>
                 </div>
                 <span className="text-sm font-medium shrink-0" style={{ color: "var(--kipu-accent)" }}>
@@ -540,6 +542,8 @@ export default function ItemsEditor({ items, onChange }: Props) {
                     <option value="0">0%</option>
                     <option value="5">5%</option>
                     <option value="15">15%</option>
+                    <option value="NA" title="No objeto de IVA">No obj.</option>
+                    <option value="EX" title="Exento de IVA">Exento</option>
                   </select>
                 </div>
 

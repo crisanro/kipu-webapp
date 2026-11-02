@@ -8,6 +8,8 @@ interface Totales {
   descuento:   number;
   iva:         number;
   subtotal_0:  number;
+  subtotal_no_objeto?: number;
+  subtotal_exento?:    number;
   subtotal_5:  number;
   subtotal_15: number;
   iva_5:       number;
@@ -49,6 +51,16 @@ export default function ResumenTotales({
         {totales.subtotal_0 > 0 && (
           <div className="flex justify-between" style={{ color: "var(--kipu-muted)" }}>
             <span>Subtotal 0%</span><span>${fmt(totales.subtotal_0)}</span>
+          </div>
+        )}
+        {(totales.subtotal_no_objeto ?? 0) > 0 && (
+          <div className="flex justify-between" style={{ color: "var(--kipu-muted)" }}>
+            <span>Subtotal no objeto de IVA</span><span>${fmt(totales.subtotal_no_objeto ?? 0)}</span>
+          </div>
+        )}
+        {(totales.subtotal_exento ?? 0) > 0 && (
+          <div className="flex justify-between" style={{ color: "var(--kipu-muted)" }}>
+            <span>Subtotal exento de IVA</span><span>${fmt(totales.subtotal_exento ?? 0)}</span>
           </div>
         )}
         {totales.subtotal_5 > 0 && (

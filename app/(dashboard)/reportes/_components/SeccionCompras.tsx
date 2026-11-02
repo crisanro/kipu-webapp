@@ -100,7 +100,9 @@ export default function SeccionCompras({ desglose, casilleros }: Props) {
   };
 
   const tarifasNZ = desglose.filter(d => d.tarifa > 0);
-  const tieneCC   = (casilleros["520"] ?? 0) > 0 || (casilleros["560"] ?? 0) > 0;
+  // Crédito antes del factor de proporcionalidad: 520 + 521 (activos fijos) + 560
+  const creditoBruto = (casilleros["520"] ?? 0) + (casilleros["521"] ?? 0) + (casilleros["560"] ?? 0);
+  const tieneCC   = creditoBruto > 0;
 
   return (
     <div
@@ -141,7 +143,7 @@ export default function SeccionCompras({ desglose, casilleros }: Props) {
           <div className="text-right hidden sm:block">
             <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Crédito tributario IVA</p>
             <p className="text-sm font-bold" style={{ color: "var(--kipu-success)" }}>
-              ${fmt((casilleros["520"] ?? 0) + (casilleros["560"] ?? 0))}
+              ${fmt(creditoBruto)}
             </p>
           </div>
           {expandido ? (
@@ -257,6 +259,39 @@ export default function SeccionCompras({ desglose, casilleros }: Props) {
             </div>
           )}
 
+          {/* Activos fijos con crédito tributario */}
+          {(casilleros["501"] ?? 0) > 0 && (
+            <div className="space-y-2 pt-2" style={{ borderTop: "1px solid var(--kipu-border)" }}>
+              <span className="text-xs font-semibold" style={{ color: "var(--kipu-text)" }}>
+                Activos fijos (con derecho a crédito tributario)
+              </span>
+              <div className="grid grid-cols-3 gap-2">
+                <CeldaCasillero num="501" label="Valor Bruto"        value={casilleros["501"] ?? 0} />
+                <CeldaCasillero num="511" label="Valor Neto"         value={casilleros["511"] ?? 0} />
+                <CeldaCasillero num="521" label="Crédito Tributario" value={casilleros["521"] ?? 0} highlight />
+              </div>
+            </div>
+          )}
+
+          {/* No objeto / exentas: se informan aparte, no suman al total 509 */}
+          {((casilleros["531"] ?? 0) > 0 || (casilleros["532"] ?? 0) > 0) && (
+            <div className="space-y-2 pt-2" style={{ borderTop: "1px solid var(--kipu-border)" }}>
+              <span className="text-xs font-semibold" style={{ color: "var(--kipu-text)" }}>
+                Adquisiciones no objeto o exentas de IVA
+              </span>
+              <div className="grid grid-cols-2 gap-2">
+                {(casilleros["531"] ?? 0) > 0 && <>
+                  <CeldaCasillero num="531" label="No objeto · Bruto" value={casilleros["531"] ?? 0} dimmed />
+                  <CeldaCasillero num="541" label="No objeto · Neto"  value={casilleros["541"] ?? 0} dimmed />
+                </>}
+                {(casilleros["532"] ?? 0) > 0 && <>
+                  <CeldaCasillero num="532" label="Exentas · Bruto" value={casilleros["532"] ?? 0} dimmed />
+                  <CeldaCasillero num="542" label="Exentas · Neto"  value={casilleros["542"] ?? 0} dimmed />
+                </>}
+              </div>
+            </div>
+          )}
+
           {/* Compras a negocios populares RIMPE (notas de venta) */}
           {(casilleros["508"] ?? 0) > 0 && (
             <div className="space-y-2 pt-2" style={{ borderTop: "1px solid var(--kipu-border)" }}>
@@ -314,11 +349,11 @@ export default function SeccionCompras({ desglose, casilleros }: Props) {
                     Crédito tributario IVA aplicable
                   </p>
                   <p className="text-[10px] mt-0.5" style={{ color: "var(--kipu-success)" }}>
-                    Casillero 520 / 560 · previo al factor de proporcionalidad
+                    Casilleros 520 + 521 + 560 · previo al factor de proporcionalidad
                   </p>
                 </div>
                 <p className="text-xl font-bold" style={{ color: "var(--kipu-success)" }}>
-                  ${fmt((casilleros["520"] ?? 0) + (casilleros["560"] ?? 0))}
+                  ${fmt(creditoBruto)}
                 </p>
               </div>
             </div>
