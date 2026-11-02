@@ -62,14 +62,16 @@ function calcTotalesNdb(motivos: Motivo[]) {
     const val = m.valor || 0;
     if (m.tipo_iva === "5") {
       subtotal_5 = r2(subtotal_5 + val);
-      iva_5 = r2(iva_5 + val * 0.05);
     } else if (m.tipo_iva === "15") {
       subtotal_15 = r2(subtotal_15 + val);
-      iva_15 = r2(iva_15 + val * 0.15);
     } else {
       subtotal_0 = r2(subtotal_0 + val);
     }
   });
+
+  // IVA sobre la base agrupada por tarifa, igual que el backend (no motivo por motivo)
+  iva_5  = r2(subtotal_5  * 0.05);
+  iva_15 = r2(subtotal_15 * 0.15);
 
   const subtotal  = r2(subtotal_0 + subtotal_5 + subtotal_15);
   const iva       = r2(iva_5 + iva_15);
@@ -234,9 +236,9 @@ export default function NuevaNdbPage() {
         const tarifa = m.tipo_iva || "0";
         if (!impuestosPorTarifa[tarifa]) impuestosPorTarifa[tarifa] = { base: 0, valor: 0 };
         impuestosPorTarifa[tarifa].base  = r2(impuestosPorTarifa[tarifa].base + (m.valor || 0));
-        const rate = parseFloat(tarifa) / 100;
-        impuestosPorTarifa[tarifa].valor = r2(impuestosPorTarifa[tarifa].valor + (m.valor || 0) * rate);
       });
+      // El backend recalcula el IVA sobre la base de cada tarifa; aquí igual
+      Object.entries(impuestosPorTarifa).forEach(([tarifa, d]) => { d.valor = r2(d.base * parseFloat(tarifa) / 100); });
 
       const impuestos = Object.entries(impuestosPorTarifa).map(([tarifa, datos]) => {
         const tarifaInfo = TARIFAS_IVA.find(t => t.value === tarifa) || TARIFAS_IVA[2];

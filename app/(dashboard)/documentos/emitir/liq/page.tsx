@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { errorIdentificacion } from "@/lib/identificacion";
 import { r2 } from "@/lib/dinero";
 import { useRouter } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
@@ -184,6 +185,10 @@ export default function NuevaLiqPage() {
     }
     if (proveedorNuevo && ["04", "07"].includes(proveedorNuevo.tipo_identificacion_sri)) {
       setError("La liquidación de compra no acepta RUC. Use cédula, pasaporte o identificación exterior."); return;
+    }
+    if (proveedorNuevo) {
+      const errId = errorIdentificacion(proveedorNuevo.tipo_identificacion_sri, proveedorNuevo.identificacion);
+      if (errId) { setError(`Proveedor: ${errId}`); return; }
     }
     if (!estabSelected || !ptoSelected) {
       setError("Configura el punto de emisión."); return;

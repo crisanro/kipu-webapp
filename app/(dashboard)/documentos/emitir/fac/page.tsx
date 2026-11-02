@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { errorIdentificacion } from "@/lib/identificacion";
 import { TIPOS_IVA } from "@/lib/iva";
 import { r2 } from "@/lib/dinero";
 import { useRouter } from "next/navigation";
@@ -229,6 +230,10 @@ export default function NuevaFacturaPage() {
     if (clienteNuevo && !clienteNuevo.razon_social.trim()) {
       setError("El nombre del cliente es obligatorio.");
       return;
+    }
+    if (clienteNuevo) {
+      const errId = errorIdentificacion(clienteNuevo.tipo_identificacion_sri, clienteNuevo.identificacion);
+      if (errId) { setError(`Cliente: ${errId}`); return; }
     }
     if (!estabSelected || !ptoSelected) {
       setError("Configura el establecimiento y punto de emisión.");
