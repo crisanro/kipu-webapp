@@ -11,8 +11,20 @@ services:
         NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET}
         NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID}
         NEXT_PUBLIC_FIREBASE_APP_ID: ${NEXT_PUBLIC_FIREBASE_APP_ID}
-    restart: unless-stopped
-    ports:
-      - "3002:3000"
+    # SIN "ports": Traefik llega por dokploy-network. El dominio es la única entrada.
+    restart: always
     environment:
       - NODE_ENV=production
+    deploy:
+      resources:
+        limits:
+          cpus: '0.75'
+          memory: 768M
+        reservations:
+          memory: 256M
+    networks:
+      - dokploy-network      # Para que Traefik la alcance con el dominio
+
+networks:
+  dokploy-network:
+    external: true
