@@ -9,6 +9,7 @@ import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
 import { CheckCircle2, AlertTriangle } from "lucide-react";
 import PuntoEmision from "../components/PuntoEmision";
+import { usePuntoEmision } from "../components/usePuntoEmision";
 import CamposAdicionales, { CampoAdicional } from "../components/CamposAdicionales";
 import ItemsEditor, { Item, calcItem, genId, EMPTY_ITEM } from "../components/ItemsEditor";
 import ResumenTotales from "../components/ResumenTotales";
@@ -46,13 +47,6 @@ const MOTIVOS = [
   "OTROS",
 ];
 
-interface Establecimiento {
-  codigo:            string;
-  nombre_comercial?: string;
-  direccion:         string;
-  puntos_emision:    { codigo: string; nombre?: string }[];
-}
-
 // ── Página ────────────────────────────────────────────────────────────────────
 export default function NuevaNcrPage() {
   const router       = useRouter();
@@ -78,11 +72,9 @@ export default function NuevaNcrPage() {
   const [items,               setItems]               = useState<Item[]>([{ _id: genId(), ...EMPTY_ITEM }]);
   const [camposAdicionales,   setCamposAdicionales]   = useState<CampoAdicional[]>([]);
 
-  // Establecimiento
-  const [establecimientos, setEstablecimientos] = useState<Establecimiento[]>([]);
-  const [estabSelected,    setEstabSelected]    = useState("");
-  const [ptoSelected,      setPtoSelected]      = useState("");
-  const [puntos,           setPuntos]           = useState<{ codigo: string; nombre?: string }[]>([]);
+  // Establecimiento y punto de emisión
+  const pe = usePuntoEmision(docOrigen?.tipo === "kipu" ? docOrigen.data.numero_doc : docOrigen?.tipo === "manual" ? docOrigen.data.numero : null);
+  const { estabSelected, ptoSelected } = pe;
 
   // UI
   const [submitting, setSubmitting] = useState(false);
@@ -94,27 +86,6 @@ export default function NuevaNcrPage() {
   const motivoFinal = motivo === "OTROS" && motivoPersonalizado.trim()
     ? motivoPersonalizado.trim().toUpperCase()
     : motivo;
-
-  // Cargar estructura
-  useEffect(() => {
-    const cargar = async () => {
-      try {
-        const cached = sessionStorage.getItem("kipu:estructura");
-        const estabs = cached
-          ? JSON.parse(cached)
-          : (await api.get("/api/v1/app/estructura")).data.data ?? [];
-        if (!cached) sessionStorage.setItem("kipu:estructura", JSON.stringify(estabs));
-        setEstablecimientos(estabs);
-        if (estabs.length > 0) {
-          setEstabSelected(estabs[0].codigo);
-          const ptos = estabs[0].puntos_emision ?? [];
-          setPuntos(ptos);
-          if (ptos.length > 0) setPtoSelected(ptos[0].codigo);
-        }
-      } catch (e) { console.error(e); }
-    };
-    cargar();
-  }, []);
 
   // Pre-cargar doc desde query param ?doc_id=xxx
   useEffect(() => {
@@ -157,24 +128,13 @@ export default function NuevaNcrPage() {
             unidad:         det.unidadMedida || "UNIDAD",
           })));
         }
-
-        // Pre-seleccionar mismo punto de emisión de la factura origen
-        const estab = d.datos?.infoTributaria?.estab;
-        const pto   = d.datos?.infoTributaria?.ptoEmi;
-        if (estab) setEstabSelected(estab);
-        if (pto)   setPtoSelected(pto);
       } catch (e) { console.error(e); }
     };
     cargar();
   }, [searchParams]);
 
-  const handleEstabChange = (codigo: string, ptos: { codigo: string; nombre?: string }[]) => {
-    setEstabSelected(codigo);
-    setPuntos(ptos);
-    setPtoSelected(ptos[0]?.codigo ?? "");
-  };
-
   const reset = () => {
+    pe.reiniciar();
     idempotencyKey.current = uuidv4();
     setResultado(null);
     setDocOrigen(null);
@@ -194,7 +154,7 @@ export default function NuevaNcrPage() {
     }
     if (!docOrigen) { setError("Selecciona el documento a modificar."); return; }
     if (!motivoFinal.trim()) { setError("Ingresa el motivo."); return; }
-    if (!estabSelected || !ptoSelected) { setError("Configura el punto de emisión."); return; }
+    if (!estabSelected || !ptoSelected) { setError("Elige el establecimiento y el punto de emisión."); return; }
     if (items.some(i => !i.descripcion?.trim())) { setError("Todos los ítems deben tener descripción."); return; }
     if (totales.total <= 0) { setError("El valor de modificación debe ser mayor a $0."); return; }
 
@@ -344,14 +304,7 @@ export default function NuevaNcrPage() {
 
           {/* Punto emisión móvil */}
           <div className="lg:hidden">
-            <PuntoEmision
-              establecimientos={establecimientos}
-              estabSelected={estabSelected}
-              ptoSelected={ptoSelected}
-              puntos={puntos}
-              onEstabChange={handleEstabChange}
-              onPtoChange={setPtoSelected}
-            />
+            <PuntoEmision {...pe} />
           </div>
 
           {/* Selector Documento Origen */}
@@ -467,16 +420,10 @@ export default function NuevaNcrPage() {
         {/* Panel lateral */}
         <div className="space-y-4">
           <div className="hidden lg:block">
-            <PuntoEmision
-              establecimientos={establecimientos}
-              estabSelected={estabSelected}
-              ptoSelected={ptoSelected}
-              puntos={puntos}
-              onEstabChange={handleEstabChange}
-              onPtoChange={setPtoSelected}
-            />
+            <PuntoEmision {...pe} />
           </div>
           <ResumenTotales
+            serie={pe.serie}
             totales={totales}
             submitting={submitting}
             error={error}

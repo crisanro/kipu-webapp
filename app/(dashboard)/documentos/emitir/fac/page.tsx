@@ -13,6 +13,7 @@ import { CheckCircle2, AlertTriangle } from "lucide-react";
 
 // ── Componentes ────────────────────────────────────────────────────────────────
 import PuntoEmision from "../components/PuntoEmision";
+import { usePuntoEmision } from "../components/usePuntoEmision";
 import ClienteSelector from "../components/ClienteSelector";
 import ItemsEditor, { Item, calcItem, genId, EMPTY_ITEM } from "../components/ItemsEditor";
 import PagosMixtos, { PagoItem, PAGO_INICIAL } from "../components/PagosMixtos";
@@ -35,13 +36,6 @@ interface ClienteNuevo {
   identificacion: string;
   razon_social: string;
   email: string;
-}
-
-interface Establecimiento {
-  codigo: string;
-  nombre_comercial?: string;
-  direccion: string;
-  puntos_emision: { codigo: string; nombre?: string }[];
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -107,10 +101,8 @@ export default function NuevaFacturaPage() {
   const [camposAdicionales, setCamposAdicionales] = useState<CampoAdicional[]>([]);
 
   // ── Estado establecimiento ──────────────────────────────────────────────────
-  const [establecimientos, setEstablecimientos] = useState<Establecimiento[]>([]);
-  const [estabSelected,    setEstabSelected]    = useState("");
-  const [ptoSelected,      setPtoSelected]      = useState("");
-  const [puntos,           setPuntos]           = useState<{ codigo: string; nombre?: string }[]>([]);
+  const pe = usePuntoEmision();
+  const { estabSelected, ptoSelected } = pe;
 
   // ── Estado Proforma ─────────────────────────────────────────────────────────
   const [proformaId, setProformaId] = useState<string | null>(null);
@@ -124,30 +116,6 @@ export default function NuevaFacturaPage() {
   const totales = calcTotales(items, propina);
 
   // ── Cargar estructura ────────────────────────────────────────────────────────
-  useEffect(() => {
-    const cargar = async () => {
-      try {
-        const aplicar = (estabs: Establecimiento[]) => {
-          setEstablecimientos(estabs);
-          if (estabs.length > 0) {
-            setEstabSelected(estabs[0].codigo);
-            const ptos = estabs[0].puntos_emision ?? [];
-            setPuntos(ptos);
-            if (ptos.length > 0) setPtoSelected(ptos[0].codigo);
-          }
-        };
-        const cached = sessionStorage.getItem("kipu:estructura");
-        if (cached) { aplicar(JSON.parse(cached)); return; }
-        const res    = await api.get("/api/v1/app/estructura");
-        const estabs = res.data.data ?? [];
-        sessionStorage.setItem("kipu:estructura", JSON.stringify(estabs));
-        aplicar(estabs);
-      } catch (e) {
-        console.error("Error cargando estructura", e);
-      }
-    };
-    cargar();
-  }, []);
 
   // ── Prefill / clonación ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -196,14 +164,10 @@ export default function NuevaFacturaPage() {
   }, []);
 
   // ── Handlers establecimiento ─────────────────────────────────────────────────
-  const handleEstabChange = (codigo: string, ptos: { codigo: string; nombre?: string }[]) => {
-    setEstabSelected(codigo);
-    setPuntos(ptos);
-    setPtoSelected(ptos[0]?.codigo ?? "");
-  };
 
   // ── Reset ────────────────────────────────────────────────────────────────────
   const reset = () => {
+    pe.reiniciar();
     idempotencyKey.current = uuidv4();
     setResultado(null);
     setClienteSelected(null);
@@ -236,7 +200,7 @@ export default function NuevaFacturaPage() {
       if (errId) { setError(`Cliente: ${errId}`); return; }
     }
     if (!estabSelected || !ptoSelected) {
-      setError("Configura el establecimiento y punto de emisión.");
+      setError("Elige el establecimiento y el punto de emisión.");
       return;
     }
     if (items.some(i => !i.descripcion?.trim())) {
@@ -465,14 +429,7 @@ export default function NuevaFacturaPage() {
 
           {/* Punto de emisión — solo móvil */}
           <div className="lg:hidden">
-            <PuntoEmision
-              establecimientos={establecimientos}
-              estabSelected={estabSelected}
-              ptoSelected={ptoSelected}
-              puntos={puntos}
-              onEstabChange={handleEstabChange}
-              onPtoChange={setPtoSelected}
-            />
+            <PuntoEmision {...pe} />
           </div>
 
           {/* Cliente */}
@@ -537,18 +494,12 @@ export default function NuevaFacturaPage() {
 
           {/* Punto de emisión — desktop */}
           <div className="hidden lg:block">
-            <PuntoEmision
-              establecimientos={establecimientos}
-              estabSelected={estabSelected}
-              ptoSelected={ptoSelected}
-              puntos={puntos}
-              onEstabChange={handleEstabChange}
-              onPtoChange={setPtoSelected}
-            />
+            <PuntoEmision {...pe} />
           </div>
 
           {/* Totales + botón emitir */}
           <ResumenTotales
+            serie={pe.serie}
             totales={totales}
             submitting={submitting}
             error={error}

@@ -25,12 +25,13 @@ interface Props {
   suscripcionActiva: boolean;
   balanceApi:        number;
   onEmitir:          () => void;
+  serie?:            string;   // "002-001": desde dónde sale, a la vista justo antes de emitir
 }
 
 const fmt = (n: number) => r2(n).toFixed(2);
 
 export default function ResumenTotales({
-  totales, submitting, error, suscripcionActiva, balanceApi, onEmitir,
+  totales, submitting, error, suscripcionActiva, balanceApi, onEmitir, serie,
 }: Props) {
   const puedeEmitir = suscripcionActiva || balanceApi > 0;
   const usaCreditos = !suscripcionActiva && balanceApi > 0;
@@ -192,7 +193,7 @@ export default function ResumenTotales({
             Emitiendo...
           </>
         ) : (
-          `Emitir · $${fmt(totales.total)}`
+          `Emitir${serie ? ` desde ${serie}` : ""} · $${fmt(totales.total)}`
         )}
       </button>
     </div>

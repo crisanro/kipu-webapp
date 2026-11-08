@@ -9,6 +9,7 @@ import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
 import { CheckCircle2, AlertTriangle, Plus, Trash2, Calendar } from "lucide-react";
 import PuntoEmision from "../components/PuntoEmision";
+import { usePuntoEmision } from "../components/usePuntoEmision";
 import CamposAdicionales, { CampoAdicional } from "../components/CamposAdicionales";
 import DocOrigenSelector, { DocOrigen } from "../components/DocOrigenSelector";
 import { getPaisesOrdenados } from "@/lib/catalogos/paises-sri";
@@ -48,13 +49,6 @@ function baseEIva(d: { importe_total: number; subtotal_base?: number; valor_iva_
   const base = Number(d.subtotal_base);
   if (Number.isFinite(base) && base > 0) return { base, iva: Number(d.valor_iva_total) || 0 };
   return { base: Number(d.importe_total) || 0, iva: 0 };
-}
-
-interface Establecimiento {
-  codigo:            string;
-  nombre_comercial?: string;
-  direccion:         string;
-  puntos_emision:    { codigo: string; nombre?: string }[];
 }
 
 const TIPOS_IMPUESTO = [
@@ -185,11 +179,9 @@ export default function NuevaRetPage() {
 
   const [camposAdicionales, setCamposAdicionales] = useState<CampoAdicional[]>([]);
 
-  // Establecimiento
-  const [establecimientos, setEstablecimientos] = useState<Establecimiento[]>([]);
-  const [estabSelected,    setEstabSelected]    = useState("");
-  const [ptoSelected,      setPtoSelected]      = useState("");
-  const [puntos,           setPuntos]           = useState<{ codigo: string; nombre?: string }[]>([]);
+  // Establecimiento y punto de emisión
+  const pe = usePuntoEmision(origenTipo === "liq_emitida" ? (docOrigen?.tipo === "kipu" ? docOrigen.data.numero_doc : docOrigen?.tipo === "manual" ? docOrigen.data.numero : null) : null);
+  const { estabSelected, ptoSelected } = pe;
 
   // UI
   const [submitting, setSubmitting] = useState(false);
@@ -197,27 +189,6 @@ export default function NuevaRetPage() {
   const [error,      setError]      = useState("");
 
   const totalRetenido = r2(impuestos.reduce((s, i) => s + (i.valorRetenido || 0), 0));
-
-  // Cargar estructura
-  useEffect(() => {
-    const cargar = async () => {
-      try {
-        const cached = sessionStorage.getItem("kipu:estructura");
-        const estabs = cached
-          ? JSON.parse(cached)
-          : (await api.get("/api/v1/app/estructura")).data.data ?? [];
-        if (!cached) sessionStorage.setItem("kipu:estructura", JSON.stringify(estabs));
-        setEstablecimientos(estabs);
-        if (estabs.length > 0) {
-          setEstabSelected(estabs[0].codigo);
-          const ptos = estabs[0].puntos_emision ?? [];
-          setPuntos(ptos);
-          if (ptos.length > 0) setPtoSelected(ptos[0].codigo);
-        }
-      } catch (e) { console.error(e); }
-    };
-    cargar();
-  }, []);
 
   // Pre-cargar desde query params
   useEffect(() => {
@@ -320,12 +291,6 @@ export default function NuevaRetPage() {
     }
   }, [searchParams]);
 
-  const handleEstabChange = (codigo: string, ptos: { codigo: string; nombre?: string }[]) => {
-    setEstabSelected(codigo);
-    setPuntos(ptos);
-    setPtoSelected(ptos[0]?.codigo ?? "");
-  };
-
   const cambiarOrigen = (nuevo: OrigenRet) => {
     setOrigenTipo(nuevo);
     setDocOrigen(null);
@@ -370,6 +335,7 @@ export default function NuevaRetPage() {
   };
 
   const reset = () => {
+    pe.reiniciar();
     idempotencyKey.current = uuidv4();
     setResultado(null);
     setDocOrigen(null);
@@ -391,7 +357,7 @@ export default function NuevaRetPage() {
   const emitir = async () => {
     setError("");
     if (!docOrigen)                     { setError("Selecciona el documento sustento."); return; }
-    if (!estabSelected || !ptoSelected) { setError("Configura el punto de emisión."); return; }
+    if (!estabSelected || !ptoSelected) { setError("Elige el establecimiento y el punto de emisión."); return; }
     if (impuestos.some(i => i.baseImponible <= 0)) { setError("La base imponible debe ser mayor a $0."); return; }
 
     const puedeEmitir = empresa?.suscripcion_activa || (empresa?.balance_api ?? 0) > 0;
@@ -557,14 +523,7 @@ export default function NuevaRetPage() {
         <div className="lg:col-span-2 space-y-6">
 
           <div className="lg:hidden">
-            <PuntoEmision
-              establecimientos={establecimientos}
-              estabSelected={estabSelected}
-              ptoSelected={ptoSelected}
-              puntos={puntos}
-              onEstabChange={handleEstabChange}
-              onPtoChange={setPtoSelected}
-            />
+            <PuntoEmision {...pe} />
           </div>
 
           {/* Toggle tipo de origen */}
@@ -1156,14 +1115,7 @@ export default function NuevaRetPage() {
         {/* Panel lateral */}
         <div className="space-y-4">
           <div className="hidden lg:block">
-            <PuntoEmision
-              establecimientos={establecimientos}
-              estabSelected={estabSelected}
-              ptoSelected={ptoSelected}
-              puntos={puntos}
-              onEstabChange={handleEstabChange}
-              onPtoChange={setPtoSelected}
-            />
+            <PuntoEmision {...pe} />
           </div>
 
           <div
@@ -1261,7 +1213,7 @@ export default function NuevaRetPage() {
                   Emitiendo...
                 </>
               ) : (
-                `Emitir retención · $${fmt(totalRetenido)}`
+                `Emitir retención${pe.serie ? ` desde ${pe.serie}` : ""} · $${fmt(totalRetenido)}`
               )}
             </button>
           </div>
