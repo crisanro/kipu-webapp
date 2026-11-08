@@ -34,8 +34,9 @@ export interface Item {
   tipo_descuento:   "$" | "%";
   tipo_iva:         string;
   unidad:           string;
-  // Solo en pantalla, modo "IVA incluido": lo que escribió la persona.
+  // Solo en pantalla, modo "IVA incluido" de este ítem: lo que escribió la persona.
   // precio y descuento siguen siendo sin IVA (lo que se envía).
+  iva_incluido?:    boolean;     // undefined = aún sin modo (toma el último usado)
   precio_iva?:      number;
   descuento_iva?:   number;
 }
@@ -140,35 +141,41 @@ export default function ItemsEditor({ items, onChange }: Props) {
   const [showScanner,       setShowScanner]       = useState(false);
   const [scanForItemId,     setScanForItemId]     = useState<string | null>(null);
   const [codigosExistentes, setCodigosExistentes] = useState<Set<string>>(new Set());
-  // Modo de precios de la última vez (el editor solo se dibuja en el navegador, tras la sesión)
-  const [ivaIncluido,       setIvaIncluido]       = useState(() => {
+  // Modo de los ítems nuevos: el último que eligió la persona
+  // (el editor solo se dibuja en el navegador, tras la sesión)
+  const [ivaPorDefecto,     setIvaPorDefecto]     = useState(() => {
     try { return localStorage.getItem(CLAVE_MODO_IVA) === "1"; } catch { return false; }
   });
 
   const timer       = useRef<ReturnType<typeof setTimeout> | null>(null);
   const productoRef = useRef<HTMLDivElement>(null);
 
-  const cambiarModoIva = (incluido: boolean) => {
-    setIvaIncluido(incluido);
-    try { localStorage.setItem(CLAVE_MODO_IVA, incluido ? "1" : "0"); } catch {}
-  };
-
-  // Ítems que llegan de fuera (proforma, factura original, catálogo) se muestran en el
-  // modo elegido sin cambiar lo que se envía; al volver a "Sumar IVA" se quitan los campos.
+  // Ítems nuevos o que llegan de fuera (proforma, factura original, catálogo) toman el
+  // modo por defecto; mostrarlos con IVA incluido no cambia lo que se envía.
   const prepararItems = useCallback(
     (lista: Item[]) => lista.map(i =>
-      ivaIncluido
-        ? (i.precio_iva === undefined ? conIvaIncluido(i) : i)
-        : (i.precio_iva === undefined ? i : sinIvaIncluido(i))
+      i.iva_incluido !== undefined ? i
+        : ivaPorDefecto ? { ...conIvaIncluido(i), iva_incluido: true }
+        : { ...sinIvaIncluido(i), iva_incluido: false }
     ),
-    [ivaIncluido]
+    [ivaPorDefecto]
   );
   const emitir = useCallback((lista: Item[]) => onChange(prepararItems(lista)), [onChange, prepararItems]);
 
   useEffect(() => {
-    const pendiente = items.some(i => (i.precio_iva !== undefined) !== ivaIncluido);
-    if (pendiente) onChange(prepararItems(items));
-  }, [items, ivaIncluido, onChange, prepararItems]);
+    if (items.some(i => i.iva_incluido === undefined)) onChange(prepararItems(items));
+  }, [items, onChange, prepararItems]);
+
+  // Cambia el modo de un ítem; los siguientes ítems nuevos usan el mismo
+  const cambiarModoItem = (id: string, incluido: boolean) => {
+    onChange(items.map(i =>
+      i._id !== id || i.iva_incluido === incluido ? i
+        : incluido ? { ...conIvaIncluido(i), iva_incluido: true }
+        : { ...sinIvaIncluido(i), iva_incluido: false }
+    ));
+    setIvaPorDefecto(incluido);
+    try { localStorage.setItem(CLAVE_MODO_IVA, incluido ? "1" : "0"); } catch {}
+  };
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -316,49 +323,16 @@ export default function ItemsEditor({ items, onChange }: Props) {
       }}
     >
       {/* Header */}
-      <div className="flex items-center justify-between gap-2 flex-wrap">
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Search size={15} style={{ color: "var(--kipu-accent)" }} />
           <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>
             Productos / Servicios
           </h2>
-          <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
-            · {items.length}
-          </span>
         </div>
-
-        {/* Cómo se escriben los precios */}
-        <div
-          role="group"
-          aria-label="Precios"
-          className="inline-flex rounded-lg p-0.5 text-xs font-medium"
-          style={{
-            background: "color-mix(in srgb, var(--kipu-text) 6%, transparent)",
-            border: "1px solid var(--kipu-border)",
-          }}
-        >
-          {([
-            [false, "Sumar IVA",    "El precio que escribes es sin IVA; Kipu le suma el IVA"],
-            [true,  "IVA incluido", "El precio que escribes ya incluye IVA; Kipu calcula la base"],
-          ] as const).map(([valor, texto, ayuda]) => {
-            const activo = ivaIncluido === valor;
-            return (
-              <button
-                key={texto}
-                type="button"
-                aria-pressed={activo}
-                title={ayuda}
-                onClick={() => cambiarModoIva(valor)}
-                className="px-2.5 py-1 rounded-md transition-colors"
-                style={activo
-                  ? { background: "var(--kipu-surface)", color: "var(--kipu-accent)", boxShadow: "0 1px 2px rgba(0,0,0,0.08)" }
-                  : { color: "var(--kipu-subtle)" }}
-              >
-                {texto}
-              </button>
-            );
-          })}
-        </div>
+        <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+          {items.length} ítem(s)
+        </span>
       </div>
 
       {/* Buscador catálogo */}
@@ -532,12 +506,38 @@ export default function ItemsEditor({ items, onChange }: Props) {
               {/* Fila 2 — precio + descuento + IVA + total */}
               <div className="grid grid-cols-12 gap-2 items-end">
                 <div className="col-span-4 sm:col-span-3 space-y-1">
-                  <label
-                    className="text-[10px] uppercase font-semibold tracking-wider block"
-                    style={{ color: "var(--kipu-subtle)" }}
+                  {/* Precio sin IVA (se le suma) o con IVA incluido — por ítem */}
+                  <div
+                    role="group"
+                    aria-label="Precio: sin IVA o con IVA incluido"
+                    className="flex w-full rounded-md p-px text-[10px] font-semibold"
+                    style={{
+                      background: "color-mix(in srgb, var(--kipu-text) 6%, transparent)",
+                      border: "1px solid var(--kipu-border)",
+                    }}
                   >
-                    {conIva ? "Precio c/IVA" : "Precio Unit."}
-                  </label>
+                    {([
+                      [false, "s/IVA", "Precio sin IVA: Kipu le suma el IVA"],
+                      [true,  "c/IVA", "Precio con IVA incluido: Kipu calcula la base"],
+                    ] as const).map(([valor, texto, ayuda]) => {
+                      const activo = conIva === valor;
+                      return (
+                        <button
+                          key={texto}
+                          type="button"
+                          aria-pressed={activo}
+                          title={ayuda}
+                          onClick={() => cambiarModoItem(item._id, valor)}
+                          className="flex-1 px-1 py-px rounded transition-colors"
+                          style={activo
+                            ? { background: "var(--kipu-surface)", color: "var(--kipu-accent)", boxShadow: "0 1px 2px rgba(0,0,0,0.08)" }
+                            : { color: "var(--kipu-subtle)" }}
+                        >
+                          {texto}
+                        </button>
+                      );
+                    })}
+                  </div>
                   <InputDecimal
                     value={conIva ? item.precio_iva ?? 0 : item.precio}
                     onChange={(v) => editItem(item._id, conIva ? "precio_iva" : "precio", v)}
