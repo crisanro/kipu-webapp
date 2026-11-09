@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
@@ -35,6 +35,7 @@ export default function NuevaEmpresaPage() {
 
   const [lookupLoading, setLookupLoading] = useState(false);
   const [lookupMsg,     setLookupMsg]     = useState("");
+  const ultimoRuc = useRef("");   // último RUC autoconsultado, para no repetir
 
   const [form, setForm] = useState({
     ruc:                    "",
@@ -55,12 +56,15 @@ export default function NuevaEmpresaPage() {
   // ── Lookup por RUC ─────────────────────────────────────────────────────────
   const rucValido = form.ruc.length === 13 && /^\d+$/.test(form.ruc) && form.ruc.endsWith("001");
 
-  const handleLookup = async () => {
-    if (!rucValido || lookupLoading) return;
+  const handleLookup = async (rucArg?: string) => {
+    const ruc = rucArg ?? form.ruc;
+    const valido = ruc.length === 13 && /^\d+$/.test(ruc) && ruc.endsWith("001");
+    if (!valido || lookupLoading) return;
+    ultimoRuc.current = ruc;
     setLookupLoading(true);
     setLookupMsg("");
 
-    const result = await lookupIdentificacion(form.ruc);
+    const result = await lookupIdentificacion(ruc);
 
     if (result.error) {
       setLookupMsg(result.error);
@@ -234,6 +238,10 @@ export default function NuevaEmpresaPage() {
                       setForm({ ...form, ruc: val });
                       setError("");
                       setLookupMsg("");
+                      // Autobúsqueda al completar un RUC válido (una sola vez por valor)
+                      if (val.length === 13 && val.endsWith("001") && val !== ultimoRuc.current) {
+                        handleLookup(val);
+                      }
                     }}
                     placeholder="0000000000001"
                     maxLength={13}
@@ -248,7 +256,7 @@ export default function NuevaEmpresaPage() {
                   />
                   <button
                     type="button"
-                    onClick={handleLookup}
+                    onClick={() => handleLookup()}
                     disabled={!rucValido || lookupLoading}
                     className="px-3 rounded-lg transition-colors shrink-0 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
                     style={{
