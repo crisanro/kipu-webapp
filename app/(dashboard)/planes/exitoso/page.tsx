@@ -19,31 +19,50 @@ export default function PagoExitosoPage() {
   const cantidadParam = parseInt(params.get("cantidad") ?? "0");
 
   const [balance, setBalance] = useState<number | null>(null);
-  const [loading, setLoading] = useState(true);
+  // Stripe confirma el pago por webhook unos segundos DESPUÉS de volver a esta
+  // página: se consulta hasta que se refleje (máx. 40 s) en vez de una sola vez.
+  const [estado, setEstado] = useState<"esperando" | "confirmado" | "demora">("esperando");
+  const loading = estado === "esperando";
 
-  // Recargar balance / estado suscripción
   useEffect(() => {
-    const recargar = async () => {
+    let cancelado = false;
+    let timer: ReturnType<typeof setTimeout>;
+    const inicio       = Date.now();
+    const saldoInicial = empresa?.balance_api ?? 0;
+
+    const revisar = async () => {
       try {
         if (tipo === "creditos") {
           const res = await api.get("/api/v1/app/creditos/balance");
-          setBalance(res.data.balance ?? 0);
+          const nuevo = res.data.balance ?? 0;
+          if (cancelado) return;
+          setBalance(nuevo);
+          if (nuevo > saldoInicial) {
+            if (empresa) updateEmpresa({ ...empresa, balance_api: nuevo });
+            setEstado("confirmado");
+            return;
+          }
         } else {
-          // Actualizar empresa en el store para reflejar suscripción activa
           const res = await api.get("/api/v1/app/usuarios/empresas");
-          const empresas = res.data.data ?? [];
-          const actual   = empresas.find((e: any) => e.id === empresa?.id);
-          if (actual) updateEmpresa(actual);
+          const actual = (res.data.data ?? []).find((e: { id: number }) => e.id === empresa?.id);
+          if (cancelado) return;
+          if (actual?.suscripcion_activa) {
+            updateEmpresa(actual);          // la pantalla de emitir ya deja facturar
+            setEstado("confirmado");
+            return;
+          }
         }
       } catch (e) {
         console.error(e);
-      } finally {
-        setLoading(false);
       }
+      if (cancelado) return;
+      if (Date.now() - inicio < 40_000) timer = setTimeout(revisar, 2500);
+      else setEstado("demora");
     };
-    // Pequeño delay para que el webhook de Stripe procese primero
-    const t = setTimeout(recargar, 2000);
-    return () => clearTimeout(t);
+
+    timer = setTimeout(revisar, 1500);
+    return () => { cancelado = true; clearTimeout(timer); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tipo]);
 
   const esCreditos    = tipo === "creditos";
@@ -51,7 +70,7 @@ export default function PagoExitosoPage() {
 
   const tituloPlan = esCreditos
     ? `${cantidadParam} créditos`
-    : `Plan ${plan === "NATURAL" ? "Natural" : "Jurídico"} ${periodo === "MENSUAL" ? "Mensual" : "Anual"}`;
+    : `Plan ${plan === "PRO" || !plan ? "Pro" : plan} ${periodo === "MENSUAL" ? "Mensual" : "Anual"}`;
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
@@ -81,9 +100,11 @@ export default function PagoExitosoPage() {
         <div className="text-center space-y-2">
           <h1 className="text-2xl font-bold" style={{ color: "var(--kipu-text)" }}>¡Pago exitoso!</h1>
           <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>
-            {esCreditos
-              ? "Tus créditos ya están disponibles en tu cuenta."
-              : "Tu suscripción está activa. Bienvenido a Kipu."}
+            {estado !== "confirmado"
+              ? (esCreditos ? "Tu pago fue recibido. Estamos acreditando tus créditos."
+                            : "Tu pago fue recibido. Estamos activando tu suscripción.")
+              : (esCreditos ? "Tus créditos ya están disponibles en tu cuenta."
+                            : "Tu suscripción está activa. Bienvenido a Kipu.")}
           </p>
         </div>
 
@@ -137,8 +158,12 @@ export default function PagoExitosoPage() {
                     className="w-3.5 h-3.5 border-2 border-t-transparent rounded-full animate-spin"
                     style={{ borderColor: "currentColor", borderTopColor: "transparent" }}
                   />
-                  Actualizando balance...
+                  Confirmando tu pago con el banco...
                 </div>
+              ) : estado === "demora" ? (
+                <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+                  Recibimos tu pago. Los créditos se acreditarán en unos minutos y te avisaremos con una notificación.
+                </p>
               ) : (
                 <div className="flex items-center justify-between">
                   <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Balance actual</span>
@@ -165,15 +190,20 @@ export default function PagoExitosoPage() {
                     className="w-3.5 h-3.5 border-2 border-t-transparent rounded-full animate-spin"
                     style={{ borderColor: "currentColor", borderTopColor: "transparent" }}
                   />
-                  Activando suscripción...
+                  Confirmando tu pago con el banco...
                 </div>
-              ) : (
+              ) : estado === "confirmado" ? (
                 <div className="flex items-center justify-between">
                   <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Estado</span>
                   <span className="text-sm font-bold" style={{ color: "var(--kipu-success)" }}>
                     ✅ Activo
                   </span>
                 </div>
+              ) : (
+                <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+                  Recibimos tu pago. La activación está tardando un poco más de lo normal:
+                  te avisaremos con una notificación apenas quede lista (normalmente en minutos).
+                </p>
               )}
             </div>
           )}
