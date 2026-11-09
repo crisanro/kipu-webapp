@@ -29,8 +29,9 @@ export async function lookupIdentificacion(
     if (res.data?.found) {
       return { found: true, nombre: res.data.data.razon_social, error: null };
     }
-    // El backend puede devolver un aviso (p. ej. límite por minuto alcanzado)
-    return { found: false, nombre: null, error: res.data?.error ?? null };
+    // El backend puede devolver un error (límite alcanzado) o un aviso
+    // (cuenta gratuita: el nombre no está en la base y no se consulta al proveedor)
+    return { found: false, nombre: null, error: res.data?.error ?? res.data?.aviso ?? null };
   } catch {
     return { found: false, nombre: null, error: "Error al consultar." };
   }
