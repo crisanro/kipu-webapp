@@ -45,8 +45,17 @@ export default function AdminEmisorDetallePage() {
   const [msgRecarga,   setMsgRecarga]   = useState("");
 
   // ── Transferencia ─────────────────────────────────────────────────────────
-  // Lo que el cliente transfirió, CON IVA ($69 + IVA = $79.35): el backend saca la base de ahí
-  const [tfMonto,      setTfMonto]      = useState("79.35");
+  // Lo que el cliente transfirió, CON IVA: el backend saca la base de ahí.
+  // Se precarga con el precio vigente del plan (leído de Stripe).
+  const [tfMonto,      setTfMonto]      = useState("");
+  useEffect(() => {
+    api.get("/api/v1/app/suscripcion/precio")
+      .then((r) => {
+        const total = r.data?.data?.total;
+        if (total) setTfMonto((actual) => actual || total.toFixed(2));
+      })
+      .catch(() => {});
+  }, []);
   const [tfRef,        setTfRef]        = useState("");
   const [tfBanco,      setTfBanco]      = useState("");
   const [tfFecha,      setTfFecha]      = useState(() => new Date().toISOString().split("T")[0]);

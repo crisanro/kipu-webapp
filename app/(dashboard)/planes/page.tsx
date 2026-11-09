@@ -36,9 +36,15 @@ interface Transaccion {
   created_at:   string;
 }
 
-const PRECIO_PRO_ANUAL = 69.00;
-const IVA_RATE         = 0.15;
-const PRECIO_CON_IVA   = +(PRECIO_PRO_ANUAL * (1 + IVA_RATE)).toFixed(2);
+// El precio sale de Stripe vía backend (GET /suscripcion/precio): para cambiarlo
+// basta con cambiar STRIPE_PRICE_PRO_ANUAL en el .env del backend.
+interface PrecioPlan {
+  base:      number;          // sin IVA
+  total:     number;          // lo que cobra Stripe
+  iva:       number;
+  intervalo: string | null;   // year | month
+  etiqueta:  string | null;   // p. ej. "Precio de lanzamiento" (metadatos del Price en Stripe)
+}
 
 const ESTADO_COLOR: Record<string, { color: string; bg: string; border: string }> = {
   ACTIVO:    { color: "var(--kipu-success)", bg: "color-mix(in srgb, var(--kipu-success) 10%, transparent)", border: "color-mix(in srgb, var(--kipu-success) 20%, transparent)" },
@@ -91,6 +97,15 @@ export default function PlanesPage() {
   }, []);
 
   useEffect(() => { cargar(); }, [cargar]);
+
+  // Aparte del resto: si Stripe no responde, la página sigue funcionando
+  const [precio, setPrecio] = useState<PrecioPlan | null>(null);
+  useEffect(() => {
+    api.get("/api/v1/app/suscripcion/precio")
+      .then((r) => setPrecio(r.data.data ?? null))
+      .catch(() => setPrecio(null));
+  }, []);
+  const textoPrecio = precio ? `$${precio.base.toFixed(2)}/año + IVA` : "un pago anual";
 
   const iniciarCheckout = async () => {
     setPagando("pro");
@@ -340,8 +355,8 @@ export default function PlanesPage() {
                     <p className="font-medium mb-0.5" style={{ color: "var(--kipu-accent)" }}>Estás en Plan Free</p>
                     <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
                       {balance > 0
-                        ? `Tienes ${balance} crédito${balance !== 1 ? "s" : ""} para emitir comprobantes. Con Plan Pro emites sin límite por $${PRECIO_PRO_ANUAL}/año + IVA.`
-                        : `Sin créditos disponibles. Con Plan Pro emites sin límite por $${PRECIO_PRO_ANUAL}/año + IVA.`
+                        ? `Tienes ${balance} crédito${balance !== 1 ? "s" : ""} para emitir comprobantes. Con Plan Pro emites sin límite por ${textoPrecio}.`
+                        : `Sin créditos disponibles. Con Plan Pro emites sin límite por ${textoPrecio}.`
                       }
                     </p>
                   </div>
@@ -477,22 +492,31 @@ export default function PlanesPage() {
                   </div>
 
                   <div className="mt-3 mb-5">
-                    <span
-                      className="inline-block text-[11px] font-semibold px-2 py-0.5 rounded-md mb-2"
-                      style={{
-                        color: "var(--kipu-accent)",
-                        background: "color-mix(in srgb, var(--kipu-accent) 12%, transparent)",
-                      }}
-                    >
-                      Precio de lanzamiento
-                    </span>
+                    {precio?.etiqueta && (
+                      <span
+                        className="inline-block text-[11px] font-semibold px-2 py-0.5 rounded-md mb-2"
+                        style={{
+                          color: "var(--kipu-accent)",
+                          background: "color-mix(in srgb, var(--kipu-accent) 12%, transparent)",
+                        }}
+                      >
+                        {precio.etiqueta}
+                      </span>
+                    )}
                     <div className="flex items-baseline gap-2">
-                      <span className="text-4xl font-extrabold" style={{ color: "var(--kipu-text)" }}>${PRECIO_PRO_ANUAL.toFixed(2)}</span>
+                      {precio ? (
+                        <span className="text-4xl font-extrabold" style={{ color: "var(--kipu-text)" }}>${precio.base.toFixed(2)}</span>
+                      ) : (
+                        <span className="inline-block h-9 w-28 rounded-lg animate-pulse"
+                              style={{ background: "color-mix(in srgb, var(--kipu-text) 8%, transparent)" }} />
+                      )}
                       <span className="text-sm" style={{ color: "var(--kipu-subtle)" }}>+ IVA / año</span>
                     </div>
-                    <p className="text-xs mt-1" style={{ color: "var(--kipu-subtle)" }}>
-                      ${PRECIO_CON_IVA} IVA incluido · equivale a ${(PRECIO_CON_IVA / 12).toFixed(2)}/mes
-                    </p>
+                    {precio && (
+                      <p className="text-xs mt-1" style={{ color: "var(--kipu-subtle)" }}>
+                        ${precio.total.toFixed(2)} IVA incluido · equivale a ${(precio.total / 12).toFixed(2)}/mes
+                      </p>
+                    )}
                     <p className="text-xs mt-1" style={{ color: "var(--kipu-subtle)" }}>
                       Se renueva cada año con el mismo precio. Cancela cuando quieras.
                     </p>
@@ -578,7 +602,7 @@ export default function PlanesPage() {
                     <div>
                       <p className="text-sm font-medium mb-0.5" style={{ color: "var(--kipu-accent)" }}>¿Emites frecuentemente?</p>
                       <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
-                        Con Plan Pro a ${PRECIO_PRO_ANUAL}/año + IVA tienes emisión ilimitada sin comprar créditos.
+                        Con Plan Pro ({textoPrecio}) tienes emisión ilimitada sin comprar créditos.
                       </p>
                     </div>
                   </div>
