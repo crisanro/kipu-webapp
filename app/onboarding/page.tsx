@@ -4,7 +4,7 @@ import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 import { Zap, Building2, CheckCircle2, Search, Loader2, MessageCircle } from "lucide-react";
-import { lookupIdentificacion } from "@/lib/identificacion-lookup";
+import { consultarRuc } from "@/lib/consultar-ruc";
 
 const PASOS = ["Empresa", "Confirmar"];
 
@@ -130,15 +130,24 @@ export default function OnboardingPage() {
     setLookupLoading(true);
     setLookupMsg("");
 
-    const result = await lookupIdentificacion(ruc);
+    const { found, datos, error } = await consultarRuc(ruc);
 
-    if (result.error) {
-      setLookupMsg(result.error);
-    } else if (result.found && result.nombre) {
-      setForm((prev) => ({ ...prev, razon_social: result.nombre! }));
-      setLookupMsg("✓ Encontrado");
+    if (error) {
+      setLookupMsg(error);
+    } else if (found && datos) {
+      setForm((prev) => ({
+        ...prev,
+        razon_social:           datos.razon_social           || prev.razon_social,
+        nombre_comercial:       datos.nombre_comercial       || prev.nombre_comercial,
+        direccion_matriz:       datos.direccion_matriz       || prev.direccion_matriz,
+        obligado_contabilidad:  datos.obligado_contabilidad  || prev.obligado_contabilidad,
+        contribuyente_especial: datos.contribuyente_especial || prev.contribuyente_especial,
+      }));
+      setLookupMsg(datos.estado === "ACTIVO"
+        ? "✓ Datos cargados del SRI — revísalos y corrige si hace falta"
+        : `⚠ Tu RUC figura como ${datos.estado || "no activo"} en el SRI`);
     } else {
-      setLookupMsg("No encontrado — ingresa la razón social manualmente");
+      setLookupMsg("No encontrado — ingresa los datos manualmente");
     }
 
     setLookupLoading(false);
@@ -308,8 +317,8 @@ export default function OnboardingPage() {
                   style={{
                     color: lookupMsg.startsWith("✓")
                       ? "var(--kipu-success)"
-                      : lookupMsg.includes("Demasiadas")
-                        ? "var(--kipu-danger)"
+                      : lookupMsg.startsWith("⚠")
+                        ? "var(--kipu-warning)"
                         : "var(--kipu-subtle)",
                   }}
                 >
