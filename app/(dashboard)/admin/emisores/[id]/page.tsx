@@ -45,7 +45,8 @@ export default function AdminEmisorDetallePage() {
   const [msgRecarga,   setMsgRecarga]   = useState("");
 
   // ── Transferencia ─────────────────────────────────────────────────────────
-  const [tfMonto,      setTfMonto]      = useState("69");
+  // Lo que el cliente transfirió, CON IVA ($69 + IVA = $79.35): el backend saca la base de ahí
+  const [tfMonto,      setTfMonto]      = useState("79.35");
   const [tfRef,        setTfRef]        = useState("");
   const [tfBanco,      setTfBanco]      = useState("");
   const [tfFecha,      setTfFecha]      = useState(() => new Date().toISOString().split("T")[0]);
@@ -683,7 +684,7 @@ export default function AdminEmisorDetallePage() {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Monto cobrado (USD + IVA)</label>
+                <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Monto recibido (IVA incluido)</label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm" style={{ color: "var(--kipu-subtle)" }}>$</span>
                   <input

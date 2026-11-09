@@ -49,7 +49,7 @@ const ESTADO_COLOR: Record<string, { color: string; bg: string; border: string }
 
 const FEATURES: { texto: string; destacado?: boolean }[] = [
   { texto: "Emisión ilimitada desde el panel web — facturas, liquidaciones, notas de crédito/débito y retenciones" },
-  { texto: "API REST — 100 comprobantes/mes incluidos · más con créditos", destacado: true },
+  { texto: "API REST — 1.000 comprobantes/mes incluidos · más con créditos", destacado: true },
   { texto: "Registro y clasificación fiscal de documentos recibidos" },
   { texto: "Reporte de IVA mensual y semestral para declaración 104/104A" },
   { texto: "Reporte de Renta anual" },
@@ -472,17 +472,29 @@ export default function PlanesPage() {
                       style={{ background: "var(--kipu-accent)" }}
                     >
                       <Star size={11} className="fill-white" />
-                      Plan Pro · Pago único anual
+                      Plan Pro · Anual
                     </span>
                   </div>
 
                   <div className="mt-3 mb-5">
+                    <span
+                      className="inline-block text-[11px] font-semibold px-2 py-0.5 rounded-md mb-2"
+                      style={{
+                        color: "var(--kipu-accent)",
+                        background: "color-mix(in srgb, var(--kipu-accent) 12%, transparent)",
+                      }}
+                    >
+                      Precio de lanzamiento
+                    </span>
                     <div className="flex items-baseline gap-2">
                       <span className="text-4xl font-extrabold" style={{ color: "var(--kipu-text)" }}>${PRECIO_PRO_ANUAL.toFixed(2)}</span>
                       <span className="text-sm" style={{ color: "var(--kipu-subtle)" }}>+ IVA / año</span>
                     </div>
                     <p className="text-xs mt-1" style={{ color: "var(--kipu-subtle)" }}>
                       ${PRECIO_CON_IVA} IVA incluido · equivale a ${(PRECIO_CON_IVA / 12).toFixed(2)}/mes
+                    </p>
+                    <p className="text-xs mt-1" style={{ color: "var(--kipu-subtle)" }}>
+                      Se renueva cada año con el mismo precio. Cancela cuando quieras.
                     </p>
                   </div>
 
