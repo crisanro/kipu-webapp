@@ -14,7 +14,6 @@ const cspReportOnly = [
   [
     "connect-src 'self'", API_URL,
     "https://*.googleapis.com",                  // Firebase Auth, FCM, installations
-    "https://app3902.privynote.net",             // consulta de cédulas (riesgo aceptado)
     "https://cloudflareinsights.com",            // envío de métricas de Cloudflare Web Analytics
   ].join(" "),
   "frame-src https://*.firebaseapp.com https://www.youtube.com",
