@@ -9,7 +9,7 @@ import { v4 as uuidv4 } from "uuid";
 import { debeRenovarClave, mensajeErrorEmision } from "@/lib/emision";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
-import { CheckCircle2, AlertTriangle } from "lucide-react";
+import { CheckCircle2, AlertTriangle, CreditCard, Copy, MessageCircle } from "lucide-react";
 
 // ── Componentes ────────────────────────────────────────────────────────────────
 import PuntoEmision from "../components/PuntoEmision";
@@ -17,7 +17,7 @@ import { usePuntoEmision } from "../components/usePuntoEmision";
 import ClienteSelector from "../components/ClienteSelector";
 import ItemsEditor, { Item, calcItem, genId, EMPTY_ITEM } from "../components/ItemsEditor";
 import PagosMixtos, { PagoItem, PAGO_INICIAL } from "../components/PagosMixtos";
-import EstadoCobro, { DatosCobro, cobroInicial } from "../components/EstadoCobro";
+import EstadoCobro, { DatosCobro, cobroInicial, PasarelaEstado } from "../components/EstadoCobro";
 import CamposAdicionales, { CampoAdicional } from "../components/CamposAdicionales";
 import ResumenTotales from "../components/ResumenTotales";
 
@@ -74,6 +74,18 @@ function calcTotales(items: Item[], incluirPropina: boolean) {
   return { ...base, propina, total };
 }
 
+/** Qué advertir antes de emitir con link de pago, según el cliente y la pasarela */
+function avisoLinkPago(p: PasarelaEstado | null, consumidorFinal: boolean, email: string): string | null {
+  if (!p?.conectada) return null;
+  if (p.requiere_cliente && consumidorFinal)
+    return `${p.nombre} no acepta Consumidor Final: elige un cliente con cédula o RUC y correo.`;
+  if (p.requiere_cliente && !email)
+    return `${p.nombre} exige el correo del cliente: agrégalo o la factura saldrá sin link.`;
+  if (consumidorFinal || !email)
+    return "El cliente no tiene correo: el link irá en el PDF; compártelo por WhatsApp desde el detalle de la factura.";
+  return null;
+}
+
 // ── Página principal ───────────────────────────────────────────────────────────
 export default function NuevaFacturaPage() {
   const router  = useRouter();
@@ -96,6 +108,20 @@ export default function NuevaFacturaPage() {
 
   // ── Estado cobro ────────────────────────────────────────────────────────────
   const [cobro, setCobro] = useState<DatosCobro>(cobroInicial);
+
+  // ── Link de pago (opcional, factura por factura) ────────────────────────────
+  const [pasarela, setPasarela] = useState<PasarelaEstado | null>(null);
+  const [linkPago, setLinkPago] = useState(false);
+  const [linkCopiado, setLinkCopiado] = useState(false);
+  useEffect(() => {
+    api.get("/api/v1/app/cobros-en-linea/estado")
+      .then(r => {
+        const p: PasarelaEstado = r.data.data ?? { conectada: false };
+        setPasarela(p);
+        setLinkPago(!!p.marcar_por_defecto);
+      })
+      .catch(() => setPasarela(null));   // sin permiso o sin servicio: no se ofrece
+  }, []);
 
   // ── Estado campos adicionales ───────────────────────────────────────────────
   const [camposAdicionales, setCamposAdicionales] = useState<CampoAdicional[]>([]);
@@ -177,6 +203,8 @@ export default function NuevaFacturaPage() {
     setPagos([{ ...PAGO_INICIAL, _id: Math.random().toString(36).slice(2) }]);
     setPropina(false);
     setCobro(cobroInicial());
+    setLinkPago(!!pasarela?.marcar_por_defecto);
+    setLinkCopiado(false);
     setCamposAdicionales([]);
     setProformaId(null);
     setError("");
@@ -303,6 +331,8 @@ export default function NuevaFacturaPage() {
       numero_comprobante_pago: cobro.estado === "PAGADO" && cobro.referencia.trim()
                                  ? cobro.referencia.trim()
                                  : null,
+      // Link de pago: solo si quien emite lo pidió y la factura queda por cobrar
+      ...(cobro.estado === "PENDIENTE" && linkPago && pasarela?.conectada ? { link_pago: true } : {}),
     };
 
     try {
@@ -354,6 +384,44 @@ export default function NuevaFacturaPage() {
             {isAutorizado ? "¡Factura autorizada!" : "Factura en proceso"}
           </h2>
           <p className="text-sm mb-2" style={{ color: "var(--kipu-subtle)" }}>{resultado.claveAcceso}</p>
+          {resultado.link_pago && (
+            <div className="text-left rounded-xl p-3 mb-4 space-y-2"
+                 style={{ border: "1px solid var(--kipu-border)", background: "var(--kipu-surface)" }}>
+              <p className="flex items-center gap-1.5 text-xs font-medium" style={{ color: "var(--kipu-text)" }}>
+                <CreditCard size={13} style={{ color: "var(--kipu-accent)" }} />
+                Link de pago incluido en la factura
+              </p>
+              <code className="block truncate text-[11px] px-2 py-1.5 rounded"
+                    style={{ background: "color-mix(in srgb, var(--kipu-text) 5%, transparent)", color: "var(--kipu-text)" }}>
+                {resultado.link_pago}
+              </code>
+              <div className="flex gap-2">
+                <button
+                  onClick={async () => { await navigator.clipboard.writeText(resultado.link_pago); setLinkCopiado(true); }}
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs py-1.5 rounded-lg"
+                  style={{ border: "1px solid var(--kipu-border)", color: "var(--kipu-muted)" }}
+                >
+                  {linkCopiado ? <CheckCircle2 size={12} style={{ color: "var(--kipu-success)" }} /> : <Copy size={12} />}
+                  {linkCopiado ? "Copiado" : "Copiar"}
+                </button>
+                <a
+                  href={`https://wa.me/?text=${encodeURIComponent(`Hola, te comparto el link para pagar tu factura: ${resultado.link_pago}`)}`}
+                  target="_blank" rel="noopener noreferrer"
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs py-1.5 rounded-lg"
+                  style={{ border: "1px solid var(--kipu-border)", color: "var(--kipu-muted)" }}
+                >
+                  <MessageCircle size={12} /> WhatsApp
+                </a>
+              </div>
+            </div>
+          )}
+          {resultado.aviso_link_pago && (
+            <p className="flex items-start gap-1.5 text-left text-xs rounded-lg px-3 py-2 mb-4"
+               style={{ color: "var(--kipu-warning)", background: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)" }}>
+              <AlertTriangle size={13} className="mt-0.5 shrink-0" />
+              {resultado.aviso_link_pago}
+            </p>
+          )}
           <span
             className="inline-block px-3 py-1 rounded-full text-xs font-medium mb-6"
             style={{
@@ -479,6 +547,12 @@ export default function NuevaFacturaPage() {
           <EstadoCobro
             cobro={cobro}
             onChange={setCobro}
+            linkPago={{
+              pasarela,
+              activo:   linkPago,
+              onChange: setLinkPago,
+              aviso:    avisoLinkPago(pasarela, esConsumidorFinal, clienteSelected?.email || clienteNuevo?.email || ""),
+            }}
           />
 
           {/* Campos adicionales */}

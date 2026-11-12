@@ -70,7 +70,7 @@ export default function TabCobrosEnLinea() {
   const conectar = async (proveedor: string, pin?: string) => {
     const res = await api.put("/api/v1/app/cobros-en-linea/config", {
       proveedor, credenciales: valores, ...(pin ? { pin } : {}),
-      activo: true, link_automatico: conexiones.find(c => c.proveedor === proveedor)?.link_automatico ?? true,
+      activo: true, link_automatico: conexiones.find(c => c.proveedor === proveedor)?.link_automatico ?? false,
     });
     setConexiones(res.data.data ?? []);
     setEditando(null);
@@ -133,8 +133,9 @@ export default function TabCobrosEnLinea() {
         <div className="min-w-0">
           <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>Cobros en línea</h2>
           <p className="text-xs mt-0.5" style={{ color: "var(--kipu-subtle)" }}>
-            Conecta tu cuenta de Payphone o PagoPlux: tus facturas por cobrar llevan un link de pago y,
-            cuando tu cliente paga, la factura queda cobrada sola. El dinero va directo a tu cuenta.
+            Conecta tu cuenta de Payphone o PagoPlux. Al emitir una factura por cobrar puedes marcar
+            &quot;Cobrar con link de pago&quot;: el link va en la factura y, cuando tu cliente paga, queda
+            cobrada sola. Es opcional, factura por factura. El dinero va directo a tu cuenta.
           </p>
         </div>
       </div>
@@ -194,7 +195,7 @@ export default function TabCobrosEnLinea() {
                   <label className="flex items-start gap-2 text-xs cursor-pointer" style={{ color: "var(--kipu-muted)" }}>
                     <input type="checkbox" className="mt-0.5" checked={c.link_automatico}
                            onChange={e => cambiarOpcion(c, { link_automatico: e.target.checked })} />
-                    Agregar el link de pago al correo de las facturas por cobrar
+                    Marcar &quot;Cobrar con link de pago&quot; por defecto al emitir facturas por cobrar
                   </label>
                   <label className="flex items-start gap-2 text-xs cursor-pointer" style={{ color: "var(--kipu-muted)" }}>
                     <input type="checkbox" className="mt-0.5" checked={c.activo}

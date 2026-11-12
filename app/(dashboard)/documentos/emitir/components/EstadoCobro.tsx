@@ -1,6 +1,7 @@
 "use client";
 
-import { CheckCircle2, Clock } from "lucide-react";
+import Link from "next/link";
+import { CheckCircle2, Clock, CreditCard, AlertTriangle } from "lucide-react";
 import { hoyEC } from "@/lib/fecha";
 
 // ── Tipos ──────────────────────────────────────────────────────────────────────
@@ -10,9 +11,26 @@ export interface DatosCobro {
   referencia: string;       // número de comprobante / referencia
 }
 
+/** Pasarela de la empresa (GET /cobros-en-linea/estado) */
+export interface PasarelaEstado {
+  conectada:           boolean;
+  nombre?:             string;
+  marcar_por_defecto?: boolean;
+  requiere_cliente?:   boolean;   // PagoPlux: exige cédula/RUC y correo del cliente
+}
+
+/** Link de pago OPCIONAL: solo lo pasa la factura, y se ofrece solo si queda por cobrar */
+export interface OpcionLinkPago {
+  pasarela: PasarelaEstado | null;
+  activo:   boolean;
+  onChange: (activo: boolean) => void;
+  aviso?:   string | null;        // p. ej. cliente sin correo
+}
+
 interface Props {
-  cobro:    DatosCobro;
-  onChange: (cobro: DatosCobro) => void;
+  cobro:     DatosCobro;
+  onChange:  (cobro: DatosCobro) => void;
+  linkPago?: OpcionLinkPago;
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -25,7 +43,7 @@ export const cobroInicial = (): DatosCobro => ({
 });
 
 // ── Componente ─────────────────────────────────────────────────────────────────
-export default function EstadoCobro({ cobro, onChange }: Props) {
+export default function EstadoCobro({ cobro, onChange, linkPago }: Props) {
   const esPagado = cobro.estado === "PAGADO";
 
   const toggleEstado = (estado: "PAGADO" | "PENDIENTE") => {
@@ -136,6 +154,44 @@ export default function EstadoCobro({ cobro, onChange }: Props) {
       {!esPagado && (
         <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
           Podrás registrar el cobro después desde el detalle del comprobante.
+        </p>
+      )}
+
+      {/* Link de pago: opcional, factura por factura */}
+      {!esPagado && linkPago?.pasarela?.conectada && (
+        <div className="rounded-lg p-3 space-y-2" style={{ border: "1px solid var(--kipu-border)" }}>
+          <label className="flex items-start gap-2.5 cursor-pointer">
+            <input
+              type="checkbox"
+              className="mt-0.5"
+              checked={linkPago.activo}
+              onChange={(e) => linkPago.onChange(e.target.checked)}
+            />
+            <span className="min-w-0">
+              <span className="flex items-center gap-1.5 text-sm font-medium" style={{ color: "var(--kipu-text)" }}>
+                <CreditCard size={14} style={{ color: "var(--kipu-accent)" }} />
+                Cobrar con link de pago ({linkPago.pasarela.nombre})
+              </span>
+              <span className="block text-xs mt-0.5" style={{ color: "var(--kipu-subtle)" }}>
+                El link va en la información adicional de la factura (XML y PDF) y en el correo
+                al cliente. Cuando pague, la factura queda cobrada sola.
+              </span>
+            </span>
+          </label>
+          {linkPago.activo && linkPago.aviso && (
+            <p className="flex items-start gap-1.5 text-xs" style={{ color: "var(--kipu-warning)" }}>
+              <AlertTriangle size={13} className="mt-0.5 shrink-0" />
+              {linkPago.aviso}
+            </p>
+          )}
+        </div>
+      )}
+      {!esPagado && linkPago?.pasarela && !linkPago.pasarela.conectada && (
+        <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+          ¿Quieres cobrarla con tarjeta?{" "}
+          <Link href="/configuracion#cobros" className="underline" style={{ color: "var(--kipu-accent)" }}>
+            Conecta Payphone o PagoPlux
+          </Link>
         </p>
       )}
     </div>
