@@ -312,6 +312,8 @@ export default function NuevaFacturaPage() {
           tipo_iva:        i.tipo_iva,
           unidad_medida:   i.unidad,
           guardar_catalogo: !!i.guardar_catalogo,
+          // Al guardarlo en el catálogo, conserva el precio final que se escribió
+          ...(i.guardar_catalogo && i.precio_iva !== undefined ? { precio_con_iva: i.precio_iva } : {}),
         };
       }),
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useCallback, useState, useEffect, lazy, Suspense } from "react";
-import { etiquetaIva } from "@/lib/iva";
+import { etiquetaIva, opcionesIva } from "@/lib/iva";
 import { r2 } from "@/lib/dinero";
 import {
   calcularLinea, aplicarIvaIncluido, conIvaIncluido, sinIvaIncluido,
@@ -16,7 +16,9 @@ const BarcodeScanner = lazy(() => import("@/components/BarcodeScanner"));
 interface Producto {
   id:          string;
   descripcion: string;
-  precio:      number;
+  precio:      number;                 // sin IVA
+  precio_con_iva?:     number | null;  // producto "IVA incluido": su precio final
+  precio_incluye_iva?: boolean;
   tipo_iva:    string;
   unidad:      string;
   codigo:      string;
@@ -239,7 +241,7 @@ export default function ItemsEditor({ items, onChange }: Props) {
   };
 
   const seleccionarProducto = useCallback((p: Producto) => {
-    emitir([...items, {
+    const item: Item = {
       _id:            genId(),
       _fromCatalog:   true,
       codigo:         p.codigo,
@@ -250,7 +252,12 @@ export default function ItemsEditor({ items, onChange }: Props) {
       tipo_descuento: "$",
       tipo_iva:       p.tipo_iva,
       unidad:         p.unidad,
-    }]);
+    };
+    // Producto con IVA incluido: entra con su precio final exacto (la base la calcula Kipu)
+    const conFinal = p.precio_incluye_iva && p.precio_con_iva != null;
+    emitir([...items, conFinal
+      ? aplicarIvaIncluido({ ...item, iva_incluido: true, precio_iva: p.precio_con_iva!, descuento_iva: 0 })
+      : item]);
     setProductoQuery("");
     setShowProductos(false);
   }, [items, emitir]);
@@ -618,11 +625,9 @@ export default function ItemsEditor({ items, onChange }: Props) {
                     onFocus={(e) => (e.currentTarget.style.borderColor = "var(--kipu-accent)")}
                     onBlur={(e) => (e.currentTarget.style.borderColor = "var(--kipu-border)")}
                   >
-                    <option value="0">0%</option>
-                    <option value="5">5%</option>
-                    <option value="15">15%</option>
-                    <option value="NA" title="No objeto de IVA">No obj.</option>
-                    <option value="EX" title="Exento de IVA">Exento</option>
+                    {opcionesIva(item.tipo_iva).map(o => (
+                      <option key={o.valor} value={o.valor}>{o.etiqueta}</option>
+                    ))}
                   </select>
                 </div>
 

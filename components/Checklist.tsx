@@ -9,7 +9,6 @@ import {
   Upload, Loader2, X, UserCog
 } from "lucide-react";
 import api from "@/lib/api";
-import PinInput from "@/components/PinInput";
 import { useAuthStore } from "@/store/auth.store";
 import { usePermiso } from "@/hooks/usePermiso";
 
@@ -45,7 +44,6 @@ interface ChecklistItem {
 
 export default function Checklist({ health, compact = false, onUpdate }: Props) {
   const pathname = usePathname();
-  const email = useAuthStore((s) => s.email) ?? "";
   const empresa = useAuthStore((s) => s.empresa);
 
   const puedeConfig     = usePermiso("configuracion");
@@ -54,6 +52,8 @@ export default function Checklist({ health, compact = false, onUpdate }: Props) 
   // ── Estado modal producción ─────────────────────────────────────
   const [showProdModal, setShowProdModal] = useState(false);
   const [prodMsg, setProdMsg] = useState("");
+  const [activando, setActivando] = useState(false);
+  const [prodError, setProdError] = useState("");
 
   // ── Estado modal firma ──────────────────────────────────────────
   const [showFirmaModal, setShowFirmaModal] = useState(false);
@@ -342,23 +342,57 @@ export default function Checklist({ health, compact = false, onUpdate }: Props) 
             Confirmar pase a producción
           </h3>
           <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
-            Ingresa el PIN enviado a tu correo.
+            Desde ahora tus comprobantes tendrán validez tributaria ante el SRI.
+            Recibirás 25 créditos de bienvenida.
           </p>
         </div>
-        <PinInput
-          tipoAccion="ACTIVAR_PRODUCCION"
-          email={email}
-          label="activar producción"
-          onCancelar={() => setShowProdModal(false)}
-          onConfirmar={async (pin) => {
-            await api.post(`/api/v1/app/emisor/produccion?pin=${pin}`);
-            setProdMsg("¡Bienvenido a producción!");
-            setShowProdModal(false);
-            onUpdate?.();
-            sessionStorage.removeItem("kipu:estructura");
-            setTimeout(() => window.location.href = "/dashboard", 1500);
-          }}
-        />
+        {prodError && (
+          <p
+            className="text-xs px-3 py-2 rounded-lg mb-3"
+            style={{
+              color: "var(--kipu-danger)",
+              background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
+            }}
+          >
+            {prodError}
+          </p>
+        )}
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => { setShowProdModal(false); setProdError(""); }}
+            disabled={activando}
+            className="flex-1 py-2.5 rounded-xl text-sm transition-colors disabled:opacity-50"
+            style={{ border: "1px solid var(--kipu-border)", color: "var(--kipu-muted)" }}
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            disabled={activando}
+            onClick={async () => {
+              setActivando(true);
+              setProdError("");
+              try {
+                await api.post("/api/v1/app/emisor/produccion");
+                setProdMsg("¡Bienvenido a producción!");
+                setShowProdModal(false);
+                onUpdate?.();
+                sessionStorage.removeItem("kipu:estructura");
+                setTimeout(() => window.location.href = "/dashboard", 1500);
+              } catch (err: unknown) {
+                const detalle = (err as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail;
+                setProdError(typeof detalle === "string" ? detalle : "No se pudo activar producción. Intenta de nuevo.");
+              } finally {
+                setActivando(false);
+              }
+            }}
+            className="flex-1 py-2.5 rounded-xl text-white text-sm font-semibold transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+            style={{ background: "var(--kipu-success)" }}
+          >
+            {activando ? <><Loader2 size={14} className="animate-spin" /> Activando...</> : "Pasar a producción"}
+          </button>
+        </div>
       </div>
     </div>
   );

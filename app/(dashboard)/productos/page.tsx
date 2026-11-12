@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect, useCallback, lazy, Suspense } from "react";
-import { etiquetaIva } from "@/lib/iva";
+import { etiquetaIva, opcionesIva } from "@/lib/iva";
+import { baseDesdeTotal, tarifaPct } from "@/lib/precios";
+import { r2 } from "@/lib/dinero";
 import api from "@/lib/api";
 import { usePermiso } from "@/hooks/usePermiso";
 import SinAcceso from "@/components/SinAcceso";
@@ -16,7 +18,9 @@ interface Producto {
   id:           string;
   codigo:       string;
   descripcion:  string;
-  precio:       number;
+  precio:       number;               // sin IVA
+  precio_con_iva?:     number | null; // "IVA incluido": precio final que se mantiene
+  precio_incluye_iva?: boolean;
   tipo_iva:     string;
   unidad:       string;
   activo:       boolean;
@@ -28,6 +32,7 @@ const EMPTY_FORM = {
   codigo:       "",
   descripcion:  "",
   precio:       "",
+  incluye_iva:  false,   // false: "+ IVA" (se suma) · true: "IVA incluido" (se desglosa)
   tipo_iva:     "15",
   unidad:       "UNIDAD",
   stock:        "-1",
@@ -38,6 +43,18 @@ const UNIDADES = ["UNIDAD", "SERVICIO", "KG", "LB", "LT", "MT", "CM", "CAJA", "P
 const PRODUCTOS_LIMIT = 50;
 
 const fmt = (n: number) => n?.toFixed(2) ?? "0.00";
+
+/** Precio que se muestra en la lista: el final si es "IVA incluido", la base si es "+ IVA". */
+const precioVisible = (p: Producto) =>
+  p.precio_incluye_iva && p.precio_con_iva != null ? p.precio_con_iva : p.precio;
+
+/** Base, IVA y final de lo que se está escribiendo (mismo redondeo que el SRI). */
+function desglose(precio: number, incluyeIva: boolean, tipoIva: string) {
+  const pct  = tarifaPct(tipoIva);
+  const base = incluyeIva ? baseDesdeTotal(precio, tipoIva) : r2(precio);
+  const iva  = r2(base * pct / 100);
+  return { pct, base, iva, final: r2(base + iva) };
+}
 
 // Modo del scanner: "buscar" filtra la lista, "codigo" llena el campo código del modal
 type ScanMode = "buscar" | "codigo";
@@ -101,7 +118,8 @@ export default function ProductosPage() {
     setForm({
       codigo:       p.codigo ?? "",
       descripcion:  p.descripcion,
-      precio:       String(p.precio),
+      precio:       String(precioVisible(p)),
+      incluye_iva:  !!(p.precio_incluye_iva && p.precio_con_iva != null),
       tipo_iva:     p.tipo_iva,
       unidad:       p.unidad,
       stock:        String(p.stock ?? -1),
@@ -165,10 +183,12 @@ export default function ProductosPage() {
 
     setSaving(true);
     try {
+      const { incluye_iva, ...resto } = form;
       const payload = {
-        ...form,
+        ...resto,
         codigo:       form.codigo.trim().toUpperCase(),
         precio:       parseFloat(form.precio),
+        precio_incluye_iva: incluye_iva,
         stock:        stockValue(),
         stock_minimo: parseInt(form.stock_minimo) || 0,
       };
@@ -353,7 +373,12 @@ export default function ProductosPage() {
                     </p>
                   </div>
                   <span className="hidden md:block col-span-2 text-sm font-semibold text-center" style={{ color: "var(--kipu-text)" }}>
-                    ${fmt(p.precio)}
+                    ${fmt(precioVisible(p))}
+                    {tarifaPct(p.tipo_iva) > 0 && (
+                      <span className="block text-[10px] font-normal" style={{ color: "var(--kipu-subtle)" }}>
+                        {p.precio_incluye_iva ? "IVA incluido" : "+ IVA"}
+                      </span>
+                    )}
                   </span>
                   <span className="hidden md:block col-span-1 text-xs text-center" style={{ color: "var(--kipu-muted)" }}>
                     {etiquetaIva(p.tipo_iva)}
@@ -392,7 +417,14 @@ export default function ProductosPage() {
                     )}
                   </span>
                   <div className="md:col-span-2 flex items-center justify-end gap-2 shrink-0">
-                    <span className="text-sm font-semibold md:hidden" style={{ color: "var(--kipu-text)" }}>${fmt(p.precio)}</span>
+                    <span className="text-sm font-semibold md:hidden text-right" style={{ color: "var(--kipu-text)" }}>
+                      ${fmt(precioVisible(p))}
+                      {tarifaPct(p.tipo_iva) > 0 && (
+                        <span className="block text-[10px] font-normal" style={{ color: "var(--kipu-subtle)" }}>
+                          {p.precio_incluye_iva ? "IVA incl." : "+ IVA"}
+                        </span>
+                      )}
+                    </span>
                     <button
                       type="button"
                       onClick={() => abrirEditar(p)}
@@ -562,6 +594,35 @@ export default function ProductosPage() {
                     onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
                     onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
                   />
+                  {/* ¿Al precio se le suma el IVA o ya lo incluye? */}
+                  <div
+                    role="radiogroup"
+                    aria-label="El precio que ingreso"
+                    className="mt-1.5 grid grid-cols-2 rounded-lg overflow-hidden text-[11px]"
+                    style={{ border: "1px solid var(--kipu-border)" }}
+                  >
+                    {([[false, "+ IVA", "Kipu le suma el IVA"], [true, "IVA incluido", "Kipu desglosa el IVA"]] as const)
+                      .map(([valor, etiqueta, ayuda]) => {
+                        const activo = form.incluye_iva === valor;
+                        return (
+                          <button
+                            key={etiqueta}
+                            type="button"
+                            role="radio"
+                            aria-checked={activo}
+                            title={ayuda}
+                            onClick={() => setForm({ ...form, incluye_iva: valor })}
+                            className="py-1 transition-colors"
+                            style={{
+                              background: activo ? "var(--kipu-accent)" : "transparent",
+                              color:      activo ? "#FFFFFF" : "var(--kipu-muted)",
+                            }}
+                          >
+                            {etiqueta}
+                          </button>
+                        );
+                      })}
+                  </div>
                 </div>
               </div>
               <div>
@@ -595,11 +656,9 @@ export default function ProductosPage() {
                     onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
                     onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
                   >
-                    <option value="0">0%</option>
-                    <option value="5">5%</option>
-                    <option value="15">15%</option>
-                    <option value="NA">No objeto de IVA</option>
-                    <option value="EX">Exento de IVA</option>
+                    {opcionesIva(editando?.tipo_iva).map(o => (
+                      <option key={o.valor} value={o.valor}>{o.etiqueta}</option>
+                    ))}
                   </select>
                 </div>
                 <div>
@@ -620,6 +679,36 @@ export default function ProductosPage() {
                   </select>
                 </div>
               </div>
+
+              {/* Desglose de lo que se escribió */}
+              {parseFloat(form.precio) > 0 && (() => {
+                const d = desglose(parseFloat(form.precio), form.incluye_iva, form.tipo_iva);
+                if (d.pct === 0) return (
+                  <p className="text-[11px]" style={{ color: "var(--kipu-subtle)" }}>
+                    Sin IVA: tu cliente paga ${fmt(d.final)}.
+                  </p>
+                );
+                const redondeo = form.incluye_iva && d.final !== r2(parseFloat(form.precio));
+                return (
+                  <div className="text-[11px] rounded-lg px-3 py-2 space-y-0.5"
+                       style={{ background: "color-mix(in srgb, var(--kipu-text) 4%, transparent)", color: "var(--kipu-muted)" }}>
+                    <p>
+                      Base ${fmt(d.base)} · IVA {d.pct}% ${fmt(d.iva)} ·{" "}
+                      <strong style={{ color: "var(--kipu-text)" }}>Tu cliente paga ${fmt(d.final)}</strong>
+                    </p>
+                    <p style={{ color: "var(--kipu-subtle)" }}>
+                      {form.incluye_iva
+                        ? "Si cambia el IVA, el precio final se mantiene y la base se ajusta."
+                        : "Si cambia el IVA, la base se mantiene y el precio final se ajusta."}
+                    </p>
+                    {redondeo && (
+                      <p style={{ color: "var(--kipu-warning)" }}>
+                        Con el redondeo del SRI no hay una base exacta para ese precio: queda en ${fmt(d.final)}.
+                      </p>
+                    )}
+                  </div>
+                );
+              })()}
               {/* Stock */}
               <div>
                 <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>
