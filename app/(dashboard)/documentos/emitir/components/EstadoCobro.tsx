@@ -134,6 +134,7 @@ export default function EstadoCobro({ cobro, onChange, linkPago }: Props) {
             <input
               type="text"
               value={cobro.referencia}
+              inputMode="numeric"
               onChange={(e) => onChange({ ...cobro, referencia: e.target.value })}
               placeholder="N° transferencia, recibo..."
               maxLength={100}

@@ -401,6 +401,7 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
           <Campo label="Código (ej: 001)">
             <input
               value={estabForm.codigo}
+              inputMode="numeric"
               onChange={e => setEstabForm({ ...estabForm, codigo: e.target.value })}
               placeholder="001"
               maxLength={3}
@@ -573,6 +574,7 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
           <Campo label="Código punto (ej: 001)">
             <input
               value={puntoForm.codigo}
+              inputMode="numeric"
               onChange={e => setPuntoForm({ ...puntoForm, codigo: e.target.value })}
               placeholder="001"
               maxLength={3}
@@ -744,6 +746,7 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
                   defaultValue={sec}
                   min={0}
                   id={`sec-produccion-${tipo}`}
+                  inputMode="numeric"
                   className="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none"
                   style={inputStyle}
                   onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
@@ -769,6 +772,7 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
                   defaultValue={sec}
                   min={0}
                   id={`sec-pruebas-${tipo}`}
+                  inputMode="numeric"
                   className="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none"
                   style={inputStyle}
                   onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}

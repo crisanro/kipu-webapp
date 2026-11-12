@@ -187,6 +187,8 @@ export default function PinInput({ tipoAccion, email, onConfirmar, onCancelar, l
               ref={inputRef}
               type="text"
               value={pin}
+              inputMode="numeric"
+              autoComplete="one-time-code"
               onChange={(e) => {
                 const val = e.target.value.replace(/\D/g, "").slice(0, 6);
                 setPin(val);

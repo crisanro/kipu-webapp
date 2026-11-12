@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import api from "@/lib/api";
 import { Search, FileText, X, ToggleLeft, ToggleRight, AlertTriangle } from "lucide-react";
+import { tecladoIdentificacion, formatoNumeroDoc } from "@/lib/teclado";
 
 export interface DocOrigenKipu {
   id:             string;
@@ -47,12 +48,7 @@ interface Props {
 const fmt = (n: number) => parseFloat(String(n || 0)).toFixed(2);
 
 // Helper para formatear automáticamente número de comprobante SRI (001-001-000000001)
-const formatNumeroDoc = (val: string): string => {
-  const solo = val.replace(/[^0-9]/g, "");
-  if (solo.length <= 3) return solo;
-  if (solo.length <= 6) return `${solo.slice(0, 3)}-${solo.slice(3)}`;
-  return `${solo.slice(0, 3)}-${solo.slice(3, 6)}-${solo.slice(6, 15)}`;
-};
+const formatNumeroDoc = formatoNumeroDoc;
 
 // Helper para formatear fecha automáticamente a dd/mm/yyyy
 const formatFechaDoc = (val: string): string => {
@@ -473,6 +469,7 @@ export default function DocOrigenSelector({
               </label>
               <input
                 value={manual.numero}
+                inputMode="numeric"
                 onChange={e => setManual({ ...manual, numero: formatNumeroDoc(e.target.value) })}
                 placeholder="001-001-000000001"
                 maxLength={17}
@@ -535,6 +532,7 @@ export default function DocOrigenSelector({
               </select>
               <input
                 value={manual.cliente.identificacion}
+                inputMode={tecladoIdentificacion(manual.cliente.tipo_id)}
                 onChange={e => setManual({ ...manual, cliente: { ...manual.cliente, identificacion: e.target.value } })}
                 placeholder="RUC / Cédula"
                 className="px-2 py-1.5 rounded-lg text-xs focus:outline-none transition-colors"
@@ -562,6 +560,7 @@ export default function DocOrigenSelector({
             />
             <input
               value={manual.cliente.email}
+              type="email"
               onChange={e => setManual({ ...manual, cliente: { ...manual.cliente, email: e.target.value } })}
               placeholder="Email (opcional)"
               className="w-full mt-2 px-2.5 py-1.5 rounded-lg text-xs focus:outline-none transition-colors"

@@ -465,7 +465,7 @@ export default function DetallePersonaPage() {
             validError="Email inválido."
           />
           <CampoEditable
-            icon={Phone} label="Teléfono" field="telefono"
+            icon={Phone} label="Teléfono" field="telefono" type="tel"
             value={cliente.telefono}
             placeholder="0999999999"
             transform={(v) => v.replace(/\D/g, "")}

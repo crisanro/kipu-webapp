@@ -4,6 +4,7 @@ import { validarIdentificacion } from "@/lib/identificacion";
 import api from "@/lib/api";
 import { Search, User, X, Check, AlertCircle, Loader2 } from "lucide-react";
 import { lookupIdentificacion } from "@/lib/identificacion-lookup";
+import { tecladoIdentificacion } from "@/lib/teclado";
 
 interface Cliente {
   id:                      string;
@@ -388,6 +389,7 @@ export default function ClienteSelector({
               <div className="relative flex-1">
                 <input
                   value={clienteNuevo.identificacion}
+                  inputMode={tecladoIdentificacion(clienteNuevo.tipo_identificacion_sri)}
                   onChange={(e) => {
                     const val = ["04", "05"].includes(clienteNuevo.tipo_identificacion_sri)
                       ? e.target.value.replace(/\D/g, "")

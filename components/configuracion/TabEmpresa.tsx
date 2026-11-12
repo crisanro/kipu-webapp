@@ -332,6 +332,7 @@ export default function TabEmpresa({ legal, health, onActualizar }: Props) {
               <input
                 type="text"
                 value={agenteRetencion}
+                inputMode="numeric"
                 onChange={(e) => setAgenteRetencion(e.target.value.replace(/\D/g, "").slice(0, 8))}
                 placeholder="Nro. resolución (ej: 1)"
                 className="w-full rounded-xl px-3 py-2.5 text-sm focus:outline-none"

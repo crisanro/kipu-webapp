@@ -567,6 +567,7 @@ export default function AdminEmisorDetallePage() {
               {editando ? (
                 <input
                   value={form.contribuyente_especial}
+                  inputMode="numeric"
                   onChange={(e) => setForm(f => ({ ...f, contribuyente_especial: e.target.value }))}
                   placeholder="N° resolución o vacío"
                   className="flex-1 px-2 py-1 rounded-lg text-sm text-right focus:outline-none transition-colors"
@@ -756,6 +757,7 @@ export default function AdminEmisorDetallePage() {
               <input
                 type="text"
                 value={tfRef}
+                inputMode="numeric"
                 onChange={(e) => setTfRef(e.target.value)}
                 placeholder="Ej: 0021234567890123456789"
                 className="w-full px-3 py-2 rounded-lg text-sm font-mono focus:outline-none transition-colors"

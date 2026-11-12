@@ -15,6 +15,7 @@ import ItemsEditor, { Item, calcItem, genId, EMPTY_ITEM } from "../components/It
 import PagosMixtos, { PagoItem, PAGO_INICIAL } from "../components/PagosMixtos";
 import CamposAdicionales, { CampoAdicional } from "../components/CamposAdicionales";
 import ResumenTotales from "../components/ResumenTotales";
+import { tecladoIdentificacion } from "@/lib/teclado";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const fmt = (n: number) => r2(n).toFixed(2);
@@ -463,6 +464,7 @@ export default function NuevaLiqPage() {
                   </select>
                   <input
                     value={proveedorNuevo.identificacion}
+                    inputMode={tecladoIdentificacion(proveedorNuevo.tipo_identificacion_sri)}
                     onChange={e => setProveedorNuevo({ ...proveedorNuevo, identificacion: e.target.value })}
                     placeholder="Identificación"
                     className="px-2 py-1.5 rounded-lg text-xs transition-colors focus:outline-none"
@@ -503,6 +505,7 @@ export default function NuevaLiqPage() {
                 />
                 <input
                   value={proveedorNuevo.email}
+                  type="email"
                   onChange={e => setProveedorNuevo({ ...proveedorNuevo, email: e.target.value })}
                   placeholder="Email (opcional)"
                   className="w-full px-2 py-1.5 rounded-lg text-xs transition-colors focus:outline-none"

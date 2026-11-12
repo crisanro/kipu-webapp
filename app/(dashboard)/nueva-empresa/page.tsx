@@ -239,6 +239,7 @@ export default function NuevaEmpresaPage() {
                   <input
                     name="ruc"
                     value={form.ruc}
+                    inputMode="numeric"
                     onChange={(e) => {
                       const val = e.target.value.replace(/\D/g, "");
                       setForm({ ...form, ruc: val });
@@ -380,6 +381,7 @@ export default function NuevaEmpresaPage() {
                   <input
                     name="contribuyente_especial"
                     value={form.contribuyente_especial}
+                    inputMode="numeric"
                     onChange={handleChange}
                     placeholder="Opcional"
                     className="w-full px-3 py-2.5 rounded-lg text-sm focus:outline-none transition-colors"

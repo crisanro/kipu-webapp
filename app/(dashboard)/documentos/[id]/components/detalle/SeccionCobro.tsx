@@ -175,6 +175,7 @@ export default function SeccionCobro({ factura, onRecargar }: { factura: Factura
                     <input
                       type="text"
                       value={cobroReferencia}
+                      inputMode="numeric"
                       onChange={e => setCobroReferencia(e.target.value)}
                       placeholder="N° transferencia, recibo..."
                       maxLength={100}

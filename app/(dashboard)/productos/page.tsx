@@ -742,6 +742,7 @@ export default function ProductosPage() {
                   <input
                     type="number"
                     value={form.stock_minimo}
+                    inputMode="numeric"
                     onChange={(e) => setForm({ ...form, stock_minimo: e.target.value })}
                     placeholder="0"
                     min={0}

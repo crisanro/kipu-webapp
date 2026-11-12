@@ -260,6 +260,7 @@ export default function OnboardingPage() {
                 <input
                   name="ruc"
                   value={form.ruc}
+                  inputMode="numeric"
                   onChange={(e) => {
                     const val = e.target.value.replace(/\D/g, "");
                     setForm({ ...form, ruc: val });
@@ -404,6 +405,7 @@ export default function OnboardingPage() {
                 <input
                   name="contribuyente_especial"
                   value={form.contribuyente_especial}
+                  inputMode="numeric"
                   onChange={handleChange}
                   placeholder="Opcional"
                   className="w-full px-4 py-2.5 rounded-lg text-sm focus:outline-none transition-colors"

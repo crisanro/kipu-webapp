@@ -9,6 +9,7 @@ import {
   ChevronDown, Save, AlertCircle, Check, Loader2
 } from "lucide-react";
 import { lookupIdentificacion } from "@/lib/identificacion-lookup";
+import { tecladoIdentificacion } from "@/lib/teclado";
 
 interface Persona {
   uid:                     string;
@@ -397,6 +398,7 @@ function PersonasContenido() {
                     <div className="relative flex-1">
                       <input
                         value={form.identificacion}
+                        inputMode={tecladoIdentificacion(form.tipo_identificacion_sri)}
                         onChange={(e) => {
                           const val = ["04", "05"].includes(form.tipo_identificacion_sri)
                             ? e.target.value.replace(/\D/g, "")
@@ -542,6 +544,7 @@ function PersonasContenido() {
                   <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Teléfono</label>
                   <input
                     value={form.telefono}
+                    type="tel"
                     onChange={(e) => setForm({ ...form, telefono: e.target.value.replace(/\D/g, "") })}
                     placeholder="0999999999"
                     maxLength={15}

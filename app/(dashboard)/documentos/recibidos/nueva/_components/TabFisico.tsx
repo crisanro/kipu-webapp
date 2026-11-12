@@ -5,6 +5,7 @@ import {
   Camera, X, AlertTriangle, Plus, Trash2,
 } from "lucide-react";
 import { hoyEC } from "@/lib/fecha";
+import { formatoNumeroDoc } from "@/lib/teclado";
 
 interface LineaRetencion {
   tipo:            string; // "1"=Renta "2"=IVA "6"=ISD
@@ -250,6 +251,7 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
           <label className="block text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>RUC / Identificación *</label>
           <input
             value={rucProveedor}
+            inputMode="numeric"
             onChange={e => setRucProveedor(e.target.value)}
             placeholder="1234567890001"
             className="w-full px-3 py-2.5 rounded-lg text-sm font-mono transition-colors focus:outline-none"
@@ -294,7 +296,9 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
             <label className="block text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>Número *</label>
             <input
               value={numeroDoc}
-              onChange={e => setNumeroDoc(e.target.value)}
+              inputMode="numeric"
+              maxLength={17}
+              onChange={e => setNumeroDoc(formatoNumeroDoc(e.target.value))}
               placeholder="001-001-000000001"
               className="w-full px-3 py-2.5 rounded-lg text-sm font-mono transition-colors focus:outline-none"
               style={{

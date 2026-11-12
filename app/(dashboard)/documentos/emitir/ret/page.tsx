@@ -13,6 +13,7 @@ import { usePuntoEmision } from "../components/usePuntoEmision";
 import CamposAdicionales, { CampoAdicional } from "../components/CamposAdicionales";
 import DocOrigenSelector, { DocOrigen } from "../components/DocOrigenSelector";
 import { getPaisesOrdenados } from "@/lib/catalogos/paises-sri";
+import { formatoPeriodo } from "@/lib/teclado";
 
 const fmt = (n: number) => r2(n).toFixed(2);
 const genId = () => Math.random().toString(36).slice(2);
@@ -653,7 +654,8 @@ export default function NuevaRetPage() {
             </div>
             <input
               value={periodoFiscal}
-              onChange={e => setPeriodoFiscal(e.target.value)}
+              inputMode="numeric"
+              onChange={e => setPeriodoFiscal(formatoPeriodo(e.target.value))}
               placeholder="MM/YYYY"
               maxLength={7}
               className="w-40 px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none"

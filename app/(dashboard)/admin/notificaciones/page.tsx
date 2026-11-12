@@ -177,6 +177,7 @@ export default function AdminNotificacionesPage() {
             <input
               type="number"
               value={emisorId}
+              inputMode="numeric"
               onChange={(e) => setEmisorId(e.target.value)}
               placeholder="Ej: 42"
               className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none transition-colors"
