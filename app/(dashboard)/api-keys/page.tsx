@@ -1,6 +1,7 @@
 "use client";
 import { BookOpen, ExternalLink } from "lucide-react";
 import TabApiKeys from "@/components/configuracion/TabApiKeys";
+import UsoApi from "@/components/configuracion/UsoApi";
 import { usePermiso } from "@/hooks/usePermiso";
 import SinAcceso from "@/components/SinAcceso";
 
@@ -32,6 +33,7 @@ export default function ApiKeysPage() {
           <ExternalLink size={13} className="opacity-70" />
         </a>
       </div>
+      <UsoApi />
       <TabApiKeys />
     </div>
   );
