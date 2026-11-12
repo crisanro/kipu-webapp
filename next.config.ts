@@ -1,4 +1,6 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "https://core.kipu.ec";
+// La documentación para integradores la genera el backend de producción
+const DOCS_ORIGIN = "https://core.kipu.ec";
 
 // CSP en modo Report-Only: no bloquea nada, solo reporta en la consola del
 // navegador lo que bloquearía. Cuando la consola quede limpia en staging,
@@ -38,12 +40,17 @@ const nextConfig = {
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },
-  // La documentación para integradores vive en el backend (se genera del código).
-  // /dev se mantiene como redirección para no romper enlaces existentes.
-  async redirects() {
+  // La documentación para integradores vive en el backend (se genera del código)
+  // y se sirve en app.kipu.ec/dev sin redirigir: Next la pide por detrás. El
+  // HTML carga /openapi-public.json con ruta relativa, así que también se
+  // reescribe. "Probar" va a core.kipu.ec porque la especificación declara su
+  // servidor. (Antes era una redirección 308: los navegadores que la guardaron
+  // seguirán yendo a core.kipu.ec/api-docs, que sigue funcionando.)
+  async rewrites() {
     return [
-      { source: "/dev",        destination: "https://core.kipu.ec/api-docs", permanent: true },
-      { source: "/dev/:path*", destination: "https://core.kipu.ec/api-docs", permanent: true },
+      { source: "/dev",                 destination: `${DOCS_ORIGIN}/api-docs` },
+      { source: "/dev/:path*",          destination: `${DOCS_ORIGIN}/api-docs` },
+      { source: "/openapi-public.json", destination: `${DOCS_ORIGIN}/openapi-public.json` },
     ];
   },
 };

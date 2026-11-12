@@ -5,8 +5,8 @@ import UsoApi from "@/components/configuracion/UsoApi";
 import { usePermiso } from "@/hooks/usePermiso";
 import SinAcceso from "@/components/SinAcceso";
 
-// Documentación pública de la API (la misma a la que redirige /dev)
-const DOCS_URL = "https://core.kipu.ec/api-docs";
+// Documentación pública de la API, servida en app.kipu.ec/dev (next.config.ts)
+const DOCS_URL = "/dev";
 
 export default function ApiKeysPage() {
   const puedeVer = usePermiso("api_keys");
