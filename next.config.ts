@@ -42,8 +42,8 @@ const nextConfig = {
   },
   // La documentación para integradores vive en el backend (se genera del código)
   // y se sirve en app.kipu.ec/dev sin redirigir: Next la pide por detrás. El
-  // HTML carga /openapi-public.json con ruta relativa, así que también se
-  // reescribe. "Probar" va a core.kipu.ec porque la especificación declara su
+  // HTML carga /openapi-public.json y /docs-assets/… con rutas relativas, así
+  // que también se reescriben. "Probar" va a core.kipu.ec porque la especificación declara su
   // servidor. (Antes era una redirección 308: los navegadores que la guardaron
   // seguirán yendo a core.kipu.ec/api-docs, que sigue funcionando.)
   async rewrites() {
@@ -51,6 +51,9 @@ const nextConfig = {
       { source: "/dev",                 destination: `${DOCS_ORIGIN}/api-docs` },
       { source: "/dev/:path*",          destination: `${DOCS_ORIGIN}/api-docs` },
       { source: "/openapi-public.json", destination: `${DOCS_ORIGIN}/openapi-public.json` },
+      // El visor (Scalar) lo sirve el backend: así /dev carga solo scripts del
+      // propio dominio y funciona con la CSP estricta, sin CDN de terceros
+      { source: "/docs-assets/:archivo", destination: `${DOCS_ORIGIN}/docs-assets/:archivo` },
     ];
   },
 };
