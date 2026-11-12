@@ -4,6 +4,7 @@ import api from "@/lib/api";
 import { HealthData } from "@/components/Checklist";
 import TabEmpresa from "@/components/configuracion/TabEmpresa";
 import TabFirma   from "@/components/configuracion/TabFirma";
+import TabCobrosEnLinea from "@/components/configuracion/TabCobrosEnLinea";
 import { useAuthStore } from "@/store/auth.store";
 import { usePermiso } from "@/hooks/usePermiso";
 import SinAcceso from "@/components/SinAcceso";
@@ -85,6 +86,9 @@ function ConfiguracionContenido() {
           firma={config?.firma}
           onActualizar={cargar}
         />
+      </div>
+      <div id="cobros">
+        <TabCobrosEnLinea />
       </div>
     </div>
   );

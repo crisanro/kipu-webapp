@@ -55,7 +55,7 @@ const ESTADO_COLOR: Record<string, { color: string; bg: string; border: string }
 
 const FEATURES: { texto: string; destacado?: boolean }[] = [
   { texto: "Emisión ilimitada desde el panel web — facturas, liquidaciones, notas de crédito/débito y retenciones" },
-  { texto: "API REST — 1.000 comprobantes/mes incluidos · más con créditos", destacado: true },
+  { texto: "API REST — 300 comprobantes/mes incluidos · más con créditos", destacado: true },
   { texto: "Registro y clasificación fiscal de documentos recibidos" },
   { texto: "Reporte de IVA mensual y semestral para declaración 104/104A" },
   { texto: "Reporte de Renta anual" },

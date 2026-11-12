@@ -6,6 +6,7 @@ import {
 import api from "@/lib/api";
 import { hoyEC } from "@/lib/fecha";
 import { type FacturaBase, COBRO_CONFIG } from "./utils";
+import LinkPago from "@/components/cobros/LinkPago";
 
 const FORMAS_PAGO_COBRO = [
   { value: "EFECTIVO",      label: "Efectivo" },
@@ -284,6 +285,14 @@ export default function SeccionCobro({ factura, onRecargar }: { factura: Factura
                 <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
                   Registra el cobro cuando recibas el pago.
                 </p>
+              )}
+              {["FAC", "NDB"].includes(factura.tipo_doc) && (
+                <LinkPago
+                  documentoId={factura.id}
+                  numero={factura.numero_doc}
+                  pendiente={["PENDIENTE", "PARCIAL"].includes(factura.estado_cobro ?? "")}
+                  onPagado={onRecargar}
+                />
               )}
             </>
           )}
