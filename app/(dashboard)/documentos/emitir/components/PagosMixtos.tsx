@@ -203,7 +203,7 @@ export default function PagosMixtos({
           return (
             <div
               key={pago._id}
-              className="flex items-center gap-2 p-3 rounded-lg transition-colors"
+              className="flex flex-wrap sm:flex-nowrap items-center gap-2 p-3 rounded-lg transition-colors"
               style={{
                 border: esSaldo
                   ? "1px solid color-mix(in srgb, var(--kipu-accent) 30%, transparent)"
@@ -217,7 +217,7 @@ export default function PagosMixtos({
               <select
                 value={pago.forma_pago}
                 onChange={(e) => editPago(pago._id, "forma_pago", e.target.value as FormaPagoCode)}
-                className="flex-1 px-2.5 py-2 rounded-lg text-sm transition-colors focus:outline-none"
+                className="w-full sm:w-auto sm:flex-1 min-w-0 px-2.5 py-2 rounded-lg text-sm transition-colors focus:outline-none"
                 style={{
                   background: "var(--kipu-surface)",
                   border: "1px solid var(--kipu-border)",
@@ -233,7 +233,7 @@ export default function PagosMixtos({
 
               {/* Monto o badge saldo restante */}
               {esSaldo ? (
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-2 shrink-0 ml-auto sm:ml-0">
                   <div className="text-right">
                     <p className="text-xs font-medium" style={{ color: "var(--kipu-accent)" }}>
                       ${fmt(Math.max(0, saldoRestante))}
@@ -242,7 +242,7 @@ export default function PagosMixtos({
                   </div>
                 </div>
               ) : (
-                <div className="flex items-center gap-1.5 shrink-0">
+                <div className="flex items-center gap-1.5 shrink-0 ml-auto sm:ml-0">
                   <span className="text-sm" style={{ color: "var(--kipu-subtle)" }}>$</span>
                   <input
                     type="number"
@@ -354,10 +354,10 @@ export default function PagosMixtos({
 
       {/* Propina */}
       <div
-        className="pt-2 flex items-center justify-between"
+        className="pt-2 flex items-center justify-between gap-3"
         style={{ borderTop: "1px solid var(--kipu-border)" }}
       >
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 min-w-0">
           <span className="text-sm font-medium" style={{ color: "var(--kipu-muted)" }}>
             Propina (10%)
           </span>
