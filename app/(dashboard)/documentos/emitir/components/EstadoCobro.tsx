@@ -19,12 +19,17 @@ export interface PasarelaEstado {
   requiere_cliente?:   boolean;   // PagoPlux: exige cédula/RUC y correo del cliente
 }
 
+/** Cuándo se emite la factura cuando se cobra con link */
+export type MomentoFactura = "ahora" | "al_pagar";
+
 /** Link de pago OPCIONAL: solo lo pasa la factura, y se ofrece solo si queda por cobrar */
 export interface OpcionLinkPago {
   pasarela: PasarelaEstado | null;
   activo:   boolean;
   onChange: (activo: boolean) => void;
   aviso?:   string | null;        // p. ej. cliente sin correo
+  momento?:   MomentoFactura;     // si viene, se ofrece "facturar cuando pague"
+  onMomento?: (m: MomentoFactura) => void;
 }
 
 interface Props {
@@ -174,11 +179,34 @@ export default function EstadoCobro({ cobro, onChange, linkPago }: Props) {
                 Cobrar con link de pago ({linkPago.pasarela.nombre})
               </span>
               <span className="block text-xs mt-0.5" style={{ color: "var(--kipu-subtle)" }}>
-                El link va en la información adicional de la factura (XML y PDF) y en el correo
-                al cliente. Cuando pague, la factura queda cobrada sola.
+                {linkPago.momento === "al_pagar"
+                  ? "Se crea solo el link. Cuando tu cliente pague, la factura se emite sola, ya cobrada, y le llega por correo."
+                  : "El link va en la información adicional de la factura (XML y PDF) y en el correo al cliente. Cuando pague, la factura queda cobrada sola."}
               </span>
             </span>
           </label>
+          {linkPago.activo && linkPago.onMomento && (
+            <div role="radiogroup" aria-label="Cuándo emitir la factura" className="pl-6 space-y-1.5">
+              {([
+                ["ahora",    "Emitir la factura ahora", "con el link adentro"],
+                ["al_pagar", "Emitir la factura cuando pague", "anticipos, reservas, cobrar antes de entregar"],
+              ] as const).map(([valor, titulo, ayuda]) => (
+                <label key={valor} className="flex items-start gap-2 cursor-pointer text-xs">
+                  <input
+                    type="radio"
+                    name="momento-factura"
+                    className="mt-0.5"
+                    checked={(linkPago.momento ?? "ahora") === valor}
+                    onChange={() => linkPago.onMomento?.(valor)}
+                  />
+                  <span>
+                    <span className="font-medium" style={{ color: "var(--kipu-text)" }}>{titulo}</span>
+                    <span style={{ color: "var(--kipu-subtle)" }}> · {ayuda}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+          )}
           {linkPago.activo && linkPago.aviso && (
             <p className="flex items-start gap-1.5 text-xs" style={{ color: "var(--kipu-warning)" }}>
               <AlertTriangle size={13} className="mt-0.5 shrink-0" />

@@ -26,12 +26,13 @@ interface Props {
   balanceApi:        number;
   onEmitir:          () => void;
   serie?:            string;   // "002-001": desde dónde sale, a la vista justo antes de emitir
+  textoBoton?:       string;   // p. ej. "Crear link de cobro" (la factura se emite cuando paguen)
 }
 
 const fmt = (n: number) => r2(n).toFixed(2);
 
 export default function ResumenTotales({
-  totales, submitting, error, suscripcionActiva, balanceApi, onEmitir, serie,
+  totales, submitting, error, suscripcionActiva, balanceApi, onEmitir, serie, textoBoton,
 }: Props) {
   const puedeEmitir = suscripcionActiva || balanceApi > 0;
   const usaCreditos = !suscripcionActiva && balanceApi > 0;
@@ -190,8 +191,10 @@ export default function ResumenTotales({
               className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin"
               style={{ borderColor: "#FFFFFF", borderTopColor: "transparent" }}
             />
-            Emitiendo...
+            {textoBoton ? "Creando..." : "Emitiendo..."}
           </>
+        ) : textoBoton ? (
+          `${textoBoton} · $${fmt(totales.total)}`
         ) : (
           `Emitir${serie ? ` desde ${serie}` : ""} · $${fmt(totales.total)}`
         )}

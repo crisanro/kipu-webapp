@@ -8,6 +8,7 @@ import {
   Package,
   Building2,
   CreditCard,
+  Link2,
   BarChart3,
   UserCog,
   Key,
@@ -28,6 +29,7 @@ export const NAV_GROUPS = [
   {
     items: [
       { href: "/proformas", label: "Proformas", icon: ClipboardList, permiso: "emitir" },
+      { href: "/cobros",    label: "Links de cobro", icon: Link2, permiso: "emitir" },
     ],
   },
   {
