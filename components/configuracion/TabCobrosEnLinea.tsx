@@ -47,6 +47,8 @@ export default function TabCobrosEnLinea() {
   const [valores,    setValores]    = useState<Record<string, string>>({});
   const [copiado,    setCopiado]    = useState<string | null>(null);
   const [error,      setError]      = useState("");
+  const [guardando,  setGuardando]  = useState(false);
+  const [desconectando, setDesconectando] = useState<string | null>(null);   // proveedor pidiendo PIN
 
   const cargar = () =>
     Promise.all([
@@ -63,14 +65,27 @@ export default function TabCobrosEnLinea() {
 
   const abrir = (p: string) => { setEditando(p); setValores({}); setError(""); };
 
-  const conectar = async (proveedor: string, pin: string) => {
+  // Primera conexión: sin PIN (se avisa por correo a los administradores).
+  // Cambiar credenciales: con PIN (los pagos irían a otra cuenta).
+  const conectar = async (proveedor: string, pin?: string) => {
     const res = await api.put("/api/v1/app/cobros-en-linea/config", {
-      proveedor, credenciales: valores, pin,
+      proveedor, credenciales: valores, ...(pin ? { pin } : {}),
       activo: true, link_automatico: conexiones.find(c => c.proveedor === proveedor)?.link_automatico ?? true,
     });
     setConexiones(res.data.data ?? []);
     setEditando(null);
     setValores({});
+  };
+
+  const conectarPrimeraVez = async (proveedor: string) => {
+    setGuardando(true); setError("");
+    try {
+      await conectar(proveedor);
+    } catch (e) {
+      setError(detalleError(e, "No se pudo conectar."));
+    } finally {
+      setGuardando(false);
+    }
   };
 
   const cambiarOpcion = async (c: Conexion, cambio: Partial<Conexion>) => {
@@ -96,14 +111,11 @@ export default function TabCobrosEnLinea() {
     }
   };
 
-  const desconectar = async (c: Conexion) => {
-    if (!confirm(`¿Desconectar ${c.nombre}? Los links pendientes ya no se podrán verificar.`)) return;
-    try {
-      await api.delete(`/api/v1/app/cobros-en-linea/config/${c.proveedor}`);
-      await cargar();
-    } catch (e) {
-      setError(detalleError(e, "No se pudo desconectar."));
-    }
+  // Desconectar pide el PIN del correo (PinInput muestra el error si falla)
+  const desconectar = async (proveedor: string, pin: string) => {
+    await api.delete(`/api/v1/app/cobros-en-linea/config/${proveedor}?pin=${encodeURIComponent(pin)}`);
+    setDesconectando(null);
+    await cargar();
   };
 
   const copiar = async (texto: string, id: string) => {
@@ -211,12 +223,28 @@ export default function TabCobrosEnLinea() {
                             style={{ border: "1px solid var(--kipu-border)", color: "var(--kipu-muted)" }}>
                       <RefreshCw size={12} /> Nueva URL
                     </button>
-                    <button onClick={() => desconectar(c)}
+                    <button onClick={() => setDesconectando(op.proveedor)}
                             className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg"
                             style={{ border: "1px solid var(--kipu-border)", color: "var(--kipu-danger)" }}>
                       <Unplug size={12} /> Desconectar
                     </button>
                   </div>
+
+                  {desconectando === op.proveedor && (
+                    <div className="rounded-lg p-3" style={{ border: "1px solid color-mix(in srgb, var(--kipu-danger) 30%, transparent)" }}>
+                      <p className="text-xs mb-3" style={{ color: "var(--kipu-muted)" }}>
+                        Al desconectar {op.nombre}, tus facturas dejan de llevar link de pago y los links
+                        pendientes ya no se podrán verificar.
+                      </p>
+                      <PinInput
+                        tipoAccion="DESCONECTAR_PASARELA"
+                        email={email}
+                        label={`desconectar ${op.nombre}`}
+                        onCancelar={() => setDesconectando(null)}
+                        onConfirmar={pin => desconectar(op.proveedor, pin)}
+                      />
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -239,18 +267,28 @@ export default function TabCobrosEnLinea() {
                       />
                     </div>
                   ))}
-                  {completos ? (
+                  {completos && c ? (
+                    // Cambiar credenciales de una pasarela ya conectada: con PIN
                     <PinInput
                       tipoAccion="CONFIGURAR_PASARELA"
                       email={email}
-                      label={`conectar tu cuenta de ${op.nombre}`}
+                      label={`cambiar las credenciales de ${op.nombre}`}
                       onCancelar={() => setEditando(null)}
                       onConfirmar={pin => conectar(op.proveedor, pin)}
                     />
                   ) : (
-                    <button onClick={() => setEditando(null)} className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
-                      Cancelar
-                    </button>
+                    <div className="flex gap-2">
+                      <button onClick={() => setEditando(null)}
+                              className="flex-1 py-2 rounded-lg text-xs"
+                              style={{ border: "1px solid var(--kipu-border)", color: "var(--kipu-muted)" }}>
+                        Cancelar
+                      </button>
+                      <button onClick={() => conectarPrimeraVez(op.proveedor)} disabled={!completos || guardando}
+                              className="flex-1 py-2 rounded-lg text-xs font-medium text-white disabled:opacity-40"
+                              style={{ background: "var(--kipu-accent)" }}>
+                        {guardando ? "Probando credenciales…" : "Conectar"}
+                      </button>
+                    </div>
                   )}
                 </div>
               )}
