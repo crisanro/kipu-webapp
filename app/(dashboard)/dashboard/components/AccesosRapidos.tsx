@@ -17,7 +17,7 @@ const accesos = [
     href:  "/documentos/recibidos/nueva",
     icon:  FileInput,
     label: "Registrar XML",
-    color: "#3b82f6",
+    color: "var(--kipu-info)",
   },
   {
     href:  "/personas",

@@ -34,12 +34,12 @@ export default function ComprobantesRelacionados({
                   disabled={consumidorFinal}
                   className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                   style={{
-                    background: "color-mix(in srgb, #c084fc 10%, transparent)",
-                    color: "#c084fc",
-                    border: "1px solid color-mix(in srgb, #c084fc 20%, transparent)",
+                    background: "color-mix(in srgb, var(--kipu-muted) 10%, transparent)",
+                    color: "var(--kipu-muted)",
+                    border: "1px solid color-mix(in srgb, var(--kipu-muted) 20%, transparent)",
                   }}
-                  onMouseEnter={e => { if (!consumidorFinal) e.currentTarget.style.background = "color-mix(in srgb, #c084fc 20%, transparent)"; }}
-                  onMouseLeave={e => { if (!consumidorFinal) e.currentTarget.style.background = "color-mix(in srgb, #c084fc 10%, transparent)"; }}
+                  onMouseEnter={e => { if (!consumidorFinal) e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-muted) 20%, transparent)"; }}
+                  onMouseLeave={e => { if (!consumidorFinal) e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-muted) 10%, transparent)"; }}
                 >
                   NCR · Nota de crédito
                 </button>
@@ -64,12 +64,12 @@ export default function ComprobantesRelacionados({
                 onClick={() => router.push(`/documentos/emitir/ret?doc_origen_emitido_id=${factura.id}`)}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs transition-colors"
                 style={{
-                  background: "color-mix(in srgb, #60a5fa 10%, transparent)",
-                  color: "#60a5fa",
-                  border: "1px solid color-mix(in srgb, #60a5fa 20%, transparent)",
+                  background: "color-mix(in srgb, var(--kipu-info) 10%, transparent)",
+                  color: "var(--kipu-info)",
+                  border: "1px solid color-mix(in srgb, var(--kipu-info) 20%, transparent)",
                 }}
-                onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, #60a5fa 20%, transparent)"}
-                onMouseLeave={e => e.currentTarget.style.background = "color-mix(in srgb, #60a5fa 10%, transparent)"}
+                onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-info) 20%, transparent)"}
+                onMouseLeave={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-info) 10%, transparent)"}
               >
                 RET · Retención al proveedor
               </button>

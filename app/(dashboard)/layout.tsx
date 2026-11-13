@@ -82,7 +82,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return ok;
   }, []);
 
+  const hayEmpresa = !!empresa?.id;
+
   useEffect(() => {
+    // Sin empresa todavía no existe el perfil: registrar el dispositivo daba 400
+    if (!hayEmpresa) return;
     montado.current = true;
     // Intento automático (Chrome muestra la pregunta). Si el permiso sigue sin
     // decidirse (Firefox/Safari lo exigen desde un clic), se ofrece el botón.
@@ -99,7 +103,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       desuscribirPush.current?.();
       desuscribirPush.current = undefined;
     };
-  }, [activarPush]);
+  }, [activarPush, hayEmpresa]);
 
   const activarNotificaciones = () => {
     setBotonNotif(false);
@@ -258,7 +262,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {sandbox && (
             <div
               className="w-full px-4 py-2 flex items-center justify-center gap-2 text-xs font-medium text-white shrink-0"
-              style={{ background: "#2563eb" }}
+              style={{ background: "var(--kipu-sandbox)" }}
             >
               <FlaskConical size={14} />
               <span>MODO SANDBOX — Las facturas no van al SRI real ni poseen validez tributaria.</span>

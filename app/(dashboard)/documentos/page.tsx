@@ -39,8 +39,8 @@ interface PaginationInfo {
 // ── Configs ───────────────────────────────────────────────────────────────────
 const ESTADO_CONFIG: Record<string, { label: string; color: string; bg: string; icon: any }> = {
   AUTORIZADO: { label: "Autorizado", color: "var(--kipu-success)", bg: "color-mix(in srgb, var(--kipu-success) 10%, transparent)", icon: CheckCircle2 },
-  RECIBIDA:   { label: "En proceso", color: "#818cf8", bg: "color-mix(in srgb, #818cf8 10%, transparent)", icon: Clock },
-  FIRMADO:    { label: "En cola",    color: "#60a5fa", bg: "color-mix(in srgb, #60a5fa 10%, transparent)", icon: Clock },
+  RECIBIDA:   { label: "En proceso", color: "var(--kipu-info)", bg: "color-mix(in srgb, var(--kipu-info) 10%, transparent)", icon: Clock },
+  FIRMADO:    { label: "En cola",    color: "var(--kipu-info)", bg: "color-mix(in srgb, var(--kipu-info) 10%, transparent)", icon: Clock },
   DEVUELTA:   { label: "Devuelto",   color: "var(--kipu-warning)", bg: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)", icon: AlertTriangle },
   RECHAZADO:  { label: "Rechazado",  color: "var(--kipu-danger)", bg: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)", icon: XCircle },
   ANULADO:    { label: "Anulado",    color: "var(--kipu-muted)", bg: "color-mix(in srgb, var(--kipu-muted) 10%, transparent)", icon: Ban },
@@ -50,7 +50,7 @@ const ESTADO_CONFIG: Record<string, { label: string; color: string; bg: string; 
 
 const TIPO_COMPROBANTE: Record<string, { label: string; color: string; bg: string }> = {
   FAC: { label: "Factura",          color: "var(--kipu-muted)", bg: "color-mix(in srgb, var(--kipu-muted) 10%, transparent)" },
-  NCR: { label: "Nota de Crédito",  color: "#c084fc", bg: "color-mix(in srgb, #c084fc 10%, transparent)" },
+  NCR: { label: "Nota de Crédito",  color: "var(--kipu-muted)", bg: "color-mix(in srgb, var(--kipu-muted) 10%, transparent)" },
   NDB: { label: "Nota de Débito",   color: "#fb923c", bg: "color-mix(in srgb, #fb923c 10%, transparent)" },
   RET: { label: "Retención",        color: "#facc15", bg: "color-mix(in srgb, #facc15 10%, transparent)" },
   LIQ: { label: "Liquidación",      color: "#22d3ee", bg: "color-mix(in srgb, #22d3ee 10%, transparent)" },
@@ -59,7 +59,7 @@ const TIPO_COMPROBANTE: Record<string, { label: string; color: string; bg: strin
 const COBRO_CONFIG: Record<string, { label: string; color: string }> = {
   PENDIENTE: { label: "Por cobrar", color: "var(--kipu-warning)" },
   PAGADO:    { label: "Cobrado",    color: "var(--kipu-success)" },
-  PARCIAL:   { label: "Parcial",    color: "#60a5fa" },
+  PARCIAL:   { label: "Parcial",    color: "var(--kipu-info)" },
   ANULADO:   { label: "Anulado",    color: "var(--kipu-danger)" },
 };
 
@@ -82,9 +82,10 @@ function guardarFecha(key: string, val: string) {
 
 // ── Componente ResumenTipoCard ─────────────────────────────────────────────────
 const COLOR_MAP: Record<string, { color: string; bg: string }> = {
-  indigo: { color: "#818cf8", bg: "color-mix(in srgb, #818cf8 10%, transparent)" },
+  verde:  { color: "var(--kipu-accent)", bg: "color-mix(in srgb, var(--kipu-accent) 10%, transparent)" },
+  indigo: { color: "var(--kipu-info)", bg: "color-mix(in srgb, var(--kipu-info) 10%, transparent)" },
   cyan:   { color: "#22d3ee", bg: "color-mix(in srgb, #22d3ee 10%, transparent)" },
-  purple: { color: "#c084fc", bg: "color-mix(in srgb, #c084fc 10%, transparent)" },
+  purple: { color: "var(--kipu-muted)", bg: "color-mix(in srgb, var(--kipu-muted) 10%, transparent)" },
   amber:  { color: "#fb923c", bg: "color-mix(in srgb, #fb923c 10%, transparent)" },
   yellow: { color: "#facc15", bg: "color-mix(in srgb, #facc15 10%, transparent)" },
 };
@@ -399,7 +400,7 @@ export default function HistorialPage() {
             >
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 pt-3">
                 {resumen.por_tipo?.FAC && (
-                  <ResumenTipoCard tipo="FAC" label="Facturas Emitidas"        color="indigo" data={resumen.por_tipo.FAC} />
+                  <ResumenTipoCard tipo="FAC" label="Facturas Emitidas"        color="verde"  data={resumen.por_tipo.FAC} />
                 )}
                 {resumen.por_tipo?.LIQ && (
                   <ResumenTipoCard tipo="LIQ" label="Liquidaciones de Compra" color="cyan"   data={resumen.por_tipo.LIQ} />

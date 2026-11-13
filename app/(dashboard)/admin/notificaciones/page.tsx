@@ -6,7 +6,7 @@ import api from "@/lib/api";
 import { ArrowLeft, Bell, Send, CheckCircle2, Users, User } from "lucide-react";
 
 const TIPOS = [
-  { value: "SISTEMA",     label: "Sistema",     color: "#60a5fa", bg: "color-mix(in srgb, #60a5fa 10%, transparent)" },
+  { value: "SISTEMA",     label: "Sistema",     color: "var(--kipu-info)", bg: "color-mix(in srgb, var(--kipu-info) 10%, transparent)" },
   { value: "DECLARACION", label: "Declaración", color: "var(--kipu-accent)", bg: "color-mix(in srgb, var(--kipu-accent) 10%, transparent)" },
   { value: "CREDITOS",    label: "Créditos",    color: "var(--kipu-warning)", bg: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)" },
   { value: "FACTURA",     label: "Factura",     color: "var(--kipu-success)", bg: "color-mix(in srgb, var(--kipu-success) 10%, transparent)" },

@@ -435,7 +435,7 @@ export default function ReporteATSPage() {
           { label: "Ventas",      value: fmtN(totalesVentas.num_docs  ?? 0), sub: `$${fmt(totalesVentas.total  ?? 0)}`, color: "var(--kipu-accent)" },
           { label: "Compras",     value: fmtN(totalesCompras.num_docs ?? 0), sub: `$${fmt(totalesCompras.total ?? 0)}`, color: "var(--kipu-success)" },
           { label: "Ret. emit.",  value: fmtN(retEmitidas.length),           sub: "comprobantes",                       color: "var(--kipu-warning)" },
-          { label: "Ret. recib.", value: fmtN(retRecibidas.length),          sub: "comprobantes",                       color: "#60a5fa" },
+          { label: "Ret. recib.", value: fmtN(retRecibidas.length),          sub: "comprobantes",                       color: "var(--kipu-info)" },
         ].map(({ label, value, sub, color }) => (
           <div
             key={label}

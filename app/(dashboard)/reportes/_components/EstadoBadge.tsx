@@ -53,9 +53,9 @@ const CONFIG: Record<EstadoReporte, {
   },
   EN_CURSO: {
     label:  "En curso",
-    color:  "#60a5fa",
-    bg:     "color-mix(in srgb, #60a5fa 20%, transparent)",
-    border: "color-mix(in srgb, #60a5fa 30%, transparent)",
+    color:  "var(--kipu-info)",
+    bg:     "color-mix(in srgb, var(--kipu-info) 20%, transparent)",
+    border: "color-mix(in srgb, var(--kipu-info) 30%, transparent)",
     icon:   Zap,
   },
 };

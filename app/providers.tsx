@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { ThemeProvider } from "next-themes";
 import { auth } from "@/lib/firebase";
-import { onAuthStateChanged, signOut } from "firebase/auth";
+import { onAuthStateChanged, signOut, type User } from "firebase/auth";
 import { useAuthStore } from "@/store/auth.store";
 import { SWRProvider } from "@/lib/swrConfig";
 import api from "@/lib/api";
@@ -16,6 +16,11 @@ const RUTAS_PUBLICAS = ["/", "/login", "/register", "/reset"];
 
 const esRutaPublica = (path: string) =>
   RUTAS_PUBLICAS.some((r) => path === r || (r !== "/" && path.startsWith(r + "/")));
+
+// Pantallas donde es normal todavía no tener empresa
+const RUTAS_SIN_EMPRESA = ["/bienvenida", "/onboarding"];
+const esRutaSinEmpresa = (path: string) =>
+  RUTAS_SIN_EMPRESA.some((r) => path === r || path.startsWith(r + "/"));
 
 const LS_KEYS = ["kipu-ext-token", "kipu-ext-emisor", "kipu-ext-ruc", "kipu-ext-razon"];
 
@@ -46,6 +51,8 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
 
   // uid para el que ya se cargaron empresas con éxito (null = nada cargado)
   const cargadoPara = useRef<string | null>(null);
+  // Carga de empresas del usuario (definida dentro del efecto de sesión)
+  const cargarRef = useRef<((user: User) => Promise<void>) | null>(null);
   const pathnameRef = useRef(pathname);
   const [listo, setListoLocal] = useState(false);
   const [errorCarga, setErrorCarga] = useState<string | null>(null);
@@ -63,26 +70,24 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
       setListo(true);
     };
 
-    const unsub = onAuthStateChanged(auth, async (user) => {
-      // ── Sin sesión ─────────────────────────────────────────────
-      if (!user) {
-        cargadoPara.current = null;
-        limpiarStorage();
-        // El store persistido (empresa, empresas, permisos) no debe sobrevivir
-        // a la sesión: si expiró sin pasar por "Cerrar sesión", seguía visible
-        useAuthStore.getState().logout();
-        if (refreshInterval) {
-          clearInterval(refreshInterval);
-          refreshInterval = null;
-        }
-        marcarListo();
-        if (!esRutaPublica(pathnameRef.current)) {
-          router.replace("/login");
-        }
-        return;
+    const sinSesion = () => {
+      cargadoPara.current = null;
+      limpiarStorage();
+      // El store persistido (empresa, empresas, permisos) no debe sobrevivir
+      // a la sesión: si expiró sin pasar por "Cerrar sesión", seguía visible
+      useAuthStore.getState().logout();
+      if (refreshInterval) {
+        clearInterval(refreshInterval);
+        refreshInterval = null;
       }
+      marcarListo();
+      if (!esRutaPublica(pathnameRef.current)) {
+        router.replace("/login");
+      }
+    };
 
-      // ── Con sesión ─────────────────────────────────────────────
+    // ── Con sesión: token y empresas ─────────────────────────────
+    const cargar = async (user: User) => {
       try {
         const token = await user.getIdToken();
         localStorage.setItem("kipu-ext-token", token);
@@ -166,6 +171,15 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
       } finally {
         marcarListo();
       }
+    };
+    cargarRef.current = cargar;
+
+    const unsub = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        sinSesion();
+        return;
+      }
+      await cargar(user);
     });
 
     return () => {
@@ -173,6 +187,18 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
       if (refreshInterval) clearInterval(refreshInterval);
     };
   }, [router, setUser, setEmpresa, setEmpresas, setListo]);
+
+  // Quien acaba de crear o unirse a una empresa llega al panel sin recargar la
+  // página: sus empresas se cargaron cuando no tenía ninguna y el panel se quedaba
+  // esperando para siempre. Se vuelven a pedir.
+  useEffect(() => {
+    const user = auth.currentUser;
+    if (!user || cargadoPara.current !== user.uid) return;
+    if (esRutaPublica(pathname) || esRutaSinEmpresa(pathname)) return;
+    if (useAuthStore.getState().empresa) return;
+    cargadoPara.current = null;
+    void cargarRef.current?.(user);
+  }, [pathname]);
 
   if (errorCarga) {
     return (

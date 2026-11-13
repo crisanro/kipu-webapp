@@ -569,7 +569,7 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
 
           <div className="flex justify-between items-center pt-2" style={{ borderTop: "1px solid var(--kipu-border)" }}>
             <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Total retenido</span>
-            <span className="text-sm font-bold" style={{ color: "#60a5fa" }}>${fmt(totalRetenido)}</span>
+            <span className="text-sm font-bold" style={{ color: "var(--kipu-info)" }}>${fmt(totalRetenido)}</span>
           </div>
         </div>
       )}
@@ -660,11 +660,11 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
         <div
           className="flex items-start gap-2 rounded-lg px-3 py-2.5"
           style={{
-            background: "color-mix(in srgb, #60a5fa 10%, transparent)",
-            border: "1px solid color-mix(in srgb, #60a5fa 20%, transparent)",
+            background: "color-mix(in srgb, var(--kipu-info) 10%, transparent)",
+            border: "1px solid color-mix(in srgb, var(--kipu-info) 20%, transparent)",
           }}
         >
-          <span className="text-xs mt-0.5" style={{ color: "#60a5fa" }}>ℹ️</span>
+          <span className="text-xs mt-0.5" style={{ color: "var(--kipu-info)" }}>ℹ️</span>
           <p className="text-xs" style={{ color: "#93c5fd" }}>
             Las retenciones de IVA generan crédito tributario automáticamente.
             Las de Renta no son deducibles — ya son un pago anticipado de impuesto.

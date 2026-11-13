@@ -27,7 +27,7 @@ interface Props {
 
 const TIPO_CONFIG = {
   IVA:   { label: "IVA 104",  color: "var(--kipu-accent)", bg: "color-mix(in srgb, var(--kipu-accent) 20%, transparent)", border: "color-mix(in srgb, var(--kipu-accent) 20%, transparent)" },
-  RENTA: { label: "Renta 102", color: "#c084fc",            bg: "color-mix(in srgb, #a855f7 20%, transparent)",     border: "color-mix(in srgb, #a855f7 20%, transparent)" },
+  RENTA: { label: "Renta 102", color: "var(--kipu-muted)",            bg: "color-mix(in srgb, #a855f7 20%, transparent)",     border: "color-mix(in srgb, #a855f7 20%, transparent)" },
   ATS:   { label: "ATS",       color: "#22d3ee",            bg: "color-mix(in srgb, #06b6d4 20%, transparent)",     border: "color-mix(in srgb, #06b6d4 20%, transparent)" },
 };
 
@@ -114,9 +114,9 @@ export default function ReporteCard({
                 <span
                   className="text-[10px] px-1.5 py-0.5 rounded font-medium"
                   style={{
-                    background: "color-mix(in srgb, #60a5fa 20%, transparent)",
-                    color: "#60a5fa",
-                    border: "1px solid color-mix(in srgb, #60a5fa 20%, transparent)",
+                    background: "color-mix(in srgb, var(--kipu-info) 20%, transparent)",
+                    color: "var(--kipu-info)",
+                    border: "1px solid color-mix(in srgb, var(--kipu-info) 20%, transparent)",
                   }}
                 >
                   En curso
@@ -163,7 +163,7 @@ export default function ReporteCard({
                   </span>
                 )}
                 {tieneCausado && !tieneAPagar && !tieneSaldo && (
-                  <span className="text-xs font-semibold" style={{ color: "#c084fc" }}>
+                  <span className="text-xs font-semibold" style={{ color: "var(--kipu-muted)" }}>
                     Causado: ${fmt(resumen.impuestoCausado ?? 0)}
                   </span>
                 )}

@@ -761,7 +761,7 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
             className="space-y-2 pt-2"
             style={{ borderTop: "1px solid var(--kipu-border)" }}
           >
-            <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "#60a5fa" }}>
+            <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--kipu-info)" }}>
               Pruebas / Sandbox
             </p>
             {Object.entries(modal.punto.secuenciales?.pruebas || {}).map(([tipo, sec]: [string, any]) => (

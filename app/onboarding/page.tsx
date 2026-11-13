@@ -174,7 +174,9 @@ export default function OnboardingPage() {
     try {
       await api.post("/api/v1/app/emisor/onboarding", form);
       setSuccess(true);
-      setTimeout(() => router.replace("/"), 2000);
+      // Carga completa: así se leen las empresas recién creadas (con router.replace
+      // el panel se quedaba cargando porque la sesión ya estaba "cargada sin empresa")
+      setTimeout(() => window.location.replace("/dashboard"), 1500);
     } catch (err: any) {
       const detail = err?.response?.data?.detail;
       if (err?.response?.status === 403 && typeof detail === "string" && /verificar tu correo/i.test(detail)) {

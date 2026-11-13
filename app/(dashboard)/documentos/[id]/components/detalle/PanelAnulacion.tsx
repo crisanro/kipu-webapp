@@ -262,9 +262,9 @@ export default function PanelAnulacion({ factura, onRecargar }: { factura: Factu
               onClick={() => router.push(`/documentos/emitir/ncr?doc_id=${factura.id}`)}
               className="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
               style={{
-                background: "color-mix(in srgb, #c084fc 10%, transparent)",
-                color: "#c084fc",
-                border: "1px solid color-mix(in srgb, #c084fc 20%, transparent)",
+                background: "color-mix(in srgb, var(--kipu-muted) 10%, transparent)",
+                color: "var(--kipu-muted)",
+                border: "1px solid color-mix(in srgb, var(--kipu-muted) 20%, transparent)",
               }}
             >
               Emitir nota de crédito

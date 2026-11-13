@@ -347,9 +347,9 @@ export default function SeccionRetenciones({
             <div className="flex items-center gap-2.5">
               <div
                 className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-                style={{ background: "color-mix(in srgb, #60a5fa 20%, transparent)" }}
+                style={{ background: "color-mix(in srgb, var(--kipu-info) 20%, transparent)" }}
               >
-                <ArrowDownLeft size={14} style={{ color: "#60a5fa" }} />
+                <ArrowDownLeft size={14} style={{ color: "var(--kipu-info)" }} />
               </div>
               <div>
                 <p className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>
@@ -367,7 +367,7 @@ export default function SeccionRetenciones({
               {retRecibidas && (
                 <div className="text-right hidden sm:block">
                   <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Casillero 609</p>
-                  <p className="text-sm font-bold" style={{ color: "#60a5fa" }}>
+                  <p className="text-sm font-bold" style={{ color: "var(--kipu-info)" }}>
                     ${fmt(retRecibidas.casilleros["609"] ?? 0)}
                   </p>
                 </div>
@@ -389,14 +389,14 @@ export default function SeccionRetenciones({
                 <div
                   className="p-3 rounded-lg flex items-center justify-between"
                   style={{
-                    background: "color-mix(in srgb, #60a5fa 10%, transparent)",
-                    border: "1px solid color-mix(in srgb, #60a5fa 25%, transparent)",
+                    background: "color-mix(in srgb, var(--kipu-info) 10%, transparent)",
+                    border: "1px solid color-mix(in srgb, var(--kipu-info) 25%, transparent)",
                   }}
                 >
                   <div className="flex items-center gap-2.5">
                     <span
                       className="text-[10px] font-bold px-2 py-0.5 rounded text-white"
-                      style={{ background: "#3b82f6" }}
+                      style={{ background: "var(--kipu-info)" }}
                     >
                       609
                     </span>
@@ -409,7 +409,7 @@ export default function SeccionRetenciones({
                       </p>
                     </div>
                   </div>
-                  <p className="text-base font-bold tabular-nums" style={{ color: "#60a5fa" }}>
+                  <p className="text-base font-bold tabular-nums" style={{ color: "var(--kipu-info)" }}>
                     ${fmt(retRecibidas.casilleros["609"] ?? 0)}
                   </p>
                 </div>
@@ -467,7 +467,7 @@ export default function SeccionRetenciones({
                                     </span>
                                   )}
                                 </span>
-                                <span className="font-bold" style={{ color: "#60a5fa" }}>
+                                <span className="font-bold" style={{ color: "var(--kipu-info)" }}>
                                   ${fmt(imp.valor)}
                                 </span>
                               </div>

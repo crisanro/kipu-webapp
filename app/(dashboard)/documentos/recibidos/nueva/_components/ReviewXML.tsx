@@ -62,9 +62,9 @@ const TIPO_LABEL: Record<string, string> = {
 
 const TIPO_COLOR: Record<string, { color: string; bg: string }> = {
   FAC: { color: "var(--kipu-muted)", bg: "color-mix(in srgb, var(--kipu-muted) 10%, transparent)" },
-  NCR: { color: "#c084fc", bg: "color-mix(in srgb, #c084fc 10%, transparent)" },
+  NCR: { color: "var(--kipu-muted)", bg: "color-mix(in srgb, var(--kipu-muted) 10%, transparent)" },
   NDB: { color: "var(--kipu-warning)", bg: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)" },
-  RET: { color: "#60a5fa", bg: "color-mix(in srgb, #60a5fa 10%, transparent)" },
+  RET: { color: "var(--kipu-info)", bg: "color-mix(in srgb, var(--kipu-info) 10%, transparent)" },
 };
 
 export default function ReviewXML({ parsed, xmlFile, onBack, onDone, suscripcionActiva }: Props) {

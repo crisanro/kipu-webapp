@@ -107,13 +107,13 @@ export default function TabApiKeys() {
           style={{ borderBottom: "1px solid var(--kipu-border)" }}
         >
           <div className="flex items-center gap-2">
-            <FlaskConical size={15} style={{ color: "#60a5fa" }} />
+            <FlaskConical size={15} style={{ color: "var(--kipu-sandbox)" }} />
             <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>API Key de Pruebas</h2>
             <span
               className="text-[10px] px-2 py-0.5 rounded-full font-bold"
               style={{
-                background: "color-mix(in srgb, #60a5fa 20%, transparent)",
-                color: "#60a5fa",
+                background: "color-mix(in srgb, var(--kipu-sandbox) 20%, transparent)",
+                color: "var(--kipu-sandbox)",
               }}
             >
               SANDBOX
@@ -160,7 +160,7 @@ export default function TabApiKeys() {
                 className="flex items-center gap-2 rounded-lg px-3 py-2.5"
                 style={{ background: "color-mix(in srgb, var(--kipu-text) 5%, transparent)" }}
               >
-                <FlaskConical size={13} className="shrink-0" style={{ color: "#60a5fa" }} />
+                <FlaskConical size={13} className="shrink-0" style={{ color: "var(--kipu-sandbox)" }} />
                 <code
                   className="text-xs flex-1 break-all transition-all"
                   style={{
@@ -223,7 +223,7 @@ export default function TabApiKeys() {
                 onClick={regenerarSandbox}
                 disabled={regenSandbox}
                 className="px-4 py-2 rounded-lg text-white text-xs font-medium transition-colors disabled:opacity-50"
-                style={{ background: "#3b82f6" }}
+                style={{ background: "var(--kipu-sandbox)" }}
               >
                 Generar key de sandbox
               </button>
@@ -234,12 +234,12 @@ export default function TabApiKeys() {
           <div
             className="rounded-lg px-3 py-2.5 text-xs space-y-1"
             style={{
-              background: "color-mix(in srgb, #60a5fa 5%, transparent)",
-              border: "1px solid color-mix(in srgb, #60a5fa 15%, transparent)",
+              background: "color-mix(in srgb, var(--kipu-sandbox) 5%, transparent)",
+              border: "1px solid color-mix(in srgb, var(--kipu-sandbox) 15%, transparent)",
               color: "#93c5fd",
             }}
           >
-            <p>· Prefix: <code className="font-semibold" style={{ color: "#bfdbfe" }}>kp_test_</code></p>
+            <p>· Prefix: <code className="font-semibold" style={{ color: "var(--kipu-sandbox)" }}>kp_test_</code></p>
             <p>· Endpoint: mismo que producción</p>
             <p>· Documentos van al SRI de pruebas — no son legales</p>
             <p>· Email de confirmación va al dueño de la cuenta, no al cliente</p>
@@ -515,7 +515,7 @@ export default function TabApiKeys() {
         <p className="font-semibold mb-2" style={{ color: "var(--kipu-text)" }}>Diferencias entre keys</p>
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1">
-            <p className="font-medium" style={{ color: "#60a5fa" }}>kp_test_ (Sandbox)</p>
+            <p className="font-medium" style={{ color: "var(--kipu-sandbox)" }}>kp_test_ (Sandbox)</p>
             <p>· SRI de pruebas</p>
             <p>· Sin cobro de créditos</p>
             <p>· Email al dueño de cuenta</p>

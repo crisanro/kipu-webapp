@@ -22,8 +22,8 @@ const TIPO_ID: Record<string, string> = {
 
 const ESTADO_CONFIG: Record<string, { label: string; color: string; bg: string; icon: any }> = {
   AUTORIZADO: { label: "Autorizado", color: "var(--kipu-success)", bg: "color-mix(in srgb, var(--kipu-success) 10%, transparent)", icon: CheckCircle2 },
-  RECIBIDA:   { label: "En proceso",  color: "#818cf8",           bg: "color-mix(in srgb, #818cf8 10%, transparent)",           icon: Clock },
-  FIRMADO:    { label: "En cola",     color: "#60a5fa",           bg: "color-mix(in srgb, #60a5fa 10%, transparent)",           icon: Clock },
+  RECIBIDA:   { label: "En proceso",  color: "var(--kipu-info)",           bg: "color-mix(in srgb, var(--kipu-info) 10%, transparent)",           icon: Clock },
+  FIRMADO:    { label: "En cola",     color: "var(--kipu-info)",           bg: "color-mix(in srgb, var(--kipu-info) 10%, transparent)",           icon: Clock },
   DEVUELTA:   { label: "Devuelto",    color: "var(--kipu-warning)", bg: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)", icon: AlertTriangle },
   RECHAZADO:  { label: "Rechazado",   color: "var(--kipu-danger)",  bg: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",  icon: XCircle },
 };
@@ -633,7 +633,7 @@ export default function DetallePersonaPage() {
             {cuentas.map((c: any, idx: number) => {
               const ESTADO_COLOR: Record<string, string> = {
                 PENDIENTE: "var(--kipu-warning)",
-                PARCIAL:   "#60a5fa",
+                PARCIAL:   "var(--kipu-info)",
                 PAGADO:    "var(--kipu-success)",
                 ANULADO:   "var(--kipu-subtle)",
               };

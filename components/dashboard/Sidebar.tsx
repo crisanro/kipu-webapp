@@ -366,12 +366,12 @@ export function Sidebar({
             className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm transition-colors"
             style={{
               background: sandbox
-                ? "color-mix(in srgb, #3b82f6 15%, transparent)"
+                ? "color-mix(in srgb, var(--kipu-sandbox) 15%, transparent)"
                 : "var(--kipu-bg)",
               border: sandbox
-                ? "1px solid color-mix(in srgb, #3b82f6 30%, transparent)"
+                ? "1px solid color-mix(in srgb, var(--kipu-sandbox) 30%, transparent)"
                 : "1px solid var(--kipu-border)",
-              color: sandbox ? "#60a5fa" : "var(--kipu-muted)",
+              color: sandbox ? "var(--kipu-sandbox)" : "var(--kipu-muted)",
               opacity: !puedeProduccion ? 0.6 : 1,
               cursor: !puedeProduccion ? "not-allowed" : "pointer",
             }}
@@ -388,7 +388,7 @@ export function Sidebar({
             {puedeProduccion && (
               <div
                 className="w-8 h-4 rounded-full transition-colors relative shrink-0"
-                style={{ background: sandbox ? "#2563eb" : "var(--kipu-success)" }}
+                style={{ background: sandbox ? "var(--kipu-sandbox)" : "var(--kipu-success)" }}
               >
                 <span
                   className="absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all"

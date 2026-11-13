@@ -29,7 +29,7 @@ function IconoTipo({ tipo }: { tipo: string }) {
     FACTURA:     { icon: FileText,      color: "var(--kipu-success)", bg: "color-mix(in srgb, var(--kipu-success) 20%, transparent)" },
     CREDITOS:    { icon: CreditCard,    color: "var(--kipu-warning)", bg: "color-mix(in srgb, var(--kipu-warning) 20%, transparent)" },
     SUSCRIPCION: { icon: BadgeCheck,    color: "var(--kipu-accent)",  bg: "color-mix(in srgb, var(--kipu-accent) 20%, transparent)" },
-    SISTEMA:     { icon: Info,          color: "#60a5fa",            bg: "color-mix(in srgb, #60a5fa 20%, transparent)" },
+    SISTEMA:     { icon: Info,          color: "var(--kipu-info)",            bg: "color-mix(in srgb, var(--kipu-info) 20%, transparent)" },
     DEFAULT:     { icon: Bell,          color: "var(--kipu-subtle)",  bg: "color-mix(in srgb, var(--kipu-text) 10%, transparent)" },
   };
   const c    = config[tipo] ?? config.DEFAULT;

@@ -98,7 +98,7 @@ const colorTab = (tab: Tab) =>
   tab === "IVA"
     ? { base: "var(--kipu-accent)", fuerte: "var(--kipu-accent)", texto: "var(--kipu-accent)" }
     : tab === "RENTA"
-      ? { base: "#a855f7", fuerte: "#9333ea", texto: "#c084fc" }
+      ? { base: "#a855f7", fuerte: "#9333ea", texto: "var(--kipu-muted)" }
       : { base: "#06b6d4", fuerte: "#0891b2", texto: "#22d3ee" };
 
 // ── Componente demo cards ──────────────────────────────────────────────────────
@@ -363,7 +363,7 @@ export default function ReportesPage() {
                 <div className="flex flex-wrap gap-2 mb-4">
                   {[
                     { label: "IVA 104 mensual",        color: "var(--kipu-accent)" },
-                    { label: "Renta 102 anual",         color: "#c084fc" },
+                    { label: "Renta 102 anual",         color: "var(--kipu-muted)" },
                     { label: "ATS mensual (obligados)", color: "#22d3ee" },
                     { label: "Trazabilidad auditoría",  color: "var(--kipu-success)" },
                   ].map(({ label, color }) => (

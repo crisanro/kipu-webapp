@@ -82,8 +82,8 @@ export default function AdminPage() {
               value: fmtK(stats.total_usuarios),
               sub:   `${stats.usuarios_sin_empresa} sin empresa`,
               icon:  UserCircle,
-              color: "#a78bfa",
-              bg:    "color-mix(in srgb, #a78bfa 10%, transparent)",
+              color: "var(--kipu-info)",
+              bg:    "color-mix(in srgb, var(--kipu-info) 10%, transparent)",
               href:  "/admin/usuarios",
             },
             {
@@ -107,8 +107,8 @@ export default function AdminPage() {
               value: `$${fmtK(stats.monto_total)}`,
               sub:   "en facturas autorizadas",
               icon:  TrendingUp,
-              color: "#60a5fa",
-              bg:    "color-mix(in srgb, #60a5fa 10%, transparent)",
+              color: "var(--kipu-info)",
+              bg:    "color-mix(in srgb, var(--kipu-info) 10%, transparent)",
             },
             {
               label: "Créditos activos",

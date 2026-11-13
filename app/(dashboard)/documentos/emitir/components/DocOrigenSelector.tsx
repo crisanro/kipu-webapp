@@ -116,19 +116,19 @@ export default function DocOrigenSelector({
   const accentColor = colorAccent === "amber" 
     ? "var(--kipu-warning)" 
     : colorAccent === "blue" 
-    ? "#60a5fa" 
+    ? "var(--kipu-info)" 
     : "var(--kipu-accent)";
 
   const accentBorder = colorAccent === "amber"
     ? "color-mix(in srgb, var(--kipu-warning) 30%, transparent)"
     : colorAccent === "blue"
-    ? "color-mix(in srgb, #60a5fa 30%, transparent)"
+    ? "color-mix(in srgb, var(--kipu-info) 30%, transparent)"
     : "color-mix(in srgb, var(--kipu-accent) 30%, transparent)";
 
   const accentBg = colorAccent === "amber"
     ? "color-mix(in srgb, var(--kipu-warning) 10%, transparent)"
     : colorAccent === "blue"
-    ? "color-mix(in srgb, #60a5fa 10%, transparent)"
+    ? "color-mix(in srgb, var(--kipu-info) 10%, transparent)"
     : "color-mix(in srgb, var(--kipu-accent) 10%, transparent)";
 
   // Cerrar dropdown al hacer clic fuera

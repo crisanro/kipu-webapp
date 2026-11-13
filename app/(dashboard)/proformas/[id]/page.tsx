@@ -205,8 +205,8 @@ export default function DetalleProformaPage() {
               <span
                 className="text-xs px-2 py-0.5 rounded-full flex items-center gap-1"
                 style={{
-                  color: "#818cf8",
-                  background: "color-mix(in srgb, #818cf8 10%, transparent)",
+                  color: "var(--kipu-info)",
+                  background: "color-mix(in srgb, var(--kipu-info) 10%, transparent)",
                 }}
               >
                 <Clock size={10} /> Vigente
@@ -540,7 +540,7 @@ export default function DetalleProformaPage() {
 
             {/* Validez */}
             {data.fecha_validez && (
-              <div style={{ background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: "6px", padding: "8px 12px", marginBottom: "16px", fontSize: "10px", color: "#1d4ed8" }}>
+              <div style={{ background: "#ecfdf5", border: "1px solid #a7f3d0", borderRadius: "6px", padding: "8px 12px", marginBottom: "16px", fontSize: "10px", color: "#047857" }}>
                 Esta proforma es válida hasta el <strong>{data.fecha_validez}</strong>. Los precios pueden variar después de esta fecha.
               </div>
             )}

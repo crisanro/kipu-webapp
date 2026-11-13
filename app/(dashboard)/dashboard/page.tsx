@@ -71,7 +71,7 @@ export default function DashboardPage() {
             {nombre} ·{" "}
             <span style={{
               color: sandbox
-                ? "#60a5fa"
+                ? "var(--kipu-sandbox)"
                 : esProduccion
                   ? "var(--kipu-success)"
                   : "var(--kipu-warning)"

@@ -14,6 +14,10 @@
   --kipu-success:  #059669;
   --kipu-warning:  #f59e0b;
   --kipu-danger:   #ef4444;
+  /* Estados en curso / informativos (en cola, en proceso, parcial, prueba) */
+  --kipu-info:     #0e7490;
+  /* Modo sandbox / pruebas (banner, interruptor, keys kp_test_) */
+  --kipu-sandbox:  #2563eb;
 }
 
 [data-theme="dark"] {
@@ -29,6 +33,8 @@
   --kipu-success:  #10b981;
   --kipu-warning:  #f59e0b;
   --kipu-danger:   #ef4444;
+  --kipu-info:     #22d3ee;
+  --kipu-sandbox:  #3b82f6;
 }
 
 * {

@@ -213,14 +213,14 @@ function ProformasContenido() {
                         ? "color-mix(in srgb, var(--kipu-success) 10%, transparent)"
                         : vencida
                         ? "color-mix(in srgb, var(--kipu-danger) 10%, transparent)"
-                        : "color-mix(in srgb, #818cf8 10%, transparent)",
+                        : "color-mix(in srgb, var(--kipu-info) 10%, transparent)",
                     }}
                   >
                     {facturada
                       ? <CheckCircle2 size={16} style={{ color: "var(--kipu-success)" }} />
                       : vencida
                         ? <AlertTriangle size={16} style={{ color: "var(--kipu-danger)" }} />
-                        : <Clock size={16} style={{ color: "#818cf8" }} />
+                        : <Clock size={16} style={{ color: "var(--kipu-info)" }} />
                     }
                   </div>
                   <div className="flex-1 min-w-0">

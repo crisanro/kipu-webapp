@@ -30,7 +30,7 @@ function TipoBadge({ u }: { u: any }) {
   const cfg = u.es_dueno
     ? { label: "Dueño",       icon: Crown,     color: "var(--kipu-success)" }
     : u.tiene_empresa
-    ? { label: "Colaborador", icon: Building2, color: "#60a5fa" }
+    ? { label: "Colaborador", icon: Building2, color: "var(--kipu-info)" }
     : { label: "Sin empresa", icon: UserX,     color: "var(--kipu-warning)" };
   const Icon = cfg.icon;
   return (

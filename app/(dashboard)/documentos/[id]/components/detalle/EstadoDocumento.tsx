@@ -95,8 +95,8 @@ export default function EstadoDocumento({ factura, onRecargar }: { factura: Fact
               <span
                 className="text-xs px-2 py-0.5 rounded-full font-medium"
                 style={{
-                  background: "color-mix(in srgb, #c084fc 20%, transparent)",
-                  color: "#c084fc",
+                  background: "color-mix(in srgb, var(--kipu-muted) 20%, transparent)",
+                  color: "var(--kipu-muted)",
                 }}
               >
                 {TIPO_LABEL[factura.tipo_doc] ?? factura.tipo_doc}

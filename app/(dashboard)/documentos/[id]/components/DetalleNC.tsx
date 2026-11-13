@@ -112,11 +112,11 @@ export default function DetalleNC({ factura }: Props) {
       <div
         className="rounded-xl p-4"
         style={{
-          background: "color-mix(in srgb, #c084fc 5%, transparent)",
-          border: "1px solid color-mix(in srgb, #c084fc 20%, transparent)",
+          background: "color-mix(in srgb, var(--kipu-muted) 5%, transparent)",
+          border: "1px solid color-mix(in srgb, var(--kipu-muted) 20%, transparent)",
         }}
       >
-        <h2 className="text-xs font-semibold mb-3 uppercase tracking-wide" style={{ color: "#c084fc" }}>
+        <h2 className="text-xs font-semibold mb-3 uppercase tracking-wide" style={{ color: "var(--kipu-muted)" }}>
           Documento que Modifica
         </h2>
         <div className="space-y-2 text-sm">
@@ -137,7 +137,7 @@ export default function DetalleNC({ factura }: Props) {
           <button
             onClick={() => router.push(`/documentos/${factura.doc_origen_emitido_id}`)}
             className="mt-3 text-xs transition-colors underline-offset-2 hover:underline"
-            style={{ color: "#c084fc" }}
+            style={{ color: "var(--kipu-muted)" }}
           >
             Ver documento original →
           </button>
@@ -183,7 +183,7 @@ export default function DetalleNC({ factura }: Props) {
                       </p>
                     </div>
                     <div className="text-right shrink-0">
-                      <p className="text-sm font-semibold" style={{ color: "#c084fc" }}>-${fmt(item.precioTotalSinImpuesto)}</p>
+                      <p className="text-sm font-semibold" style={{ color: "var(--kipu-muted)" }}>-${fmt(item.precioTotalSinImpuesto)}</p>
                       {tarifa && <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>IVA {tarifa}%</span>}
                     </div>
                   </div>
@@ -222,7 +222,7 @@ export default function DetalleNC({ factura }: Props) {
             className="flex justify-between font-bold text-base pt-2 mt-2"
             style={{
               borderTop: "1px solid var(--kipu-border)",
-              color: "#c084fc",
+              color: "var(--kipu-muted)",
             }}
           >
             <span>Total acreditado</span>

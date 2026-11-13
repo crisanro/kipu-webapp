@@ -52,15 +52,15 @@ const TIPO_COLOR: Record<string, { color: string; bg: string }> = {
   FAC: { color: "var(--kipu-muted)", bg: "color-mix(in srgb, var(--kipu-muted) 10%, transparent)" },
   NVE: { color: "var(--kipu-muted)", bg: "color-mix(in srgb, var(--kipu-muted) 10%, transparent)" },
   LIQ: { color: "#22d3ee", bg: "color-mix(in srgb, #22d3ee 10%, transparent)" },
-  NCR: { color: "#c084fc", bg: "color-mix(in srgb, #c084fc 10%, transparent)" },
+  NCR: { color: "var(--kipu-muted)", bg: "color-mix(in srgb, var(--kipu-muted) 10%, transparent)" },
   NDB: { color: "#fb923c", bg: "color-mix(in srgb, #fb923c 10%, transparent)" },
-  RET: { color: "#60a5fa", bg: "color-mix(in srgb, #60a5fa 10%, transparent)" },
+  RET: { color: "var(--kipu-info)", bg: "color-mix(in srgb, var(--kipu-info) 10%, transparent)" },
 };
 
 const PAGO_COLOR: Record<string, { color: string; bg: string }> = {
   PENDIENTE: { color: "var(--kipu-warning)", bg: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)" },
   PAGADO:    { color: "var(--kipu-success)", bg: "color-mix(in srgb, var(--kipu-success) 10%, transparent)" },
-  PARCIAL:   { color: "#60a5fa", bg: "color-mix(in srgb, #60a5fa 10%, transparent)" },
+  PARCIAL:   { color: "var(--kipu-info)", bg: "color-mix(in srgb, var(--kipu-info) 10%, transparent)" },
   ANULADO:   { color: "var(--kipu-danger)", bg: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)" },
 };
 
@@ -197,17 +197,17 @@ function DocExpandido({ doc, onVerDetalle }: { doc: DocRecibido; onVerDetalle: (
           className="rounded-lg p-2.5 text-center"
           style={{
             background: doc.credito_tributario_iva
-              ? "color-mix(in srgb, #818cf8 5%, transparent)"
+              ? "color-mix(in srgb, var(--kipu-info) 5%, transparent)"
               : "color-mix(in srgb, var(--kipu-text) 4%, transparent)",
             border: doc.credito_tributario_iva
-              ? "1px solid color-mix(in srgb, #818cf8 20%, transparent)"
+              ? "1px solid color-mix(in srgb, var(--kipu-info) 20%, transparent)"
               : "1px solid var(--kipu-border)",
           }}
         >
           <p className="text-[10px] mb-1" style={{ color: "var(--kipu-subtle)" }}>Crédito trib. IVA</p>
           <p
             className="text-xs font-bold"
-            style={{ color: doc.credito_tributario_iva ? "#818cf8" : "var(--kipu-subtle)" }}
+            style={{ color: doc.credito_tributario_iva ? "var(--kipu-info)" : "var(--kipu-subtle)" }}
           >
             {doc.credito_tributario_iva ? `$${fmt(doc.valor_iva_total)}` : "No aplica"}
           </p>
@@ -482,7 +482,7 @@ export default function FacturasRecibidasPage() {
                 Ded. <span className="font-medium" style={{ color: "var(--kipu-success)" }}>${fmt(resumen.total_deducible)}</span>
               </span>
               <span className="text-xs hidden sm:block" style={{ color: "var(--kipu-muted)" }}>
-                CT IVA <span className="font-medium" style={{ color: "#818cf8" }}>${fmt(resumen.iva_credito_tributario)}</span>
+                CT IVA <span className="font-medium" style={{ color: "var(--kipu-info)" }}>${fmt(resumen.iva_credito_tributario)}</span>
               </span>
               {resumenOpen ? <ChevronUp size={16} style={{ color: "var(--kipu-subtle)" }} /> : <ChevronDown size={16} style={{ color: "var(--kipu-subtle)" }} />}
             </div>
@@ -516,12 +516,12 @@ export default function FacturasRecibidasPage() {
                 <div
                   className="rounded-xl p-4 text-center"
                   style={{
-                    background: "color-mix(in srgb, #818cf8 5%, transparent)",
-                    border: "1px solid color-mix(in srgb, #818cf8 10%, transparent)",
+                    background: "color-mix(in srgb, var(--kipu-info) 5%, transparent)",
+                    border: "1px solid color-mix(in srgb, var(--kipu-info) 10%, transparent)",
                   }}
                 >
                   <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: "var(--kipu-subtle)" }}>Crédito trib. IVA</p>
-                  <p className="text-lg font-bold" style={{ color: "#818cf8" }}>${fmt(resumen.iva_credito_tributario)}</p>
+                  <p className="text-lg font-bold" style={{ color: "var(--kipu-info)" }}>${fmt(resumen.iva_credito_tributario)}</p>
                   <p className="text-[10px] mt-1" style={{ color: "var(--kipu-subtle)" }}>IVA recuperable del período</p>
                 </div>
               </div>
@@ -606,8 +606,8 @@ export default function FacturasRecibidasPage() {
                             <span
                               className="text-[10px] px-1.5 py-0.5 rounded"
                               style={{
-                                color: "#818cf8",
-                                background: "color-mix(in srgb, #818cf8 10%, transparent)",
+                                color: "var(--kipu-info)",
+                                background: "color-mix(in srgb, var(--kipu-info) 10%, transparent)",
                               }}
                             >
                               CT IVA

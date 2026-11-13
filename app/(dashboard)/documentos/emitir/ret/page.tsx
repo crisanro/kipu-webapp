@@ -441,10 +441,10 @@ export default function NuevaRetPage() {
           <div
             className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
             style={{
-              background: "color-mix(in srgb, #818cf8 20%, transparent)",
+              background: "color-mix(in srgb, var(--kipu-info) 20%, transparent)",
             }}
           >
-            <CheckCircle2 size={32} style={{ color: "#818cf8" }} />
+            <CheckCircle2 size={32} style={{ color: "var(--kipu-info)" }} />
           </div>
           <h2 className="text-xl font-bold mb-1" style={{ color: "var(--kipu-text)" }}>
             Retención emitida
@@ -453,8 +453,8 @@ export default function NuevaRetPage() {
           <span
             className="inline-block px-3 py-1 rounded-full text-xs font-medium mb-6"
             style={{
-              background: "color-mix(in srgb, #818cf8 20%, transparent)",
-              color: "#818cf8",
+              background: "color-mix(in srgb, var(--kipu-info) 20%, transparent)",
+              color: "var(--kipu-info)",
             }}
           >
             {resultado.estado}
@@ -549,12 +549,12 @@ export default function NuevaRetPage() {
                     className="flex flex-col items-center gap-1 px-3 py-2.5 rounded-lg text-center transition-colors"
                     style={{
                       background: isSelected
-                        ? "color-mix(in srgb, #818cf8 10%, transparent)"
+                        ? "color-mix(in srgb, var(--kipu-info) 10%, transparent)"
                         : "var(--kipu-surface)",
                       border: isSelected
-                        ? "1px solid #818cf8"
+                        ? "1px solid var(--kipu-info)"
                         : "1px solid var(--kipu-border)",
-                      color: isSelected ? "#818cf8" : "var(--kipu-muted)",
+                      color: isSelected ? "var(--kipu-info)" : "var(--kipu-muted)",
                     }}
                     onMouseEnter={e => {
                       if (!isSelected) {

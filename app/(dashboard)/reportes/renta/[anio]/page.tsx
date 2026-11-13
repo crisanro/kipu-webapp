@@ -114,7 +114,7 @@ export default function ReporteRentaPage() {
           <h3 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>Retenciones de Impuesto a la Renta ({anio})</h3>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-          <div className="p-3 rounded-lg" style={{ background: "color-mix(in srgb, #3b82f6 8%, transparent)", border: "1px solid color-mix(in srgb, #3b82f6 20%, transparent)" }}>
+          <div className="p-3 rounded-lg" style={{ background: "color-mix(in srgb, var(--kipu-info) 8%, transparent)", border: "1px solid color-mix(in srgb, var(--kipu-info) 20%, transparent)" }}>
             <p className="text-[10px] uppercase font-bold text-sky-400">Retenciones Recibidas (Crédito a tu favor)</p>
             <p className="text-lg font-bold text-sky-400 mt-1">${fmt(data?.retenciones_renta_recibidas)}</p>
             <p className="text-[10px] text-[var(--kipu-subtle)] mt-1">Retenciones que te hicieron tus clientes en ventas (Casillero 855/841)</p>

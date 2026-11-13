@@ -39,7 +39,7 @@ const ACCION_STYLE: Record<string, { color: string; bg: string }> = {
   DELETE:   { color: "var(--kipu-danger)",  bg: "color-mix(in srgb, var(--kipu-danger) 12%, transparent)" },
   ANULAR:   { color: "var(--kipu-warning)", bg: "color-mix(in srgb, var(--kipu-warning) 12%, transparent)" },
   REVOKE:   { color: "var(--kipu-danger)",  bg: "color-mix(in srgb, var(--kipu-danger) 12%, transparent)" },
-  INVITE:   { color: "#a78bfa",             bg: "color-mix(in srgb, #a78bfa 12%, transparent)" },
+  INVITE:   { color: "var(--kipu-info)",             bg: "color-mix(in srgb, var(--kipu-info) 12%, transparent)" },
   ACTIVATE: { color: "var(--kipu-success)", bg: "color-mix(in srgb, var(--kipu-success) 12%, transparent)" },
 };
 

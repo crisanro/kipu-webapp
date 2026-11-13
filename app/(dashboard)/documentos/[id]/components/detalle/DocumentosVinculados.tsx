@@ -70,18 +70,18 @@ export default function DocumentosVinculados({ factura }: { factura: FacturaBase
                       className="text-[10px] px-1.5 py-0.5 rounded font-bold"
                       style={{
                         background: d.tipo_doc === "NCR"
-                          ? "color-mix(in srgb, #c084fc 20%, transparent)"
+                          ? "color-mix(in srgb, var(--kipu-muted) 20%, transparent)"
                           : d.tipo_doc === "NDB"
                           ? "color-mix(in srgb, var(--kipu-warning) 20%, transparent)"
                           : d.tipo_doc === "RET"
-                          ? "color-mix(in srgb, #60a5fa 20%, transparent)"
+                          ? "color-mix(in srgb, var(--kipu-info) 20%, transparent)"
                           : "color-mix(in srgb, var(--kipu-text) 10%, transparent)",
                         color: d.tipo_doc === "NCR"
-                          ? "#c084fc"
+                          ? "var(--kipu-muted)"
                           : d.tipo_doc === "NDB"
                           ? "var(--kipu-warning)"
                           : d.tipo_doc === "RET"
-                          ? "#60a5fa"
+                          ? "var(--kipu-info)"
                           : "var(--kipu-muted)",
                       }}
                     >

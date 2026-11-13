@@ -468,13 +468,13 @@ export default function NuevaFacturaPage() {
             style={{
               background: isAutorizado
                 ? "color-mix(in srgb, var(--kipu-success) 20%, transparent)"
-                : "color-mix(in srgb, #818cf8 20%, transparent)",
+                : "color-mix(in srgb, var(--kipu-info) 20%, transparent)",
             }}
           >
             <CheckCircle2
               size={32}
               style={{
-                color: isAutorizado ? "var(--kipu-success)" : "#818cf8",
+                color: isAutorizado ? "var(--kipu-success)" : "var(--kipu-info)",
               }}
             />
           </div>
@@ -525,8 +525,8 @@ export default function NuevaFacturaPage() {
             style={{
               background: isAutorizado
                 ? "color-mix(in srgb, var(--kipu-success) 20%, transparent)"
-                : "color-mix(in srgb, #818cf8 20%, transparent)",
-              color: isAutorizado ? "var(--kipu-success)" : "#818cf8",
+                : "color-mix(in srgb, var(--kipu-info) 20%, transparent)",
+              color: isAutorizado ? "var(--kipu-success)" : "var(--kipu-info)",
             }}
           >
             {resultado.estado}

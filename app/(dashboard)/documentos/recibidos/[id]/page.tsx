@@ -23,15 +23,15 @@ const TIPO_COLOR: Record<string, { color: string; bg: string }> = {
   FAC: { color: "var(--kipu-muted)", bg: "color-mix(in srgb, var(--kipu-muted) 10%, transparent)" },
   NVE: { color: "var(--kipu-muted)", bg: "color-mix(in srgb, var(--kipu-muted) 10%, transparent)" },
   LIQ: { color: "#22d3ee", bg: "color-mix(in srgb, #22d3ee 10%, transparent)" },
-  NCR: { color: "#c084fc", bg: "color-mix(in srgb, #c084fc 10%, transparent)" },
+  NCR: { color: "var(--kipu-muted)", bg: "color-mix(in srgb, var(--kipu-muted) 10%, transparent)" },
   NDB: { color: "var(--kipu-warning)", bg: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)" },
-  RET: { color: "#60a5fa", bg: "color-mix(in srgb, #60a5fa 10%, transparent)" },
+  RET: { color: "var(--kipu-info)", bg: "color-mix(in srgb, var(--kipu-info) 10%, transparent)" },
 };
 
 const PAGO_CONFIG: Record<string, { label: string; color: string }> = {
   PENDIENTE: { label: "Por pagar", color: "var(--kipu-warning)" },
   PAGADO:    { label: "Pagado",    color: "var(--kipu-success)" },
-  PARCIAL:   { label: "Parcial",   color: "#60a5fa" },
+  PARCIAL:   { label: "Parcial",   color: "var(--kipu-info)" },
   ANULADO:   { label: "Anulado",   color: "var(--kipu-danger)" },
 };
 
@@ -608,13 +608,13 @@ export default function DetalleRecibidoPage() {
         <div
           className="rounded-xl p-4"
           style={{
-            background: "color-mix(in srgb, #c084fc 5%, transparent)",
-            border: "1px solid color-mix(in srgb, #c084fc 20%, transparent)",
+            background: "color-mix(in srgb, var(--kipu-muted) 5%, transparent)",
+            border: "1px solid color-mix(in srgb, var(--kipu-muted) 20%, transparent)",
           }}
         >
           <div className="flex items-center gap-2 mb-2">
-            <Link2 size={13} style={{ color: "#c084fc" }} />
-            <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: "#c084fc" }}>
+            <Link2 size={13} style={{ color: "var(--kipu-muted)" }} />
+            <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--kipu-muted)" }}>
               Documento que modifica
             </h2>
           </div>
@@ -635,13 +635,13 @@ export default function DetalleRecibidoPage() {
         <div
           className="rounded-xl p-4"
           style={{
-            background: "color-mix(in srgb, #60a5fa 5%, transparent)",
-            border: "1px solid color-mix(in srgb, #60a5fa 20%, transparent)",
+            background: "color-mix(in srgb, var(--kipu-info) 5%, transparent)",
+            border: "1px solid color-mix(in srgb, var(--kipu-info) 20%, transparent)",
           }}
         >
           <div className="flex items-center gap-2 mb-2">
-            <Link2 size={13} style={{ color: "#60a5fa" }} />
-            <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: "#60a5fa" }}>
+            <Link2 size={13} style={{ color: "var(--kipu-info)" }} />
+            <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--kipu-info)" }}>
               Documento retenido
             </h2>
           </div>
@@ -722,12 +722,12 @@ export default function DetalleRecibidoPage() {
             onClick={() => router.push(`/documentos/emitir/ret?doc_origen_recibido_id=${doc.id}`)}
             className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs transition-colors"
             style={{
-              background: "color-mix(in srgb, #60a5fa 10%, transparent)",
-              color: "#60a5fa",
-              border: "1px solid color-mix(in srgb, #60a5fa 20%, transparent)",
+              background: "color-mix(in srgb, var(--kipu-info) 10%, transparent)",
+              color: "var(--kipu-info)",
+              border: "1px solid color-mix(in srgb, var(--kipu-info) 20%, transparent)",
             }}
-            onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, #60a5fa 20%, transparent)"}
-            onMouseLeave={e => e.currentTarget.style.background = "color-mix(in srgb, #60a5fa 10%, transparent)"}
+            onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-info) 20%, transparent)"}
+            onMouseLeave={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-info) 10%, transparent)"}
           >
             RET · Emitir retención
           </button>

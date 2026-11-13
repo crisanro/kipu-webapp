@@ -15,7 +15,7 @@ const fmtDate = (d: any) => d ? new Date(d).toLocaleDateString("es-EC", { day: "
 // ── Estado de suscripción ───────────────────────────────────────────────────
 const SUB_CONFIG: Record<string, { label: string; color: string; bg: string; border: string; icon: any }> = {
   ACTIVO:    { label: "Activo",    color: "var(--kipu-success)", bg: "color-mix(in srgb, var(--kipu-success) 10%, transparent)", border: "color-mix(in srgb, var(--kipu-success) 20%, transparent)", icon: ShieldCheck },
-  TRIAL:     { label: "Trial",     color: "#60a5fa",            bg: "color-mix(in srgb, #60a5fa 10%, transparent)",            border: "color-mix(in srgb, #60a5fa 20%, transparent)",            icon: Clock },
+  TRIAL:     { label: "Trial",     color: "var(--kipu-info)",            bg: "color-mix(in srgb, var(--kipu-info) 10%, transparent)",            border: "color-mix(in srgb, var(--kipu-info) 20%, transparent)",            icon: Clock },
   CANCELADO: { label: "Cancelado", color: "var(--kipu-warning)", bg: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)", border: "color-mix(in srgb, var(--kipu-warning) 20%, transparent)", icon: ShieldOff },
   VENCIDO:   { label: "Vencido",   color: "var(--kipu-danger)",  bg: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",  border: "color-mix(in srgb, var(--kipu-danger) 20%, transparent)",  icon: XCircle },
 };
@@ -23,7 +23,7 @@ const SUB_CONFIG: Record<string, { label: string; color: string; bg: string; bor
 // ── Estado de documentos ────────────────────────────────────────────────────
 const DOC_CONFIG: Record<string, { label: string; color: string; bg: string; icon: any }> = {
   AUTORIZADO: { label: "Autorizado", color: "var(--kipu-success)", bg: "color-mix(in srgb, var(--kipu-success) 10%, transparent)", icon: CheckCircle2 },
-  FIRMADO:    { label: "En cola",    color: "#60a5fa",            bg: "color-mix(in srgb, #60a5fa 10%, transparent)",            icon: Clock },
+  FIRMADO:    { label: "En cola",    color: "var(--kipu-info)",            bg: "color-mix(in srgb, var(--kipu-info) 10%, transparent)",            icon: Clock },
   DEVUELTA:   { label: "Devuelta",   color: "var(--kipu-warning)", bg: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)", icon: AlertTriangle },
   RECHAZADO:  { label: "Rechazado",  color: "var(--kipu-danger)",  bg: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",  icon: XCircle },
   PENDIENTE:  { label: "Pendiente",  color: "var(--kipu-subtle)",  bg: "color-mix(in srgb, var(--kipu-text) 10%, transparent)",  icon: Clock },

@@ -15,14 +15,14 @@ const ESTADO_CONFIG: Record<string, { label: string; color: string; bg: string; 
   },
   RECIBIDA: {
     label: "En proceso",
-    color: "#818cf8",
-    bg: "color-mix(in srgb, #818cf8 10%, transparent)",
+    color: "var(--kipu-info)",
+    bg: "color-mix(in srgb, var(--kipu-info) 10%, transparent)",
     icon: Clock,
   },
   FIRMADO: {
     label: "En cola",
-    color: "#60a5fa",
-    bg: "color-mix(in srgb, #60a5fa 10%, transparent)",
+    color: "var(--kipu-info)",
+    bg: "color-mix(in srgb, var(--kipu-info) 10%, transparent)",
     icon: Clock,
   },
   DEVUELTA: {

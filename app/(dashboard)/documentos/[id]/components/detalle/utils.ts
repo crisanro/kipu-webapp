@@ -68,8 +68,8 @@ export const ESTADO_CONFIG: Record<string, {
   label: string; color: string; bg: string; border: string; icon: any
 }> = {
   AUTORIZADO: { label: "Autorizado",         color: "var(--kipu-success)", bg: "color-mix(in srgb, var(--kipu-success) 20%, transparent)", border: "color-mix(in srgb, var(--kipu-success) 20%, transparent)", icon: CheckCircle2 },
-  RECIBIDA:   { label: "Recibido por SRI",   color: "#818cf8",           bg: "color-mix(in srgb, #818cf8 20%, transparent)",           border: "color-mix(in srgb, #818cf8 20%, transparent)",           icon: Clock },
-  FIRMADO:    { label: "En cola",            color: "#60a5fa",           bg: "color-mix(in srgb, #60a5fa 20%, transparent)",           border: "color-mix(in srgb, #60a5fa 20%, transparent)",           icon: Clock },
+  RECIBIDA:   { label: "Recibido por SRI",   color: "var(--kipu-info)",           bg: "color-mix(in srgb, var(--kipu-info) 20%, transparent)",           border: "color-mix(in srgb, var(--kipu-info) 20%, transparent)",           icon: Clock },
+  FIRMADO:    { label: "En cola",            color: "var(--kipu-info)",           bg: "color-mix(in srgb, var(--kipu-info) 20%, transparent)",           border: "color-mix(in srgb, var(--kipu-info) 20%, transparent)",           icon: Clock },
   DEVUELTA:   { label: "Devuelto por SRI",   color: "var(--kipu-warning)", bg: "color-mix(in srgb, var(--kipu-warning) 20%, transparent)", border: "color-mix(in srgb, var(--kipu-warning) 20%, transparent)", icon: AlertTriangle },
   RECHAZADO:  { label: "Rechazado por SRI",  color: "var(--kipu-danger)",  bg: "color-mix(in srgb, var(--kipu-danger) 20%, transparent)",  border: "color-mix(in srgb, var(--kipu-danger) 20%, transparent)",  icon: XCircle },
   EN_REVISION:{ label: "En revisión",        color: "#f59e0b",           bg: "color-mix(in srgb, #f59e0b 15%, transparent)",           border: "color-mix(in srgb, #f59e0b 25%, transparent)",           icon: SearchCheck },
@@ -87,7 +87,7 @@ export const TIPO_LABEL: Record<string, string> = {
 export const COBRO_CONFIG: Record<string, { label: string; color: string }> = {
   PENDIENTE: { label: "Por cobrar", color: "var(--kipu-warning)" },
   PAGADO:    { label: "Cobrado",    color: "var(--kipu-success)" },
-  PARCIAL:   { label: "Parcial",    color: "#60a5fa" },
+  PARCIAL:   { label: "Parcial",    color: "var(--kipu-info)" },
   ANULADO:   { label: "Anulado",    color: "var(--kipu-danger)" },
 };
 

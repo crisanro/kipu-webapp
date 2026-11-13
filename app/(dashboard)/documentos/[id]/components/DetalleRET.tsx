@@ -96,11 +96,11 @@ export default function DetalleRET({ factura }: Props) {
         <div
           className="rounded-xl p-4"
           style={{
-            background: "color-mix(in srgb, #60a5fa 5%, transparent)",
-            border: "1px solid color-mix(in srgb, #60a5fa 20%, transparent)",
+            background: "color-mix(in srgb, var(--kipu-info) 5%, transparent)",
+            border: "1px solid color-mix(in srgb, var(--kipu-info) 20%, transparent)",
           }}
         >
-          <h2 className="text-xs font-semibold mb-3 uppercase tracking-wide" style={{ color: "#60a5fa" }}>
+          <h2 className="text-xs font-semibold mb-3 uppercase tracking-wide" style={{ color: "var(--kipu-info)" }}>
             Documento Sustento
           </h2>
           {factura.doc_origen_emitido ? (
@@ -117,7 +117,7 @@ export default function DetalleRET({ factura }: Props) {
                 type="button"
                 onClick={() => router.push(`/documentos/${factura.doc_origen_emitido.id}`)}
                 className="text-xs transition-colors"
-                style={{ color: "#60a5fa" }}
+                style={{ color: "var(--kipu-info)" }}
               >
                 Ver →
               </button>
@@ -135,7 +135,7 @@ export default function DetalleRET({ factura }: Props) {
                 type="button"
                 onClick={() => router.push(`/documentos/recibidos/${factura.doc_origen_recibido_id}`)}
                 className="mt-2 text-xs transition-colors"
-                style={{ color: "#60a5fa" }}
+                style={{ color: "var(--kipu-info)" }}
               >
                 Ver factura recibida →
               </button>
@@ -170,8 +170,8 @@ export default function DetalleRET({ factura }: Props) {
                     <span
                       className="text-xs px-2 py-0.5 rounded-full font-medium"
                       style={{
-                        background: "color-mix(in srgb, #60a5fa 20%, transparent)",
-                        color: "#60a5fa",
+                        background: "color-mix(in srgb, var(--kipu-info) 20%, transparent)",
+                        color: "var(--kipu-info)",
                       }}
                     >
                       {TIPO_IMPUESTO[imp.codigo] ?? imp.codigo}
@@ -180,7 +180,7 @@ export default function DetalleRET({ factura }: Props) {
                       {imp.codigoRetencion || imp.codigoPorcentaje}
                     </span>
                   </div>
-                  <span className="text-sm font-bold" style={{ color: "#60a5fa" }}>
+                  <span className="text-sm font-bold" style={{ color: "var(--kipu-info)" }}>
                     ${fmt(imp.valorRetenido || imp.valor)}
                   </span>
                 </div>
@@ -205,7 +205,7 @@ export default function DetalleRET({ factura }: Props) {
             style={{ borderTop: "2px solid var(--kipu-border)" }}
           >
             <span className="text-sm" style={{ color: "var(--kipu-muted)" }}>Total retenido</span>
-            <span style={{ color: "#60a5fa" }}>${fmt(totalRetenido)}</span>
+            <span style={{ color: "var(--kipu-info)" }}>${fmt(totalRetenido)}</span>
           </div>
         </div>
       )}

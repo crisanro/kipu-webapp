@@ -17,7 +17,7 @@ const fmt = (n: number) => `$${n.toFixed(2)}`;
 
 const ESTADO_CONFIG = {
   PENDIENTE: { label: "Pendiente", color: "var(--kipu-warning)", bg: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)", icon: Clock },
-  PARCIAL:   { label: "Parcial",   color: "#60a5fa",           bg: "color-mix(in srgb, #60a5fa 10%, transparent)",           icon: AlertTriangle },
+  PARCIAL:   { label: "Parcial",   color: "var(--kipu-info)",           bg: "color-mix(in srgb, var(--kipu-info) 10%, transparent)",           icon: AlertTriangle },
   PAGADO:    { label: "Pagado",    color: "var(--kipu-success)", bg: "color-mix(in srgb, var(--kipu-success) 10%, transparent)", icon: CheckCircle2 },
   ANULADO:   { label: "Anulado",   color: "var(--kipu-subtle)",  bg: "color-mix(in srgb, var(--kipu-subtle) 10%, transparent)",  icon: Ban },
 };
