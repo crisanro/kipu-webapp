@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 import { auth } from "@/lib/firebase";
-import { Zap, Building2, CheckCircle2, Search, Loader2, MessageCircle } from "lucide-react";
+import { Zap, Building2, CheckCircle2, Search, Loader2, MessageCircle, ShieldCheck, Upload } from "lucide-react";
 import { consultarRuc } from "@/lib/consultar-ruc";
 
 const PASOS = ["Empresa", "Confirmar"];
@@ -43,9 +43,139 @@ const validarRuc = (ruc: string): string | null => {
   return null;
 };
 
+type FormEmpresa = {
+  ruc: string; razon_social: string; nombre_comercial: string; direccion_matriz: string;
+  obligado_contabilidad: string; contribuyente_especial: string; full_name: string;
+};
+
+function textoError(err: unknown, porDefecto: string): string {
+  const detail = (err as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail;
+  if (typeof detail === "string") return detail;
+  if (detail && typeof detail === "object" && "mensaje" in detail) return String((detail as { mensaje: unknown }).mensaje);
+  return porDefecto;
+}
+
+// ── RUC registrado en pruebas por otra cuenta: el dueño lo recupera con su firma ─
+function RecuperarConFirma({ form, onListo }: { form: FormEmpresa; onListo: () => void }) {
+  const [archivo,  setArchivo]  = useState<File | null>(null);
+  const [clave,    setClave]    = useState("");
+  const [enviando, setEnviando] = useState(false);
+  const [error,    setError]    = useState("");
+  const archivoRef = useRef<HTMLInputElement>(null);
+
+  const recuperar = async () => {
+    if (!archivo || !clave) {
+      setError("Selecciona tu archivo .p12 y escribe su contraseña.");
+      return;
+    }
+    setEnviando(true);
+    setError("");
+    try {
+      const datos = new FormData();
+      datos.append("datos", JSON.stringify(form));
+      datos.append("password", clave);
+      datos.append("file", archivo);
+      await api.post("/api/v1/app/emisor/onboarding/reclamar", datos, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      onListo();
+    } catch (err: unknown) {
+      setError(textoError(err, "No pudimos recuperar la empresa. Intenta de nuevo."));
+    } finally {
+      setEnviando(false);
+    }
+  };
+
+  const campo = {
+    background: "var(--kipu-bg)",
+    border:     "1px solid var(--kipu-border)",
+    color:      "var(--kipu-text)",
+  };
+
+  return (
+    <div
+      className="rounded-xl p-4 space-y-3"
+      style={{
+        background: "var(--kipu-surface)",
+        border:     "1px solid color-mix(in srgb, var(--kipu-accent) 35%, transparent)",
+      }}
+    >
+      <div className="flex items-start gap-3">
+        <ShieldCheck size={20} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-accent)" }} />
+        <div className="space-y-1.5">
+          <p className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>
+            Este RUC lo registró otra cuenta, pero aún no lo activa
+          </p>
+          <p className="text-xs leading-relaxed" style={{ color: "var(--kipu-muted)" }}>
+            Si la empresa es tuya, recupérala con tu firma electrónica (.p12): si la firma es de
+            este RUC, la empresa pasa a tu cuenta con la firma ya configurada. La otra cuenta pierde
+            el acceso a su versión de pruebas y le avisamos por correo.
+          </p>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => archivoRef.current?.click()}
+        className="w-full border-2 border-dashed rounded-lg px-3 py-3 text-sm flex items-center justify-center gap-2"
+        style={{
+          borderColor: archivo ? "var(--kipu-accent)" : "var(--kipu-border)",
+          color:       archivo ? "var(--kipu-accent)" : "var(--kipu-muted)",
+        }}
+      >
+        <Upload size={15} />
+        {archivo ? archivo.name : "Seleccionar mi firma (.p12)"}
+      </button>
+      <input
+        ref={archivoRef}
+        type="file"
+        accept=".p12"
+        className="hidden"
+        onChange={(e) => { setArchivo(e.target.files?.[0] ?? null); setError(""); }}
+      />
+      <input
+        type="password"
+        value={clave}
+        onChange={(e) => { setClave(e.target.value); setError(""); }}
+        onKeyDown={(e) => { if (e.key === "Enter") recuperar(); }}
+        placeholder="Contraseña de la firma"
+        autoComplete="off"
+        className="w-full px-3 py-2.5 rounded-lg text-sm focus:outline-none"
+        style={campo}
+      />
+
+      {error && <ErrorBox error={error} ruc={form.ruc} />}
+
+      <button
+        type="button"
+        onClick={recuperar}
+        disabled={enviando}
+        className="w-full py-2.5 rounded-lg text-white font-medium text-sm flex items-center justify-center gap-2 disabled:opacity-50"
+        style={{ background: "var(--kipu-accent)" }}
+      >
+        {enviando
+          ? <><Loader2 size={15} className="animate-spin" /> Verificando la firma...</>
+          : <><ShieldCheck size={15} /> Recuperar mi empresa</>}
+      </button>
+      <p className="text-xs text-center" style={{ color: "var(--kipu-subtle)" }}>
+        ¿No tienes tu firma a mano?{" "}
+        <a
+          href={waSoporte(`Hola, el RUC ${form.ruc} aparece registrado en Kipu por otra cuenta y no tengo mi firma a mano. ¿Me pueden ayudar?`)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline"
+          style={{ color: "var(--kipu-accent)" }}
+        >
+          Escríbenos
+        </a>
+      </p>
+    </div>
+  );
+}
+
 // ── Caja de error — siempre con salida a soporte ──────────────────────────────
 function ErrorBox({ error, ruc }: { error: string; ruc: string }) {
-  const texto = error.includes("REGISTRADO")
+  const texto = error.toUpperCase().includes("REGISTRADO")
     ? `Hola, intento registrar el RUC ${ruc} en Kipu pero dice que ya está registrado. ¿Me pueden ayudar?`
     : `Hola, estoy configurando mi empresa en Kipu${ruc ? ` (RUC ${ruc})` : ""} y me sale este error: "${error}". ¿Me pueden ayudar?`;
 
@@ -100,6 +230,8 @@ export default function OnboardingPage() {
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState("");
   const [success, setSuccess] = useState(false);
+  // El RUC está en pruebas con otra cuenta: se ofrece recuperarlo con la firma
+  const [recuperar, setRecuperar] = useState(false);
 
   const [lookupLoading, setLookupLoading] = useState(false);
   const [lookupMsg,     setLookupMsg]     = useState("");
@@ -168,19 +300,28 @@ export default function OnboardingPage() {
     return true;
   };
 
+  const listo = () => {
+    setSuccess(true);
+    // Carga completa: así se leen las empresas recién creadas (con router.replace
+    // el panel se quedaba cargando porque la sesión ya estaba "cargada sin empresa")
+    setTimeout(() => window.location.replace("/dashboard"), 1500);
+  };
+
   const handleSubmit = async () => {
     setError("");
+    setRecuperar(false);
     setLoading(true);
     try {
       await api.post("/api/v1/app/emisor/onboarding", form);
-      setSuccess(true);
-      // Carga completa: así se leen las empresas recién creadas (con router.replace
-      // el panel se quedaba cargando porque la sesión ya estaba "cargada sin empresa")
-      setTimeout(() => window.location.replace("/dashboard"), 1500);
+      listo();
     } catch (err: any) {
       const detail = err?.response?.data?.detail;
       if (err?.response?.status === 403 && typeof detail === "string" && /verificar tu correo/i.test(detail)) {
         router.replace("/bienvenida");
+        return;
+      }
+      if (detail?.codigo === "RUC_EN_PRUEBAS") {
+        setRecuperar(true);
         return;
       }
       if (typeof detail === "string") {
@@ -494,11 +635,12 @@ export default function OnboardingPage() {
             </div>
 
             {error && <ErrorBox error={error} ruc={form.ruc} />}
+            {recuperar && <RecuperarConFirma form={form} onListo={listo} />}
 
             <div className="flex gap-3">
               <button
                 type="button"
-                onClick={() => setPaso(0)}
+                onClick={() => { setPaso(0); setRecuperar(false); }}
                 className="flex-1 py-2.5 rounded-lg text-sm transition-colors font-medium"
                 style={{
                   border: "1px solid var(--kipu-border)",
@@ -516,7 +658,7 @@ export default function OnboardingPage() {
               >
                 Atrás
               </button>
-              <button
+              {!recuperar && <button
                 type="button"
                 onClick={handleSubmit}
                 disabled={loading}
@@ -539,7 +681,7 @@ export default function OnboardingPage() {
                 ) : (
                   "Confirmar y entrar"
                 )}
-              </button>
+              </button>}
             </div>
           </div>
         )}
