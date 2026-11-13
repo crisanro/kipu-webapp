@@ -202,7 +202,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   {correo.error
                     ? correo.error
                     : correo.enviado
-                      ? <>Te enviamos un enlace a <strong>{auth.currentUser?.email}</strong>. Ábrelo para verificar tu correo (revisa Spam).</>
+                      ? <>Te enviamos un enlace a <strong>{auth.currentUser?.email}</strong>. Busca el correo de no-reply@kipu.ec (revisa también Spam).</>
                       : <>Tu correo <strong>{auth.currentUser?.email}</strong> no está verificado.
                         Verifica tu email para poder emitir comprobantes.</>}
                 </span>

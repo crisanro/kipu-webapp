@@ -5,6 +5,9 @@ import { CheckCircle2, Loader2, Mail, MailCheck, RefreshCw } from "lucide-react"
 import { auth } from "@/lib/firebase";
 import { useVerificacionCorreo } from "@/hooks/useVerificacionCorreo";
 
+// Remitente de los correos de cuenta (SMTP_FROM del backend)
+const REMITENTE = "no-reply@kipu.ec";
+
 interface Props {
   onVerificado:      () => void;
   onCambiarCorreo?:  () => void;
@@ -74,6 +77,9 @@ export default function VerificarCorreo({ onVerificado, onCambiarCorreo }: Props
           Antes de configurar tu empresa necesitamos confirmar que este correo es tuyo:
           <br />
           <strong className="break-all" style={{ color: "var(--kipu-text)" }}>{email}</strong>
+          <span className="block text-xs mt-2" style={{ color: "var(--kipu-subtle)" }}>
+            Te llegará desde {REMITENTE}.
+          </span>
         </p>
       ) : (
         <div className="text-sm text-center mt-2 space-y-2" style={{ color: "var(--kipu-muted)" }}>
@@ -82,9 +88,17 @@ export default function VerificarCorreo({ onVerificado, onCambiarCorreo }: Props
             <strong className="break-all" style={{ color: "var(--kipu-text)" }}>{email}</strong>.
             Ábrelo y esta pantalla avanzará sola.
           </p>
-          <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
-            ¿No lo ves? Revisa las carpetas de Spam o Promociones.
-          </p>
+          <div
+            className="text-xs text-left rounded-lg px-3 py-2.5 space-y-1"
+            style={{ background: "color-mix(in srgb, var(--kipu-text) 4%, transparent)", color: "var(--kipu-muted)" }}
+          >
+            <p>
+              Busca un correo de <strong style={{ color: "var(--kipu-text)" }}>Kipu</strong>{" "}
+              <span className="break-all">&lt;{REMITENTE}&gt;</span> con el asunto
+              {" "}<strong style={{ color: "var(--kipu-text)" }}>“Verifica tu correo en Kipu”</strong>.
+            </p>
+            <p>¿No lo ves? Revisa las carpetas de Spam o Promociones y márcalo como “No es spam”.</p>
+          </div>
         </div>
       )}
 
