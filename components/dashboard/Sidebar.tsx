@@ -9,6 +9,7 @@ import {
   ChevronDown,
   ChevronRight,
   Shield,
+  CalendarCheck,
   AlertTriangle,
   FlaskConical,
   Bell,
@@ -18,6 +19,7 @@ import { clsx } from "clsx";
 import { NAV_GROUPS, tienePermiso } from "./DashboardNav";
 import { SoporteWhatsApp } from "./SoporteWhatsApp";
 import { ThemeToggle } from "./ThemeToggle";
+import { useAuthStore } from "@/store/auth.store";
 
 interface SidebarProps {
   sidebarOpen: boolean;
@@ -56,6 +58,7 @@ export function Sidebar({
   onOpenLogoutModal,
   onOpenDrawer,
 }: SidebarProps) {
+  const equipoAlDia = useAuthStore((s) => s.equipoAlDia);
   const [gruposAbiertos, setGruposAbiertos] = useState<Record<string, boolean>>({
     "/documentos/emitir": pathname.startsWith("/documentos/emitir"),
     "/documentos": pathname.startsWith("/documentos") && !pathname.startsWith("/documentos/emitir"),
@@ -279,6 +282,23 @@ export function Sidebar({
             )}
           </div>
         ))}
+
+        {/* Equipo de Kipu Al Día: superadmin y contadores */}
+        {equipoAlDia && (
+          <>
+            <div className="my-2" style={{ borderTop: "2px solid var(--kipu-border)" }} />
+            <Link
+              href="/equipo"
+              onClick={() => setSidebarOpen(false)}
+              className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors"
+              style={pathname.startsWith("/equipo") ? navActivo : navInactivo}
+            >
+              <CalendarCheck size={17} />
+              Equipo Al Día
+              {pathname.startsWith("/equipo") && <ChevronRight size={14} className="ml-auto" />}
+            </Link>
+          </>
+        )}
 
         {role === "superadmin" && (
           <>

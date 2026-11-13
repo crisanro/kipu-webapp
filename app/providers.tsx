@@ -41,6 +41,7 @@ async function cargarEmpresas(token: string) {
     empresas:  res.data.data ?? [],
     role:      res.data.role ?? null,
     defaultId: res.data.default_id ?? null,
+    equipoAlDia: !!res.data.equipo_al_dia,
   };
 }
 
@@ -117,6 +118,8 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
         }
 
         setUser(user.uid, user.email ?? "", "", data.role);
+        // Superadmin o contador de Kipu Al Día: ve el panel del equipo
+        useAuthStore.setState({ equipoAlDia: data.equipoAlDia });
         setEmpresas(data.empresas);
 
         // Prioridad: elegida en esta sesión → predeterminada → primera
