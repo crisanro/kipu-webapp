@@ -5,6 +5,7 @@ import Link from "next/link";
 import { CalendarCheck, CheckCircle2, Loader2, MessageCircle, ShieldCheck } from "lucide-react";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
+import ClaveSri from "@/components/al-dia/ClaveSri";
 
 const SOPORTE_WA = "593960585581";
 
@@ -196,6 +197,9 @@ export default function KipuAlDiaPage() {
           )}
         </div>
       )}
+
+      {/* Clave del SRI: solo con el servicio contratado y para el administrador */}
+      {estado?.contratado && esAdmin && <ClaveSri />}
 
       {!estado?.contratado && (
         <>
