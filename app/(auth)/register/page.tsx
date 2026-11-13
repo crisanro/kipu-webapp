@@ -7,7 +7,6 @@ import Link from "next/link";
 import Image from "next/image";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@/lib/firebase";
-import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { useTheme } from "next-themes";
@@ -52,9 +51,8 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       await createUserWithEmailAndPassword(auth, email, password);
-      try {
-        await api.post("/api/v1/app/auth/send-verification");
-      } catch {}
+      // El correo de verificación NO se envía solo: en la bienvenida se pide con
+      // un botón, así la persona sabe que debe buscarlo en su bandeja.
       const empresaParam = new URLSearchParams(window.location.search).get("empresa");
       router.replace(empresaParam ? `/bienvenida?empresa=${empresaParam}` : "/bienvenida");
     } catch (err: any) {

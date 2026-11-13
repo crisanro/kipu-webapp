@@ -1,7 +1,7 @@
 // app/bienvenida/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { auth } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
@@ -10,6 +10,7 @@ import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
 import { Building2, Plus, Loader2, CheckCircle2, ArrowRight, MessageCircle, LogOut } from "lucide-react";
 import { useTheme } from "next-themes";
+import VerificarCorreo from "@/components/auth/VerificarCorreo";
 
 export default function BienvenidaPage() {
   const router       = useRouter();
@@ -25,6 +26,9 @@ export default function BienvenidaPage() {
   const [error,          setError]          = useState("");
   const [unido,          setUnido]          = useState(false);
   const [confirmDelete,  setConfirmDelete]  = useState(false);
+  // Primero se verifica el correo; recién después se crea o se une a una empresa
+  const [correoOk,       setCorreoOk]       = useState(() => auth.currentUser?.emailVerified ?? false);
+  const correoVerificado = useCallback(() => setCorreoOk(true), []);
 
   useEffect(() => setMounted(true), []);
 
@@ -99,6 +103,18 @@ export default function BienvenidaPage() {
     }
   };
 
+  // Correo mal escrito: no hay cómo verificarlo, se borra la cuenta y se registra de nuevo
+  const handleCambiarCorreo = async () => {
+    if (!confirm("Borraremos esta cuenta para que te registres con el correo correcto. ¿Continuar?")) return;
+    try {
+      await auth.currentUser?.delete();
+      logout();
+      router.replace(empresaParam ? `/register?empresa=${encodeURIComponent(empresaParam)}` : "/register");
+    } catch {
+      alert("Por seguridad, cierra sesión, vuelve a entrar y elige \"Eliminar mi cuenta\".");
+    }
+  };
+
   // ── Éxito ────────────────────────────────────────────────────────────────
   if (unido) {
     return (
@@ -146,6 +162,17 @@ export default function BienvenidaPage() {
           )}
         </div>
 
+        {!correoOk ? (
+          <>
+            {empresaParam && empresa && (
+              <p className="text-xs text-center mb-3" style={{ color: "var(--kipu-muted)" }}>
+                Te invitaron a <strong style={{ color: "var(--kipu-text)" }}>{empresa.nombre_comercial || empresa.razon_social}</strong>.
+                Verifica tu correo para unirte.
+              </p>
+            )}
+            <VerificarCorreo onVerificado={correoVerificado} onCambiarCorreo={handleCambiarCorreo} />
+          </>
+        ) : (
         <div className="space-y-3">
 
           {/* Opción 1 — Unirse a empresa invitada */}
@@ -248,6 +275,7 @@ export default function BienvenidaPage() {
           </button>
 
         </div>
+        )}
 
         {/* Botones de acción */}
         <div className="mt-8 space-y-3">

@@ -6,7 +6,6 @@ import { auth } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
 import { useAuthStore } from "@/store/auth.store";
 import { useSandboxStore } from "@/store/sandbox.store";
-import api from "@/lib/api";
 import PWAInstallBanner from "@/components/PWAInstallBanner";
 import {
   registrarNotificaciones,
@@ -24,6 +23,7 @@ import {
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { MobileHeader } from "@/components/dashboard/MobileHeader";
 import { ModalLogout, SelectorEmpresa } from "@/components/dashboard/DashboardModals";
+import { useVerificacionCorreo } from "@/hooks/useVerificacionCorreo";
 
 // "Ahora no" en el aviso de notificaciones: no volver a mostrarlo por 7 días
 const NOTIF_POSPUESTAS = "kipu-notif-pospuestas";
@@ -50,18 +50,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showSelectorEmp, setShowSelectorEmp] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [emailVerificado, setEmailVerificado] = useState(true);
-  const [reenviando, setReenviando] = useState(false);
+  // Cuentas antiguas que ya tienen empresa pero nunca verificaron el correo
+  const correo = useVerificacionCorreo();
 
   useEffect(() => setMounted(true), []);
 
   const firmaOk = empresa?.firma_ok ?? false;
   const puedeProduccion = firmaOk && empresa?.ambiente === 2;
-
-  useEffect(() => {
-    const user = auth.currentUser;
-    if (user) setEmailVerificado(user.emailVerified);
-  }, []);
 
   useEffect(() => {
     if (!firmaOk) setSandbox(false);
@@ -122,20 +117,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     await signOut(auth);
     logout();
     router.replace("/login");
-  };
-
-  const reenviarVerificacion = async () => {
-    if (reenviando) return;
-    setReenviando(true);
-    try {
-      await api.post("/api/v1/app/auth/send-verification");
-      alert("Correo de verificación enviado. Revisa tu bandeja y la carpeta de spam.");
-    } catch (e: any) {
-      const detail = e?.response?.data?.detail;
-      alert(typeof detail === "string" ? detail : "Error al enviar el correo. Intenta de nuevo.");
-    } finally {
-      setReenviando(false);
-    }
   };
 
   if (!empresa) {
@@ -207,9 +188,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         <main className="flex-1 overflow-y-auto">
           {/* Banner email no verificado */}
-          {!emailVerificado && (
+          {!correo.cargando && !correo.verificado && (
             <div
-              className="w-full px-4 py-2.5 flex items-center justify-between gap-3 shrink-0"
+              className="w-full px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 shrink-0"
               style={{
                 background: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)",
                 borderBottom: "1px solid color-mix(in srgb, var(--kipu-warning) 20%, transparent)",
@@ -218,17 +199,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <div className="flex items-center gap-2 text-xs" style={{ color: "var(--kipu-warning)" }}>
                 <AlertTriangle size={14} className="shrink-0" />
                 <span>
-                  Tu correo <strong>{auth.currentUser?.email}</strong> no está verificado.
-                  Verifica tu email para poder emitir comprobantes.
+                  {correo.error
+                    ? correo.error
+                    : correo.enviado
+                      ? <>Te enviamos un enlace a <strong>{auth.currentUser?.email}</strong>. Ábrelo para verificar tu correo (revisa Spam).</>
+                      : <>Tu correo <strong>{auth.currentUser?.email}</strong> no está verificado.
+                        Verifica tu email para poder emitir comprobantes.</>}
                 </span>
               </div>
               <button
-                onClick={reenviarVerificacion}
-                disabled={reenviando}
-                className="text-xs underline underline-offset-2 whitespace-nowrap shrink-0 disabled:opacity-50"
+                onClick={correo.enviar}
+                disabled={correo.enviando || correo.espera > 0}
+                className="text-xs underline underline-offset-2 whitespace-nowrap shrink-0 disabled:opacity-50 disabled:no-underline"
                 style={{ color: "var(--kipu-warning)" }}
               >
-                {reenviando ? "Enviando..." : "Reenviar"}
+                {correo.enviando
+                  ? "Enviando..."
+                  : correo.espera > 0
+                    ? `Reenviar en ${correo.espera} s`
+                    : correo.enviado ? "Reenviar" : "Enviar correo de verificación"}
               </button>
             </div>
           )}

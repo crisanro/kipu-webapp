@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
+import { auth } from "@/lib/firebase";
 import { Zap, Building2, CheckCircle2, Search, Loader2, MessageCircle } from "lucide-react";
 import { consultarRuc } from "@/lib/consultar-ruc";
 
@@ -114,6 +115,11 @@ export default function OnboardingPage() {
     full_name:              "",
   });
 
+  // Sin correo verificado el backend rechaza el registro: verificar primero
+  useEffect(() => {
+    if (auth.currentUser && !auth.currentUser.emailVerified) router.replace("/bienvenida");
+  }, [router]);
+
   const rucValido = form.ruc.length === 13 && /^\d+$/.test(form.ruc) && form.ruc.endsWith("001");
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -171,6 +177,10 @@ export default function OnboardingPage() {
       setTimeout(() => router.replace("/"), 2000);
     } catch (err: any) {
       const detail = err?.response?.data?.detail;
+      if (err?.response?.status === 403 && typeof detail === "string" && /verificar tu correo/i.test(detail)) {
+        router.replace("/bienvenida");
+        return;
+      }
       if (typeof detail === "string") {
         setError(detail);
       } else if (Array.isArray(detail)) {
