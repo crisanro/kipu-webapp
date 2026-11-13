@@ -70,7 +70,9 @@ export default function PagoExitosoPage() {
 
   const tituloPlan = esCreditos
     ? `${cantidadParam} créditos`
-    : `Plan ${plan === "PRO" || !plan ? "Pro" : plan} ${periodo === "MENSUAL" ? "Mensual" : "Anual"}`;
+    : plan === "AL_DIA"
+      ? "Kipu Al Día"
+      : `Plan ${plan === "PRO" || !plan ? "Pro" : plan} ${periodo === "MENSUAL" ? "Mensual" : "Anual"}`;
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">

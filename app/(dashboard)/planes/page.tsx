@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
 import {
@@ -212,6 +213,26 @@ export default function PlanesPage() {
         </button>
       </div>
 
+      {/* Kipu Al Día: facturación + declaraciones */}
+      <Link
+        href="/al-dia"
+        className="flex items-center justify-between gap-3 rounded-xl px-4 py-3 transition-colors"
+        style={{
+          background: "color-mix(in srgb, var(--kipu-accent) 8%, transparent)",
+          border:     "1px solid color-mix(in srgb, var(--kipu-accent) 25%, transparent)",
+        }}
+      >
+        <div>
+          <p className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>
+            {sub?.activa && sub.plan === "AL_DIA" ? "Tu Kipu Al Día" : "Nuevo: Kipu Al Día"}
+          </p>
+          <p className="text-xs" style={{ color: "var(--kipu-muted)" }}>
+            Facturas con Kipu y nosotros presentamos tus declaraciones de IVA y renta.
+          </p>
+        </div>
+        <span className="text-xs font-semibold shrink-0" style={{ color: "var(--kipu-accent)" }}>Ver →</span>
+      </Link>
+
       {loading ? (
         <div className="flex items-center justify-center py-20">
           <div
@@ -267,11 +288,11 @@ export default function PlanesPage() {
                 )}
               </div>
               <p className="text-lg font-bold" style={{ color: "var(--kipu-text)" }}>
-                {sub?.activa ? "Plan Pro" : "Plan Free"}
+                {sub?.activa ? (sub.plan === "AL_DIA" ? "Kipu Al Día" : "Plan Pro") : "Plan Free"}
               </p>
               <p className="text-xs mt-0.5" style={{ color: "var(--kipu-subtle)" }}>
                 {sub?.activa
-                  ? `Anual · ${sub.dias_restantes ?? 0} días restantes`
+                  ? `${sub.periodo === "MENSUAL" ? "Mensual" : "Anual"} · ${sub.dias_restantes ?? 0} días restantes`
                   : balance > 0
                     ? "Emitiendo con créditos"
                     : "Sin créditos disponibles"
