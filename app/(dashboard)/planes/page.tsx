@@ -116,10 +116,11 @@ export default function PlanesPage() {
 
   // Aparte del resto: si Stripe no responde, la página sigue funcionando
   const [precio, setPrecio] = useState<PrecioPlan | null>(null);
+  const [precioFallo, setPrecioFallo] = useState(false);
   useEffect(() => {
     api.get("/api/v1/app/suscripcion/precio")
-      .then((r) => setPrecio(r.data.data ?? null))
-      .catch(() => setPrecio(null));
+      .then((r) => { setPrecio(r.data.data ?? null); setPrecioFallo(!r.data.data); })
+      .catch(() => setPrecioFallo(true));
   }, []);
   const textoPrecio = precio ? `$${precio.base.toFixed(2)}/año + IVA` : "un pago anual";
 
@@ -542,11 +543,15 @@ export default function PlanesPage() {
                     <div className="flex items-baseline gap-2">
                       {precio ? (
                         <span className="text-4xl font-extrabold" style={{ color: "var(--kipu-text)" }}>${precio.base.toFixed(2)}</span>
+                      ) : precioFallo ? (
+                        <span className="text-sm" style={{ color: "var(--kipu-subtle)" }}>
+                          No pudimos cargar el precio; lo verás al pagar
+                        </span>
                       ) : (
                         <span className="inline-block h-9 w-28 rounded-lg animate-pulse"
                               style={{ background: "color-mix(in srgb, var(--kipu-text) 8%, transparent)" }} />
                       )}
-                      <span className="text-sm" style={{ color: "var(--kipu-subtle)" }}>+ IVA / año</span>
+                      {!precioFallo && <span className="text-sm" style={{ color: "var(--kipu-subtle)" }}>+ IVA / año</span>}
                     </div>
                     {precio && (
                       <p className="text-xs mt-1" style={{ color: "var(--kipu-subtle)" }}>
