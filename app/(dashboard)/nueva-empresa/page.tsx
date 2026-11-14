@@ -6,6 +6,7 @@ import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
 import { ArrowLeft, Building2, CheckCircle2, Search, Loader2 } from "lucide-react";
 import { consultarRuc } from "@/lib/consultar-ruc";
+import Turnstile, { TURNSTILE_ACTIVO } from "@/components/auth/Turnstile";
 
 const limpiarTexto = (texto: string) =>
   texto.toUpperCase().normalize("NFD")
@@ -32,6 +33,8 @@ export default function NuevaEmpresaPage() {
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState("");
   const [success, setSuccess] = useState(false);
+  const [captcha, setCaptcha] = useState<string | null>(null);
+  const [intentoCaptcha, setIntentoCaptcha] = useState(0);
 
   const [lookupLoading, setLookupLoading] = useState(false);
   const [lookupMsg,     setLookupMsg]     = useState("");
@@ -97,9 +100,13 @@ export default function NuevaEmpresaPage() {
 
   const handleSubmit = async () => {
     setError("");
+    if (TURNSTILE_ACTIVO && !captcha) {
+      setError("Completa la verificación de seguridad.");
+      return;
+    }
     setLoading(true);
     try {
-      const res = await api.post("/api/v1/app/emisor/onboarding", form);
+      const res = await api.post("/api/v1/app/emisor/onboarding", { ...form, captcha_token: captcha });
       const nuevaEmpresa = {
         id:                     res.data.emisor_id,
         ruc:                    form.ruc,
@@ -127,6 +134,9 @@ export default function NuevaEmpresaPage() {
       setTimeout(() => router.replace("/dashboard"), 2000);
     } catch (err: any) {
       setError(err?.response?.data?.detail ?? "Error al registrar la empresa.");
+      // Cada verificación sirve una sola vez: para reintentar hace falta otra
+      setCaptcha(null);
+      setIntentoCaptcha(n => n + 1);
     } finally {
       setLoading(false);
     }
@@ -470,6 +480,8 @@ export default function NuevaEmpresaPage() {
                   {error}
                 </p>
               )}
+
+              <Turnstile key={intentoCaptcha} onToken={setCaptcha} />
 
               <div className="flex gap-3">
                 <button

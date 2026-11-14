@@ -103,6 +103,8 @@ export function useVerificacionCorreo(alVerificar?: () => void) {
         if (!vivo) return;
         if (r.data?.verificado) {
           await marcarVerificado();
+        } else if (r.data?.correo_temporal) {
+          setError("No aceptamos correos temporales. Cambia tu correo por uno que revises siempre: ahí te llegan tus facturas y avisos del SRI.");
         } else {
           if (r.data?.enviado_at) setEnviado(true);
           const s = Number(r.data?.espera_segundos) || 0;

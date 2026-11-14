@@ -6,6 +6,7 @@ import api from "@/lib/api";
 import { auth } from "@/lib/firebase";
 import { Zap, Building2, CheckCircle2, Search, Loader2, MessageCircle, ShieldCheck, Upload } from "lucide-react";
 import { consultarRuc } from "@/lib/consultar-ruc";
+import Turnstile, { TURNSTILE_ACTIVO } from "@/components/auth/Turnstile";
 
 const PASOS = ["Empresa", "Confirmar"];
 
@@ -61,6 +62,8 @@ function RecuperarConFirma({ form, onListo }: { form: FormEmpresa; onListo: () =
   const [clave,    setClave]    = useState("");
   const [enviando, setEnviando] = useState(false);
   const [error,    setError]    = useState("");
+  const [captcha,  setCaptcha]  = useState<string | null>(null);
+  const [intento,  setIntento]  = useState(0);
   const archivoRef = useRef<HTMLInputElement>(null);
 
   const recuperar = async () => {
@@ -68,21 +71,29 @@ function RecuperarConFirma({ form, onListo }: { form: FormEmpresa; onListo: () =
       setError("Selecciona tu archivo .p12 y escribe su contraseña.");
       return;
     }
+    if (TURNSTILE_ACTIVO && !captcha) {
+      setError("Completa la verificación de seguridad.");
+      return;
+    }
     setEnviando(true);
     setError("");
+    let ok = false;
     try {
       const datos = new FormData();
-      datos.append("datos", JSON.stringify(form));
+      datos.append("datos", JSON.stringify({ ...form, captcha_token: captcha }));
       datos.append("password", clave);
       datos.append("file", archivo);
       await api.post("/api/v1/app/emisor/onboarding/reclamar", datos, {
         headers: { "Content-Type": "multipart/form-data" },
       });
+      ok = true;
       onListo();
     } catch (err: unknown) {
       setError(textoError(err, "No pudimos recuperar la empresa. Intenta de nuevo."));
     } finally {
       setEnviando(false);
+      // Cada verificación sirve una sola vez: para reintentar hace falta otra
+      if (!ok) { setCaptcha(null); setIntento(n => n + 1); }
     }
   };
 
@@ -145,6 +156,8 @@ function RecuperarConFirma({ form, onListo }: { form: FormEmpresa; onListo: () =
       />
 
       {error && <ErrorBox error={error} ruc={form.ruc} />}
+
+      <Turnstile key={intento} onToken={setCaptcha} />
 
       <button
         type="button"
@@ -232,6 +245,8 @@ export default function OnboardingPage() {
   const [success, setSuccess] = useState(false);
   // El RUC está en pruebas con otra cuenta: se ofrece recuperarlo con la firma
   const [recuperar, setRecuperar] = useState(false);
+  const [captcha,   setCaptcha]   = useState<string | null>(null);
+  const [intentoCaptcha, setIntentoCaptcha] = useState(0);
 
   const [lookupLoading, setLookupLoading] = useState(false);
   const [lookupMsg,     setLookupMsg]     = useState("");
@@ -310,9 +325,15 @@ export default function OnboardingPage() {
   const handleSubmit = async () => {
     setError("");
     setRecuperar(false);
+    if (TURNSTILE_ACTIVO && !captcha) {
+      setError("Completa la verificación de seguridad.");
+      return;
+    }
     setLoading(true);
+    let ok = false;
     try {
-      await api.post("/api/v1/app/emisor/onboarding", form);
+      await api.post("/api/v1/app/emisor/onboarding", { ...form, captcha_token: captcha });
+      ok = true;
       listo();
     } catch (err: any) {
       const detail = err?.response?.data?.detail;
@@ -335,6 +356,8 @@ export default function OnboardingPage() {
       }
     } finally {
       setLoading(false);
+      // Cada verificación sirve una sola vez: para reintentar hace falta otra
+      if (!ok) { setCaptcha(null); setIntentoCaptcha(n => n + 1); }
     }
   };
 
@@ -636,6 +659,7 @@ export default function OnboardingPage() {
 
             {error && <ErrorBox error={error} ruc={form.ruc} />}
             {recuperar && <RecuperarConFirma form={form} onListo={listo} />}
+            {!recuperar && <Turnstile key={intentoCaptcha} onToken={setCaptcha} />}
 
             <div className="flex gap-3">
               <button

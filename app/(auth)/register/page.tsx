@@ -7,6 +7,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@/lib/firebase";
+import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { useTheme } from "next-themes";
@@ -50,6 +51,16 @@ export default function RegisterPage() {
 
     setLoading(true);
     try {
+      // Correos temporales: avisar antes de crear la cuenta (el backend igual los bloquea)
+      try {
+        const r = await api.get("/api/v1/public/registro/correo", { params: { email } });
+        if (r.data?.permitido === false) {
+          setError(r.data.mensaje || "No aceptamos correos temporales.");
+          return;
+        }
+      } catch {
+        // Si la consulta falla, se sigue: la verificación vuelve a revisarlo
+      }
       await createUserWithEmailAndPassword(auth, email, password);
       // El correo de verificación NO se envía solo: en la bienvenida se pide con
       // un botón, así la persona sabe que debe buscarlo en su bandeja.

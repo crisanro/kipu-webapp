@@ -1,6 +1,6 @@
 // lib/api.ts
 import axios from "axios";
-import { auth } from "./firebase";
+import { auth, tokenAppCheck } from "./firebase";
 import { useSandboxStore } from "@/store/sandbox.store";
 import { useAuthStore } from "@/store/auth.store";
 
@@ -24,6 +24,12 @@ api.interceptors.request.use(async (config) => {
   if (user) {
     const token = await user.getIdToken();
     config.headers.Authorization = `Bearer ${token}`;
+  }
+
+  // App Check: prueba que la petición sale de esta página (ver lib/firebase.ts)
+  const appCheck = await tokenAppCheck();
+  if (appCheck) {
+    config.headers["X-Firebase-AppCheck"] = appCheck;
   }
 
   // Emisor activo — para que el backend sepa qué empresa usar
