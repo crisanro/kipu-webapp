@@ -5,10 +5,11 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
+import Turnstile, { TURNSTILE_ACTIVO } from "@/components/auth/Turnstile";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { useTheme } from "next-themes";
 
@@ -31,6 +32,9 @@ export default function RegisterPage() {
   const [aceptaTerminos, setAceptaTerminos] = useState(false);
   const [loading,        setLoading]        = useState(false);
   const [error,          setError]          = useState("");
+  // Captcha: cada token sirve una vez; "intento" vuelve a montar el widget
+  const [captcha,        setCaptcha]        = useState<string | null>(null);
+  const [intento,        setIntento]        = useState(0);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,34 +53,35 @@ export default function RegisterPage() {
       return;
     }
 
+    if (TURNSTILE_ACTIVO && !captcha) {
+      setError("Completa la verificación de seguridad.");
+      return;
+    }
+
     setLoading(true);
+    let creada = false;
     try {
-      // Correos temporales: avisar antes de crear la cuenta (el backend igual los bloquea)
-      try {
-        const r = await api.get("/api/v1/public/registro/correo", { params: { email } });
-        if (r.data?.permitido === false) {
-          setError(r.data.mensaje || "No aceptamos correos temporales.");
-          return;
-        }
-      } catch {
-        // Si la consulta falla, se sigue: la verificación vuelve a revisarlo
-      }
-      await createUserWithEmailAndPassword(auth, email, password);
+      // La cuenta la crea el backend (captcha, correos temporales, límite por IP);
+      // el registro directo en Firebase está desactivado
+      await api.post("/api/v1/public/registro/cuenta", {
+        email, password, captcha_token: captcha,
+      });
+      creada = true;
+      await signInWithEmailAndPassword(auth, email.trim(), password);
       // El correo de verificación NO se envía solo: en la bienvenida se pide con
       // un botón, así la persona sabe que debe buscarlo en su bandeja.
       const empresaParam = new URLSearchParams(window.location.search).get("empresa");
       router.replace(empresaParam ? `/bienvenida?empresa=${empresaParam}` : "/bienvenida");
     } catch (err: any) {
-      const code = err?.code ?? "";
-      if (code === "auth/email-already-in-use") {
-        setError("Ya existe una cuenta con ese correo.");
-      } else if (code === "auth/weak-password") {
-        setError("La contraseña es muy débil.");
-      } else if (code === "auth/invalid-email") {
-        setError("El correo no es válido.");
-      } else {
-        setError("Error al crear la cuenta. Intenta de nuevo.");
+      if (creada) {
+        // La cuenta existe; solo falló el inicio de sesión automático
+        router.replace("/login");
+        return;
       }
+      const detail = err?.response?.data?.detail;
+      setError(typeof detail === "string" ? detail : "Error al crear la cuenta. Intenta de nuevo.");
+      setCaptcha(null);
+      setIntento(i => i + 1);
     } finally {
       setLoading(false);
     }
@@ -219,6 +224,8 @@ export default function RegisterPage() {
             </label>
           </div>
 
+          {TURNSTILE_ACTIVO && <Turnstile key={intento} onToken={setCaptcha} />}
+
           {error && (
             <p
               className="text-sm px-3 py-2 rounded-lg"
@@ -233,7 +240,7 @@ export default function RegisterPage() {
 
           <button
             type="submit"
-            disabled={loading || !aceptaTerminos}
+            disabled={loading || !aceptaTerminos || (TURNSTILE_ACTIVO && !captcha)}
             className="w-full py-2.5 rounded-lg font-medium text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ background: "var(--kipu-accent)", color: "#ffffff" }}
             onMouseEnter={e => !loading && (e.currentTarget.style.background = "var(--kipu-accent-h)")}
