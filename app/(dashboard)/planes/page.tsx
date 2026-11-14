@@ -1,10 +1,11 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
 import {
   CreditCard, Zap, RefreshCw,
-  CheckCircle2, AlertTriangle, TrendingDown, Star, ArrowRight, Info
+  CheckCircle2, AlertTriangle, TrendingDown, Star, ArrowRight, Info, CalendarCheck
 } from "lucide-react";
 
 const fmt = (n: any) => parseFloat(String(n ?? 0)).toFixed(2);
@@ -45,6 +46,21 @@ interface PrecioPlan {
   intervalo: string | null;   // year | month
   etiqueta:  string | null;   // p. ej. "Precio de lanzamiento" (metadatos del Price en Stripe)
 }
+
+interface EstadoAlDia {
+  disponible:         boolean;
+  precio:             PrecioPlan | null;
+  motivo_no_elegible: string | null;
+}
+
+const FEATURES_AL_DIA = [
+  "Todo lo del Plan Pro",
+  "Declaración de IVA mensual o semestral",
+  "Declaración anual de renta",
+  "Revisión de tus compras cada mes",
+  "Aviso por WhatsApp de cuánto pagar",
+  "Resumen para revisar antes de declarar",
+];
 
 const ESTADO_COLOR: Record<string, { color: string; bg: string; border: string }> = {
   ACTIVO:    { color: "var(--kipu-success)", bg: "color-mix(in srgb, var(--kipu-success) 10%, transparent)", border: "color-mix(in srgb, var(--kipu-success) 20%, transparent)" },
@@ -100,12 +116,21 @@ export default function PlanesPage() {
 
   // Aparte del resto: si Stripe no responde, la página sigue funcionando
   const [precio, setPrecio] = useState<PrecioPlan | null>(null);
+  const [precioFallo, setPrecioFallo] = useState(false);
   useEffect(() => {
     api.get("/api/v1/app/suscripcion/precio")
-      .then((r) => setPrecio(r.data.data ?? null))
-      .catch(() => setPrecio(null));
+      .then((r) => { setPrecio(r.data.data ?? null); setPrecioFallo(!r.data.data); })
+      .catch(() => setPrecioFallo(true));
   }, []);
   const textoPrecio = precio ? `$${precio.base.toFixed(2)}/año + IVA` : "un pago anual";
+
+  // Kipu Al Día: precio y si esta empresa puede contratarlo (mismo criterio que /al-dia)
+  const [alDia, setAlDia] = useState<EstadoAlDia | null>(null);
+  useEffect(() => {
+    api.get("/api/v1/app/al-dia/estado")
+      .then((r) => setAlDia(r.data.data ?? null))
+      .catch(() => setAlDia(null));
+  }, []);
 
   const iniciarCheckout = async () => {
     setPagando("pro");
@@ -161,6 +186,9 @@ export default function PlanesPage() {
 
   const enProduccion  = empresa?.ambiente === 2;
   const esFree        = !sub?.activa;
+  const esAlDia       = !!sub?.activa && sub.plan === "AL_DIA";
+  const verPro        = !sub?.activa || sub.cancel_at_period_end;
+  const verAlDia      = !esAlDia;
 
   return (
     <div className="p-4 md:p-6 max-w-3xl mx-auto space-y-5">
@@ -267,11 +295,11 @@ export default function PlanesPage() {
                 )}
               </div>
               <p className="text-lg font-bold" style={{ color: "var(--kipu-text)" }}>
-                {sub?.activa ? "Plan Pro" : "Plan Free"}
+                {sub?.activa ? (sub.plan === "AL_DIA" ? "Kipu Al Día" : "Plan Pro") : "Plan Free"}
               </p>
               <p className="text-xs mt-0.5" style={{ color: "var(--kipu-subtle)" }}>
                 {sub?.activa
-                  ? `Anual · ${sub.dias_restantes ?? 0} días restantes`
+                  ? `${sub.periodo === "MENSUAL" ? "Mensual" : "Anual"} · ${sub.dias_restantes ?? 0} días restantes`
                   : balance > 0
                     ? "Emitiendo con créditos"
                     : "Sin créditos disponibles"
@@ -355,8 +383,8 @@ export default function PlanesPage() {
                     <p className="font-medium mb-0.5" style={{ color: "var(--kipu-accent)" }}>Estás en Plan Free</p>
                     <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
                       {balance > 0
-                        ? `Tienes ${balance} crédito${balance !== 1 ? "s" : ""} para emitir comprobantes. Con Plan Pro emites sin límite por ${textoPrecio}.`
-                        : `Sin créditos disponibles. Con Plan Pro emites sin límite por ${textoPrecio}.`
+                        ? `Tienes ${balance} crédito${balance !== 1 ? "s" : ""} para emitir comprobantes. Con Plan Pro emites sin límite por ${textoPrecio}; con Kipu Al Día, además, declaramos por ti.`
+                        : `Sin créditos disponibles. Con Plan Pro emites sin límite por ${textoPrecio}; con Kipu Al Día, además, declaramos por ti.`
                       }
                     </p>
                   </div>
@@ -377,11 +405,18 @@ export default function PlanesPage() {
                   </h2>
                   <div className="flex items-center justify-between mb-4">
                     <div>
-                      <p className="text-2xl font-bold" style={{ color: "var(--kipu-text)" }}>Plan Pro</p>
+                      <p className="text-2xl font-bold" style={{ color: "var(--kipu-text)" }}>
+                        {esAlDia ? "Kipu Al Día" : "Plan Pro"}
+                      </p>
                       <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>
-                        Anual · IVA incluido
+                        {sub.periodo === "MENSUAL" ? "Mensual" : "Anual"} · IVA incluido
                         {sub.cancel_at_period_end && " · Cancela al vencer"}
                       </p>
+                      {esAlDia && (
+                        <Link href="/al-dia" className="text-xs font-medium" style={{ color: "var(--kipu-accent)" }}>
+                          Ver mi Kipu Al Día y mi clave del SRI →
+                        </Link>
+                      )}
                     </div>
                     <span
                       className="text-xs px-3 py-1 rounded-full font-semibold"
@@ -472,10 +507,12 @@ export default function PlanesPage() {
                 </div>
               )}
 
-              {/* Card Plan Pro */}
-              {(!sub?.activa || sub?.cancel_at_period_end) && (
+              {/* Opciones: Plan Pro y Kipu Al Día, lado a lado */}
+              {(verPro || verAlDia) && (
+              <div className={`grid gap-5 pt-3 ${verPro && verAlDia ? "md:grid-cols-2" : ""}`}>
+              {verPro && (
                 <div
-                  className="relative rounded-xl p-6"
+                  className="relative rounded-xl p-6 flex flex-col"
                   style={{
                     background: "var(--kipu-surface)",
                     border: "1px solid color-mix(in srgb, var(--kipu-accent) 60%, transparent)",
@@ -506,11 +543,15 @@ export default function PlanesPage() {
                     <div className="flex items-baseline gap-2">
                       {precio ? (
                         <span className="text-4xl font-extrabold" style={{ color: "var(--kipu-text)" }}>${precio.base.toFixed(2)}</span>
+                      ) : precioFallo ? (
+                        <span className="text-sm" style={{ color: "var(--kipu-subtle)" }}>
+                          No pudimos cargar el precio; lo verás al pagar
+                        </span>
                       ) : (
                         <span className="inline-block h-9 w-28 rounded-lg animate-pulse"
                               style={{ background: "color-mix(in srgb, var(--kipu-text) 8%, transparent)" }} />
                       )}
-                      <span className="text-sm" style={{ color: "var(--kipu-subtle)" }}>+ IVA / año</span>
+                      {!precioFallo && <span className="text-sm" style={{ color: "var(--kipu-subtle)" }}>+ IVA / año</span>}
                     </div>
                     {precio && (
                       <p className="text-xs mt-1" style={{ color: "var(--kipu-subtle)" }}>
@@ -522,7 +563,7 @@ export default function PlanesPage() {
                     </p>
                   </div>
 
-                  <div className="space-y-2.5 mb-6">
+                  <div className="space-y-2.5 mb-6 flex-1">
                     {FEATURES.map((f, i) => (
                       <div key={i} className="flex items-start gap-2.5">
                         <CheckCircle2 size={14} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-success)" }} />
@@ -572,6 +613,16 @@ export default function PlanesPage() {
                     </p>
                   )}
                 </div>
+              )}
+
+              {verAlDia && (
+                <TarjetaAlDia
+                  estado={alDia}
+                  enProduccion={enProduccion}
+                  tienePro={!!sub?.activa && !esAlDia}
+                />
+              )}
+              </div>
               )}
             </div>
           )}
@@ -787,6 +838,100 @@ export default function PlanesPage() {
             </div>
           )}
         </>
+      )}
+    </div>
+  );
+}
+
+// ── Tarjeta Kipu Al Día ──────────────────────────────────────────────────────
+// Los términos y el pago están en /al-dia: aquí solo se presenta la opción.
+function TarjetaAlDia({ estado, enProduccion, tienePro }: {
+  estado: EstadoAlDia | null; enProduccion: boolean; tienePro: boolean;
+}) {
+  const total = estado?.precio?.total ?? 40;
+
+  // Por qué no se puede contratar todavía (la producción primero, como en Pro)
+  const bloqueo = !enProduccion
+    ? "Disponible solo en producción"
+    : estado?.motivo_no_elegible
+      ?? (estado && !estado.disponible ? "Disponible muy pronto" : null);
+
+  return (
+    <div
+      className="relative rounded-xl p-6 flex flex-col"
+      style={{
+        background: "var(--kipu-surface)",
+        border: "1px solid color-mix(in srgb, var(--kipu-accent) 60%, transparent)",
+      }}
+    >
+      <div className="absolute -top-3 left-5">
+        <span
+          className="flex items-center gap-1.5 text-white text-xs px-3 py-1 rounded-full font-semibold shadow-lg"
+          style={{ background: "var(--kipu-accent)" }}
+        >
+          <CalendarCheck size={11} />
+          Kipu Al Día · Mensual
+        </span>
+      </div>
+
+      <div className="mt-3 mb-5">
+        <span
+          className="inline-block text-[11px] font-semibold px-2 py-0.5 rounded-md mb-2"
+          style={{ color: "var(--kipu-accent)", background: "color-mix(in srgb, var(--kipu-accent) 12%, transparent)" }}
+        >
+          Nuevo · declaramos por ti
+        </span>
+        <div className="flex items-baseline gap-2">
+          <span className="text-4xl font-extrabold" style={{ color: "var(--kipu-text)" }}>${total.toFixed(0)}</span>
+          <span className="text-sm" style={{ color: "var(--kipu-subtle)" }}>IVA incluido / mes</span>
+        </div>
+        <p className="text-xs mt-1" style={{ color: "var(--kipu-subtle)" }}>
+          Precio de lanzamiento: lo mantienes mientras sigas en el plan. Cancela cuando quieras.
+        </p>
+      </div>
+
+      <div className="space-y-2.5 mb-4 flex-1">
+        {FEATURES_AL_DIA.map((t, i) => (
+          <div key={t} className="flex items-start gap-2.5">
+            <CheckCircle2 size={14} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-success)" }} />
+            <p className="text-sm" style={{
+              color: i === 0 ? "var(--kipu-accent)" : "var(--kipu-text)",
+              fontWeight: i === 0 ? 500 : 400,
+            }}>
+              {t}
+            </p>
+          </div>
+        ))}
+        <p className="text-xs pt-1" style={{ color: "var(--kipu-subtle)" }}>
+          Para personas naturales no obligadas a llevar contabilidad (régimen general o RIMPE Emprendedor).
+        </p>
+      </div>
+
+      {bloqueo ? (
+        <>
+          <button
+            type="button"
+            disabled
+            className="w-full py-3 rounded-xl text-white font-bold text-sm flex items-center justify-center gap-2 opacity-50"
+            style={{ background: "var(--kipu-accent)" }}
+          >
+            <CalendarCheck size={16} />
+            Contratar Kipu Al Día
+          </button>
+          <p className="text-center text-xs mt-2" style={{ color: "var(--kipu-subtle)" }}>{bloqueo}</p>
+        </>
+      ) : (
+        <Link
+          href="/al-dia"
+          className="w-full py-3 rounded-xl text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg"
+          style={{
+            background: "var(--kipu-accent)",
+            boxShadow: "0 10px 15px -3px color-mix(in srgb, var(--kipu-accent) 20%, transparent)",
+          }}
+        >
+          <CalendarCheck size={16} />
+          {tienePro ? "Pasarme a Kipu Al Día" : "Contratar Kipu Al Día"}
+        </Link>
       )}
     </div>
   );

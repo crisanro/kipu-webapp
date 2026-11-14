@@ -6,7 +6,7 @@ import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
 import {
   CheckCircle2, Zap, CreditCard, ArrowRight,
-  FileText, Sparkles,
+  FileText, Sparkles, KeyRound,
 } from "lucide-react";
 
 export default function PagoExitosoPage() {
@@ -67,10 +67,13 @@ export default function PagoExitosoPage() {
 
   const esCreditos    = tipo === "creditos";
   const esSuscripcion = tipo === "suscripcion";
+  const esAlDia       = esSuscripcion && plan === "AL_DIA";
 
   const tituloPlan = esCreditos
     ? `${cantidadParam} créditos`
-    : `Plan ${plan === "PRO" || !plan ? "Pro" : plan} ${periodo === "MENSUAL" ? "Mensual" : "Anual"}`;
+    : plan === "AL_DIA"
+      ? "Kipu Al Día"
+      : `Plan ${plan === "PRO" || !plan ? "Pro" : plan} ${periodo === "MENSUAL" ? "Mensual" : "Anual"}`;
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
@@ -137,7 +140,9 @@ export default function PagoExitosoPage() {
               <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
                 {esCreditos
                   ? "Créditos para emitir comprobantes"
-                  : "Emisión ilimitada · Sistema contable · Soporte"
+                  : esAlDia
+                    ? "Facturación sin límite · Declaraciones de IVA y renta"
+                    : "Emisión ilimitada · Sistema contable · Soporte"
                 }
               </p>
             </div>
@@ -211,13 +216,18 @@ export default function PagoExitosoPage() {
           {/* Incluye (suscripción) */}
           {esSuscripcion && (
             <div className="space-y-2 pt-1">
-              {[
+              {(esAlDia ? [
+                "Todo lo del Plan Pro",
+                "Presentamos tus declaraciones de IVA y renta",
+                "Te avisamos por WhatsApp cuánto pagar",
+                "Soporte de lunes a viernes, de 8:00 a 17:00",
+              ] : [
                 "Emisión ilimitada de comprobantes",
                 "Registro de documentos recibidos",
                 "Reportes IVA y Renta",
                 "Hasta 5 usuarios",
                 "Soporte por WhatsApp",
-              ].map((item, i) => (
+              ]).map((item, i) => (
                 <div key={i} className="flex items-center gap-2">
                   <CheckCircle2 size={13} className="shrink-0" style={{ color: "var(--kipu-success)" }} />
                   <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>{item}</p>
@@ -232,14 +242,49 @@ export default function PagoExitosoPage() {
           </p>
         </div>
 
+        {/* Kipu Al Día: sin la clave del SRI no podemos declarar */}
+        {esAlDia && (
+          <div
+            className="rounded-2xl p-5 space-y-3"
+            style={{
+              background: "color-mix(in srgb, var(--kipu-accent) 10%, transparent)",
+              border: "1px solid color-mix(in srgb, var(--kipu-accent) 40%, transparent)",
+            }}
+          >
+            <div className="flex items-center gap-2">
+              <KeyRound size={18} style={{ color: "var(--kipu-accent)" }} />
+              <p className="font-semibold" style={{ color: "var(--kipu-text)" }}>Último paso: guarda tu clave del SRI</p>
+            </div>
+            <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>
+              Sin ella no podemos presentar tus declaraciones. Queda cifrada, solo la usa tu contador
+              y ves cada vez que alguien la consulta.
+            </p>
+            {estado === "confirmado" || estado === "demora" ? (
+              <Link
+                href="/al-dia#clave-sri"
+                className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-white font-semibold text-sm"
+                style={{ background: "var(--kipu-accent)" }}
+              >
+                <KeyRound size={16} />
+                Guardar mi clave del SRI
+                <ArrowRight size={16} />
+              </Link>
+            ) : (
+              <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+                En cuanto confirmemos tu pago aparecerá aquí el botón para guardarla.
+              </p>
+            )}
+          </div>
+        )}
+
         {/* Botones */}
         <div className="space-y-3">
           <Link
-            href="/documentos/nueva"
-            className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-white font-semibold text-sm transition-colors"
-            style={{ background: "var(--kipu-accent)" }}
-            onMouseEnter={e => e.currentTarget.style.background = "var(--kipu-accent-h)"}
-            onMouseLeave={e => e.currentTarget.style.background = "var(--kipu-accent)"}
+            href="/documentos/emitir"
+            className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm transition-colors"
+            style={esAlDia
+              ? { border: "1px solid var(--kipu-border)", color: "var(--kipu-text)", background: "var(--kipu-surface)" }
+              : { background: "var(--kipu-accent)", color: "#FFFFFF", fontWeight: 600 }}
           >
             <FileText size={16} />
             Emitir primer comprobante

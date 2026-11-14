@@ -30,6 +30,7 @@ interface AuthState {
   email:        string | null;
   profile_id:   string | null;
   role:         string | null;
+  equipoAlDia:  boolean;          // superadmin o contador del equipo de Kipu Al Día
   listo:        boolean;
   empresa:      Empresa | null;
   empresas:     Empresa[];
@@ -49,6 +50,7 @@ export const useAuthStore = create<AuthState>()(
       email:      null,
       profile_id: null,
       role:       null,
+      equipoAlDia: false,
       listo:      false,
       empresa:    null,
       empresas:   [],
@@ -79,7 +81,7 @@ export const useAuthStore = create<AuthState>()(
           // kipu:empresas ya no existe
         }
         set({ uid: null, email: null, profile_id: null,
-              role: null, listo: false, empresa: null, empresas: [] });
+              role: null, equipoAlDia: false, listo: false, empresa: null, empresas: [] });
       },
     }),
     {
