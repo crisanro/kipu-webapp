@@ -9,16 +9,34 @@ const cspReportOnly = [
   "default-src 'self'",
   // Next.js inyecta scripts inline; Firebase Auth carga de apis.google.com
   // static.cloudflareinsights.com: Cloudflare Web Analytics (lo inyecta Cloudflare)
-  "script-src 'self' 'unsafe-inline' https://apis.google.com https://www.gstatic.com https://static.cloudflareinsights.com",
+  // challenges.cloudflare.com: captcha Turnstile al crear empresa
+  // www.google.com / www.recaptcha.net: reCAPTCHA de App Check (www.gstatic.com ya estaba)
+  [
+    "script-src 'self' 'unsafe-inline'",
+    "https://apis.google.com",
+    "https://www.gstatic.com",
+    "https://static.cloudflareinsights.com",
+    "https://challenges.cloudflare.com",
+    "https://www.google.com",
+    "https://www.recaptcha.net",
+  ].join(" "),
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
   [
     "connect-src 'self'", API_URL,
-    "https://*.googleapis.com",                  // Firebase Auth, FCM, installations
+    "https://*.googleapis.com",                  // Firebase Auth, FCM, installations, App Check
     "https://cloudflareinsights.com",            // envío de métricas de Cloudflare Web Analytics
   ].join(" "),
-  "frame-src https://*.firebaseapp.com https://www.youtube.com",
+  [
+    "frame-src",
+    "https://*.firebaseapp.com",
+    "https://www.youtube.com",
+    "https://challenges.cloudflare.com",         // Turnstile
+    "https://www.google.com",                    // reCAPTCHA (App Check)
+    "https://recaptcha.google.com",
+    "https://www.recaptcha.net",
+  ].join(" "),
   "worker-src 'self' blob:",
   "manifest-src 'self'",
   "object-src 'none'",
