@@ -115,6 +115,14 @@ export default function KipuAlDiaPage() {
     return () => { vivo = false; };
   }, []);
 
+  // Desde "pago exitoso" se llega con #clave-sri: bajar al recuadro cuando ya cargó
+  const contratado = !!estado?.contratado;
+  useEffect(() => {
+    if (cargando || !contratado || window.location.hash !== "#clave-sri") return;
+    const t = setTimeout(() => document.getElementById("clave-sri")?.scrollIntoView({ behavior: "smooth" }), 100);
+    return () => clearTimeout(t);
+  }, [cargando, contratado]);
+
   const contratar = async () => {
     // Quien ya aceptó (y volvió tras cancelar el pago) pasa directo al pago
     if (!terminos || !(estado?.aceptado || (acepta && autoriza))) return;

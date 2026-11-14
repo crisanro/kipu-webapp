@@ -78,7 +78,7 @@ export default function ClaveSri() {
   const mostrarFormulario = estado && (!estado.guardada || editando);
 
   return (
-    <div className="rounded-xl p-5 space-y-4" style={caja}>
+    <div id="clave-sri" className="rounded-xl p-5 space-y-4 scroll-mt-6" style={caja}>
       <div className="flex items-center gap-2">
         <KeyRound size={18} style={{ color: "var(--kipu-accent)" }} />
         <p className="font-semibold" style={{ color: "var(--kipu-text)" }}>Tu clave del SRI</p>
