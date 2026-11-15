@@ -1,7 +1,7 @@
 // app/(auth)/register/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -9,6 +9,7 @@ import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
+import { detalleError } from "@/lib/errores";
 import Turnstile, { TURNSTILE_ACTIVO } from "@/components/auth/Turnstile";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { useTheme } from "next-themes";
@@ -17,12 +18,11 @@ export default function RegisterPage() {
   const router = useRouter();
   const { uid } = useAuthStore();
   const { resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
+  const mounted = useSyncExternalStore(() => () => {}, () => true, () => false);
 
-  useEffect(() => setMounted(true), []);
   useEffect(() => {
     if (uid) router.replace("/dashboard");
-  }, [uid]);
+  }, [uid, router]);
 
   const [email,          setEmail]          = useState("");
   const [password,       setPassword]       = useState("");
@@ -72,14 +72,13 @@ export default function RegisterPage() {
       // un botón, así la persona sabe que debe buscarlo en su bandeja.
       const empresaParam = new URLSearchParams(window.location.search).get("empresa");
       router.replace(empresaParam ? `/bienvenida?empresa=${empresaParam}` : "/bienvenida");
-    } catch (err: any) {
+    } catch (err) {
       if (creada) {
         // La cuenta existe; solo falló el inicio de sesión automático
         router.replace("/login");
         return;
       }
-      const detail = err?.response?.data?.detail;
-      setError(typeof detail === "string" ? detail : "Error al crear la cuenta. Intenta de nuevo.");
+      setError(detalleError(err, "Error al crear la cuenta. Intenta de nuevo."));
       setCaptcha(null);
       setIntento(i => i + 1);
     } finally {

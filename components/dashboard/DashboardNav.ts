@@ -14,6 +14,7 @@ import {
   Key,
   Shield,
   Settings,
+  CalendarCheck,
 } from "lucide-react";
 
 // permiso: string       → usuario necesita ESE permiso
@@ -67,6 +68,7 @@ export const NAV_GROUPS = [
     items: [
       { href: "/estructura",    label: "Estructura",    icon: Building2, permiso: ["emitir", "estructura"] },
       { href: "/planes",        label: "Planes",        icon: CreditCard, permiso: null },
+      { href: "/al-dia",        label: "Kipu Al Día",   icon: CalendarCheck, permiso: null },
       { href: "/reportes",      label: "Reportes",      icon: BarChart3, permiso: "reportes" },
       { href: "/usuarios",      label: "Usuarios",      icon: UserCog,   permiso: "usuarios" },
       { href: "/api-keys",      label: "API Keys",      icon: Key,       permiso: "api_keys" },
@@ -76,7 +78,9 @@ export const NAV_GROUPS = [
   },
 ];
 
-export function tienePermiso(empresa: any, permiso: string | string[] | null): boolean {
+type EmpresaConPermisos = { rol?: string | null; permisos?: Record<string, boolean> | null } | null | undefined;
+
+export function tienePermiso(empresa: EmpresaConPermisos, permiso: string | string[] | null): boolean {
   if (!permiso) return true;
   if (empresa?.rol === "admin") return true;
   if (Array.isArray(permiso)) {
