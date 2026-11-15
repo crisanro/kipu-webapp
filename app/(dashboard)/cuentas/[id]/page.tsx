@@ -157,7 +157,7 @@ export default function DetalleCuentaPage() {
     ? Math.min(100, (cuenta.monto_pagado / cuenta.monto_total) * 100)
     : 0;
   const vencida = cuenta.fecha_vencimiento &&
-    new Date(cuenta.fecha_vencimiento) < new Date() && activa;
+    cuenta.fecha_vencimiento < hoyEC() && activa;
 
   // ── Render ────────────────────────────────────────────────────────────────────
   return (

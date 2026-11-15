@@ -410,7 +410,7 @@ function CuentasContent() {
               const est  = ESTADO_CONFIG[c.estado] ?? ESTADO_CONFIG.PENDIENTE;
               const Icon = est.icon;
               const vencida = c.fecha_vencimiento &&
-                new Date(c.fecha_vencimiento) < new Date() &&
+                c.fecha_vencimiento < hoyEC() &&
                 c.estado !== "PAGADO" && c.estado !== "ANULADO";
 
               return (

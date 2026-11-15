@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import api from "@/lib/api";
+import { hoyEC } from "@/lib/fecha";
 import {
   ArrowLeft, Building2, CreditCard, FileText, Users,
   Plus, CheckCircle2, Clock, AlertTriangle,
@@ -58,7 +59,7 @@ export default function AdminEmisorDetallePage() {
   }, []);
   const [tfRef,        setTfRef]        = useState("");
   const [tfBanco,      setTfBanco]      = useState("");
-  const [tfFecha,      setTfFecha]      = useState(() => new Date().toISOString().split("T")[0]);
+  const [tfFecha,      setTfFecha]      = useState(hoyEC);
   const [tfNotas,      setTfNotas]      = useState("");
   const [activando,    setActivando]    = useState(false);
   const [msgTransf,    setMsgTransf]    = useState<{ ok: boolean; texto: string } | null>(null);
@@ -160,7 +161,7 @@ export default function AdminEmisorDetallePage() {
       setTfRef("");
       setTfBanco("");
       setTfNotas("");
-      setTfFecha(new Date().toISOString().split("T")[0]);
+      setTfFecha(hoyEC());
       await cargar();
     } catch (e: any) {
       setMsgTransf({ ok: false, texto: e?.response?.data?.detail ?? "Error al activar." });
