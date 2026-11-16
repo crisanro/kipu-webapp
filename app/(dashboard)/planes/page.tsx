@@ -857,7 +857,7 @@ export default function PlanesPage() {
 function TarjetaAlDia({ estado, enProduccion, tienePro }: {
   estado: EstadoAlDia | null; enProduccion: boolean; tienePro: boolean;
 }) {
-  const total = estado?.precio?.total ?? 40;
+  const total = estado?.precio?.total ?? null;   // sin Stripe no se inventa un monto
 
   // Por qué no se puede contratar todavía (la producción primero, como en Pro)
   const bloqueo = !enProduccion
@@ -888,10 +888,14 @@ function TarjetaAlDia({ estado, enProduccion, tienePro }: {
         <p className="text-sm font-semibold mb-2" style={{ color: "var(--kipu-text)" }}>
           Tú facturas. Nosotros declaramos.
         </p>
-        <div className="flex items-baseline gap-2">
-          <span className="text-4xl font-extrabold" style={{ color: "var(--kipu-text)" }}>${total.toFixed(0)}</span>
-          <span className="text-sm" style={{ color: "var(--kipu-subtle)" }}>IVA incluido / mes</span>
-        </div>
+        {total !== null ? (
+          <div className="flex items-baseline gap-2">
+            <span className="text-4xl font-extrabold" style={{ color: "var(--kipu-text)" }}>${total.toFixed(0)}</span>
+            <span className="text-sm" style={{ color: "var(--kipu-subtle)" }}>IVA incluido / mes</span>
+          </div>
+        ) : (
+          <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>Mensual · el precio lo ves al pagar</p>
+        )}
         <p className="text-xs mt-1" style={{ color: "var(--kipu-subtle)" }}>
           Tu precio no sube mientras sigas suscrito. Sin permanencia.
         </p>

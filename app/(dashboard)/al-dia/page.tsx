@@ -163,7 +163,8 @@ export default function KipuAlDiaPage() {
   };
 
   const caja = { background: "var(--kipu-surface)", border: "1px solid var(--kipu-border)" };
-  const precio = estado?.precio?.total ?? 40;
+  // Sin el precio de Stripe no se muestra un monto (se ve al pagar)
+  const precio = estado?.precio?.total ?? null;
 
   if (cargando) {
     return (
@@ -236,7 +237,7 @@ export default function KipuAlDiaPage() {
         >
           {enviando
             ? <><Loader2 size={16} className="animate-spin" /> Abriendo el pago...</>
-            : `Contratar por $${precio.toFixed(0)} al mes`}
+            : precio !== null ? `Contratar por $${precio.toFixed(0)} al mes` : "Continuar al pago"}
         </button>
         <p className="text-xs text-center" style={{ color: "var(--kipu-subtle)" }}>
           Pagas con tarjeta en Stripe. Te enviamos por correo una copia de los términos que aceptaste.

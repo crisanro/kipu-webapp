@@ -81,7 +81,7 @@ function useVentasMesPasado(enProduccion: boolean): Ventas | null {
 }
 
 // ── Encabezado ────────────────────────────────────────────────────────────────
-export function HeroAlDia({ precio, onContratar }: { precio: number; onContratar: () => void }) {
+export function HeroAlDia({ precio, onContratar }: { precio: number | null; onContratar: () => void }) {
   return (
     <div className="rounded-2xl p-6 md:p-8 space-y-4"
          style={{
@@ -100,10 +100,14 @@ export function HeroAlDia({ precio, onContratar }: { precio: number; onContratar
         tus declaraciones de IVA y renta al SRI. Tú sigues con tu negocio.
       </p>
       <div className="flex flex-wrap items-center gap-4 pt-1">
-        <div>
-          <span className="text-3xl font-extrabold" style={{ color: "var(--kipu-text)" }}>${precio.toFixed(0)}</span>
-          <span className="text-sm ml-1.5" style={{ color: "var(--kipu-muted)" }}>al mes, IVA incluido</span>
-        </div>
+        {precio !== null ? (
+          <div>
+            <span className="text-3xl font-extrabold" style={{ color: "var(--kipu-text)" }}>${precio.toFixed(0)}</span>
+            <span className="text-sm ml-1.5" style={{ color: "var(--kipu-muted)" }}>al mes, IVA incluido</span>
+          </div>
+        ) : (
+          <span className="text-sm" style={{ color: "var(--kipu-subtle)" }}>Mensual · el precio lo ves al pagar</span>
+        )}
         <button type="button" onClick={onContratar}
                 className="px-5 py-2.5 rounded-xl text-white font-semibold text-sm shadow-md transition-all
                            bg-[var(--kipu-accent)] hover:bg-[var(--kipu-accent-h)] active:scale-[0.97]">
