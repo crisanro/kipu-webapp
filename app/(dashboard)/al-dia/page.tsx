@@ -6,6 +6,7 @@ import { CalendarCheck, CheckCircle2, Loader2, MessageCircle, ShieldCheck } from
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
 import ClaveSri from "@/components/al-dia/ClaveSri";
+import { HeroAlDia, DemoAlDia, ComoFunciona, QueIncluye, Confianza, Preguntas } from "@/components/al-dia/Venta";
 
 const SOPORTE_WA = "593960585581";
 
@@ -78,6 +79,8 @@ function TextoTerminos({ texto }: { texto: string }) {
 export default function KipuAlDiaPage() {
   // Contratar y gestionar el pago es solo del administrador (igual que en el backend)
   const esAdmin = useAuthStore((s) => s.empresa?.rol === "admin");
+  const empresa = useAuthStore((s) => s.empresa);
+  const enProduccion = empresa?.ambiente === 2;
   const [estado,    setEstado]    = useState<Estado | null>(null);
   const [terminos,  setTerminos]  = useState<Terminos | null>(null);
   const [cargando,  setCargando]  = useState(true);
@@ -123,6 +126,13 @@ export default function KipuAlDiaPage() {
     return () => clearTimeout(t);
   }, [cargando, contratado]);
 
+  // Desde "Quiero que declaren por mí" en /planes se llega con #contratar
+  useEffect(() => {
+    if (cargando || contratado || window.location.hash !== "#contratar") return;
+    const t = setTimeout(() => document.getElementById("contratar")?.scrollIntoView({ behavior: "smooth" }), 100);
+    return () => clearTimeout(t);
+  }, [cargando, contratado]);
+
   const contratar = async () => {
     // Quien ya aceptó (y volvió tras cancelar el pago) pasa directo al pago
     if (!terminos || !(estado?.aceptado || (acepta && autoriza))) return;
@@ -153,12 +163,122 @@ export default function KipuAlDiaPage() {
   };
 
   const caja = { background: "var(--kipu-surface)", border: "1px solid var(--kipu-border)" };
-  const precio = estado?.precio?.total ?? 40;
+  // Sin el precio de Stripe no se muestra un monto (se ve al pagar)
+  const precio = estado?.precio?.total ?? null;
 
   if (cargando) {
     return (
       <div className="flex items-center justify-center py-24">
         <Loader2 size={22} className="animate-spin" style={{ color: "var(--kipu-subtle)" }} />
+      </div>
+    );
+  }
+
+  // Elegibilidad, términos y pago (al final de la página de venta)
+  const contratarBloque = (
+    !enProduccion ? (
+      <div className="rounded-xl p-4 text-sm" style={{ ...caja, color: "var(--kipu-muted)" }}>
+        Podrás contratarlo cuando tu empresa esté en producción. Mientras tanto, revisa cómo funciona
+        o escríbenos por WhatsApp si tienes dudas.
+      </div>
+    ) : estado?.motivo_no_elegible ? (
+      <div className="rounded-xl p-4 text-sm" style={{ ...caja, color: "var(--kipu-muted)" }}>
+        {estado.motivo_no_elegible}
+      </div>
+    ) : estado?.otra_suscripcion ? (
+      <div className="rounded-xl p-4 text-sm space-y-2" style={{ ...caja, color: "var(--kipu-muted)" }}>
+        <p>Ya tienes Kipu Pro activo. Escríbenos y te pasamos a Kipu Al Día sin perder lo que ya pagaste.</p>
+        <a href={`https://wa.me/${SOPORTE_WA}?text=${encodeURIComponent("Hola, tengo Kipu Pro y quiero pasarme a Kipu Al Día.")}`}
+           target="_blank" rel="noopener noreferrer"
+           className="inline-flex items-center gap-1.5 font-medium" style={{ color: "var(--kipu-accent)" }}>
+          <MessageCircle size={14} /> Escribir por WhatsApp
+        </a>
+      </div>
+    ) : !estado?.disponible ? (
+      <div className="rounded-xl p-4 text-sm" style={{ ...caja, color: "var(--kipu-muted)" }}>
+        Kipu Al Día estará disponible muy pronto.
+      </div>
+    ) : !esAdmin ? (
+      <div className="rounded-xl p-4 text-sm" style={{ ...caja, color: "var(--kipu-muted)" }}>
+        Solo el administrador de la empresa puede contratar Kipu Al Día.
+      </div>
+    ) : terminos && (
+      <div className="rounded-xl p-5 space-y-4" style={caja}>
+        <div className="flex items-center gap-2">
+          <ShieldCheck size={18} style={{ color: "var(--kipu-accent)" }} />
+          <p className="font-semibold" style={{ color: "var(--kipu-text)" }}>Términos del servicio</p>
+          <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>versión {terminos.version}</span>
+        </div>
+        <div className="max-h-96 overflow-y-auto rounded-lg p-4"
+             style={{ background: "var(--kipu-bg)", border: "1px solid var(--kipu-border)" }}>
+          <TextoTerminos texto={terminos.texto} />
+        </div>
+
+        <label className="flex items-start gap-2.5 text-sm cursor-pointer" style={{ color: "var(--kipu-text)" }}>
+          <input type="checkbox" checked={acepta || !!estado?.aceptado} disabled={!!estado?.aceptado}
+                 onChange={e => setAcepta(e.target.checked)} className="mt-0.5 w-4 h-4"
+                 style={{ accentColor: "var(--kipu-accent)" }} />
+          Leí y acepto los términos de Kipu Al Día.
+        </label>
+        <label className="flex items-start gap-2.5 text-sm cursor-pointer" style={{ color: "var(--kipu-text)" }}>
+          <input type="checkbox" checked={autoriza || !!estado?.aceptado} disabled={!!estado?.aceptado}
+                 onChange={e => setAutoriza(e.target.checked)} className="mt-0.5 w-4 h-4"
+                 style={{ accentColor: "var(--kipu-accent)" }} />
+          Autorizo a Kipu a usar mi clave del SRI solo para lo que dice la sección 5
+          (declaraciones, descarga de comprobantes y consultas).
+        </label>
+
+        <button
+          type="button"
+          onClick={contratar}
+          disabled={enviando || !(estado?.aceptado || (acepta && autoriza))}
+          className="w-full py-3 rounded-lg text-white font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-50"
+          style={{ background: "var(--kipu-accent)" }}
+        >
+          {enviando
+            ? <><Loader2 size={16} className="animate-spin" /> Abriendo el pago...</>
+            : precio !== null ? `Contratar por $${precio.toFixed(0)} al mes` : "Continuar al pago"}
+        </button>
+        <p className="text-xs text-center" style={{ color: "var(--kipu-subtle)" }}>
+          Pagas con tarjeta en Stripe. Te enviamos por correo una copia de los términos que aceptaste.
+          ¿Prefieres transferencia?{" "}
+          <a href={`https://wa.me/${SOPORTE_WA}?text=${encodeURIComponent("Hola, quiero contratar Kipu Al Día pagando por transferencia.")}`}
+             target="_blank" rel="noopener noreferrer" className="underline" style={{ color: "var(--kipu-accent)" }}>
+            Escríbenos
+          </a>.
+        </p>
+      </div>
+    )
+  );
+
+  const irAContratar = () =>
+    document.getElementById("contratar")?.scrollIntoView({ behavior: "smooth", block: "start" });
+
+  // Sin contratar: página de venta (la demo muestra lo que verá después)
+  if (!estado?.contratado) {
+    return (
+      <div className="p-4 md:p-6 max-w-3xl mx-auto space-y-8">
+        {error && (
+          <p className="text-sm px-3 py-2 rounded-lg"
+             style={{ color: "var(--kipu-danger)", background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)" }}>
+            {error}
+          </p>
+        )}
+        <HeroAlDia precio={precio} onContratar={irAContratar} />
+        <DemoAlDia ruc={empresa?.ruc} semestral={empresa?.periodo_iva === "SEMESTRAL"} enProduccion={enProduccion} />
+        <ComoFunciona />
+        <QueIncluye />
+        <Confianza />
+        <Preguntas />
+
+        <section id="contratar" className="space-y-3 scroll-mt-4">
+          <h2 className="text-lg font-bold" style={{ color: "var(--kipu-text)" }}>Contratar Kipu Al Día</h2>
+          {contratarBloque}
+        </section>
+
+        <p className="text-xs text-center" style={{ color: "var(--kipu-subtle)" }}>
+          <Link href="/planes" className="underline">Ver todos los planes</Link>
+        </p>
       </div>
     );
   }
@@ -174,7 +294,7 @@ export default function KipuAlDiaPage() {
         <div>
           <h1 className="text-xl font-bold" style={{ color: "var(--kipu-text)" }}>Kipu Al Día</h1>
           <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>
-            Tú atiende a tus clientes. Del SRI nos encargamos nosotros.
+            Tú facturas. Nosotros declaramos.
           </p>
         </div>
       </div>
@@ -208,109 +328,6 @@ export default function KipuAlDiaPage() {
 
       {/* Clave del SRI: solo con el servicio contratado y para el administrador */}
       {estado?.contratado && esAdmin && <ClaveSri />}
-
-      {!estado?.contratado && (
-        <>
-          {/* Qué incluye */}
-          <div className="rounded-xl p-5 space-y-4" style={caja}>
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-bold" style={{ color: "var(--kipu-text)" }}>${precio.toFixed(0)}</span>
-              <span className="text-sm" style={{ color: "var(--kipu-muted)" }}>al mes, IVA incluido</span>
-            </div>
-            <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
-              Precio de lanzamiento: si entras ahora, mantienes este precio mientras sigas en el plan.
-            </p>
-            <ul className="grid sm:grid-cols-2 gap-2 text-sm" style={{ color: "var(--kipu-muted)" }}>
-              {[
-                "Kipu Pro: facturas sin límite",
-                "Declaración de IVA mensual o semestral",
-                "Revisión de tus compras cada mes",
-                "Declaración anual de renta",
-                "Aviso por WhatsApp de cuánto pagar",
-                "Resumen para revisar antes de declarar",
-              ].map(t => (
-                <li key={t} className="flex items-start gap-2">
-                  <CheckCircle2 size={15} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-accent)" }} />
-                  {t}
-                </li>
-              ))}
-            </ul>
-            <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
-              Para personas naturales no obligadas a llevar contabilidad (régimen general o RIMPE Emprendedor).
-            </p>
-          </div>
-
-          {/* No aplica / otra suscripción / no disponible */}
-          {estado?.motivo_no_elegible ? (
-            <div className="rounded-xl p-4 text-sm" style={{ ...caja, color: "var(--kipu-muted)" }}>
-              {estado.motivo_no_elegible}
-            </div>
-          ) : estado?.otra_suscripcion ? (
-            <div className="rounded-xl p-4 text-sm space-y-2" style={{ ...caja, color: "var(--kipu-muted)" }}>
-              <p>Ya tienes Kipu Pro activo. Escríbenos y te pasamos a Kipu Al Día sin perder lo que ya pagaste.</p>
-              <a href={`https://wa.me/${SOPORTE_WA}?text=${encodeURIComponent("Hola, tengo Kipu Pro y quiero pasarme a Kipu Al Día.")}`}
-                 target="_blank" rel="noopener noreferrer"
-                 className="inline-flex items-center gap-1.5 font-medium" style={{ color: "var(--kipu-accent)" }}>
-                <MessageCircle size={14} /> Escribir por WhatsApp
-              </a>
-            </div>
-          ) : !estado?.disponible ? (
-            <div className="rounded-xl p-4 text-sm" style={{ ...caja, color: "var(--kipu-muted)" }}>
-              Kipu Al Día estará disponible muy pronto.
-            </div>
-          ) : !esAdmin ? (
-            <div className="rounded-xl p-4 text-sm" style={{ ...caja, color: "var(--kipu-muted)" }}>
-              Solo el administrador de la empresa puede contratar Kipu Al Día.
-            </div>
-          ) : terminos && (
-            <div className="rounded-xl p-5 space-y-4" style={caja}>
-              <div className="flex items-center gap-2">
-                <ShieldCheck size={18} style={{ color: "var(--kipu-accent)" }} />
-                <p className="font-semibold" style={{ color: "var(--kipu-text)" }}>Términos del servicio</p>
-                <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>versión {terminos.version}</span>
-              </div>
-              <div className="max-h-96 overflow-y-auto rounded-lg p-4"
-                   style={{ background: "var(--kipu-bg)", border: "1px solid var(--kipu-border)" }}>
-                <TextoTerminos texto={terminos.texto} />
-              </div>
-
-              <label className="flex items-start gap-2.5 text-sm cursor-pointer" style={{ color: "var(--kipu-text)" }}>
-                <input type="checkbox" checked={acepta || !!estado?.aceptado} disabled={!!estado?.aceptado}
-                       onChange={e => setAcepta(e.target.checked)} className="mt-0.5 w-4 h-4"
-                       style={{ accentColor: "var(--kipu-accent)" }} />
-                Leí y acepto los términos de Kipu Al Día.
-              </label>
-              <label className="flex items-start gap-2.5 text-sm cursor-pointer" style={{ color: "var(--kipu-text)" }}>
-                <input type="checkbox" checked={autoriza || !!estado?.aceptado} disabled={!!estado?.aceptado}
-                       onChange={e => setAutoriza(e.target.checked)} className="mt-0.5 w-4 h-4"
-                       style={{ accentColor: "var(--kipu-accent)" }} />
-                Autorizo a Kipu a usar mi clave del SRI solo para lo que dice la sección 5
-                (declaraciones, descarga de comprobantes y consultas).
-              </label>
-
-              <button
-                type="button"
-                onClick={contratar}
-                disabled={enviando || !(estado?.aceptado || (acepta && autoriza))}
-                className="w-full py-3 rounded-lg text-white font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-50"
-                style={{ background: "var(--kipu-accent)" }}
-              >
-                {enviando
-                  ? <><Loader2 size={16} className="animate-spin" /> Abriendo el pago...</>
-                  : `Contratar por $${precio.toFixed(0)} al mes`}
-              </button>
-              <p className="text-xs text-center" style={{ color: "var(--kipu-subtle)" }}>
-                Pagas con tarjeta en Stripe. Te enviamos por correo una copia de los términos que aceptaste.
-                ¿Prefieres transferencia?{" "}
-                <a href={`https://wa.me/${SOPORTE_WA}?text=${encodeURIComponent("Hola, quiero contratar Kipu Al Día pagando por transferencia.")}`}
-                   target="_blank" rel="noopener noreferrer" className="underline" style={{ color: "var(--kipu-accent)" }}>
-                  Escríbenos
-                </a>.
-              </p>
-            </div>
-          )}
-        </>
-      )}
 
       <p className="text-xs text-center" style={{ color: "var(--kipu-subtle)" }}>
         <Link href="/planes" className="underline">Volver a Plan y créditos</Link>

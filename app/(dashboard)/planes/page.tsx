@@ -55,12 +55,17 @@ interface EstadoAlDia {
 }
 
 const FEATURES_AL_DIA = [
-  "Todo lo del Plan Pro",
-  "Declaración de IVA mensual o semestral",
-  "Declaración anual de renta",
-  "Revisión de tus compras cada mes",
-  "Aviso por WhatsApp de cuánto pagar",
-  "Resumen para revisar antes de declarar",
+  "Declaramos tu IVA, mensual o semestral",
+  "Declaramos tu renta anual",
+  "Revisamos tus compras cada mes",
+  "Te avisamos por WhatsApp cuánto pagar y hasta cuándo",
+  "Respondemos al SRI por las declaraciones que presentamos",
+];
+const SISTEMA_AL_DIA = [
+  "Facturas sin límite",
+  "Compras y reportes de IVA, renta y ATS",
+  "Cuentas por cobrar y pagar, y proformas",
+  "Hasta 5 usuarios",
 ];
 
 const ESTADO_COLOR: Record<string, { color: string; bg: string; border: string }> = {
@@ -71,16 +76,11 @@ const ESTADO_COLOR: Record<string, { color: string; bg: string; border: string }
 };
 
 const FEATURES: { texto: string; destacado?: boolean }[] = [
-  { texto: "Emisión ilimitada desde el panel web — facturas, liquidaciones, notas de crédito/débito y retenciones" },
-  { texto: "API REST — 300 comprobantes/mes incluidos · más con créditos", destacado: true },
-  { texto: "Registro y clasificación fiscal de documentos recibidos" },
-  { texto: "Reporte de IVA mensual y semestral para declaración 104/104A" },
-  { texto: "Reporte de Renta anual" },
-  { texto: "Anexo Transaccional Simplificado (ATS) mensual" },
-  { texto: "Proformas comerciales con descarga en PDF" },
-  { texto: "Cuentas por cobrar y cuentas por pagar" },
-  { texto: "Hasta 5 usuarios por empresa" },
-  { texto: "Soporte por WhatsApp" },
+  { texto: "Facturas, liquidaciones, notas y retenciones sin límite" },
+  { texto: "Registro de compras y reportes de IVA (104), renta y ATS" },
+  { texto: "Cuentas por cobrar y pagar, y proformas en PDF" },
+  { texto: "API: 300 comprobantes al mes incluidos" },
+  { texto: "Hasta 5 usuarios · soporte por WhatsApp" },
 ];
 
 export default function PlanesPage() {
@@ -386,8 +386,8 @@ export default function PlanesPage() {
                     <p className="font-medium mb-0.5" style={{ color: "var(--kipu-accent)" }}>Estás en Plan Free</p>
                     <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
                       {balance > 0
-                        ? `Tienes ${balance} crédito${balance !== 1 ? "s" : ""} para emitir comprobantes. Con Plan Pro, por ${textoPrecio}, emites sin límite y llevas tus compras, declaraciones y cuentas; con Kipu Al Día, una persona las lleva por ti.`
-                        : `Sin créditos disponibles. Con Plan Pro, por ${textoPrecio}, emites sin límite y llevas tus compras, declaraciones y cuentas; con Kipu Al Día, una persona las lleva por ti.`
+                        ? `Tienes ${balance} crédito${balance !== 1 ? "s" : ""} para emitir comprobantes. Con Plan Pro, por ${textoPrecio}, emites sin límite y llevas tus compras, declaraciones y cuentas; con Kipu Al Día, el equipo de Kipu las lleva por ti.`
+                        : `Sin créditos disponibles. Con Plan Pro, por ${textoPrecio}, emites sin límite y llevas tus compras, declaraciones y cuentas; con Kipu Al Día, el equipo de Kipu las lleva por ti.`
                       }
                     </p>
                   </div>
@@ -510,24 +510,40 @@ export default function PlanesPage() {
                 </div>
               )}
 
-              {/* Opciones: Plan Pro y Kipu Al Día, lado a lado */}
+              {/* Opciones: Kipu Al Día (recomendado) y Kipu Pro, lado a lado */}
+              {verPro && verAlDia && (
+                <div className="text-center pt-2">
+                  <p className="text-base font-bold" style={{ color: "var(--kipu-text)" }}>¿Quién presenta tus declaraciones?</p>
+                  <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>
+                    <b style={{ color: "var(--kipu-accent)" }}>Nosotros</b>, con Kipu Al Día ·{" "}
+                    <b style={{ color: "var(--kipu-text)" }}>Tú</b>, con Kipu Pro
+                  </p>
+                </div>
+              )}
               {(verPro || verAlDia) && (
               <div className={`grid gap-5 pt-3 ${verPro && verAlDia ? "md:grid-cols-2" : ""}`}>
+              {verAlDia && (
+                <TarjetaAlDia
+                  estado={alDia}
+                  enProduccion={enProduccion}
+                  tienePro={!!sub?.activa && !esAlDia}
+                />
+              )}
               {verPro && (
                 <div
                   className="relative rounded-xl p-6 flex flex-col"
                   style={{
                     background: "var(--kipu-surface)",
-                    border: "1px solid color-mix(in srgb, var(--kipu-accent) 60%, transparent)",
+                    border: "1px solid var(--kipu-border)",
                   }}
                 >
                   <div className="absolute -top-3 left-5">
                     <span
-                      className="flex items-center gap-1.5 text-white text-xs px-3 py-1 rounded-full font-semibold shadow-lg"
-                      style={{ background: "var(--kipu-accent)" }}
+                      className="flex items-center gap-1.5 text-xs px-3 py-1 rounded-full font-semibold"
+                      style={{ background: "var(--kipu-surface)", color: "var(--kipu-text)", border: "1px solid var(--kipu-border)" }}
                     >
-                      <Star size={11} className="fill-white" />
-                      Plan Pro · Anual
+                      <CreditCard size={11} />
+                      Kipu Pro · Anual
                     </span>
                   </div>
 
@@ -544,7 +560,7 @@ export default function PlanesPage() {
                       </span>
                     )}
                     <p className="text-sm font-medium mb-2" style={{ color: "var(--kipu-text)" }}>
-                      El sistema completo: facturas y llevas tus impuestos tú mismo.
+                      Hazlo tú: el sistema completo para facturar y preparar tus impuestos.
                     </p>
                     <div className="flex items-baseline gap-2">
                       {precio ? (
@@ -584,33 +600,26 @@ export default function PlanesPage() {
                         </p>
                       </div>
                     ))}
+                    <p className="text-xs pt-1" style={{ color: "var(--kipu-subtle)" }}>
+                      Las declaraciones las presentas tú.
+                    </p>
                   </div>
 
                   <button
                     type="button"
                     onClick={iniciarCheckout}
                     disabled={!!pagando || !enProduccion}
-                    className="w-full py-3 rounded-xl text-white font-bold text-sm transition-colors flex items-center justify-center gap-2 shadow-lg disabled:opacity-50"
-                    style={{
-                      background: "var(--kipu-accent)",
-                      boxShadow: "0 10px 15px -3px color-mix(in srgb, var(--kipu-accent) 20%, transparent)",
-                    }}
-                    onMouseEnter={e => {
-                      if (!pagando && enProduccion) e.currentTarget.style.background = "var(--kipu-accent-h)";
-                    }}
-                    onMouseLeave={e => {
-                      if (!pagando && enProduccion) e.currentTarget.style.background = "var(--kipu-accent)";
-                    }}
+                    className="w-full py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2
+                               border border-[var(--kipu-accent)] text-[var(--kipu-accent)] bg-transparent
+                               hover:bg-[color-mix(in_srgb,var(--kipu-accent)_10%,transparent)] active:scale-[0.98]
+                               disabled:opacity-50 disabled:hover:bg-transparent disabled:active:scale-100"
                   >
                     {pagando === "pro" ? (
-                      <div
-                        className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin"
-                        style={{ borderColor: "#FFFFFF", borderTopColor: "transparent" }}
-                      />
+                      <div className="w-4 h-4 border-2 border-[var(--kipu-accent)] border-t-transparent rounded-full animate-spin" />
                     ) : (
                       <CreditCard size={16} />
                     )}
-                    {pagando === "pro" ? "Redirigiendo..." : "Suscribirme ahora"}
+                    {pagando === "pro" ? "Redirigiendo..." : "Contratar Kipu Pro"}
                   </button>
 
                   {!enProduccion && (
@@ -621,13 +630,6 @@ export default function PlanesPage() {
                 </div>
               )}
 
-              {verAlDia && (
-                <TarjetaAlDia
-                  estado={alDia}
-                  enProduccion={enProduccion}
-                  tienePro={!!sub?.activa && !esAlDia}
-                />
-              )}
               </div>
               )}
             </div>
@@ -850,12 +852,12 @@ export default function PlanesPage() {
   );
 }
 
-// ── Tarjeta Kipu Al Día ──────────────────────────────────────────────────────
-// Los términos y el pago están en /al-dia: aquí solo se presenta la opción.
+// ── Tarjeta Kipu Al Día (la recomendada) ─────────────────────────────────────
+// Los términos y el pago están en /al-dia: aquí se presenta y se lleva allá.
 function TarjetaAlDia({ estado, enProduccion, tienePro }: {
   estado: EstadoAlDia | null; enProduccion: boolean; tienePro: boolean;
 }) {
-  const total = estado?.precio?.total ?? 40;
+  const total = estado?.precio?.total ?? null;   // sin Stripe no se inventa un monto
 
   // Por qué no se puede contratar todavía (la producción primero, como en Pro)
   const bloqueo = !enProduccion
@@ -867,8 +869,9 @@ function TarjetaAlDia({ estado, enProduccion, tienePro }: {
     <div
       className="relative rounded-xl p-6 flex flex-col"
       style={{
-        background: "var(--kipu-surface)",
-        border: "1px solid color-mix(in srgb, var(--kipu-accent) 60%, transparent)",
+        background: "linear-gradient(180deg, color-mix(in srgb, var(--kipu-accent) 7%, var(--kipu-surface)), var(--kipu-surface) 45%)",
+        border: "2px solid var(--kipu-accent)",
+        boxShadow: "0 12px 28px -12px color-mix(in srgb, var(--kipu-accent) 35%, transparent)",
       }}
     >
       <div className="absolute -top-3 left-5">
@@ -876,43 +879,45 @@ function TarjetaAlDia({ estado, enProduccion, tienePro }: {
           className="flex items-center gap-1.5 text-white text-xs px-3 py-1 rounded-full font-semibold shadow-lg"
           style={{ background: "var(--kipu-accent)" }}
         >
-          <CalendarCheck size={11} />
-          Kipu Al Día · Mensual
+          <Star size={11} className="fill-white" />
+          Recomendado · Kipu Al Día
         </span>
       </div>
 
       <div className="mt-3 mb-5">
-        <span
-          className="inline-block text-[11px] font-semibold px-2 py-0.5 rounded-md mb-2"
-          style={{ color: "var(--kipu-accent)", background: "color-mix(in srgb, var(--kipu-accent) 12%, transparent)" }}
-        >
-          Nuevo · declaramos por ti
-        </span>
-        <p className="text-sm font-medium mb-2" style={{ color: "var(--kipu-text)" }}>
-          Una persona lleva tus impuestos; tú solo facturas.
+        <p className="text-sm font-semibold mb-2" style={{ color: "var(--kipu-text)" }}>
+          Tú facturas. Nosotros declaramos.
         </p>
-        <div className="flex items-baseline gap-2">
-          <span className="text-4xl font-extrabold" style={{ color: "var(--kipu-text)" }}>${total.toFixed(0)}</span>
-          <span className="text-sm" style={{ color: "var(--kipu-subtle)" }}>IVA incluido / mes</span>
-        </div>
+        {total !== null ? (
+          <div className="flex items-baseline gap-2">
+            <span className="text-4xl font-extrabold" style={{ color: "var(--kipu-text)" }}>${total.toFixed(0)}</span>
+            <span className="text-sm" style={{ color: "var(--kipu-subtle)" }}>IVA incluido / mes</span>
+          </div>
+        ) : (
+          <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>Mensual · el precio lo ves al pagar</p>
+        )}
         <p className="text-xs mt-1" style={{ color: "var(--kipu-subtle)" }}>
-          Precio de lanzamiento: lo mantienes mientras sigas en el plan. Cancela cuando quieras.
+          Tu precio no sube mientras sigas suscrito. Sin permanencia.
         </p>
       </div>
 
-      <div className="space-y-2.5 mb-4 flex-1">
-        {FEATURES_AL_DIA.map((t, i) => (
+      <div className="space-y-2.5 mb-5 flex-1">
+        {FEATURES_AL_DIA.map((t) => (
           <div key={t} className="flex items-start gap-2.5">
             <CheckCircle2 size={14} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-success)" }} />
-            <p className="text-sm" style={{
-              color: i === 0 ? "var(--kipu-accent)" : "var(--kipu-text)",
-              fontWeight: i === 0 ? 500 : 400,
-            }}>
-              {t}
-            </p>
+            <p className="text-sm font-medium" style={{ color: "var(--kipu-text)" }}>{t}</p>
           </div>
         ))}
-        <p className="text-xs pt-1" style={{ color: "var(--kipu-subtle)" }}>
+        <p className="text-xs font-semibold pt-2" style={{ color: "var(--kipu-accent)" }}>
+          Y además, todo Kipu Pro:
+        </p>
+        {SISTEMA_AL_DIA.map((t) => (
+          <div key={t} className="flex items-start gap-2.5">
+            <CheckCircle2 size={14} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-accent)" }} />
+            <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>{t}</p>
+          </div>
+        ))}
+        <p className="text-xs pt-2" style={{ color: "var(--kipu-subtle)" }}>
           Para personas naturales no obligadas a llevar contabilidad (régimen general o RIMPE Emprendedor).
         </p>
       </div>
@@ -932,17 +937,21 @@ function TarjetaAlDia({ estado, enProduccion, tienePro }: {
         </>
       ) : (
         <Link
-          href="/al-dia"
-          className="w-full py-3 rounded-xl text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg"
-          style={{
-            background: "var(--kipu-accent)",
-            boxShadow: "0 10px 15px -3px color-mix(in srgb, var(--kipu-accent) 20%, transparent)",
-          }}
+          href="/al-dia#contratar"
+          className="w-full py-3 rounded-xl text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg transition-all
+                     bg-[var(--kipu-accent)] hover:bg-[var(--kipu-accent-h)] active:scale-[0.98]"
         >
           <CalendarCheck size={16} />
-          {tienePro ? "Pasarme a Kipu Al Día" : "Contratar Kipu Al Día"}
+          {tienePro ? "Pasarme a Kipu Al Día" : "Quiero que declaren por mí"}
         </Link>
       )}
+      <Link
+        href="/al-dia"
+        className="mt-3 text-center text-sm font-medium flex items-center justify-center gap-1 hover:underline underline-offset-2"
+        style={{ color: "var(--kipu-accent)" }}
+      >
+        Ver cómo funciona <ArrowRight size={14} />
+      </Link>
     </div>
   );
 }
