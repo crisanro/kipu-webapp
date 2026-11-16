@@ -6,6 +6,8 @@ import api from "@/lib/api";
 import { usePermiso } from "@/hooks/usePermiso";
 import SinAcceso from "@/components/SinAcceso";
 import { useAuthStore } from "@/store/auth.store";
+import { demoProformas } from "@/lib/demos";
+import { BannerEjemplo, EtiquetaEjemplo } from "@/components/EjemploPro";
 import {
   ClipboardList, Plus, Search,
   CheckCircle2, AlertTriangle, Clock,
@@ -63,7 +65,11 @@ function ProformasContenido() {
 
   useEffect(() => { cargar(); }, [cargar]);
 
-  const filtradas = proformas.filter((p) => {
+  // Sin Plan Pro y sin proformas propias: ejemplos para ver cómo funciona
+  const esDemo = !loading && !tieneSub && proformas.length === 0;
+  const lista  = esDemo ? demoProformas() : proformas;
+
+  const filtradas = lista.filter((p) => {
     if (!query) return true;
     const q = query.toLowerCase();
     return (
@@ -103,8 +109,12 @@ function ProformasContenido() {
         </button>
       </div>
 
+      {esDemo && (
+        <BannerEjemplo texto="Así se ven tus proformas con el Plan Pro: las haces en segundos, las mandas en PDF y, cuando el cliente acepta, la conviertes en factura con un clic." />
+      )}
+
       {/* Banner de suscripción */}
-      {!tieneSub && (
+      {!tieneSub && !esDemo && (
         <div
           className="flex items-center gap-3 rounded-xl px-4 py-3 mb-4"
           style={{
@@ -198,7 +208,7 @@ function ProformasContenido() {
               return (
                 <Link
                   key={p.id}
-                  href={`/proformas/${p.id}`}
+                  href={esDemo ? "/planes" : `/proformas/${p.id}`}
                   className="flex items-center gap-3 px-4 py-3 transition-colors"
                   style={{
                     borderTop: index > 0 ? "1px solid var(--kipu-border)" : "none",
@@ -224,7 +234,9 @@ function ProformasContenido() {
                     }
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-mono font-medium" style={{ color: "var(--kipu-accent)" }}>{p.numero}</p>
+                    <p className="text-sm font-mono font-medium flex items-center gap-2" style={{ color: "var(--kipu-accent)" }}>
+                      {p.numero}{esDemo && <EtiquetaEjemplo />}
+                    </p>
                     <p className="text-xs truncate" style={{ color: "var(--kipu-subtle)" }}>
                       {p.cliente?.razon_social ?? "Sin cliente"}
                       {p.fecha_validez && (

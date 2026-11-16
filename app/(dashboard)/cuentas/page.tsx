@@ -7,6 +7,8 @@ import { usePermiso } from "@/hooks/usePermiso";
 import SinAcceso from "@/components/SinAcceso";
 import { useAuthStore } from "@/store/auth.store";
 import { hoyEC } from "@/lib/fecha";
+import { demoCuentas, resumenCuentas } from "@/lib/demos";
+import { BannerEjemplo, EtiquetaEjemplo } from "@/components/EjemploPro";
 import {
   Wallet, Plus, X, ChevronDown, Save,
   TrendingUp, TrendingDown, Scale, Search,
@@ -134,7 +136,12 @@ function CuentasContent() {
     return () => clearTimeout(timer);
   }, [clienteQuery]);
 
-  const filtradas = cuentas.filter((c) => {
+  // Sin Plan Pro y sin cuentas propias: ejemplos para ver cómo funciona
+  const esDemo = !loading && !tieneSub && cuentas.length === 0 && !filtroTipo && !filtroEst;
+  const lista  = esDemo ? demoCuentas() : cuentas;
+  const totales = esDemo ? resumenCuentas(lista) : resumen;
+
+  const filtradas = lista.filter((c) => {
     if (!query) return true;
     const q = query.toLowerCase();
     return (
@@ -216,7 +223,11 @@ function CuentasContent() {
         </button>
       </div>
 
-      {!tieneSub && (
+      {esDemo && (
+        <BannerEjemplo texto="Así llevas con el Plan Pro lo que te deben y lo que debes: registras abonos, ves qué está vencido y cuánto te queda por cobrar." />
+      )}
+
+      {!tieneSub && !esDemo && (
         <div
           className="flex items-center gap-3 rounded-xl px-4 py-3 mb-4"
           style={{
@@ -252,7 +263,7 @@ function CuentasContent() {
             <TrendingUp size={14} style={{ color: "var(--kipu-success)" }} />
             <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Por cobrar</p>
           </div>
-          <p className="text-xl font-bold" style={{ color: "var(--kipu-success)" }}>{fmt(resumen.por_cobrar)}</p>
+          <p className="text-xl font-bold" style={{ color: "var(--kipu-success)" }}>{fmt(totales.por_cobrar)}</p>
         </div>
         <div
           className="rounded-xl p-4"
@@ -265,7 +276,7 @@ function CuentasContent() {
             <TrendingDown size={14} style={{ color: "var(--kipu-danger)" }} />
             <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Por pagar</p>
           </div>
-          <p className="text-xl font-bold" style={{ color: "var(--kipu-danger)" }}>{fmt(resumen.por_pagar)}</p>
+          <p className="text-xl font-bold" style={{ color: "var(--kipu-danger)" }}>{fmt(totales.por_pagar)}</p>
         </div>
         <div
           className="rounded-xl p-4"
@@ -277,15 +288,15 @@ function CuentasContent() {
           <div className="flex items-center gap-2 mb-1">
             <Scale
               size={14}
-              style={{ color: resumen.balance >= 0 ? "var(--kipu-accent)" : "var(--kipu-warning)" }}
+              style={{ color: totales.balance >= 0 ? "var(--kipu-accent)" : "var(--kipu-warning)" }}
             />
             <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Balance</p>
           </div>
           <p
             className="text-xl font-bold"
-            style={{ color: resumen.balance >= 0 ? "var(--kipu-accent)" : "var(--kipu-warning)" }}
+            style={{ color: totales.balance >= 0 ? "var(--kipu-accent)" : "var(--kipu-warning)" }}
           >
-            {fmt(resumen.balance)}
+            {fmt(totales.balance)}
           </p>
         </div>
       </div>
@@ -416,7 +427,7 @@ function CuentasContent() {
               return (
                 <Link
                   key={c.id}
-                  href={`/cuentas/${c.id}`}
+                  href={esDemo ? "/planes" : `/cuentas/${c.id}`}
                   className="flex items-center gap-3 px-4 py-3 transition-colors"
                   style={{
                     borderTop: idx > 0 ? "1px solid var(--kipu-border)" : "none",
@@ -439,7 +450,9 @@ function CuentasContent() {
 
                   {/* Info */}
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate" style={{ color: "var(--kipu-text)" }}>{c.concepto}</p>
+                    <p className="text-sm font-medium flex items-center gap-2 min-w-0" style={{ color: "var(--kipu-text)" }}>
+                      <span className="truncate">{c.concepto}</span>{esDemo && <EtiquetaEjemplo />}
+                    </p>
                     <p className="text-xs truncate" style={{ color: "var(--kipu-subtle)" }}>
                       {c.razon_social}
                       {c.fecha_vencimiento && (
