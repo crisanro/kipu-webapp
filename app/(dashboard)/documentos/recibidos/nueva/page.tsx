@@ -97,7 +97,7 @@ export default function NuevaRecibidaPage() {
         >
           <AlertTriangle size={16} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-warning)" }} />
           <p className="text-sm" style={{ color: "var(--kipu-warning)" }}>
-            Se requiere suscripción activa para registrar documentos.
+            Registrar tus compras es del Plan Pro. Las que ya registraste las sigues viendo.
           </p>
         </div>
       )}

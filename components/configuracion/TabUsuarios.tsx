@@ -1,6 +1,8 @@
 "use client";
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import api from "@/lib/api";
+import { useAuthStore } from "@/store/auth.store";
 import {
   Plus, Trash2, Shield, User, ChevronDown,
   ChevronUp, Check, X, AlertCircle
@@ -63,6 +65,10 @@ export default function TabUsuarios({ empresaId }: Props) {
   const [expandido,         setExpandido]         = useState<string | null>(null);
   const [permisosCambiados, setPermisosCambiados] = useState<Record<string, Record<string, boolean>>>({});
   const [guardandoPermisos, setGuardandoPermisos] = useState<string | null>(null);
+
+  // En producción, agregar usuarios es del Plan Pro (en pruebas se deja, para configurar)
+  const empresa = useAuthStore((s) => s.empresa);
+  const soloPro = !!empresa && empresa.id === empresaId && empresa.ambiente === 2 && !empresa.suscripcion_activa;
 
   const cargar = async () => {
     try {
@@ -179,6 +185,12 @@ export default function TabUsuarios({ empresaId }: Props) {
         }}
       >
         <h2 className="text-sm font-semibold mb-4" style={{ color: "var(--kipu-text)" }}>Invitar usuario</h2>
+        {soloPro && (
+          <p className="text-xs mb-3" style={{ color: "var(--kipu-warning)" }}>
+            Agregar usuarios es del Plan Pro (hasta 5 por empresa). Los que ya tienes siguen entrando normalmente.{" "}
+            <Link href="/planes" className="underline underline-offset-2">Ver planes</Link>
+          </p>
+        )}
         <div className="flex gap-2 flex-wrap">
           <div className="flex-1 min-w-0">
             <input
@@ -228,7 +240,7 @@ export default function TabUsuarios({ empresaId }: Props) {
           <button
             type="button"
             onClick={invitar}
-            disabled={inviting || !invEmail.trim() || !!emailError}
+            disabled={soloPro || inviting || !invEmail.trim() || !!emailError}
             className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors disabled:opacity-50"
             style={{ background: "var(--kipu-accent)" }}
             onMouseEnter={e => {

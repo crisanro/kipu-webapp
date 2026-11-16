@@ -84,7 +84,7 @@ function ProformasContenido() {
         <button
           onClick={() => tieneSub && router.push("/proformas/nueva")}
           disabled={!tieneSub}
-          title={!tieneSub ? "Requiere suscripción activa" : undefined}
+          title={!tieneSub ? "Disponible en el Plan Pro" : undefined}
           className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
           style={{
             background: tieneSub ? "var(--kipu-accent)" : "color-mix(in srgb, var(--kipu-text) 8%, transparent)",
@@ -114,9 +114,9 @@ function ProformasContenido() {
         >
           <AlertTriangle size={15} className="shrink-0" style={{ color: "var(--kipu-warning)" }} />
           <div className="flex-1">
-            <p className="text-sm font-medium" style={{ color: "var(--kipu-warning)" }}>Suscripción requerida</p>
+            <p className="text-sm font-medium" style={{ color: "var(--kipu-warning)" }}>Función del Plan Pro</p>
             <p className="text-xs" style={{ color: "color-mix(in srgb, var(--kipu-warning) 70%, transparent)" }}>
-              Las proformas están disponibles con un plan activo.
+              Crear proformas es del Plan Pro. Las que ya hiciste las sigues viendo y puedes facturarlas.
             </p>
           </div>
           <Link

@@ -203,9 +203,9 @@ export default function NuevaProformaPage() {
           }}
         >
           <AlertTriangle size={36} className="mb-3" style={{ color: "var(--kipu-warning)" }} />
-          <h2 className="font-semibold mb-1" style={{ color: "var(--kipu-text)" }}>Suscripción requerida</h2>
+          <h2 className="font-semibold mb-1" style={{ color: "var(--kipu-text)" }}>Función del Plan Pro</h2>
           <p className="text-sm mb-4 max-w-xs" style={{ color: "var(--kipu-subtle)" }}>
-            Las proformas están disponibles con un plan activo. Activa tu suscripción para continuar.
+            Crear proformas es del Plan Pro. Con créditos solo se emiten comprobantes.
           </p>
           <div className="flex gap-3">
             <button
