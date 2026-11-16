@@ -48,6 +48,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [mounted, setMounted] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [cerrandoSesion,  setCerrandoSesion]  = useState(false);
   const [showSelectorEmp, setShowSelectorEmp] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   // Cuentas antiguas que ya tienen empresa pero nunca verificaron el correo
@@ -116,11 +117,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   };
 
   const handleLogout = async () => {
-    // Dar de baja el dispositivo ANTES de cerrar sesión (necesita el token válido)
-    await desregistrarNotificaciones();
-    await signOut(auth);
-    logout();
-    router.replace("/login");
+    if (cerrandoSesion) return;
+    setCerrandoSesion(true);
+    try {
+      // Dar de baja el dispositivo ANTES de cerrar sesión (necesita el token
+      // válido), pero sin dejar esperando: como mucho 3 s y se cierra igual.
+      await Promise.race([
+        desregistrarNotificaciones(),
+        new Promise((resolve) => setTimeout(resolve, 3000)),
+      ]);
+    } finally {
+      try { await signOut(auth); } catch {}
+      logout();
+      router.replace("/login");
+    }
   };
 
   if (!empresa) {
@@ -137,7 +147,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: "var(--kipu-bg)" }}>
       {showLogoutModal && (
-        <ModalLogout onConfirm={handleLogout} onCancel={() => setShowLogoutModal(false)} />
+        <ModalLogout
+          onConfirm={handleLogout}
+          onCancel={() => setShowLogoutModal(false)}
+          cerrando={cerrandoSesion}
+        />
       )}
       {showSelectorEmp && (
         <SelectorEmpresa onClose={() => setShowSelectorEmp(false)} />
