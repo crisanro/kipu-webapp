@@ -386,8 +386,8 @@ export default function PlanesPage() {
                     <p className="font-medium mb-0.5" style={{ color: "var(--kipu-accent)" }}>Estás en Plan Free</p>
                     <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
                       {balance > 0
-                        ? `Tienes ${balance} crédito${balance !== 1 ? "s" : ""} para emitir comprobantes. Con Plan Pro emites sin límite por ${textoPrecio}; con Kipu Al Día, además, declaramos por ti.`
-                        : `Sin créditos disponibles. Con Plan Pro emites sin límite por ${textoPrecio}; con Kipu Al Día, además, declaramos por ti.`
+                        ? `Tienes ${balance} crédito${balance !== 1 ? "s" : ""} para emitir comprobantes. Con Plan Pro, por ${textoPrecio}, emites sin límite y llevas tus compras, declaraciones y cuentas; con Kipu Al Día, una persona las lleva por ti.`
+                        : `Sin créditos disponibles. Con Plan Pro, por ${textoPrecio}, emites sin límite y llevas tus compras, declaraciones y cuentas; con Kipu Al Día, una persona las lleva por ti.`
                       }
                     </p>
                   </div>
@@ -543,6 +543,9 @@ export default function PlanesPage() {
                         {precio.etiqueta}
                       </span>
                     )}
+                    <p className="text-sm font-medium mb-2" style={{ color: "var(--kipu-text)" }}>
+                      El sistema completo: facturas y llevas tus impuestos tú mismo.
+                    </p>
                     <div className="flex items-baseline gap-2">
                       {precio ? (
                         <span className="text-4xl font-extrabold" style={{ color: "var(--kipu-text)" }}>${precio.base.toFixed(2)}</span>
@@ -656,7 +659,8 @@ export default function PlanesPage() {
                     <div>
                       <p className="text-sm font-medium mb-0.5" style={{ color: "var(--kipu-accent)" }}>¿Emites frecuentemente?</p>
                       <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
-                        Con Plan Pro ({textoPrecio}) tienes emisión ilimitada sin comprar créditos.
+                        Con Plan Pro ({textoPrecio}) emites sin límite, sin comprar créditos, y además
+                        registras tus compras, preparas tus declaraciones y llevas tus cuentas.
                       </p>
                     </div>
                   </div>
@@ -694,7 +698,7 @@ export default function PlanesPage() {
                 >
                   <p>· 1 crédito = 1 comprobante emitido (FAC, LIQ, NCR, NDB, RET)</p>
                   <p>· No vencen nunca</p>
-                  <p>· {esFree ? "Son tu único acceso para emitir en Plan Free" : "Complementan tu suscripción Pro activa"}</p>
+                  <p>· {esFree ? "Con créditos solo emites: compras, declaraciones, cuentas y proformas son del Plan Pro" : "Complementan tu suscripción Pro activa"}</p>
                 </div>
               </div>
 
@@ -884,6 +888,9 @@ function TarjetaAlDia({ estado, enProduccion, tienePro }: {
         >
           Nuevo · declaramos por ti
         </span>
+        <p className="text-sm font-medium mb-2" style={{ color: "var(--kipu-text)" }}>
+          Una persona lleva tus impuestos; tú solo facturas.
+        </p>
         <div className="flex items-baseline gap-2">
           <span className="text-4xl font-extrabold" style={{ color: "var(--kipu-text)" }}>${total.toFixed(0)}</span>
           <span className="text-sm" style={{ color: "var(--kipu-subtle)" }}>IVA incluido / mes</span>

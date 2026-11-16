@@ -369,7 +369,7 @@ export default function DetalleCuentaPage() {
               }}
             >
               <AlertTriangle size={13} className="shrink-0" style={{ color: "var(--kipu-warning)" }} />
-              <p className="text-xs" style={{ color: "var(--kipu-warning)" }}>Requiere suscripción activa para registrar movimientos.</p>
+              <p className="text-xs" style={{ color: "var(--kipu-warning)" }}>Registrar abonos y ajustes es del Plan Pro.</p>
               <Link href="/planes" className="ml-auto text-xs underline shrink-0" style={{ color: "var(--kipu-warning)" }}>Ver planes</Link>
             </div>
           </div>
