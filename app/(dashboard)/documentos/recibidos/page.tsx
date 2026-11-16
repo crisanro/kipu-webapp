@@ -4,6 +4,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import api from "@/lib/api";
 import { usePermiso } from "@/hooks/usePermiso";
 import SinAcceso from "@/components/SinAcceso";
+import { useAuthStore } from "@/store/auth.store";
+import { demoRecibidos, resumenRecibidos } from "@/lib/demos";
+import { BannerEjemplo, EtiquetaEjemplo } from "@/components/EjemploPro";
 import {
   Plus, FileText, RefreshCw, Search,
   ChevronDown, ChevronUp, TrendingUp, ArrowUpRight,
@@ -305,6 +308,7 @@ export default function FacturasRecibidasPage() {
   const [queryActivo, setQueryActivo] = useState("");
   const debounceRef                   = useRef<NodeJS.Timeout | null>(null);
 
+  const tieneSub = useAuthStore((s) => s.empresa?.suscripcion_activa ?? false);
   const [docs, setDocs]               = useState<DocRecibido[]>([]);
   const [resumen, setResumen]         = useState<Resumen | null>(null);
   const [loading, setLoading]         = useState(true);
@@ -364,7 +368,11 @@ export default function FacturasRecibidasPage() {
 
   if (!puedeVer) return <SinAcceso />;
 
-  const filtrados = docs;
+  // Sin Plan Pro y sin compras propias: ejemplos para ver cómo funciona
+  const esDemo    = !loading && !tieneSub && docs.length === 0 && !queryActivo;
+  const filtrados = esDemo ? demoRecibidos() : docs;
+  const resumenV  = esDemo ? resumenRecibidos(demoRecibidos()) : resumen;
+  const verDetalle = (id: string) => router.push(esDemo ? "/planes" : `/documentos/recibidos/${id}`);
 
   return (
     <div className="p-4 md:p-6 space-y-5">
@@ -373,7 +381,7 @@ export default function FacturasRecibidasPage() {
         <div>
           <h1 className="text-xl font-bold" style={{ color: "var(--kipu-text)" }}>Documentos Recibidos</h1>
           <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>
-            {resumen ? `${resumen.total_documentos} en el período` : "—"}
+            {resumenV ? `${resumenV.total_documentos} en el período` : "—"}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -456,8 +464,12 @@ export default function FacturasRecibidasPage() {
         </p>
       )}
 
+      {esDemo && (
+        <BannerEjemplo texto="Así se ven tus compras con el Plan Pro: las cargas desde el XML o desde el SRI con la extensión, y Kipu separa lo deducible y el IVA que puedes usar como crédito." />
+      )}
+
       {/* Resumen Fiscal */}
-      {resumen && resumen.total_documentos > 0 && (
+      {resumenV && resumenV.total_documentos > 0 && (
         <div
           className="rounded-xl overflow-hidden"
           style={{
@@ -476,13 +488,13 @@ export default function FacturasRecibidasPage() {
             </div>
             <div className="flex items-center gap-4">
               <span className="text-xs hidden sm:block" style={{ color: "var(--kipu-muted)" }}>
-                Total <span className="font-medium" style={{ color: "var(--kipu-text)" }}>${fmt(resumen.importe_total)}</span>
+                Total <span className="font-medium" style={{ color: "var(--kipu-text)" }}>${fmt(resumenV.importe_total)}</span>
               </span>
               <span className="text-xs hidden sm:block" style={{ color: "var(--kipu-muted)" }}>
-                Ded. <span className="font-medium" style={{ color: "var(--kipu-success)" }}>${fmt(resumen.total_deducible)}</span>
+                Ded. <span className="font-medium" style={{ color: "var(--kipu-success)" }}>${fmt(resumenV.total_deducible)}</span>
               </span>
               <span className="text-xs hidden sm:block" style={{ color: "var(--kipu-muted)" }}>
-                CT IVA <span className="font-medium" style={{ color: "var(--kipu-info)" }}>${fmt(resumen.iva_credito_tributario)}</span>
+                CT IVA <span className="font-medium" style={{ color: "var(--kipu-info)" }}>${fmt(resumenV.iva_credito_tributario)}</span>
               </span>
               {resumenOpen ? <ChevronUp size={16} style={{ color: "var(--kipu-subtle)" }} /> : <ChevronDown size={16} style={{ color: "var(--kipu-subtle)" }} />}
             </div>
@@ -499,8 +511,8 @@ export default function FacturasRecibidasPage() {
                   }}
                 >
                   <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: "var(--kipu-subtle)" }}>Total compras</p>
-                  <p className="text-lg font-bold" style={{ color: "var(--kipu-text)" }}>${fmt(resumen.importe_total)}</p>
-                  <p className="text-[10px] mt-1" style={{ color: "var(--kipu-subtle)" }}>{resumen.total_documentos} documentos</p>
+                  <p className="text-lg font-bold" style={{ color: "var(--kipu-text)" }}>${fmt(resumenV.importe_total)}</p>
+                  <p className="text-[10px] mt-1" style={{ color: "var(--kipu-subtle)" }}>{resumenV.total_documentos} documentos</p>
                 </div>
                 <div
                   className="rounded-xl p-4 text-center"
@@ -510,7 +522,7 @@ export default function FacturasRecibidasPage() {
                   }}
                 >
                   <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: "var(--kipu-subtle)" }}>Deducible renta</p>
-                  <p className="text-lg font-bold" style={{ color: "var(--kipu-success)" }}>${fmt(resumen.total_deducible)}</p>
+                  <p className="text-lg font-bold" style={{ color: "var(--kipu-success)" }}>${fmt(resumenV.total_deducible)}</p>
                   <p className="text-[10px] mt-1" style={{ color: "var(--kipu-subtle)" }}>base sin IVA de docs deducibles</p>
                 </div>
                 <div
@@ -521,7 +533,7 @@ export default function FacturasRecibidasPage() {
                   }}
                 >
                   <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: "var(--kipu-subtle)" }}>Crédito trib. IVA</p>
-                  <p className="text-lg font-bold" style={{ color: "var(--kipu-info)" }}>${fmt(resumen.iva_credito_tributario)}</p>
+                  <p className="text-lg font-bold" style={{ color: "var(--kipu-info)" }}>${fmt(resumenV.iva_credito_tributario)}</p>
                   <p className="text-[10px] mt-1" style={{ color: "var(--kipu-subtle)" }}>IVA recuperable del período</p>
                 </div>
               </div>
@@ -590,6 +602,7 @@ export default function FacturasRecibidasPage() {
                         <p className="text-sm font-medium truncate" style={{ color: "var(--kipu-text)" }}>
                           {doc.razon_social_proveedor}
                         </p>
+                        {esDemo && <EtiquetaEjemplo />}
                         <div className="flex gap-1 shrink-0 items-center">
                           {doc.deducible_renta && (
                             <span
@@ -637,7 +650,7 @@ export default function FacturasRecibidasPage() {
                     </div>
                     <button
                       type="button"
-                      onClick={e => { e.stopPropagation(); router.push(`/documentos/recibidos/${doc.id}`); }}
+                      onClick={e => { e.stopPropagation(); verDetalle(doc.id); }}
                       className="p-1.5 rounded-lg transition-colors shrink-0"
                       style={{ color: "var(--kipu-subtle)" }}
                       title="Ver detalle completo"
@@ -651,7 +664,7 @@ export default function FacturasRecibidasPage() {
                   {isOpen && (
                     <DocExpandido
                       doc={doc}
-                      onVerDetalle={() => router.push(`/documentos/recibidos/${doc.id}`)}
+                      onVerDetalle={() => verDetalle(doc.id)}
                     />
                   )}
                 </div>
