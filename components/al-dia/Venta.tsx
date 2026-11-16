@@ -47,11 +47,11 @@ function calendario(ruc: string | null | undefined, semestral: boolean) {
     }
   }
   lista.sort((a, b) => a.vence.getTime() - b.vence.getTime());
-  const i = Math.max(0, lista.findIndex((p) => p.vence >= hoy));
-  const proxima = { ...lista[i] };
-  // El periodo termina el último día del mes anterior al vencimiento, y puede no haber terminado aún
-  const finPeriodo = new Date(proxima.vence.getFullYear(), proxima.vence.getMonth(), 0);
-  proxima.cerrado = hoy > finPeriodo;
+  // La primera incluida es la del periodo en curso (se declara al mes siguiente).
+  // El periodo termina el último día del mes anterior a su vencimiento.
+  const fin = (p: Periodo) => new Date(p.vence.getFullYear(), p.vence.getMonth(), 0);
+  const i = Math.max(0, lista.findIndex((p) => fin(p) >= hoy));
+  const proxima = { ...lista[i], cerrado: false };
   const anteriores = lista.slice(Math.max(0, i - 2), i).reverse();
   return { proxima, anteriores, hoy, anioRenta: m > 3 ? y - 1 : y - 2 };
 }
@@ -124,7 +124,6 @@ export function DemoAlDia({ ruc, semestral, enProduccion }: {
   const ventas = useVentasMesPasado(enProduccion);
   const { proxima, anteriores, hoy, anioRenta } = calendario(ruc, semestral);
   const diasFaltan = Math.round((proxima.vence.getTime() - hoy.getTime()) / 86400000);
-  const presentaEl = new Date(proxima.vence.getTime() - 2 * 86400000);
 
   return (
     <section className="space-y-3">
@@ -142,7 +141,7 @@ export function DemoAlDia({ ruc, semestral, enProduccion }: {
         {/* Próxima declaración */}
         <div className="rounded-xl p-4 space-y-2" style={caja}>
           <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--kipu-subtle)" }}>
-            Próxima declaración
+            Tu primera declaración si contratas hoy
           </p>
           <p className="text-base font-bold" style={{ color: "var(--kipu-text)" }}>{proxima.nombre}</p>
           <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>
@@ -157,8 +156,12 @@ export function DemoAlDia({ ruc, semestral, enProduccion }: {
                     : "color-mix(in srgb, var(--kipu-text) 6%, transparent)",
                 }}>
             <Clock size={11} />
-            {proxima.cerrado ? "En revisión por el equipo de Kipu" : "El periodo aún no termina: lo revisamos apenas cierre"}
+            {proxima.cerrado ? "En revisión por el equipo de Kipu" : "Lo vamos revisando; al cerrar el periodo te mandamos el resumen"}
           </span>
+          <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+            Las de meses anteriores no están incluidas: las presentas tú o, si nos avisas con tiempo,
+            las hacemos como extra ($10 por periodo).
+          </p>
         </div>
 
         {/* Resumen por WhatsApp */}
@@ -173,13 +176,13 @@ export function DemoAlDia({ ruc, semestral, enProduccion }: {
                 Hola 👋, te escribe el equipo de Kipu. Revisamos tu {ventas.mes}: emitiste{" "}
                 <b>{ventas.docs} comprobante{ventas.docs !== 1 ? "s" : ""}</b> por <b>{dinero(ventas.total)}</b>{" "}
                 (IVA cobrado {dinero(ventas.iva)}). Ya restamos el IVA de tus compras y te pasamos el valor
-                a pagar. Si está bien, no hagas nada: lo presentamos el {fechaCorta(presentaEl)}.
+                a pagar. Si está bien, no hagas nada: lo presentamos antes de la fecha límite.
               </>
             ) : (
               <>
                 Hola 👋, te escribe el equipo de Kipu. Revisamos tu {MESES[(Number(hoyEC().slice(5, 7)) + 10) % 12]}: vendiste <b>{dinero(3240.5)}</b> y
                 compraste <b>{dinero(890)}</b>. IVA cobrado {dinero(486.08)} − IVA de tus compras {dinero(133.5)} ={" "}
-                <b>{dinero(352.58)} a pagar</b>. Si está bien, no hagas nada: lo presentamos el {fechaCorta(presentaEl)}.
+                <b>{dinero(352.58)} a pagar</b>. Si está bien, no hagas nada: lo presentamos antes de la fecha límite.
                 Si algo no cuadra, respóndenos aquí.
               </>
             )}
@@ -264,7 +267,7 @@ const SISTEMA = [
 ];
 const EXTRAS: [string, string][] = [
   ["Renta anual si estuviste menos de 6 meses en el plan", "$50"],
-  ["Declaraciones atrasadas de antes de contratar", "$10 por periodo"],
+  ["Declaraciones de meses anteriores a contratar", "$10 por periodo"],
   ["Sustitutivas de declaraciones que no hicimos nosotros", "$15 cada una"],
   ["Devolución de IVA o de renta", "$40 a $60"],
   ["Actualizar el RUC o ayuda con la firma electrónica", "$10 a $20"],
@@ -344,6 +347,8 @@ export function Confianza() {
 
 // ── Preguntas frecuentes ─────────────────────────────────────────────────────
 const PREGUNTAS: [string, string][] = [
+  ["Si contrato hoy, ¿cuál es la primera declaración que hacen?",
+   "La del mes en que contratas, que se presenta el mes siguiente (si declaras semestral, la del semestre en curso). Las de meses anteriores no están incluidas: las presentas tú o, si nos avisas con tiempo, las hacemos como extra ($10 por periodo)."],
   ["¿Y si no estoy de acuerdo con el resumen?",
    "Respóndenos el WhatsApp dentro de las 24 horas y lo corregimos antes de presentar. Si no nos dices nada, lo presentamos con esa información."],
   ["¿El IVA se los pago a ustedes?",
