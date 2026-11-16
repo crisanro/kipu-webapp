@@ -39,23 +39,30 @@ export function ModalLogout({ onConfirm, onCancel, cerrando = false }: {
         </div>
         <div className="flex gap-2">
           <button
+            type="button"
             onClick={onCancel}
             disabled={cerrando}
-            className="flex-1 py-2 rounded-lg text-sm transition-colors disabled:opacity-50"
-            style={{
-              border: "1px solid var(--kipu-border)",
-              color: "var(--kipu-muted)",
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = "var(--kipu-text)")}
-            onMouseLeave={(e) => (e.currentTarget.style.color = "var(--kipu-muted)")}
+            className="flex-1 py-2 rounded-lg text-sm font-medium transition-all
+                       border border-[var(--kipu-border)] text-[var(--kipu-muted)]
+                       bg-[color-mix(in_srgb,var(--kipu-text)_4%,transparent)]
+                       hover:bg-[color-mix(in_srgb,var(--kipu-text)_9%,transparent)] hover:text-[var(--kipu-text)]
+                       active:scale-[0.97]
+                       focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--kipu-border)]
+                       disabled:opacity-50 disabled:active:scale-100"
           >
             Cancelar
           </button>
           <button
+            type="button"
             onClick={onConfirm}
             disabled={cerrando}
-            className="flex-1 py-2 rounded-lg text-sm font-medium text-white transition-colors flex items-center justify-center gap-2 disabled:opacity-80"
-            style={{ background: "var(--kipu-danger)" }}
+            className="flex-1 py-2 rounded-lg text-sm font-medium text-white transition-all
+                       flex items-center justify-center gap-2
+                       bg-[var(--kipu-danger)] shadow-sm
+                       hover:brightness-90 hover:shadow-md
+                       active:scale-[0.97] active:brightness-85
+                       focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--kipu-danger)]
+                       disabled:opacity-80 disabled:hover:brightness-100 disabled:active:scale-100"
           >
             {cerrando && (
               <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
