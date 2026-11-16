@@ -111,7 +111,7 @@ export function HeroAlDia({ precio, onContratar }: { precio: number; onContratar
         </button>
       </div>
       <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
-        Incluye todo Kipu Pro · Sin permanencia: cancelas cuando quieras · Precio de lanzamiento
+        Incluye todo Kipu Pro · Tu precio no sube mientras sigas suscrito · Cancelas cuando quieras
       </p>
     </div>
   );

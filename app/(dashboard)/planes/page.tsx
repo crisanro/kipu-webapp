@@ -893,7 +893,7 @@ function TarjetaAlDia({ estado, enProduccion, tienePro }: {
           <span className="text-sm" style={{ color: "var(--kipu-subtle)" }}>IVA incluido / mes</span>
         </div>
         <p className="text-xs mt-1" style={{ color: "var(--kipu-subtle)" }}>
-          Precio de lanzamiento: lo mantienes mientras sigas en el plan. Sin permanencia.
+          Tu precio no sube mientras sigas suscrito. Sin permanencia.
         </p>
       </div>
 
