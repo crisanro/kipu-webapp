@@ -3,12 +3,13 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
+import { detalleError } from "@/lib/errores";
 import {
   CreditCard, Zap, RefreshCw,
   CheckCircle2, AlertTriangle, TrendingDown, Star, ArrowRight, Info, CalendarCheck
 } from "lucide-react";
 
-const fmt = (n: any) => parseFloat(String(n ?? 0)).toFixed(2);
+const fmt = (n: unknown) => parseFloat(String(n ?? 0)).toFixed(2);
 
 interface EstadoSub {
   plan:                 string;
@@ -95,22 +96,24 @@ export default function PlanesPage() {
   const [cancelando, setCancelando] = useState(false);
   const [tab,        setTab]        = useState<"suscripcion" | "creditos">("suscripcion");
 
-  const cargar = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [resSub, resBal, resPlanes, resHist] = await Promise.all([
-        api.get("/api/v1/app/suscripcion/estado"),
-        api.get("/api/v1/app/creditos/balance"),
-        api.get("/api/v1/app/creditos/planes"),
-        api.get("/api/v1/app/creditos/historial?limit=10"),
-      ]);
-      setSub(resSub.data.data ?? null);
-      setBalance(resBal.data.balance ?? 0);
-      setPlanes(resPlanes.data.data ?? []);
-      setHistorial(resHist.data.data ?? []);
-    } catch (e) { console.error(e); }
-    finally { setLoading(false); }
-  }, []);
+  const cargar = useCallback(() =>
+    Promise.all([
+      api.get("/api/v1/app/suscripcion/estado"),
+      api.get("/api/v1/app/creditos/balance"),
+      api.get("/api/v1/app/creditos/planes"),
+      api.get("/api/v1/app/creditos/historial?limit=10"),
+    ])
+      .then(([resSub, resBal, resPlanes, resHist]) => {
+        setSub(resSub.data.data ?? null);
+        setBalance(resBal.data.balance ?? 0);
+        setPlanes(resPlanes.data.data ?? []);
+        setHistorial(resHist.data.data ?? []);
+      })
+      .catch((e) => console.error(e))
+      .finally(() => setLoading(false)),
+  []);
+
+  const recargar = () => { setLoading(true); cargar(); };
 
   useEffect(() => { cargar(); }, [cargar]);
 
@@ -136,9 +139,9 @@ export default function PlanesPage() {
     setPagando("pro");
     try {
       const res = await api.post("/api/v1/app/suscripcion/checkout");
-      window.location.href = res.data.checkout_url;
-    } catch (err: any) {
-      alert(err?.response?.data?.detail ?? "Error al iniciar el pago.");
+      window.location.assign(res.data.checkout_url);
+    } catch (err) {
+      alert(detalleError(err, "Error al iniciar el pago."));
       setPagando(null);
     }
   };
@@ -147,9 +150,9 @@ export default function PlanesPage() {
     setPagando(`cred_${plan_id}`);
     try {
       const res = await api.post("/api/v1/app/creditos/checkout", { plan_id });
-      window.location.href = res.data.checkout_url;
-    } catch (err: any) {
-      alert(err?.response?.data?.detail ?? "Error al iniciar el pago.");
+      window.location.assign(res.data.checkout_url);
+    } catch (err) {
+      alert(detalleError(err, "Error al iniciar el pago."));
       setPagando(null);
     }
   };
@@ -158,9 +161,9 @@ export default function PlanesPage() {
     setAbriendo(true);
     try {
       const res = await api.post("/api/v1/app/suscripcion/portal");
-      window.location.href = res.data.portal_url;
-    } catch (err: any) {
-      alert(err?.response?.data?.detail ?? "Error al abrir el portal.");
+      window.location.assign(res.data.portal_url);
+    } catch (err) {
+      alert(detalleError(err, "Error al abrir el portal."));
     } finally { setAbriendo(false); }
   };
 
@@ -169,18 +172,18 @@ export default function PlanesPage() {
     setCancelando(true);
     try {
       await api.post("/api/v1/app/suscripcion/cancelar");
-      cargar();
-    } catch (err: any) {
-      alert(err?.response?.data?.detail ?? "Error al cancelar.");
+      recargar();
+    } catch (err) {
+      alert(detalleError(err, "Error al cancelar."));
     } finally { setCancelando(false); }
   };
 
   const reactivar = async () => {
     try {
       await api.post("/api/v1/app/suscripcion/reactivar");
-      cargar();
-    } catch (err: any) {
-      alert(err?.response?.data?.detail ?? "Error al reactivar.");
+      recargar();
+    } catch (err) {
+      alert(detalleError(err, "Error al reactivar."));
     }
   };
 
