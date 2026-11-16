@@ -92,13 +92,10 @@ export async function desregistrarNotificaciones(): Promise<void> {
     console.warn("[FCM] ⚠️ No se pudo dar de baja en el backend:", e);
   }
 
-  // 2. FCM: invalidar el token del navegador (el próximo login genera uno nuevo)
-  try {
-    const messaging = await getFirebaseMessaging();
-    if (messaging) await deleteToken(messaging);
-  } catch (e) {
-    console.warn("[FCM] ⚠️ No se pudo eliminar el token local:", e);
-  }
+  // 2. FCM: invalidar el token del navegador (el próximo login genera uno nuevo).
+  // En segundo plano: puede tardar varios segundos y el cierre de sesión no
+  // debe esperarlo (antes el botón parecía no responder).
+  void olvidarDispositivoLocal();
 }
 
 // ── Olvidar el token solo en este navegador (sesión expirada / 401) ───────────
@@ -111,9 +108,21 @@ export async function olvidarDispositivoLocal(): Promise<void> {
     sessionStorage.removeItem(FLAG_SESION);
   } catch {}
   try {
+    // Sin permiso o sin nuestro service worker no hay token que borrar. Y
+    // deleteToken sin registro instala OTRO service worker de Firebase y espera
+    // hasta 10 s a que arranque: se le pasa el nuestro con getToken.
+    if (permisoNotificaciones() !== "granted") return;
+    const registros = await navigator.serviceWorker.getRegistrations();
+    const registration = registros.find((r) =>
+      (r.active ?? r.waiting ?? r.installing)?.scriptURL.endsWith("/firebase-messaging-sw.js"));
+    if (!registration) return;
     const messaging = await getFirebaseMessaging();
-    if (messaging) await deleteToken(messaging);
-  } catch {}
+    if (!messaging) return;
+    await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: registration });
+    await deleteToken(messaging);
+  } catch (e) {
+    console.warn("[FCM] ⚠️ No se pudo eliminar el token local:", e);
+  }
 }
 
 // ── Mensajes con la app abierta (primer plano) ────────────────────────────────

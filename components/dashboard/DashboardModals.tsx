@@ -7,7 +7,11 @@ import { useAuthStore } from "@/store/auth.store";
 import { SESSION_EMPRESA_KEY } from "@/app/providers";
 import api from "@/lib/api";
 
-export function ModalLogout({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
+export function ModalLogout({ onConfirm, onCancel, cerrando = false }: {
+  onConfirm: () => void;
+  onCancel: () => void;
+  cerrando?: boolean;
+}) {
   return (
     <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
       <div
@@ -35,23 +39,35 @@ export function ModalLogout({ onConfirm, onCancel }: { onConfirm: () => void; on
         </div>
         <div className="flex gap-2">
           <button
+            type="button"
             onClick={onCancel}
-            className="flex-1 py-2 rounded-lg text-sm transition-colors"
-            style={{
-              border: "1px solid var(--kipu-border)",
-              color: "var(--kipu-muted)",
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = "var(--kipu-text)")}
-            onMouseLeave={(e) => (e.currentTarget.style.color = "var(--kipu-muted)")}
+            disabled={cerrando}
+            className="flex-1 py-2 rounded-lg text-sm font-medium transition-all
+                       border border-[var(--kipu-border)] text-[var(--kipu-muted)]
+                       bg-[color-mix(in_srgb,var(--kipu-text)_4%,transparent)]
+                       hover:bg-[color-mix(in_srgb,var(--kipu-text)_9%,transparent)] hover:text-[var(--kipu-text)]
+                       active:scale-[0.97]
+                       focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--kipu-border)]
+                       disabled:opacity-50 disabled:active:scale-100"
           >
             Cancelar
           </button>
           <button
+            type="button"
             onClick={onConfirm}
-            className="flex-1 py-2 rounded-lg text-sm font-medium text-white transition-colors"
-            style={{ background: "var(--kipu-danger)" }}
+            disabled={cerrando}
+            className="flex-1 py-2 rounded-lg text-sm font-medium text-white transition-all
+                       flex items-center justify-center gap-2
+                       bg-[var(--kipu-danger)] shadow-sm
+                       hover:brightness-90 hover:shadow-md
+                       active:scale-[0.97] active:brightness-85
+                       focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--kipu-danger)]
+                       disabled:opacity-80 disabled:hover:brightness-100 disabled:active:scale-100"
           >
-            Cerrar sesión
+            {cerrando && (
+              <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            )}
+            {cerrando ? "Cerrando…" : "Cerrar sesión"}
           </button>
         </div>
       </div>

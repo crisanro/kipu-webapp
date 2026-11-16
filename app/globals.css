@@ -47,6 +47,19 @@ body {
   transition: background 0.2s ease, color 0.2s ease;
 }
 
+/* Tailwind 4 deja los botones con la flecha del mouse: que se note que se pueden pulsar */
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  select:not(:disabled),
+  summary {
+    cursor: pointer;
+  }
+  button:disabled {
+    cursor: not-allowed;
+  }
+}
+
 ::-webkit-scrollbar       { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--kipu-border); border-radius: 3px; }
