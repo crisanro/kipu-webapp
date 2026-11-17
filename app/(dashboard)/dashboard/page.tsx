@@ -12,6 +12,7 @@ import GraficoFacturacion from "./components/GraficoFacturacion";
 import UltimosDocumentos from "./components/UltimosDocumentos";
 import DocumentosRecibidos from "./components/DocumentosRecibidos";
 import AccesosRapidos from "./components/AccesosRapidos";
+import OfertaRenta from "@/components/renta/OfertaRenta";
 
 interface DashboardData {
   health?: HealthData;
@@ -101,6 +102,9 @@ export default function DashboardPage() {
       {declaracion && (
         <DeclaracionWidget data={declaracion} onDeclarado={() => mutate()} />
       )}
+
+      {/* Temporada de renta (enero a inicios de marzo): Kipu Renta */}
+      <OfertaRenta variante="dashboard" />
 
       {/* Plan gratis: no necesita un plan para facturar */}
       {empresa && !empresa.suscripcion_activa && empresa.emision_gratis && (

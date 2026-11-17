@@ -4,6 +4,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import api from "@/lib/api";
+import OfertaRenta from "@/components/renta/OfertaRenta";
 import { ArrowLeft, RefreshCw, FileText, AlertTriangle, TrendingUp, TrendingDown, Receipt } from "lucide-react";
 
 const fmt = (n: number = 0) => n.toLocaleString("es-EC", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -59,6 +60,9 @@ export default function ReporteRentaPage() {
           <strong>Aviso Informativo:</strong> Este reporte consolida únicamente las facturas, notas de crédito, liquidaciones y retenciones registradas en Kipu durante el año {anio}. Recuerda incorporar en el portal del SRI tus ingresos por relación de dependencia, arrendamientos, rendimientos financieros y gastos personales.
         </p>
       </div>
+
+      {/* Kipu Renta: si es el año que se vende, que el equipo de Kipu la presente */}
+      <OfertaRenta variante="reportes" anio={Number(anio)} />
 
       {/* Tarjetas Principales */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
