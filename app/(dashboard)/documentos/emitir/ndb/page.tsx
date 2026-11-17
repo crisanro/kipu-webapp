@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { r2 } from "@/lib/dinero";
 import { useRouter, useSearchParams } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
-import { debeRenovarClave, mensajeErrorEmision } from "@/lib/emision";
+import { debeRenovarClave, esUsoJusto, mensajeErrorEmision } from "@/lib/emision";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
 import { CheckCircle2, AlertTriangle, Plus, Trash2, ChevronDown } from "lucide-react";
@@ -120,6 +120,7 @@ export default function NuevaNdbPage() {
   const [submitting, setSubmitting] = useState(false);
   const [resultado,  setResultado]  = useState<any>(null);
   const [error,      setError]      = useState("");
+  const [usoJusto,   setUsoJusto]   = useState("");   // mensaje del uso justo (para ofrecer Pro o créditos)
 
   const totales = calcTotalesNdb(motivos);
 
@@ -186,7 +187,7 @@ export default function NuevaNdbPage() {
     if (motivos.some(m => !m.razon.trim())) { setError("Todos los motivos deben tener descripción."); return; }
     if (totales.total <= 0)             { setError("El valor total debe ser mayor a $0."); return; }
 
-    const puedeEmitir = empresa?.suscripcion_activa || (empresa?.balance_api ?? 0) > 0;
+    const puedeEmitir = empresa?.suscripcion_activa || (empresa?.balance_api ?? 0) > 0 || !!empresa?.emision_gratis;
     if (!puedeEmitir) { setError("Se requiere suscripción activa o créditos API."); return; }
 
     setSubmitting(true);
@@ -251,7 +252,9 @@ export default function NuevaNdbPage() {
       // Solo con un rechazo definitivo se usa otra clave; ante timeout, red,
       // 5xx o 409 se reintenta con la misma para no duplicar el comprobante
       if (debeRenovarClave(err)) idempotencyKey.current = uuidv4();
-      setError(mensajeErrorEmision(err, "Error al emitir la nota de débito."));
+      const mensaje = mensajeErrorEmision(err, "Error al emitir la nota de débito.");
+      setError(mensaje);
+      setUsoJusto(esUsoJusto(err) ? mensaje : "");
     } finally {
       setSubmitting(false);
     }
@@ -571,6 +574,8 @@ export default function NuevaNdbPage() {
             error={error}
             suscripcionActiva={empresa?.suscripcion_activa ?? false}
             balanceApi={empresa?.balance_api ?? 0}
+            emisionGratis={!!empresa?.emision_gratis}
+            usoJusto={!!usoJusto && usoJusto === error}
             onEmitir={emitir}
           />
         </div>

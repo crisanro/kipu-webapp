@@ -20,6 +20,7 @@ interface Empresa {
   suscripcion_activa:     boolean;
   suscripcion:            Suscripcion;
   balance_api:            number;
+  emision_gratis?:        boolean;  // plan gratis encendido: el panel emite sin plan ni créditos (uso justo)
   permisos:               Record<string, boolean>;
   obligado_contabilidad:  string | null;  // "SI" | "NO" | null
   periodo_iva:            string | null;  // "MENSUAL" | "SEMESTRAL" | null  ← agregar
