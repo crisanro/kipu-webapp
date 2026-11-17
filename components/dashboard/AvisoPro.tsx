@@ -21,6 +21,7 @@ const MENSAJES: [string, string][] = [
   ["/cuentas",              "Con Kipu Pro llevas tus cuentas por cobrar y por pagar."],
   ["/proformas",            "Con Kipu Pro haces proformas en PDF y las conviertes en factura."],
   ["/usuarios",             "Con Kipu Pro sumas usuarios a tu empresa, cada uno con sus permisos."],
+  ["/api-keys",             "Con Kipu Pro tus integraciones (WooCommerce, tu sistema) tienen 300 comprobantes al mes incluidos, sin gastar créditos."],
   ["/configuracion",        "Con Kipu Pro sumas usuarios y tus facturas salen sin la marca de Kipu."],
 ];
 const GENERAL =
