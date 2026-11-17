@@ -1,6 +1,7 @@
 "use client";
 
-// Estado del detector de caídas del SRI y de las colas de envío (solo superadmin).
+// Estado del detector de caídas del SRI, de las colas de envío y de quién las
+// procesa (contenedor worker / API) (solo superadmin).
 
 import { useCallback, useEffect, useState } from "react";
 import { Radio, RotateCw, Loader2 } from "lucide-react";
@@ -29,9 +30,11 @@ const ESTADO_DOC: Record<string, string> = {
 };
 
 type Servicio  = { ambiente: string; servicio: string; estado: string; desde: number | null };
+type Worker    = { id: string; origen: "worker" | "api"; inicio: number; hace_seg: number; en_curso: number };
 type Pendiente = { estado: string; sandbox: boolean; n: number };
 type Datos = {
   detector_activo: boolean;
+  workers?: { en_api: boolean; vivos: Worker[]; visto_hace_seg: number | null };
   servicios:  Servicio[];
   colas: {
     emision: number; emision_prioritaria: number;
@@ -52,6 +55,37 @@ function desde(segundos: number | null): string {
   return f.toLocaleString("es-EC", hoy
     ? { hour: "2-digit", minute: "2-digit" }
     : { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+}
+
+function hace(seg: number): string {
+  if (seg < 60) return `${seg} s`;
+  if (seg < 3600) return `${Math.round(seg / 60)} min`;
+  return `${Math.round(seg / 3600)} h`;
+}
+
+// Quién procesa las colas: el contenedor "worker" y, con WORKERS_EN_API=true, la API
+function Workers({ w }: { w: NonNullable<Datos["workers"]> }) {
+  const aparte = w.vivos.filter((v) => v.origen === "worker");
+  const enApi  = w.vivos.filter((v) => v.origen === "api");
+  const nadie  = w.vivos.length === 0;
+  const color  = nadie ? "var(--kipu-danger)" : aparte.length ? "var(--kipu-success)" : "var(--kipu-warning)";
+  const texto  = nadie
+    ? `Ningún worker procesa las colas${w.visto_hace_seg !== null ? ` (último latido hace ${hace(w.visto_hace_seg)})` : ""}`
+    : aparte.length
+      ? `Worker activo (latido hace ${hace(Math.min(...aparte.map((v) => v.hace_seg)))}`
+        + `, ${aparte.reduce((n, v) => n + v.en_curso, 0)} documentos en curso)`
+      : "Sin contenedor worker: lo procesa la API";
+  return (
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs mb-3" style={{ color: "var(--kipu-text)" }}>
+      <span className="w-2 h-2 rounded-full shrink-0" style={{ background: color }} />
+      <span>{texto}</span>
+      {w.en_api && (
+        <span style={{ color: "var(--kipu-subtle)" }}>
+          · la API también procesa ({enApi.length} proceso{enApi.length === 1 ? "" : "s"}, WORKERS_EN_API=true)
+        </span>
+      )}
+    </div>
+  );
 }
 
 function resumenPendientes(lista: Pendiente[], sandbox: boolean): string {
@@ -143,6 +177,7 @@ export default function EstadoSRI() {
         )
       ) : (
         <>
+          {datos.workers && <Workers w={datos.workers} />}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {AMBIENTES.map((amb) => (
               <div
