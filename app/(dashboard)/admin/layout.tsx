@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, LifeBuoy, Activity, Bell } from "lucide-react";
+import { LayoutDashboard, Users, LifeBuoy, Activity, Bell, Undo2 } from "lucide-react";
 
 const NAV = [
   { href: "/admin",                label: "Resumen",        icon: LayoutDashboard, exact: true },
   { href: "/admin/usuarios",       label: "Usuarios",       icon: Users },
   { href: "/admin/soporte",        label: "Soporte",        icon: LifeBuoy },
   { href: "/admin/diagnostico",    label: "Diagnóstico",    icon: Activity },
+  { href: "/admin/devoluciones",   label: "Devoluciones",   icon: Undo2 },
   { href: "/admin/notificaciones", label: "Notificaciones", icon: Bell },
 ];
 
