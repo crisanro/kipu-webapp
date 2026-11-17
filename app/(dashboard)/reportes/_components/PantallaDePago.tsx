@@ -21,6 +21,7 @@ export interface OfertaPase {
   pro:            boolean;
   periodo:        string;
   periodo_nombre: string;
+  tipo_periodo?:  "MENSUAL" | "SEMESTRAL";
 }
 
 interface Props {
@@ -177,7 +178,8 @@ export default function PantallaDePago({
             <div className="rounded-2xl p-4 flex flex-col gap-3"
                  style={{ background: "var(--kipu-surface)", border: "1px solid var(--kipu-border)" }}>
               <span className="flex items-center gap-1.5 text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>
-                <Ticket size={15} style={{ color: "var(--kipu-subtle)" }} /> Pase del mes
+                <Ticket size={15} style={{ color: "var(--kipu-subtle)" }} />
+                {pase.tipo_periodo === "SEMESTRAL" ? "Pase del semestre" : "Pase del mes"}
               </span>
               <p className="text-xl font-bold" style={{ color: "var(--kipu-text)" }}>
                 {pase.precio ? `$${dinero(pase.precio.total)}` : "Pago único"}
