@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import api from "@/lib/api";
 import { CheckCircle2, AlertTriangle, Clock, XCircle, ExternalLink } from "lucide-react";
 
@@ -13,6 +14,10 @@ export interface DeclaracionData {
   vencimiento_fmt: string;
   dias_restantes:  number;
   estado:          "DECLARADO" | "VENCIDO" | "URGENTE" | "PROXIMO" | "PENDIENTE";
+  // Total del periodo: con Pro, o para todos con el plan gratis encendido
+  iva_a_pagar?:         number;
+  saldo_a_favor?:       number;
+  formulario_completo?: boolean;   // false: el 104 casillero por casillero es de pago
 }
 
 interface Props {
@@ -233,6 +238,26 @@ export default function DeclaracionWidget({ data, onDeclarado }: Props) {
                 `Fecha límite: ${data.vencimiento_fmt} — ${data.dias_restantes} días restantes`
               )}
             </p>
+
+            {/* Total de IVA del periodo */}
+            {typeof data.iva_a_pagar === "number" && (
+              <div className="mt-2 flex items-baseline gap-x-3 gap-y-1 flex-wrap">
+                <p className="text-sm" style={{ color: "var(--kipu-text)" }}>
+                  {data.iva_a_pagar === 0 && (data.saldo_a_favor ?? 0) > 0
+                    ? <>Saldo a favor: <strong>${(data.saldo_a_favor ?? 0).toFixed(2)}</strong></>
+                    : <>IVA a pagar: <strong>${data.iva_a_pagar.toFixed(2)}</strong></>}
+                </p>
+                {data.formulario_completo === false && (
+                  <Link
+                    href="/planes"
+                    className="text-[11px] underline underline-offset-2 hover:no-underline"
+                    style={{ color: "var(--kipu-accent)" }}
+                  >
+                    Formulario 104 casillero por casillero con Kipu Pro
+                  </Link>
+                )}
+              </div>
+            )}
 
             {error && (
               <p className="text-xs mt-1" style={{ color: "var(--kipu-danger)" }}>{error}</p>
