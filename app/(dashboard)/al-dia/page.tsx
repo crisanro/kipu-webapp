@@ -6,6 +6,7 @@ import { CalendarCheck, CheckCircle2, Loader2, MessageCircle, ShieldCheck } from
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
 import ClaveSri from "@/components/al-dia/ClaveSri";
+import PanelCliente from "@/components/al-dia/PanelCliente";
 import { HeroAlDia, DemoAlDia, ComoFunciona, QueIncluye, Confianza, Preguntas } from "@/components/al-dia/Venta";
 
 const SOPORTE_WA = "593960585581";
@@ -297,6 +298,8 @@ export default function KipuAlDiaPage() {
             {error}
           </p>
         )}
+        {/* Si tuvo el servicio, su historial se sigue viendo */}
+        <PanelCliente soloHistorial />
         <HeroAlDia precio={precio} onContratar={irAContratar} />
         <DemoAlDia ruc={empresa?.ruc} semestral={empresa?.periodo_iva === "SEMESTRAL"} enProduccion={enProduccion} />
         <ComoFunciona />
@@ -358,6 +361,9 @@ export default function KipuAlDiaPage() {
           )}
         </div>
       )}
+
+      {/* Lo que el equipo de Kipu hace por él: lo que viene y el historial */}
+      {estado?.contratado && <PanelCliente />}
 
       {/* Clave del SRI: solo con el servicio contratado y para el administrador */}
       {estado?.contratado && esAdmin && <ClaveSri />}
