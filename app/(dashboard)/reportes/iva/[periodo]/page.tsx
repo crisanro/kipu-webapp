@@ -14,6 +14,7 @@ import ResumenImpositivo   from "../../_components/ResumenImpositivo";
 import DocumentosIncluidos from "../../_components/DocumentosIncluidos";
 import EstadoBadge, { EstadoReporte } from "../../_components/EstadoBadge";
 import PantallaDePago      from "../../_components/PantallaDePago";
+import Alertas104          from "../../_components/Alertas104";
 
 const fmt = (n: number = 0) =>
   n.toLocaleString("es-EC", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -158,6 +159,7 @@ export default function ReporteIVAPage() {
         total={data.total}
         pase={data.pase}
         esperandoPago={pasePagado}
+        alertasCantidad={data.alertas_cantidad ?? 0}
         onRecargar={recargarSilencioso}
         onVolver={() => router.push("/reportes")}
       />
@@ -325,6 +327,9 @@ export default function ReporteIVAPage() {
           <p className="text-sm" style={{ color: "var(--kipu-danger)" }}>{error}</p>
         </div>
       )}
+
+      {/* Alertas de errores (pase o Pro) */}
+      {!esDemo && <Alertas104 alertas={data?.alertas ?? []} />}
 
       {/* Resumen rápido top */}
       <div className="grid grid-cols-3 gap-3">

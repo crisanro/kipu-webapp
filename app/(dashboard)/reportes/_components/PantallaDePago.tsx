@@ -6,7 +6,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Calculator, CheckCircle2, Loader2, Sparkles, Ticket } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Calculator, CheckCircle2, Loader2, Sparkles, Ticket } from "lucide-react";
 import api from "@/lib/api";
 
 const dinero = (n: number = 0) =>
@@ -28,13 +28,16 @@ interface Props {
   total:         { iva_a_pagar: number; saldo_a_favor: number };
   pase:          OfertaPase;
   esperandoPago: boolean;          // volvió de Stripe: el pase se activa en segundos
+  alertasCantidad?: number;        // alertas encontradas: el detalle es del pase o de Pro
   onRecargar:    () => void;
   onVolver:      () => void;
 }
 
 const MAX_INTENTOS = 16;           // ~40 s esperando el aviso de Stripe
 
-export default function PantallaDePago({ periodoFmt, enCurso, total, pase, esperandoPago, onRecargar, onVolver }: Props) {
+export default function PantallaDePago({
+  periodoFmt, enCurso, total, pase, esperandoPago, alertasCantidad = 0, onRecargar, onVolver,
+}: Props) {
   const [pagando, setPagando] = useState(false);
   const [error,   setError]   = useState("");
   const [intentos, setIntentos] = useState(0);
@@ -105,6 +108,21 @@ export default function PantallaDePago({ periodoFmt, enCurso, total, pase, esper
         </div>
       ) : (
         <>
+          {alertasCantidad > 0 && (
+            <div className="rounded-xl p-3.5 flex items-start gap-3"
+                 style={{ background: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)",
+                          border: "1px solid color-mix(in srgb, var(--kipu-warning) 30%, transparent)" }}>
+              <AlertTriangle size={16} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-warning)" }} />
+              <p className="text-sm" style={{ color: "var(--kipu-text)" }}>
+                <strong>
+                  Encontramos {alertasCantidad === 1 ? "1 alerta" : `${alertasCantidad} alertas`} en tu declaración
+                  de {periodoFmt}.
+                </strong>{" "}
+                Retenciones que no llegaron, IVA sin crédito y más: desbloquéalas con el pase o con Kipu Pro.
+              </p>
+            </div>
+          )}
+
           <p className="text-sm text-center" style={{ color: "var(--kipu-subtle)" }}>
             Para verla casillero por casillero, lista para copiar en el SRI:
           </p>
