@@ -18,6 +18,7 @@ export interface DeclaracionData {
   iva_a_pagar?:         number;
   saldo_a_favor?:       number;
   formulario_completo?: boolean;   // false: el 104 casillero por casillero es de pago
+  periodo_key?:         string;    // "2026-10": la página del 104 de ese periodo
 }
 
 interface Props {
@@ -249,11 +250,11 @@ export default function DeclaracionWidget({ data, onDeclarado }: Props) {
                 </p>
                 {data.formulario_completo === false && (
                   <Link
-                    href="/planes"
+                    href={data.periodo_key ? `/reportes/iva/${data.periodo_key}` : "/planes"}
                     className="text-[11px] underline underline-offset-2 hover:no-underline"
                     style={{ color: "var(--kipu-accent)" }}
                   >
-                    Formulario 104 casillero por casillero con Kipu Pro
+                    Ver el formulario 104 casillero por casillero
                   </Link>
                 )}
               </div>
