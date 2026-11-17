@@ -18,6 +18,7 @@ const MENSAJES: [string, string][] = [
   ["/documentos/emitir",    "Con Kipu Pro emites sin límite, también por API, y tus facturas salen sin la marca de Kipu."],
   ["/documentos/recibidos", "Con Kipu Pro tus compras arman el formulario 104 de cada mes, con alertas de errores."],
   ["/reportes",             "Con Kipu Pro tienes el 104 casillero por casillero todo el año, alertas y el resumen para la renta."],
+  ["/renta",                "Con Kipu Pro ves el resumen de tu renta todo el año, el 104 con alertas, y facturas sin límite."],
   ["/cuentas",              "Con Kipu Pro llevas tus cuentas por cobrar y por pagar."],
   ["/proformas",            "Con Kipu Pro haces proformas en PDF y las conviertes en factura."],
   ["/usuarios",             "Con Kipu Pro sumas usuarios a tu empresa, cada uno con sus permisos."],

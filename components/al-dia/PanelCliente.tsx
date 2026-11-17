@@ -110,7 +110,7 @@ export default function PanelCliente({ soloHistorial = false }: { soloHistorial?
       <section className="space-y-2">
         <h2 className="text-sm font-semibold flex items-center gap-2" style={{ color: "var(--kipu-text)" }}>
           <FileText size={16} style={{ color: "var(--kipu-accent)" }} />
-          {soloHistorial ? "Tus declaraciones con Kipu Al Día" : "Tu historial"}
+          {soloHistorial ? "Tus declaraciones con el equipo de Kipu" : "Tu historial"}
         </h2>
         {datos.historial.length === 0 ? (
           <div className="rounded-xl p-4 text-sm" style={{ ...caja, color: "var(--kipu-muted)" }}>

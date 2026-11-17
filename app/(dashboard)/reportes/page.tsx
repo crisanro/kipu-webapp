@@ -4,6 +4,7 @@ import Link from "next/link";
 import api from "@/lib/api";
 import { usePermiso } from "@/hooks/usePermiso";
 import SinAcceso from "@/components/SinAcceso";
+import OfertaRenta from "@/components/renta/OfertaRenta";
 import { useAuthStore } from "@/store/auth.store";
 import {
   BarChart3,
@@ -403,6 +404,8 @@ export default function ReportesPage() {
             </Aviso>
           )}
 
+          {tab === "RENTA" && <OfertaRenta variante="reportes" />}
+
           <DemoCards tab={tab} />
         </>
       )}
@@ -464,6 +467,8 @@ export default function ReportesPage() {
           >
             {textoInfo}
           </div>
+
+          {tab === "RENTA" && <OfertaRenta variante="reportes" />}
 
           {/* Contenido */}
           {loading ? (

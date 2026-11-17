@@ -1,12 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { CalendarCheck, CheckCircle2, Loader2, MessageCircle, ShieldCheck } from "lucide-react";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
 import ClaveSri from "@/components/al-dia/ClaveSri";
 import PanelCliente from "@/components/al-dia/PanelCliente";
+import TextoTerminos from "@/components/al-dia/TextoTerminos";
+import OfertaRenta from "@/components/renta/OfertaRenta";
 import { HeroAlDia, DemoAlDia, ComoFunciona, QueIncluye, Confianza, Preguntas } from "@/components/al-dia/Venta";
 
 const SOPORTE_WA = "593960585581";
@@ -36,53 +38,6 @@ interface Terminos { version: string; texto: string; hash: string }
 function detalle(err: unknown, porDefecto: string): string {
   const d = (err as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail;
   return typeof d === "string" ? d : porDefecto;
-}
-
-// ── Términos: markdown sencillo (títulos, listas, tablas, negritas), sin HTML ──
-function enLinea(texto: string): ReactNode[] {
-  return texto.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/g).filter(Boolean).map((parte, i) => {
-    if (parte.startsWith("**")) return <strong key={i} style={{ color: "var(--kipu-text)" }}>{parte.slice(2, -2)}</strong>;
-    if (parte.startsWith("*")) return <em key={i}>{parte.slice(1, -1)}</em>;
-    return parte;
-  });
-}
-
-function TextoTerminos({ texto }: { texto: string }) {
-  const bloques = texto.trim().split(/\n\s*\n/);
-  return (
-    <div className="space-y-3 text-sm leading-relaxed" style={{ color: "var(--kipu-muted)" }}>
-      {bloques.map((bloque, i) => {
-        const lineas = bloque.split("\n");
-        if (bloque.startsWith("# "))
-          return <h2 key={i} className="text-base font-bold" style={{ color: "var(--kipu-text)" }}>{bloque.slice(2)}</h2>;
-        if (bloque.startsWith("## "))
-          return <h3 key={i} className="text-sm font-bold pt-2" style={{ color: "var(--kipu-text)" }}>{bloque.slice(3)}</h3>;
-        if (lineas.every(l => l.startsWith("|"))) {
-          const filas = lineas.filter(l => !/^\|\s*-/.test(l)).map(l => l.split("|").slice(1, -1).map(c => c.trim()));
-          return (
-            <table key={i} className="w-full text-xs">
-              <tbody>
-                {filas.map((celdas, f) => (
-                  <tr key={f} style={{ borderBottom: "1px solid var(--kipu-border)" }}>
-                    {celdas.map((c, k) => (
-                      <td key={k} className="py-1.5 pr-2" style={{ fontWeight: f === 0 ? 600 : 400, color: f === 0 ? "var(--kipu-text)" : undefined }}>
-                        {c}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          );
-        }
-        if (lineas.every(l => l.startsWith("- ")))
-          return <ul key={i} className="list-disc pl-5 space-y-1">{lineas.map((l, k) => <li key={k}>{enLinea(l.slice(2))}</li>)}</ul>;
-        if (lineas.every(l => /^\d+\. /.test(l)))
-          return <ol key={i} className="list-decimal pl-5 space-y-1">{lineas.map((l, k) => <li key={k}>{enLinea(l.replace(/^\d+\. /, ""))}</li>)}</ol>;
-        return <p key={i}>{enLinea(bloque)}</p>;
-      })}
-    </div>
-  );
 }
 
 export default function KipuAlDiaPage() {
@@ -311,6 +266,9 @@ export default function KipuAlDiaPage() {
           <h2 className="text-lg font-bold" style={{ color: "var(--kipu-text)" }}>Contratar Kipu Al Día</h2>
           {contratarBloque}
         </section>
+
+        {/* ¿Solo la renta? Kipu Renta (pago único) */}
+        <OfertaRenta variante="al-dia" />
 
         <p className="text-xs text-center" style={{ color: "var(--kipu-subtle)" }}>
           <Link href="/planes" className="underline">Ver todos los planes</Link>
