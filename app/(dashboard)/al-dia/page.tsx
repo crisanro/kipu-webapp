@@ -19,6 +19,14 @@ interface Estado {
   aceptado:             boolean;
   contratado:           boolean;
   otra_suscripcion:     string | null;
+  // Tiene Kipu Pro: al pagar Al Día se cancela el Pro y se devuelve lo no usado
+  cambio_desde_pro: {
+    metodo:         "TARJETA" | "TRANSFERENCIA";
+    dias_no_usados: number | null;
+    monto_estimado: number | null;
+    sin_devolucion: boolean;
+    minimo:         number;
+  } | null;
   period_end:           string | null;
   cancel_at_period_end: boolean;
 }
@@ -185,7 +193,7 @@ export default function KipuAlDiaPage() {
       <div className="rounded-xl p-4 text-sm" style={{ ...caja, color: "var(--kipu-muted)" }}>
         {estado.motivo_no_elegible}
       </div>
-    ) : estado?.otra_suscripcion ? (
+    ) : estado?.otra_suscripcion && !estado?.cambio_desde_pro ? (
       <div className="rounded-xl p-4 text-sm space-y-2" style={{ ...caja, color: "var(--kipu-muted)" }}>
         <p>Ya tienes Kipu Pro activo. Escríbenos y te pasamos a Kipu Al Día sin perder lo que ya pagaste.</p>
         <a href={`https://wa.me/${SOPORTE_WA}?text=${encodeURIComponent("Hola, tengo Kipu Pro y quiero pasarme a Kipu Al Día.")}`}
@@ -227,6 +235,31 @@ export default function KipuAlDiaPage() {
           Autorizo a Kipu a usar mi clave del SRI solo para lo que dice la sección 5
           (declaraciones, descarga de comprobantes y consultas).
         </label>
+
+        {/* Tiene Pro: qué pasa con lo que ya pagó */}
+        {estado?.cambio_desde_pro && (() => {
+          const c = estado.cambio_desde_pro;
+          const dias = c.dias_no_usados ?? 0;
+          return (
+            <div className="rounded-lg px-4 py-3 text-sm space-y-1"
+                 style={{ background: "color-mix(in srgb, var(--kipu-accent) 8%, transparent)",
+                          border: "1px solid color-mix(in srgb, var(--kipu-accent) 25%, transparent)",
+                          color: "var(--kipu-text)" }}>
+              <p className="font-semibold">Tienes Kipu Pro: no pierdes lo que ya pagaste</p>
+              <p className="text-xs" style={{ color: "var(--kipu-muted)" }}>
+                {c.sin_devolucion
+                  ? `A tu Kipu Pro le quedan ${dias} día${dias === 1 ? "" : "s"}: es menos de $${c.minimo.toFixed(2)}, así que no hay devolución.`
+                  : c.monto_estimado !== null
+                    ? <>Cuando se confirme el pago de Al Día cancelamos tu Pro y te devolvemos <b>unos ${c.monto_estimado.toFixed(2)}</b> por
+                        los {dias} días que no vas a usar{c.metodo === "TARJETA"
+                          ? ", a la tarjeta con la que pagaste (se ve en 5 a 10 días hábiles)."
+                          : ": te pediremos tu cuenta bancaria y te lo transferimos."}</>
+                    : "Cuando se confirme el pago de Al Día cancelamos tu Pro y te devolvemos los días que no vas a usar; te confirmamos el monto por correo."}
+                {" "}Kipu Al Día incluye todo lo de Kipu Pro.
+              </p>
+            </div>
+          );
+        })()}
 
         <button
           type="button"

@@ -967,6 +967,11 @@ function TarjetaAlDia({ estado, enProduccion, tienePro }: {
           {tienePro ? "Pasarme a Kipu Al Día" : "Quiero que declaren por mí"}
         </Link>
       )}
+      {tienePro && !bloqueo && (
+        <p className="text-center text-xs mt-2" style={{ color: "var(--kipu-subtle)" }}>
+          Te devolvemos los días de Kipu Pro que no uses.
+        </p>
+      )}
       <Link
         href="/al-dia"
         className="mt-3 text-center text-sm font-medium flex items-center justify-center gap-1 hover:underline underline-offset-2"
