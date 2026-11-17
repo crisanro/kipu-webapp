@@ -6,7 +6,7 @@ import { TIPOS_IVA } from "@/lib/iva";
 import { r2 } from "@/lib/dinero";
 import { useRouter } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
-import { debeRenovarClave, mensajeErrorEmision } from "@/lib/emision";
+import { debeRenovarClave, esUsoJusto, mensajeErrorEmision } from "@/lib/emision";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
 import { CheckCircle2, AlertTriangle, CreditCard, Copy, MessageCircle } from "lucide-react";
@@ -152,6 +152,7 @@ export default function NuevaFacturaPage() {
   const [submitting, setSubmitting] = useState(false);
   const [resultado,  setResultado]  = useState<any>(null);
   const [error,      setError]      = useState("");
+  const [usoJusto,   setUsoJusto]   = useState("");   // mensaje del uso justo (para ofrecer Pro o créditos)
 
   // ── Totales ─────────────────────────────────────────────────────────────────
   const totales = calcTotales(items, propina);
@@ -284,7 +285,7 @@ export default function NuevaFacturaPage() {
       } catch {}
     }
     
-    const puedeEmitir = empresa?.suscripcion_activa || (empresa?.balance_api ?? 0) > 0;
+    const puedeEmitir = empresa?.suscripcion_activa || (empresa?.balance_api ?? 0) > 0 || !!empresa?.emision_gratis;
     if (!puedeEmitir) {
       setError("Se requiere suscripción activa o créditos API para emitir.");
       return;
@@ -387,7 +388,9 @@ export default function NuevaFacturaPage() {
       // Solo con un rechazo definitivo se usa otra clave; ante timeout, red,
       // 5xx o 409 se reintenta con la misma para no duplicar el comprobante
       if (debeRenovarClave(err)) idempotencyKey.current = uuidv4();
-      setError(mensajeErrorEmision(err, "Error al emitir la factura."));
+      const mensaje = mensajeErrorEmision(err, "Error al emitir la factura.");
+      setError(mensaje);
+      setUsoJusto(esUsoJusto(err) ? mensaje : "");
     } finally {
       setSubmitting(false);
     }
@@ -679,6 +682,9 @@ export default function NuevaFacturaPage() {
             error={error}
             suscripcionActiva={empresa?.suscripcion_activa ?? false}
             balanceApi={empresa?.balance_api ?? 0}
+            emisionGratis={!!empresa?.emision_gratis
+              && !(cobro.estado === "PENDIENTE" && linkPago && pasarela?.conectada && momento === "al_pagar")}
+            usoJusto={!!usoJusto && usoJusto === error}
             onEmitir={emitir}
             textoBoton={cobro.estado === "PENDIENTE" && linkPago && pasarela?.conectada && momento === "al_pagar"
               ? "Crear link de cobro" : undefined}

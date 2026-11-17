@@ -16,6 +16,14 @@ export function debeRenovarClave(err: any): boolean {
   return typeof status === "number" && ERRORES_DEFINITIVOS.has(status);
 }
 
+/** true si se pasó el uso justo del plan gratis: la pantalla ofrece Pro o créditos. */
+export function esUsoJusto(err: unknown): boolean {
+  const detail = (err as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail as
+    { codigo?: unknown } | undefined;
+  return !!detail && typeof detail === "object" && !Array.isArray(detail)
+    && String(detail.codigo ?? "").startsWith("USO_JUSTO");
+}
+
 /** Mensaje para el usuario según el tipo de error. */
 export function mensajeErrorEmision(err: any, porDefecto: string): string {
   const status = err?.response?.status;
@@ -34,6 +42,9 @@ export function mensajeErrorEmision(err: any, porDefecto: string): string {
   }
 
   const detail = err.response.data?.detail;
+  if (detail && typeof detail === "object" && typeof detail.mensaje === "string") {
+    return detail.mensaje;   // p. ej. el uso justo del plan gratis ({codigo, mensaje})
+  }
   if (Array.isArray(detail)) {
     return detail.map((e: any) => (e.campo ? `${e.campo}: ${e.mensaje}` : e.msg ?? e.mensaje)).join(" | ");
   }

@@ -308,7 +308,8 @@ export default function FacturasRecibidasPage() {
   const [queryActivo, setQueryActivo] = useState("");
   const debounceRef                   = useRef<NodeJS.Timeout | null>(null);
 
-  const tieneSub = useAuthStore((s) => s.empresa?.suscripcion_activa ?? false);
+  // Con Plan Pro, o con el plan gratis encendido (importar recibidas es para todos)
+  const tieneSub = useAuthStore((s) => !!(s.empresa?.suscripcion_activa || s.empresa?.emision_gratis));
   const [docs, setDocs]               = useState<DocRecibido[]>([]);
   const [resumen, setResumen]         = useState<Resumen | null>(null);
   const [loading, setLoading]         = useState(true);

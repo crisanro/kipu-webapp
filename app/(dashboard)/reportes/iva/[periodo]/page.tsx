@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import api from "@/lib/api";
 import {
   ArrowLeft, RefreshCw, CheckCircle2, AlertTriangle, Info, Calendar,
@@ -13,6 +13,8 @@ import SeccionRetenciones  from "../../_components/SeccionRetenciones";
 import ResumenImpositivo   from "../../_components/ResumenImpositivo";
 import DocumentosIncluidos from "../../_components/DocumentosIncluidos";
 import EstadoBadge, { EstadoReporte } from "../../_components/EstadoBadge";
+import PantallaDePago      from "../../_components/PantallaDePago";
+import Alertas104          from "../../_components/Alertas104";
 
 const fmt = (n: number = 0) =>
   n.toLocaleString("es-EC", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -49,6 +51,8 @@ export default function ReporteIVAPage() {
   const params  = useParams();
   const router  = useRouter();
   const periodo = params.periodo as string;  // "2026-08" (o "2026-07" para el 2do semestre)
+  // Volvió de pagar el pase en Stripe (?pase=pagado): se espera a que se active
+  const pasePagado = useSearchParams().get("pase") === "pagado";
 
   const [data,        setData]        = useState<any>(null);
   const [decl,        setDecl]        = useState<DeclaracionPeriodo | null>(null);
@@ -84,6 +88,14 @@ export default function ReporteIVAPage() {
   }, [periodo]);
 
   useEffect(() => { cargar(); }, [cargar]);
+
+  // Sin la pantalla de carga: para esperar la activación del pase
+  const recargarSilencioso = useCallback(async () => {
+    try {
+      const res = await api.get(`/api/v1/app/declaraciones/iva?periodo=${periodo}`);
+      setData(res.data);
+    } catch {}
+  }, [periodo]);
 
   const guardarCamposManuales = async (valores: Record<string, number | null>) => {
     await api.patch(
@@ -135,6 +147,22 @@ export default function ReporteIVAPage() {
           <p className="text-sm" style={{ color: "var(--kipu-danger)" }}>{error}</p>
         </div>
       </div>
+    );
+  }
+
+  // Plan gratis sin Pro ni pase: el total ya calculado y cómo desbloquear el 104
+  if (data?.bloqueado) {
+    return (
+      <PantallaDePago
+        periodoFmt={nombrePeriodo(periodo, data?.data?.periodo?.tipo)}
+        enCurso={data.en_curso ?? false}
+        total={data.total}
+        pase={data.pase}
+        esperandoPago={pasePagado}
+        alertasCantidad={data.alertas_cantidad ?? 0}
+        onRecargar={recargarSilencioso}
+        onVolver={() => router.push("/reportes")}
+      />
     );
   }
 
@@ -299,6 +327,9 @@ export default function ReporteIVAPage() {
           <p className="text-sm" style={{ color: "var(--kipu-danger)" }}>{error}</p>
         </div>
       )}
+
+      {/* Alertas de errores (pase o Pro) */}
+      {!esDemo && <Alertas104 alertas={data?.alertas ?? []} />}
 
       {/* Resumen rápido top */}
       <div className="grid grid-cols-3 gap-3">

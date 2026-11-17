@@ -2,6 +2,7 @@
 import { AlertTriangle } from "lucide-react";
 import { r2 } from "@/lib/dinero";
 import Link from "next/link";
+import AccionesUsoJusto from "./AccionesUsoJusto";
 
 interface Totales {
   subtotal:    number;
@@ -24,6 +25,8 @@ interface Props {
   error:             string;
   suscripcionActiva: boolean;
   balanceApi:        number;
+  emisionGratis?:    boolean;  // plan gratis: emite sin plan ni créditos, con uso justo
+  usoJusto?:         boolean;  // el error es por el uso justo: mostrar cómo seguir
   onEmitir:          () => void;
   serie?:            string;   // "002-001": desde dónde sale, a la vista justo antes de emitir
   textoBoton?:       string;   // p. ej. "Crear link de cobro" (la factura se emite cuando paguen)
@@ -32,10 +35,12 @@ interface Props {
 const fmt = (n: number) => r2(n).toFixed(2);
 
 export default function ResumenTotales({
-  totales, submitting, error, suscripcionActiva, balanceApi, onEmitir, serie, textoBoton,
+  totales, submitting, error, suscripcionActiva, balanceApi, emisionGratis = false, usoJusto = false,
+  onEmitir, serie, textoBoton,
 }: Props) {
-  const puedeEmitir = suscripcionActiva || balanceApi > 0;
-  const usaCreditos = !suscripcionActiva && balanceApi > 0;
+  const gratis      = !suscripcionActiva && emisionGratis;
+  const puedeEmitir = suscripcionActiva || balanceApi > 0 || gratis;
+  const usaCreditos = !suscripcionActiva && !gratis && balanceApi > 0;
 
   return (
     <div
@@ -122,7 +127,9 @@ export default function ResumenTotales({
         >
           {usaCreditos
             ? `Consumirá 1 crédito API · Disponibles: ${balanceApi}`
-            : "✅ Incluido en tu suscripción"
+            : gratis
+              ? "Plan gratis · uso justo de comprobantes al mes"
+              : "✅ Incluido en tu suscripción"
           }
         </div>
       )}
@@ -167,6 +174,7 @@ export default function ResumenTotales({
           {error}
         </p>
       )}
+      {error && usoJusto && <AccionesUsoJusto />}
 
       {/* Botón */}
       <button

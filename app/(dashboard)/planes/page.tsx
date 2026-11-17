@@ -6,7 +6,7 @@ import { useAuthStore } from "@/store/auth.store";
 import { detalleError } from "@/lib/errores";
 import {
   CreditCard, Zap, RefreshCw,
-  CheckCircle2, AlertTriangle, TrendingDown, Star, ArrowRight, Info, CalendarCheck
+  CheckCircle2, AlertTriangle, TrendingDown, Star, ArrowRight, Info, CalendarCheck, MinusCircle
 } from "lucide-react";
 
 const fmt = (n: unknown) => parseFloat(String(n ?? 0)).toFixed(2);
@@ -68,6 +68,16 @@ const SISTEMA_AL_DIA = [
   "Hasta 5 usuarios",
 ];
 
+// Plan gratis (solo se muestra con el interruptor EMISION_GRATIS encendido)
+const GRATIS_INCLUYE = [
+  "Facturas desde el panel web, con uso justo",
+  "Importa tus compras y mira el IVA a pagar de cada mes",
+];
+const GRATIS_NO_INCLUYE = [
+  "Formulario 104 casillero por casillero y alertas",
+  "API, WooCommerce y varios usuarios",
+];
+
 const ESTADO_COLOR: Record<string, { color: string; bg: string; border: string }> = {
   ACTIVO:    { color: "var(--kipu-success)", bg: "color-mix(in srgb, var(--kipu-success) 10%, transparent)", border: "color-mix(in srgb, var(--kipu-success) 20%, transparent)" },
   TRIAL:     { color: "var(--kipu-info)",            bg: "color-mix(in srgb, var(--kipu-info) 10%, transparent)",            border: "color-mix(in srgb, var(--kipu-info) 20%, transparent)" },
@@ -79,6 +89,7 @@ const FEATURES: { texto: string; destacado?: boolean }[] = [
   { texto: "Facturas, liquidaciones, notas y retenciones sin límite" },
   { texto: "Registro de compras y reportes de IVA (104), renta y ATS" },
   { texto: "Cuentas por cobrar y pagar, y proformas en PDF" },
+  { texto: "Alertas de errores antes de declarar y facturas sin la marca de Kipu" },
   { texto: "API: 300 comprobantes al mes incluidos" },
   { texto: "Hasta 5 usuarios · soporte por WhatsApp" },
 ];
@@ -189,6 +200,7 @@ export default function PlanesPage() {
 
   const enProduccion  = empresa?.ambiente === 2;
   const esFree        = !sub?.activa;
+  const planGratis    = !!empresa?.emision_gratis;   // interruptor del plan gratis en el backend
   const esAlDia       = !!sub?.activa && sub.plan === "AL_DIA";
   const verPro        = !sub?.activa || sub.cancel_at_period_end;
   const verAlDia      = !esAlDia;
@@ -383,9 +395,13 @@ export default function PlanesPage() {
                 >
                   <Info size={15} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-accent)" }} />
                   <div className="text-sm">
-                    <p className="font-medium mb-0.5" style={{ color: "var(--kipu-accent)" }}>Estás en Plan Free</p>
+                    <p className="font-medium mb-0.5" style={{ color: "var(--kipu-accent)" }}>
+                      {planGratis ? "Estás en el plan gratis" : "Estás en Plan Free"}
+                    </p>
                     <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
-                      {balance > 0
+                      {planGratis
+                        ? `Facturas gratis desde el panel, con uso justo. Con Kipu Pro, por ${textoPrecio}, emites sin límite y tienes el formulario 104 completo con sus alertas; con Kipu Al Día, el equipo de Kipu presenta tus declaraciones.`
+                        : balance > 0
                         ? `Tienes ${balance} crédito${balance !== 1 ? "s" : ""} para emitir comprobantes. Con Plan Pro, por ${textoPrecio}, emites sin límite y llevas tus compras, declaraciones y cuentas; con Kipu Al Día, el equipo de Kipu las lleva por ti.`
                         : `Sin créditos disponibles. Con Plan Pro, por ${textoPrecio}, emites sin límite y llevas tus compras, declaraciones y cuentas; con Kipu Al Día, el equipo de Kipu las lleva por ti.`
                       }
@@ -632,6 +648,9 @@ export default function PlanesPage() {
 
               </div>
               )}
+
+              {/* Plan gratis: la tercera opción (lo que se tiene sin pagar) */}
+              {planGratis && <TarjetaGratis actual={esFree} />}
             </div>
           )}
 
@@ -700,7 +719,10 @@ export default function PlanesPage() {
                 >
                   <p>· 1 crédito = 1 comprobante emitido (FAC, LIQ, NCR, NDB, RET)</p>
                   <p>· No vencen nunca</p>
-                  <p>· {esFree ? "Con créditos solo emites: compras, declaraciones, cuentas y proformas son del Plan Pro" : "Complementan tu suscripción Pro activa"}</p>
+                  <p>· {planGratis
+                    ? "Son para emitir por API o WooCommerce: desde el panel emites gratis"
+                    : esFree ? "Con créditos solo emites: compras, declaraciones, cuentas y proformas son del Plan Pro"
+                             : "Complementan tu suscripción Pro activa"}</p>
                 </div>
               </div>
 
@@ -952,6 +974,51 @@ function TarjetaAlDia({ estado, enProduccion, tienePro }: {
       >
         Ver cómo funciona <ArrowRight size={14} />
       </Link>
+    </div>
+  );
+}
+
+// ── Plan gratis ───────────────────────────────────────────────────────────────
+function TarjetaGratis({ actual }: { actual: boolean }) {
+  return (
+    <div
+      className="rounded-xl p-5"
+      style={{ background: "var(--kipu-surface)", border: "1px dashed var(--kipu-border)" }}
+    >
+      <div className="flex items-start justify-between gap-3 flex-wrap mb-3">
+        <div>
+          <p className="text-base font-bold" style={{ color: "var(--kipu-text)" }}>
+            Gratis <span className="text-sm font-normal" style={{ color: "var(--kipu-subtle)" }}>· $0</span>
+          </p>
+          <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+            Para empezar a facturar. Tus facturas llevan «Facturado con Kipu».
+          </p>
+        </div>
+        {actual && (
+          <span
+            className="text-[11px] font-semibold px-2.5 py-1 rounded-full"
+            style={{
+              color: "var(--kipu-text)",
+              background: "color-mix(in srgb, var(--kipu-text) 6%, transparent)",
+              border: "1px solid var(--kipu-border)",
+            }}
+          >
+            Tu plan actual
+          </span>
+        )}
+      </div>
+      <div className="grid sm:grid-cols-2 gap-x-6 gap-y-1.5">
+        {GRATIS_INCLUYE.map((t) => (
+          <p key={t} className="flex items-start gap-2 text-sm" style={{ color: "var(--kipu-text)" }}>
+            <CheckCircle2 size={14} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-success)" }} />{t}
+          </p>
+        ))}
+        {GRATIS_NO_INCLUYE.map((t) => (
+          <p key={t} className="flex items-start gap-2 text-sm" style={{ color: "var(--kipu-subtle)" }}>
+            <MinusCircle size={14} className="shrink-0 mt-0.5" />{t}
+          </p>
+        ))}
+      </div>
     </div>
   );
 }

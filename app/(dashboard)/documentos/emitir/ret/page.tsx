@@ -3,8 +3,9 @@
 import { useState, useEffect, useRef } from "react";
 import { r2 } from "@/lib/dinero";
 import { useRouter, useSearchParams } from "next/navigation";
+import AccionesUsoJusto from "../components/AccionesUsoJusto";
 import { v4 as uuidv4 } from "uuid";
-import { debeRenovarClave, mensajeErrorEmision } from "@/lib/emision";
+import { debeRenovarClave, esUsoJusto, mensajeErrorEmision } from "@/lib/emision";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
 import { CheckCircle2, AlertTriangle, Plus, Trash2, Calendar } from "lucide-react";
@@ -188,6 +189,7 @@ export default function NuevaRetPage() {
   const [submitting, setSubmitting] = useState(false);
   const [resultado,  setResultado]  = useState<any>(null);
   const [error,      setError]      = useState("");
+  const [usoJusto,   setUsoJusto]   = useState("");   // mensaje del uso justo (para ofrecer Pro o créditos)
 
   const totalRetenido = r2(impuestos.reduce((s, i) => s + (i.valorRetenido || 0), 0));
 
@@ -361,7 +363,7 @@ export default function NuevaRetPage() {
     if (!estabSelected || !ptoSelected) { setError("Elige el establecimiento y el punto de emisión."); return; }
     if (impuestos.some(i => i.baseImponible <= 0)) { setError("La base imponible debe ser mayor a $0."); return; }
 
-    const puedeEmitir = empresa?.suscripcion_activa || (empresa?.balance_api ?? 0) > 0;
+    const puedeEmitir = empresa?.suscripcion_activa || (empresa?.balance_api ?? 0) > 0 || !!empresa?.emision_gratis;
     if (!puedeEmitir) { setError("Se requiere suscripción activa o créditos API."); return; }
 
     setSubmitting(true);
@@ -425,7 +427,9 @@ export default function NuevaRetPage() {
       // Solo con un rechazo definitivo se usa otra clave; ante timeout, red,
       // 5xx o 409 se reintenta con la misma para no duplicar el comprobante
       if (debeRenovarClave(err)) idempotencyKey.current = uuidv4();
-      setError(mensajeErrorEmision(err, "Error al emitir la retención."));
+      const mensaje = mensajeErrorEmision(err, "Error al emitir la retención.");
+      setError(mensaje);
+      setUsoJusto(esUsoJusto(err) ? mensaje : "");
     } finally  {
       setSubmitting(false);
     }
@@ -1189,10 +1193,12 @@ export default function NuevaRetPage() {
                 {error}
               </p>
             )}
+            {error && usoJusto === error && <AccionesUsoJusto />}
 
             <button
               onClick={emitir}
-              disabled={submitting || (!empresa?.suscripcion_activa && (empresa?.balance_api ?? 0) === 0)}
+              disabled={submitting || (!empresa?.suscripcion_activa && (empresa?.balance_api ?? 0) === 0
+                                       && !empresa?.emision_gratis)}
               className="mt-4 w-full py-3 rounded-lg text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ background: "var(--kipu-accent)" }}
               onMouseEnter={e => {

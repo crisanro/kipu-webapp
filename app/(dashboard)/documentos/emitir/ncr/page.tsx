@@ -158,7 +158,7 @@ export default function NuevaNcrPage() {
     if (items.some(i => !i.descripcion?.trim())) { setError("Todos los ítems deben tener descripción."); return; }
     if (totales.total <= 0) { setError("El valor de modificación debe ser mayor a $0."); return; }
 
-    const puedeEmitir = empresa?.suscripcion_activa || (empresa?.balance_api ?? 0) > 0;
+    const puedeEmitir = empresa?.suscripcion_activa || (empresa?.balance_api ?? 0) > 0 || !!empresa?.emision_gratis;
     if (!puedeEmitir) { setError("Se requiere suscripción activa o créditos API."); return; }
 
     setSubmitting(true);
@@ -429,6 +429,7 @@ export default function NuevaNcrPage() {
             error={error}
             suscripcionActiva={empresa?.suscripcion_activa ?? false}
             balanceApi={empresa?.balance_api ?? 0}
+            emisionGratis={!!empresa?.emision_gratis}
             onEmitir={emitir}
           />
         </div>

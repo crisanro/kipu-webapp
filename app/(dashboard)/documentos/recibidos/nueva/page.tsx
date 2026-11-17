@@ -24,7 +24,8 @@ export default function NuevaRecibidaPage() {
   const [error,    setError]    = useState("");
   const [dragging, setDragging] = useState(false);
 
-  const suscripcionActiva = empresa?.suscripcion_activa ?? false;
+  // Registrar compras: Plan Pro, o todos con el plan gratis encendido
+  const suscripcionActiva = !!(empresa?.suscripcion_activa || empresa?.emision_gratis);
 
   // ── Done XML ────────────────────────────────────────────────────────────────
   if (tab === "xml" && doneXML) {
