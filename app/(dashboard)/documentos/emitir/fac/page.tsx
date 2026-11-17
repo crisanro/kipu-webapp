@@ -574,8 +574,8 @@ export default function NuevaFacturaPage() {
         </p>
       </div>
 
-      {/* Alerta sin suscripción activa ni créditos API */}
-      {empresa && !empresa.suscripcion_activa && empresa.balance_api === 0 && (
+      {/* Alerta sin suscripción activa ni créditos API (con el plan gratis sí puede emitir) */}
+      {empresa && !empresa.suscripcion_activa && empresa.balance_api === 0 && !empresa.emision_gratis && (
         <div
           className="flex items-center gap-2 rounded-lg px-4 py-3"
           style={{

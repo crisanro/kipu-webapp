@@ -9,8 +9,9 @@ import { usePathname } from "next/navigation";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { useAuthStore } from "@/store/auth.store";
 
-// Páginas de venta o internas: ahí no hace falta el aviso
-const OCULTO_EN = ["/planes", "/al-dia", "/admin", "/equipo", "/nueva-empresa"];
+// Páginas de venta o internas: ahí no hace falta el aviso. El dashboard tiene su
+// propio recuadro del plan (gratis o suscripción inactiva), con lo mismo.
+const OCULTO_EN = ["/planes", "/al-dia", "/admin", "/equipo", "/nueva-empresa", "/dashboard"];
 
 // El primero cuya ruta coincida (de la más específica a la más general)
 const MENSAJES: [string, string][] = [

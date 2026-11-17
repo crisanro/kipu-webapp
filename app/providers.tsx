@@ -142,6 +142,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
           suscripcion_activa:    empresaActual.suscripcion_activa,
           suscripcion:           empresaActual.suscripcion,
           balance_api:           empresaActual.balance_api,
+          emision_gratis:        empresaActual.emision_gratis ?? false,
           obligado_contabilidad: empresaActual.obligado_contabilidad ?? null,
           periodo_iva:           empresaActual.periodo_iva ?? null,
         });

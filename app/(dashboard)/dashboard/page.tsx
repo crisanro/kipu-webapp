@@ -3,7 +3,7 @@ import useSWR from "swr";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
 import { useSandboxStore } from "@/store/sandbox.store";
-import { Loader2, AlertTriangle } from "lucide-react";
+import { Loader2, AlertTriangle, Sparkles } from "lucide-react";
 import Link from "next/link";
 import Checklist, { HealthData } from "@/components/Checklist";
 import DeclaracionWidget from "@/components/DeclaracionWidget";
@@ -102,8 +102,34 @@ export default function DashboardPage() {
         <DeclaracionWidget data={declaracion} onDeclarado={() => mutate()} />
       )}
 
-      {/* Alerta suscripción inactiva */}
-      {empresa && !empresa.suscripcion_activa && (
+      {/* Plan gratis: no necesita un plan para facturar */}
+      {empresa && !empresa.suscripcion_activa && empresa.emision_gratis && (
+        <div
+          className="flex items-start gap-3 rounded-xl px-4 py-3"
+          style={{
+            background: "color-mix(in srgb, var(--kipu-accent) 8%, transparent)",
+            border:     "1px solid color-mix(in srgb, var(--kipu-accent) 25%, transparent)",
+          }}
+        >
+          <Sparkles size={16} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-accent)" }} />
+          <div>
+            <p className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>
+              Estás en el plan gratis: no necesitas pagar para facturar
+            </p>
+            <p className="text-xs mt-0.5" style={{ color: "var(--kipu-subtle)" }}>
+              Emites tus facturas desde el panel sin costo y cargas tus compras. Cuando quieras más:
+              con <b>Kipu Pro</b> emites sin límite, ves el formulario 104 completo con alertas y sumas usuarios;
+              con <b>Kipu Al Día</b>, el equipo de Kipu presenta tus declaraciones.{" "}
+              <Link href="/planes" className="underline font-medium" style={{ color: "var(--kipu-accent)" }}>
+                Ver planes
+              </Link>
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Alerta suscripción inactiva (sin el plan gratis) */}
+      {empresa && !empresa.suscripcion_activa && !empresa.emision_gratis && (
         <div
           className="flex items-start gap-3 rounded-xl px-4 py-3"
           style={{
@@ -119,7 +145,7 @@ export default function DashboardPage() {
             <p className="text-xs mt-0.5" style={{ color: "color-mix(in srgb, var(--kipu-danger) 70%, transparent)" }}>
               Activa tu plan para emitir comprobantes.{" "}
               <Link
-                href="/configuracion"
+                href="/planes"
                 className="underline"
                 style={{ color: "var(--kipu-danger)" }}
               >
