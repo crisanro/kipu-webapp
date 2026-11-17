@@ -33,7 +33,11 @@ type Pendiente = { estado: string; sandbox: boolean; n: number };
 type Datos = {
   detector_activo: boolean;
   servicios:  Servicio[];
-  colas:      { emision: number; autorizacion: number; programados: number } | null;
+  colas: {
+    emision: number; emision_prioritaria: number;
+    autorizacion: number; autorizacion_prioritaria: number;
+    programados: number;
+  } | null;
   pendientes: Pendiente[];
   config: { fallas: number; ventana_seg: number; prueba_seg: number; reanudar_por_seg: number; reanudar_exitos: number };
 };
@@ -169,7 +173,11 @@ export default function EstadoSRI() {
 
           <p className="text-[11px] mt-3" style={{ color: "var(--kipu-subtle)" }}>
             {datos.colas
-              ? `En cola ahora: ${datos.colas.emision} por enviar · ${datos.colas.autorizacion} por autorizar · ${datos.colas.programados} reintentos programados.`
+              ? `En cola ahora: ${datos.colas.emision_prioritaria + datos.colas.emision} por enviar`
+                + ` (${datos.colas.emision_prioritaria} con plan)`
+                + ` · ${datos.colas.autorizacion_prioritaria + datos.colas.autorizacion} por autorizar`
+                + ` (${datos.colas.autorizacion_prioritaria} con plan)`
+                + ` · ${datos.colas.programados} reintentos programados. Los de clientes con plan salen primero.`
               : "No se pudo leer las colas (Redis)."}
           </p>
           <p className="text-[11px] mt-1" style={{ color: "var(--kipu-subtle)" }}>
