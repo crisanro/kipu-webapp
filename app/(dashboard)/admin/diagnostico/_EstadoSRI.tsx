@@ -39,7 +39,10 @@ type Datos = {
     programados: number;
   } | null;
   pendientes: Pendiente[];
-  config: { fallas: number; ventana_seg: number; prueba_seg: number; reanudar_por_seg: number; reanudar_exitos: number };
+  config: {
+    fallas: number; ventana_seg: number; prueba_seg: number; forzar_seg: number;
+    reanudar_por_seg: number; reanudar_exitos: number;
+  };
 };
 
 function desde(segundos: number | null): string {
@@ -183,7 +186,8 @@ export default function EstadoSRI() {
           <p className="text-[11px] mt-1" style={{ color: "var(--kipu-subtle)" }}>
             Se marca caído con {datos.config.fallas} fallas técnicas seguidas en {datos.config.ventana_seg} s;
             prueba cada {datos.config.prueba_seg} s y reanuda a {datos.config.reanudar_por_seg} por segundo
-            hasta {datos.config.reanudar_exitos} éxitos seguidos.
+            hasta {datos.config.reanudar_exitos} éxitos seguidos. Si la prueba sigue fallando, cada{" "}
+            {Math.round(datos.config.forzar_seg / 60)} min intenta igual con una factura real.
           </p>
         </>
       )}
