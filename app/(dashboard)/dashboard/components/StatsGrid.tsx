@@ -16,6 +16,9 @@ const fmtK = (n: any) => {
 
 export default function StatsGrid({ resumen, empresa }: Props) {
   const suscripcion = empresa?.suscripcion;
+  // Plan gratis: no es una suscripción "inactiva", es el plan con el que factura
+  const gratis = !suscripcion?.activa && !!empresa?.emision_gratis;
+  const tono   = suscripcion?.activa ? "var(--kipu-success)" : gratis ? "var(--kipu-accent)" : "var(--kipu-danger)";
 
   const stats = [
     {
@@ -46,21 +49,19 @@ export default function StatsGrid({ resumen, empresa }: Props) {
       border: "color-mix(in srgb, var(--kipu-info) 30%, transparent)",
     },
     {
-      label: "Suscripción",
-      value: suscripcion?.plan ?? "—",
+      label: gratis ? "Tu plan" : "Suscripción",
+      value: gratis ? "Gratis" : suscripcion?.plan ?? "—",
       sub: suscripcion?.estado === "TRIAL"
         ? "⏳ En período de prueba"
         : suscripcion?.activa
         ? "✅ Activa"
+        : gratis
+        ? "🆓 Facturas gratis · Pro suma más"
         : "❌ Inactiva",
       icon: CreditCard,
-      color: suscripcion?.activa ? "var(--kipu-success)" : "var(--kipu-danger)",
-      bg: suscripcion?.activa
-        ? "color-mix(in srgb, var(--kipu-success) 12%, transparent)"
-        : "color-mix(in srgb, var(--kipu-danger) 12%, transparent)",
-      border: suscripcion?.activa
-        ? "color-mix(in srgb, var(--kipu-success) 30%, transparent)"
-        : "color-mix(in srgb, var(--kipu-danger) 30%, transparent)",
+      color: tono,
+      bg: `color-mix(in srgb, ${tono} 12%, transparent)`,
+      border: `color-mix(in srgb, ${tono} 30%, transparent)`,
     },
     {
       label: "Créditos API",
