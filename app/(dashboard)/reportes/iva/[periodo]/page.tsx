@@ -15,6 +15,7 @@ import DocumentosIncluidos from "../../_components/DocumentosIncluidos";
 import EstadoBadge, { EstadoReporte } from "../../_components/EstadoBadge";
 import PantallaDePago      from "../../_components/PantallaDePago";
 import Alertas104          from "../../_components/Alertas104";
+import AyudaAlDia          from "../../_components/AyudaAlDia";
 
 const fmt = (n: number = 0) =>
   n.toLocaleString("es-EC", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -330,6 +331,12 @@ export default function ReporteIVAPage() {
 
       {/* Alertas de errores (pase o Pro) */}
       {!esDemo && <Alertas104 alertas={data?.alertas ?? []} />}
+
+      {/* Se está enredando (vencida sin declarar o varias alertas importantes): Kipu Al Día */}
+      {!esDemo && !declarado && (
+        decl?.estado === "VENCIDO"
+        || (data?.alertas ?? []).filter((a: { nivel: string }) => a.nivel === "importante").length >= 2
+      ) && <AyudaAlDia vencida={decl?.estado === "VENCIDO"} />}
 
       {/* Resumen rápido top */}
       <div className="grid grid-cols-3 gap-3">

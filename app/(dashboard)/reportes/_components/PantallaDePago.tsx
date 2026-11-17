@@ -13,6 +13,7 @@ const dinero = (n: number = 0) =>
   n.toLocaleString("es-EC", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export interface OfertaPase {
+  historial?:     { cantidad: number; total: number };   // pases comprados el último año
   disponible:     boolean;
   motivo:         string | null;
   precio:         { total: number } | null;
@@ -108,6 +109,22 @@ export default function PantallaDePago({
         </div>
       ) : (
         <>
+          {/* Ya compró pases: Pro como el ahorro obvio */}
+          {(pase.historial?.cantidad ?? 0) >= 2 && (
+            <div className="rounded-xl p-3.5 flex items-start gap-3"
+                 style={{ background: "color-mix(in srgb, var(--kipu-accent) 10%, transparent)",
+                          border: "1px solid color-mix(in srgb, var(--kipu-accent) 30%, transparent)" }}>
+              <Sparkles size={16} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-accent)" }} />
+              <p className="text-sm" style={{ color: "var(--kipu-text)" }}>
+                <strong>
+                  Ya compraste {pase.historial!.cantidad} pases este año (${dinero(pase.historial!.total)}).
+                </strong>{" "}
+                Con Kipu Pro{precioPro ? `, por $${dinero(precioPro.total)} al año,` : ""} tienes todos los meses,
+                las alertas y la renta.
+              </p>
+            </div>
+          )}
+
           {alertasCantidad > 0 && (
             <div className="rounded-xl p-3.5 flex items-start gap-3"
                  style={{ background: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)",
