@@ -7,6 +7,7 @@ import { signOut } from "firebase/auth";
 import { useAuthStore } from "@/store/auth.store";
 import { useSandboxStore } from "@/store/sandbox.store";
 import PWAInstallBanner from "@/components/PWAInstallBanner";
+import FranjaSRI from "@/components/dashboard/FranjaSRI";
 import {
   registrarNotificaciones,
   desregistrarNotificaciones,
@@ -205,6 +206,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         />
 
         <main className="flex-1 overflow-y-auto">
+          {/* El SRI tiene intermitencias: los comprobantes esperan en cola */}
+          <FranjaSRI sandbox={sandbox} />
+
           {/* Banner email no verificado */}
           {!correo.cargando && !correo.verificado && (
             <div

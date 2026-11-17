@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
+import EstadoSRI from "./_EstadoSRI";
 import {
   Mail, Send, Plug, CheckCircle2, XCircle, AlertTriangle,
   RotateCw, ExternalLink, Loader2, Info, MinusCircle
@@ -144,6 +145,9 @@ export default function AdminDiagnosticoPage() {
           <p className="text-xs break-all" style={{ color: "var(--kipu-text)" }}>{error}</p>
         </div>
       )}
+
+      {/* SRI: detector de caídas y colas */}
+      <EstadoSRI />
 
       {/* Configuración */}
       <div className="rounded-xl p-4" style={cardStyle}>
