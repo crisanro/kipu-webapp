@@ -8,6 +8,7 @@ import { useAuthStore } from "@/store/auth.store";
 import { useSandboxStore } from "@/store/sandbox.store";
 import PWAInstallBanner from "@/components/PWAInstallBanner";
 import FranjaSRI from "@/components/dashboard/FranjaSRI";
+import AvisoPro from "@/components/dashboard/AvisoPro";
 import {
   registrarNotificaciones,
   desregistrarNotificaciones,
@@ -294,6 +295,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               )}
             </div>
           )}
+
+          {/* Sin plan: en cada página, qué suma Kipu Pro */}
+          <AvisoPro />
 
           {children}
         </main>

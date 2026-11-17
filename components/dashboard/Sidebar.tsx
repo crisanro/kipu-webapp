@@ -81,8 +81,10 @@ export function Sidebar({
     return pathname === href || pathname.startsWith(href + "/");
   };
 
-  const planLabel = empresa.suscripcion_activa ? (empresa.suscripcion?.plan ?? "Pro") : "Free";
-  const sinCreditos = !empresa.suscripcion_activa && (empresa.balance_api ?? 0) === 0;
+  const planGratis = !empresa.suscripcion_activa && !!empresa.emision_gratis;   // plan gratis encendido
+  const planLabel = empresa.suscripcion_activa ? (empresa.suscripcion?.plan ?? "Pro") : planGratis ? "Gratis" : "Free";
+  // Con el plan gratis el panel emite sin créditos: no hay que alarmar por no tenerlos
+  const sinCreditos = !empresa.suscripcion_activa && !planGratis && (empresa.balance_api ?? 0) === 0;
 
   const navActivo = {
     color: "var(--kipu-accent)",
@@ -343,6 +345,8 @@ export function Sidebar({
                   ? "⏳ En prueba"
                   : empresa.suscripcion_activa
                   ? "✅ Activo"
+                  : planGratis
+                  ? "🆓 Facturas gratis desde el panel"
                   : "🆓 Emitiendo con créditos"}
               </p>
             </div>
@@ -365,7 +369,12 @@ export function Sidebar({
               </span>
             </div>
           )}
-          {!empresa.suscripcion_activa && !sinCreditos && (
+          {planGratis && (
+            <p className="text-xs mt-1.5 font-medium" style={{ color: "var(--kipu-accent)" }}>
+              ✨ Pásate a Pro: sin límite y el 104 completo
+            </p>
+          )}
+          {!empresa.suscripcion_activa && !planGratis && !sinCreditos && (
             <div className="flex items-center gap-1 mt-1.5">
               <span className="text-xs" style={{ color: "var(--kipu-warning)" }}>
                 ⚡ {empresa.balance_api} crédito{empresa.balance_api !== 1 ? "s" : ""} disponible
