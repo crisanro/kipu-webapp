@@ -256,7 +256,7 @@ export default function PagoExitosoPage() {
               <p className="font-semibold" style={{ color: "var(--kipu-text)" }}>Último paso: guarda tu clave del SRI</p>
             </div>
             <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>
-              Sin ella no podemos presentar tus declaraciones. Queda cifrada, solo la usa tu contador
+              Sin ella no podemos presentar tus declaraciones. Queda cifrada, solo la usa el equipo de Kipu
               y ves cada vez que alguien la consulta.
             </p>
             {estado === "confirmado" || estado === "demora" ? (
