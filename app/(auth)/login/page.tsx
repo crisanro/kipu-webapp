@@ -10,6 +10,7 @@ import { auth } from "@/lib/firebase";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { useAuthStore } from "@/store/auth.store";
 import { useTheme } from "next-themes";
+import { tomarVolver } from "@/lib/volver";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -22,7 +23,7 @@ export default function LoginPage() {
   }, []);
 
   useEffect(() => {
-    if (uid) router.replace("/dashboard");
+    if (uid) router.replace(tomarVolver() ?? "/dashboard");
   }, [uid, router]);
 
   const [email, setEmail] = useState("");

@@ -25,7 +25,10 @@ export default function AvisoColchon({ aviso }: { aviso: AvisoUsoJusto }) {
                   background: "color-mix(in srgb, var(--kipu-warning) 8%, transparent)" }}>
       <p className="flex items-start gap-1.5 text-xs font-medium" style={{ color: "var(--kipu-warning)" }}>
         <AlertTriangle size={13} className="mt-0.5 shrink-0" />
-        <span>{aviso.mensaje} {quedan}</span>
+        <span>
+          {aviso.mensaje} {quedan}{" "}
+          <Link href="/uso-justo" className="underline underline-offset-2 whitespace-nowrap">Ver mi uso justo</Link>
+        </span>
       </p>
       {aviso.solicitar_ampliacion && <SolicitarAmpliacion />}
       <Link

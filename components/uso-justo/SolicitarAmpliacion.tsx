@@ -18,7 +18,7 @@ interface EstadoUsoJusto {
 
 type Resultado = { tipo: "ok" | "pendiente" | "error"; texto: string };
 
-export default function SolicitarAmpliacion() {
+export default function SolicitarAmpliacion({ onResultado }: { onResultado?: () => void } = {}) {
   const [estado,    setEstado]    = useState<EstadoUsoJusto | null>(null);
   const [enviando,  setEnviando]  = useState(false);
   const [resultado, setResultado] = useState<Resultado | null>(null);
@@ -37,6 +37,7 @@ export default function SolicitarAmpliacion() {
       const r = await api.post("/api/v1/app/uso-justo/ampliacion");
       const d = r.data.data as { estado: string; mensaje: string };
       setResultado({ tipo: d.estado === "APROBADA" ? "ok" : "pendiente", texto: d.mensaje });
+      onResultado?.();
     } catch (e) {
       const det = (e as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail;
       setResultado({ tipo: "error", texto: typeof det === "string" ? det : "No se pudo enviar la solicitud. Intenta de nuevo." });

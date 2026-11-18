@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { Loader2 } from "lucide-react";
+import { tomarVolver } from "@/lib/volver";
 
 export default function RootPage() {
   const router = useRouter();
@@ -12,7 +13,7 @@ export default function RootPage() {
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user) => {
       if (user) {
-        router.replace("/dashboard");
+        router.replace(tomarVolver() ?? "/dashboard");
       } else {
         router.replace("/login");
       }
