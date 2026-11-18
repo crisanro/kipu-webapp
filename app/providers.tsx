@@ -9,6 +9,7 @@ import { useAuthStore } from "@/store/auth.store";
 import { SWRProvider } from "@/lib/swrConfig";
 import api from "@/lib/api";
 import { olvidarDispositivoLocal } from "@/lib/notifications";
+import { guardarVolver } from "@/lib/volver";
 
 // Todo lo demás requiere sesión. Lista de públicas (y no de protegidas) para
 // que una pantalla nueva quede protegida por defecto.
@@ -83,6 +84,8 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
       }
       marcarListo();
       if (!esRutaPublica(pathnameRef.current)) {
+        // Después del login vuelve aquí (p. ej. /uso-justo?ruc=… desde Wappti)
+        guardarVolver(pathnameRef.current + window.location.search);
         router.replace("/login");
       }
     };

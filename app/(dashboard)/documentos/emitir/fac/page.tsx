@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
 import { debeRenovarClave, esUsoJusto, mensajeErrorEmision } from "@/lib/emision";
 import api from "@/lib/api";
+import AvisoColchon from "@/components/uso-justo/AvisoColchon";
 import { useAuthStore } from "@/store/auth.store";
 import { CheckCircle2, AlertTriangle, CreditCard, Copy, MessageCircle } from "lucide-react";
 
@@ -485,6 +486,7 @@ export default function NuevaFacturaPage() {
             {isAutorizado ? "¡Factura autorizada!" : "Factura en proceso"}
           </h2>
           <p className="text-sm mb-2" style={{ color: "var(--kipu-subtle)" }}>{resultado.claveAcceso}</p>
+          {resultado.aviso_uso_justo && <AvisoColchon aviso={resultado.aviso_uso_justo} />}
           {resultado.link_pago && (
             <div className="text-left rounded-xl p-3 mb-4 space-y-2"
                  style={{ border: "1px solid var(--kipu-border)", background: "var(--kipu-surface)" }}>

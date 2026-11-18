@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
 import { debeRenovarClave, mensajeErrorEmision } from "@/lib/emision";
 import api from "@/lib/api";
+import AvisoColchon from "@/components/uso-justo/AvisoColchon";
 import { useAuthStore } from "@/store/auth.store";
 import { CheckCircle2, AlertTriangle } from "lucide-react";
 import PuntoEmision from "../components/PuntoEmision";
@@ -231,6 +232,7 @@ export default function NuevaNcrPage() {
             Nota de crédito emitida
           </h2>
           <p className="text-sm mb-2" style={{ color: "var(--kipu-subtle)" }}>{resultado.claveAcceso}</p>
+          {resultado.aviso_uso_justo && <AvisoColchon aviso={resultado.aviso_uso_justo} />}
           <span
             className="inline-block px-3 py-1 rounded-full text-xs font-medium mb-6"
             style={{
