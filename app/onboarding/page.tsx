@@ -48,7 +48,7 @@ const validarRuc = (ruc: string): string | null => {
 
 type FormEmpresa = {
   ruc: string; razon_social: string; nombre_comercial: string; direccion_matriz: string;
-  obligado_contabilidad: string; contribuyente_especial: string; full_name: string;
+  obligado_contabilidad: string; contribuyente_especial: string;
 };
 
 function textoError(err: unknown, porDefecto: string): string {
@@ -278,7 +278,6 @@ export default function OnboardingPage() {
     direccion_matriz:       "",
     obligado_contabilidad:  "NO",
     contribuyente_especial: "",
-    full_name:              "",
   });
 
   // Sin correo verificado el backend rechaza el registro: verificar primero
@@ -613,24 +612,6 @@ export default function OnboardingPage() {
                   onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
                 />
               </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Tu nombre</label>
-              <input
-                name="full_name"
-                value={form.full_name}
-                onChange={(e) => { setForm({ ...form, full_name: limpiarTexto(e.target.value) }); setError(""); }}
-                placeholder="JUAN PEREZ"
-                className="w-full px-4 py-2.5 rounded-lg text-sm focus:outline-none transition-colors"
-                style={{
-                  background: "var(--kipu-surface)",
-                  border: "1px solid var(--kipu-border)",
-                  color: "var(--kipu-text)",
-                }}
-                onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
-              />
             </div>
 
             {error && <ErrorBox error={error} ruc={form.ruc} />}
