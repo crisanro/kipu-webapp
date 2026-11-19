@@ -41,6 +41,7 @@ type Datos = {
   colas: {
     emision: number; emision_prioritaria: number;
     autorizacion: number; autorizacion_prioritaria: number;
+    firma?: number; fila_justa?: number;
     programados: number;
   } | null;
   pendientes: Pendiente[];
@@ -213,11 +214,15 @@ export default function EstadoSRI() {
 
           <p className="text-[11px] mt-3" style={{ color: "var(--kipu-subtle)" }}>
             {datos.colas
-              ? `En cola ahora: ${datos.colas.emision_prioritaria + datos.colas.emision} por enviar`
+              ? `En cola ahora: ${datos.colas.firma ? `${datos.colas.firma} por firmar · ` : ""}`
+                + `${datos.colas.emision_prioritaria + datos.colas.emision} por enviar`
                 + ` (${datos.colas.emision_prioritaria} con plan)`
                 + ` · ${datos.colas.autorizacion_prioritaria + datos.colas.autorizacion} por autorizar`
                 + ` (${datos.colas.autorizacion_prioritaria} con plan)`
-                + ` · ${datos.colas.programados} reintentos programados. Los de clientes con plan salen primero.`
+                + ` · ${datos.colas.programados} reintentos programados`
+                + (datos.colas.fila_justa ? ` · ${datos.colas.fila_justa} en fila justa` : "")
+                + ". Los de clientes con plan salen primero; lo que una empresa emite por encima"
+                + " de 5 por minuto va detrás de las demás."
               : "No se pudo leer las colas (Redis)."}
           </p>
           <p className="text-[11px] mt-1" style={{ color: "var(--kipu-subtle)" }}>
