@@ -367,7 +367,10 @@ export default function NuevaFacturaPage() {
         setCobroCreado(res.data.data);
       } catch (err: unknown) {
         if (debeRenovarClave(err)) idempotencyKey.current = uuidv4();
-        setError(mensajeErrorEmision(err, "No se pudo crear el link de cobro."));
+        // Sin plan, el link cuenta en el uso justo: agotado, mismo aviso con ampliación y Kipu Pro
+        const mensaje = mensajeErrorEmision(err, "No se pudo crear el link de cobro.");
+        setError(mensaje);
+        setUsoJusto(esUsoJusto(err) ? mensaje : "");
       } finally {
         setSubmitting(false);
       }

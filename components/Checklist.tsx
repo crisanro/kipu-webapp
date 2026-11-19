@@ -343,7 +343,7 @@ export default function Checklist({ health, compact = false, onUpdate }: Props) 
           </h3>
           <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
             Desde ahora tus comprobantes tendrán validez tributaria ante el SRI.
-            Recibirás 25 créditos de bienvenida.
+            Factura gratis, hasta 300 al mes (ampliable gratis).
           </p>
         </div>
         {prodError && (
