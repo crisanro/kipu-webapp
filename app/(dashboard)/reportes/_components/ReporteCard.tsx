@@ -2,7 +2,7 @@
 import Link from "next/link";
 import {
   FileText, ChevronRight, RefreshCw,
-  Calendar, Shield, AlertTriangle,
+  Calendar, Shield, AlertTriangle, Lock,
 } from "lucide-react";
 import EstadoBadge, { EstadoReporte } from "./EstadoBadge";
 
@@ -23,6 +23,7 @@ interface Props {
     totalDocs?:       number;
   };
   generadoAt?: string;
+  sinPlan?:    boolean;  // plan gratis: el total se ve gratis, el 104 completo con pase o Pro
 }
 
 const TIPO_CONFIG = {
@@ -59,7 +60,7 @@ function href(tipo: string, periodo: string) {
 
 export default function ReporteCard({
   tipo, periodo, periodoFmt, estado, diasRestantes,
-  vencimiento, declarado, cached, enCurso, resumen, generadoAt,
+  vencimiento, declarado, cached, enCurso, resumen, generadoAt, sinPlan,
 }: Props) {
   const cfg = TIPO_CONFIG[tipo];
 
@@ -175,8 +176,16 @@ export default function ReporteCard({
               </div>
             )}
 
+            {/* Plan gratis: el total del mes se ve al abrirlo */}
+            {sinPlan && !cached && (
+              <div className="flex items-center gap-1.5">
+                <Lock size={11} style={{ color: "var(--kipu-accent)" }} />
+                <p className="text-xs font-medium" style={{ color: "var(--kipu-accent)" }}>Ver total gratis</p>
+              </div>
+            )}
+
             {/* Generado / pendiente */}
-            {!cached && !enCurso && (
+            {!sinPlan && !cached && !enCurso && (
               <div className="flex items-center gap-1.5">
                 <RefreshCw size={11} style={{ color: "var(--kipu-subtle)" }} />
                 <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Reporte no generado aún</p>

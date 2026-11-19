@@ -68,20 +68,9 @@ const TAB_CONFIG = {
 };
 
 const DEMO_CARDS: Record<Tab, { periodo: string; estado: string; monto?: string; saldo?: string }[]> = {
-  IVA: [
-    { periodo: "agosto de 2026",  estado: "En curso",  monto: "$208.58" },
-    { periodo: "julio de 2026",   estado: "Pendiente", monto: "$145.30" },
-    { periodo: "junio de 2026",   estado: "Declarado", saldo: "$32.10"  },
-  ],
-  RENTA: [
-    { periodo: "Año 2025", estado: "Pendiente", monto: "$314.10" },
-    { periodo: "Año 2024", estado: "Declarado", saldo: "$0.00"   },
-  ],
-  ATS: [
-    { periodo: "agosto de 2026", estado: "En curso"  },
-    { periodo: "julio de 2026",  estado: "Pendiente" },
-    { periodo: "junio de 2026",  estado: "Declarado" },
-  ],
+  IVA:   [{ periodo: "julio de 2026",  estado: "Pendiente", monto: "$145.30" }],
+  RENTA: [{ periodo: "Año 2025",       estado: "Pendiente", monto: "$314.10" }],
+  ATS:   [{ periodo: "julio de 2026",  estado: "Pendiente" }],
 };
 
 const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio",
@@ -104,7 +93,7 @@ const colorTab = (tab: Tab) =>
 
 // ── Componente demo cards ──────────────────────────────────────────────────────
 function DemoCards({ tab }: { tab: Tab }) {
-  const href = tab === "IVA" ? "/reportes/iva/2026-08"
+  const href = tab === "IVA" ? "/reportes/iva/2026-07?demo=1"
              : tab === "RENTA" ? "/reportes/renta/2025"
              : "/reportes/ats/2026-08";
   const c = colorTab(tab);
@@ -209,8 +198,12 @@ export default function ReportesPage() {
   const puedeVer         = usePermiso("reportes");
   const empresa          = useAuthStore((s) => s.empresa);
   const tieneSuscripcion = empresa?.suscripcion_activa ?? false;
+  // Plan gratis (sin Pro): en IVA ve sus meses reales y el total de cada uno;
+  // el 104 completo se desbloquea con el pase o Pro. Renta y ATS siguen siendo de Pro.
+  const planGratis       = !tieneSuscripcion && !!empresa?.emision_gratis;
 
   const [tab,           setTab]           = useState<Tab>("IVA");
+  const verReales = tieneSuscripcion || (planGratis && tab === "IVA");
   const [anio,          setAnio]          = useState(new Date().getFullYear());
   const [obl,           setObl]           = useState<Obligaciones | null>(null);
   const [declaraciones, setDeclaraciones] = useState<DeclaracionRow[]>([]);
@@ -221,14 +214,14 @@ export default function ReportesPage() {
 
   // Qué declara esta empresa (se recarga al cambiar de empresa)
   useEffect(() => {
-    if (!puedeVer || !tieneSuscripcion) return;
+    if (!puedeVer || !(tieneSuscripcion || planGratis)) return;
     api.get("/api/v1/app/declaraciones/obligaciones")
       .then((r) => setObl(r.data.data))
       .catch(() => setObl(null));
-  }, [puedeVer, tieneSuscripcion, empresa?.id]);
+  }, [puedeVer, tieneSuscripcion, planGratis, empresa?.id]);
 
   const cargar = useCallback(async () => {
-    if (!puedeVer || !tieneSuscripcion) return;
+    if (!puedeVer || !verReales) return;
     setLoading(true);
     setError("");
     try {
@@ -244,7 +237,7 @@ export default function ReportesPage() {
     } finally {
       setLoading(false);
     }
-  }, [tab, anio, puedeVer, tieneSuscripcion, empresa?.id]);
+  }, [tab, anio, puedeVer, verReales, empresa?.id]);
 
   useEffect(() => { cargar(); }, [cargar]);
 
@@ -318,7 +311,7 @@ export default function ReportesPage() {
             <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>Declaraciones organizadas y listas para el SRI</p>
           </div>
         </div>
-        {tieneSuscripcion && (
+        {verReales && (
           <button
             type="button"
             onClick={cargar}
@@ -339,9 +332,31 @@ export default function ReportesPage() {
         )}
       </div>
 
-      {/* ── SIN SUSCRIPCIÓN ────────────────────────────────────────────────── */}
-      {!tieneSuscripcion && (
+      {/* ── PLAN GRATIS: el total es gratis, el 104 completo con pase o Pro ─── */}
+      {planGratis && (
+        <div
+          className="flex items-start gap-3 rounded-xl px-4 py-3"
+          style={{
+            background: "color-mix(in srgb, var(--kipu-accent) 8%, transparent)",
+            border: "1px solid color-mix(in srgb, var(--kipu-accent) 25%, transparent)",
+          }}
+        >
+          <Lock size={15} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-accent)" }} />
+          <p className="text-xs" style={{ color: "var(--kipu-muted)" }}>
+            <span className="font-semibold" style={{ color: "var(--kipu-text)" }}>Ver el total de tu IVA es gratis. </span>
+            El formulario 104 completo se desbloquea con el {obl?.iva === "SEMESTRAL" ? "pase del semestre" : "pase del mes"} o
+            con Kipu Pro, que además incluye Renta y ATS.{" "}
+            <Link href="/planes" className="font-semibold underline" style={{ color: "var(--kipu-accent)" }}>
+              Ver planes
+            </Link>
+          </p>
+        </div>
+      )}
+
+      {/* ── SIN DATOS REALES (sin plan; o plan gratis en Renta/ATS) ─────────── */}
+      {!verReales && (
         <>
+          {!planGratis && (
           <div
             className="relative overflow-hidden rounded-2xl p-5"
             style={{
@@ -395,6 +410,7 @@ export default function ReportesPage() {
               </div>
             </div>
           </div>
+          )}
 
           {TabsBar}
 
@@ -410,8 +426,8 @@ export default function ReportesPage() {
         </>
       )}
 
-      {/* ── CON SUSCRIPCIÓN ────────────────────────────────────────────────── */}
-      {tieneSuscripcion && (
+      {/* ── DATOS REALES (Pro; o plan gratis en IVA) ─────────────────────────── */}
+      {verReales && (
         <>
           {!enProduccion && (
             <Aviso tono="warning">Los reportes tributarios solo aplican en ambiente de producción.</Aviso>
@@ -519,6 +535,7 @@ export default function ReportesPage() {
                     cached={!!reporte}
                     enCurso={decl.en_curso}
                     generadoAt={reporte?.generado_at ?? undefined}
+                    sinPlan={!tieneSuscripcion}
                     resumen={reporte ? {
                       ivaAPagar:       reporte.resumen?.resultado?.a_pagar ?? reporte.resumen?.casilleros?.["859"] ?? 0,
                       saldoFavor:      reporte.resumen?.resultado?.saldo_favor ?? 0,
@@ -557,6 +574,17 @@ export default function ReportesPage() {
                   </div>
                 </div>
               </div>
+
+              {!tieneSuscripcion && (
+                <Link
+                  href="/reportes/iva/2026-07?demo=1"
+                  className="flex items-center justify-center gap-1 py-1 text-xs"
+                  style={{ color: "var(--kipu-subtle)" }}
+                >
+                  Ver un ejemplo del 104 completo
+                  <ChevronRight size={12} />
+                </Link>
+              )}
             </>
           )}
         </>
