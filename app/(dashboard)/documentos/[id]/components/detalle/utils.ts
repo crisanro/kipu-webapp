@@ -69,7 +69,9 @@ export const ESTADO_CONFIG: Record<string, {
 }> = {
   AUTORIZADO: { label: "Autorizado",         color: "var(--kipu-success)", bg: "color-mix(in srgb, var(--kipu-success) 20%, transparent)", border: "color-mix(in srgb, var(--kipu-success) 20%, transparent)", icon: CheckCircle2 },
   RECIBIDA:   { label: "Recibido por SRI",   color: "var(--kipu-info)",           bg: "color-mix(in srgb, var(--kipu-info) 20%, transparent)",           border: "color-mix(in srgb, var(--kipu-info) 20%, transparent)",           icon: Clock },
+  POR_FIRMAR: { label: "Firmando",           color: "var(--kipu-info)",           bg: "color-mix(in srgb, var(--kipu-info) 20%, transparent)",           border: "color-mix(in srgb, var(--kipu-info) 20%, transparent)",           icon: Clock },
   FIRMADO:    { label: "En cola",            color: "var(--kipu-info)",           bg: "color-mix(in srgb, var(--kipu-info) 20%, transparent)",           border: "color-mix(in srgb, var(--kipu-info) 20%, transparent)",           icon: Clock },
+  ERROR_FIRMA:{ label: "Error de firma",     color: "var(--kipu-danger)",  bg: "color-mix(in srgb, var(--kipu-danger) 20%, transparent)",  border: "color-mix(in srgb, var(--kipu-danger) 20%, transparent)",  icon: AlertTriangle },
   DEVUELTA:   { label: "Devuelto por SRI",   color: "var(--kipu-warning)", bg: "color-mix(in srgb, var(--kipu-warning) 20%, transparent)", border: "color-mix(in srgb, var(--kipu-warning) 20%, transparent)", icon: AlertTriangle },
   RECHAZADO:  { label: "Rechazado por SRI",  color: "var(--kipu-danger)",  bg: "color-mix(in srgb, var(--kipu-danger) 20%, transparent)",  border: "color-mix(in srgb, var(--kipu-danger) 20%, transparent)",  icon: XCircle },
   EN_REVISION:{ label: "En revisión",        color: "#f59e0b",           bg: "color-mix(in srgb, #f59e0b 15%, transparent)",           border: "color-mix(in srgb, #f59e0b 25%, transparent)",           icon: SearchCheck },
