@@ -30,6 +30,11 @@ export default function BienvenidaPage() {
   const [correoOk,       setCorreoOk]       = useState(() => auth.currentUser?.emailVerified ?? false);
   const correoVerificado = useCallback(() => setCorreoOk(true), []);
 
+  // Sin invitación no hay nada que elegir: directo a registrar su primera empresa
+  useEffect(() => {
+    if (correoOk && !empresaParam) router.replace("/onboarding");
+  }, [correoOk, empresaParam, router]);
+
   useEffect(() => setMounted(true), []);
 
   useEffect(() => {
@@ -173,6 +178,11 @@ export default function BienvenidaPage() {
             )}
             <VerificarCorreo onVerificado={correoVerificado} onCambiarCorreo={handleCambiarCorreo} />
           </>
+        ) : !empresaParam ? (
+          <div className="flex items-center justify-center gap-2 py-6 text-sm" style={{ color: "var(--kipu-muted)" }}>
+            <Loader2 size={16} className="animate-spin" />
+            Abriendo el registro de tu empresa...
+          </div>
         ) : (
         <div className="space-y-3">
 

@@ -9,6 +9,7 @@ import {
   Upload, Loader2, X, UserCog
 } from "lucide-react";
 import api from "@/lib/api";
+import { refrescarEmpresaActual } from "@/lib/empresa";
 import { useAuthStore } from "@/store/auth.store";
 import { usePermiso } from "@/hooks/usePermiso";
 
@@ -87,6 +88,7 @@ export default function Checklist({ health, compact = false, onUpdate }: Props) 
       setP12File(null);
       setP12Pass("");
       onUpdate?.();
+      void refrescarEmpresaActual();   // la barra lateral deja de decir "Sin firma"
     } catch (err: any) {
       setFirmaError(err?.response?.data?.detail ?? "Error al subir la firma.");
     } finally {

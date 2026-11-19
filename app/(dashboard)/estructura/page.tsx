@@ -6,6 +6,8 @@ import { Building2 } from "lucide-react";
 import TabEstructura from "@/components/configuracion/TabEstructura";
 import { usePermiso } from "@/hooks/usePermiso";
 import SinAcceso from "@/components/SinAcceso";
+import Checklist from "@/components/Checklist";
+import { useSalud } from "@/hooks/useSalud";
 
 export default function EstructuraPage() {
   const puedeVer = usePermiso(["emitir", "estructura"]);
@@ -19,6 +21,7 @@ function EstructuraContenido() {
 
   const [estructura, setEstructura] = useState<any[]>([]);
   const [loading,    setLoading]    = useState(true);
+  const { salud, refrescar } = useSalud();
 
   const cargar = useCallback(async () => {
     try {
@@ -53,6 +56,12 @@ function EstructuraContenido() {
         </div>
       </div>
 
+      {/* Onboarding: al crear el primer establecimiento y punto se ve el avance y,
+          cuando todo está listo, el botón para pasar a producción */}
+      {salud && !salud.en_produccion && (
+        <Checklist health={salud} compact onUpdate={refrescar} />
+      )}
+
       {loading ? (
         <div className="flex items-center justify-center py-20">
           <div
@@ -63,7 +72,7 @@ function EstructuraContenido() {
       ) : (
         <TabEstructura
           estructura={estructura}
-          onActualizar={cargar}
+          onActualizar={() => { void cargar(); refrescar(); }}
         />
       )}
     </div>

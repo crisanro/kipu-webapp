@@ -4,6 +4,8 @@ import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 import { auth } from "@/lib/firebase";
+import { signOut } from "firebase/auth";
+import { useAuthStore } from "@/store/auth.store";
 import { Zap, Building2, CheckCircle2, Search, Loader2, MessageCircle, ShieldCheck, Upload } from "lucide-react";
 import { consultarRuc } from "@/lib/consultar-ruc";
 import Turnstile, { TURNSTILE_ACTIVO } from "@/components/auth/Turnstile";
@@ -217,9 +219,16 @@ function ErrorBox({ error, ruc }: { error: string; ruc: string }) {
 
 // ── Pie de soporte — visible en todos los pasos ───────────────────────────────
 function SoporteFooter({ ruc }: { ruc: string }) {
+  const router = useRouter();
   const texto = `Hola, necesito ayuda para configurar mi empresa en Kipu${ruc ? ` (RUC ${ruc})` : ""}.`;
+  // Al verificar el correo se llega directo aquí: es la única salida de la cuenta
+  const cerrarSesion = async () => {
+    await signOut(auth);
+    useAuthStore.getState().logout();
+    router.replace("/login");
+  };
   return (
-    <div className="mt-6 text-center">
+    <div className="mt-6 flex flex-col items-center gap-2 text-center">
       <a
         href={waSoporte(texto)}
         target="_blank"
@@ -232,6 +241,16 @@ function SoporteFooter({ ruc }: { ruc: string }) {
         <MessageCircle size={13} />
         ¿Problemas? Escríbenos por WhatsApp
       </a>
+      <button
+        type="button"
+        onClick={cerrarSesion}
+        className="text-xs transition-colors"
+        style={{ color: "var(--kipu-subtle)" }}
+        onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
+        onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-subtle)"}
+      >
+        Cerrar sesión
+      </button>
     </div>
   );
 }

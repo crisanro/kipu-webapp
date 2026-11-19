@@ -8,6 +8,7 @@ import { onAuthStateChanged, signOut, type User } from "firebase/auth";
 import { useAuthStore } from "@/store/auth.store";
 import { SWRProvider } from "@/lib/swrConfig";
 import api from "@/lib/api";
+import { aEmpresa } from "@/lib/empresa";
 import { olvidarDispositivoLocal } from "@/lib/notifications";
 import { guardarVolver } from "@/lib/volver";
 
@@ -132,23 +133,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
           data.empresas.find((e: any) => e.id === data.defaultId) ||
           data.empresas[0];
 
-        setEmpresa({
-          id:                    empresaActual.id,
-          ruc:                   empresaActual.ruc,
-          razon_social:          empresaActual.razon_social,
-          nombre_comercial:      empresaActual.nombre_comercial,
-          ambiente:              empresaActual.ambiente,
-          tipo_emisor:           empresaActual.tipo_emisor,
-          rol:                   empresaActual.rol,
-          permisos:              empresaActual.permisos ?? {},
-          firma_ok:              empresaActual.firma_ok,
-          suscripcion_activa:    empresaActual.suscripcion_activa,
-          suscripcion:           empresaActual.suscripcion,
-          balance_api:           empresaActual.balance_api,
-          emision_gratis:        empresaActual.emision_gratis ?? false,
-          obligado_contabilidad: empresaActual.obligado_contabilidad ?? null,
-          periodo_iva:           empresaActual.periodo_iva ?? null,
-        });
+        setEmpresa(aEmpresa(empresaActual));
 
         localStorage.setItem("kipu-ext-emisor", String(empresaActual.id));
         localStorage.setItem("kipu-ext-ruc",    empresaActual.ruc);
