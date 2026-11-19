@@ -16,6 +16,8 @@ const REINTENTABLES = ["FIRMADO", "EN_REVISION", "DEVUELTA", "RECHAZADO"];
 const DESCRIPCION: Record<string, string> = {
   DEVUELTA:    "El SRI devolvió el comprobante — revisa los errores abajo",
   RECHAZADO:   "El SRI rechazó el comprobante — revisa los errores abajo",
+  POR_FIRMAR:  "Recibido: se está firmando y en unos segundos se envía al SRI",
+  ERROR_FIRMA: "No pudimos firmarlo. Revisa que tu firma electrónica esté vigente y su contraseña sea correcta en Configuración: lo reintentamos solos.",
   FIRMADO:     "En cola de envío al SRI",
   RECIBIDA:    "Recibido por el SRI, pendiente de autorización",
   EN_REVISION: "No pudimos confirmar el estado con el SRI. Lo seguimos verificando automáticamente: no es un rechazo.",
@@ -178,7 +180,7 @@ export default function EstadoDocumento({ factura, onRecargar }: { factura: Fact
               </button>
             )}
 
-            {["RECIBIDA", "FIRMADO"].includes(factura.estado_sri) && (
+            {["POR_FIRMAR", "RECIBIDA", "FIRMADO"].includes(factura.estado_sri) && (
               <button
                 onClick={onRecargar}
                 aria-label="Actualizar"

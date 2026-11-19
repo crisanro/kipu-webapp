@@ -24,6 +24,8 @@ const ESTADO: Record<string, { texto: string; color: string }> = {
   REANUDANDO: { texto: "Reanudando de a poco",      color: "var(--kipu-warning)" },
 };
 const ESTADO_DOC: Record<string, string> = {
+  POR_FIRMAR:  "por firmar",
+  ERROR_FIRMA: "error de firma",
   FIRMADO:     "por enviar",
   RECIBIDA:    "esperando autorización",
   EN_REVISION: "en revisión",

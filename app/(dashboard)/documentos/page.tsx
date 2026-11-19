@@ -40,7 +40,9 @@ interface PaginationInfo {
 const ESTADO_CONFIG: Record<string, { label: string; color: string; bg: string; icon: any }> = {
   AUTORIZADO: { label: "Autorizado", color: "var(--kipu-success)", bg: "color-mix(in srgb, var(--kipu-success) 10%, transparent)", icon: CheckCircle2 },
   RECIBIDA:   { label: "En proceso", color: "var(--kipu-info)", bg: "color-mix(in srgb, var(--kipu-info) 10%, transparent)", icon: Clock },
+  POR_FIRMAR: { label: "Firmando",   color: "var(--kipu-info)", bg: "color-mix(in srgb, var(--kipu-info) 10%, transparent)", icon: Clock },
   FIRMADO:    { label: "En cola",    color: "var(--kipu-info)", bg: "color-mix(in srgb, var(--kipu-info) 10%, transparent)", icon: Clock },
+  ERROR_FIRMA:{ label: "Error de firma", color: "var(--kipu-danger)", bg: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)", icon: AlertTriangle },
   DEVUELTA:   { label: "Devuelto",   color: "var(--kipu-warning)", bg: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)", icon: AlertTriangle },
   RECHAZADO:  { label: "Rechazado",  color: "var(--kipu-danger)", bg: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)", icon: XCircle },
   ANULADO:    { label: "Anulado",    color: "var(--kipu-muted)", bg: "color-mix(in srgb, var(--kipu-muted) 10%, transparent)", icon: Ban },
