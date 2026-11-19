@@ -44,7 +44,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router = useRouter();
   const pathname = usePathname();
   const { empresa, empresas, role, logout } = useAuthStore();
-  const { activo: sandbox, setSandbox } = useSandboxStore();
+  const { activo: sandbox, setSandbox, porPruebas, forzarPorPruebas } = useSandboxStore();
   const { resolvedTheme } = useTheme();
 
   const [mounted, setMounted] = useState(false);
@@ -66,8 +66,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [firmaOk, setSandbox]);
 
   useEffect(() => {
-    if (firmaOk && empresa?.ambiente === 1) setSandbox(true);
-  }, [firmaOk, empresa?.ambiente, setSandbox]);
+    if (firmaOk && empresa?.ambiente === 1) forzarPorPruebas();
+  }, [firmaOk, empresa?.ambiente, forzarPorPruebas]);
+
+  // Ya en producción: el sandbox que puso la etapa de pruebas se apaga solo
+  // (en cualquier navegador o dispositivo, no solo donde se pulsó el botón)
+  useEffect(() => {
+    if (empresa?.ambiente === 2 && porPruebas) setSandbox(false);
+  }, [empresa?.ambiente, porPruebas, setSandbox]);
 
   const { notificaciones, noLeidas, loading: loadingNotifs, marcarLeida, marcarTodasLeidas } =
     useNotificaciones(false);

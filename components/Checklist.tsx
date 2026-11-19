@@ -11,6 +11,7 @@ import {
 import api from "@/lib/api";
 import { refrescarEmpresaActual } from "@/lib/empresa";
 import { useAuthStore } from "@/store/auth.store";
+import { useSandboxStore } from "@/store/sandbox.store";
 import { usePermiso } from "@/hooks/usePermiso";
 
 export interface HealthData {
@@ -377,6 +378,8 @@ export default function Checklist({ health, compact = false, onUpdate }: Props) 
               setProdError("");
               try {
                 await api.post("/api/v1/app/emisor/produccion");
+                // Desde ya emite de verdad: fuera el sandbox antes de ir al dashboard
+                useSandboxStore.getState().setSandbox(false);
                 setProdMsg("¡Bienvenido a producción!");
                 setShowProdModal(false);
                 onUpdate?.();
