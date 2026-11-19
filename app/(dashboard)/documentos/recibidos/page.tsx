@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import api from "@/lib/api";
 import { usePermiso } from "@/hooks/usePermiso";
 import SinAcceso from "@/components/SinAcceso";
@@ -31,11 +32,18 @@ interface DocRecibido {
   fuente:                 string;
 }
 
+interface Bloque { cantidad?: number; subtotal: number; iva: number; total: number }
+
 interface Resumen {
   total_documentos:       number;
-  importe_total:          number;
+  importe_total:          number;   // neto: compras − notas de crédito
   total_deducible:        number;
   iva_credito_tributario: number;
+  // El backend los manda desde 2026-11-19 (el ejemplo sin datos no los trae)
+  compras?:       Bloque;
+  notas_credito?: Bloque;
+  neto?:          Bloque;
+  retenciones?:   { cantidad: number; total: number; iva: number; renta: number; otros: number };
 }
 
 interface PaginationInfo {
@@ -372,7 +380,7 @@ export default function FacturasRecibidasPage() {
   // Sin Plan Pro y sin compras propias: ejemplos para ver cómo funciona
   const esDemo    = !loading && !tieneSub && docs.length === 0 && !queryActivo;
   const filtrados = esDemo ? demoRecibidos() : docs;
-  const resumenV  = esDemo ? resumenRecibidos(demoRecibidos()) : resumen;
+  const resumenV: Resumen | null = esDemo ? resumenRecibidos(demoRecibidos()) : resumen;
   const verDetalle = (id: string) => router.push(esDemo ? "/planes" : `/documentos/recibidos/${id}`);
 
   return (
@@ -489,7 +497,7 @@ export default function FacturasRecibidasPage() {
             </div>
             <div className="flex items-center gap-4">
               <span className="text-xs hidden sm:block" style={{ color: "var(--kipu-muted)" }}>
-                Total <span className="font-medium" style={{ color: "var(--kipu-text)" }}>${fmt(resumenV.importe_total)}</span>
+                Compras netas <span className="font-medium" style={{ color: "var(--kipu-text)" }}>${fmt(resumenV.importe_total)}</span>
               </span>
               <span className="text-xs hidden sm:block" style={{ color: "var(--kipu-muted)" }}>
                 Ded. <span className="font-medium" style={{ color: "var(--kipu-success)" }}>${fmt(resumenV.total_deducible)}</span>
@@ -502,19 +510,47 @@ export default function FacturasRecibidasPage() {
           </button>
 
           {resumenOpen && (
-            <div className="px-4 pb-4 pt-3" style={{ borderTop: "2px solid var(--kipu-border)" }}>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div
-                  className="rounded-xl p-4 text-center"
-                  style={{
-                    background: "color-mix(in srgb, var(--kipu-surface) 60%, transparent)",
-                    border: "1px solid var(--kipu-border)",
-                  }}
-                >
-                  <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: "var(--kipu-subtle)" }}>Total compras</p>
-                  <p className="text-lg font-bold" style={{ color: "var(--kipu-text)" }}>${fmt(resumenV.importe_total)}</p>
-                  <p className="text-[10px] mt-1" style={{ color: "var(--kipu-subtle)" }}>{resumenV.total_documentos} documentos</p>
+            <div className="px-4 pb-4 pt-3 space-y-3" style={{ borderTop: "2px solid var(--kipu-border)" }}>
+              {resumenV.compras && resumenV.notas_credito && resumenV.neto && (
+                <div className="rounded-xl overflow-x-auto" style={{ border: "1px solid var(--kipu-border)" }}>
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr style={{ color: "var(--kipu-subtle)" }}>
+                        <th className="text-left font-medium px-3 py-2"></th>
+                        <th className="text-right font-medium px-3 py-2">Subtotal</th>
+                        <th className="text-right font-medium px-3 py-2">IVA</th>
+                        <th className="text-right font-medium px-3 py-2">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody style={{ color: "var(--kipu-text)" }}>
+                      <tr style={{ borderTop: "1px solid var(--kipu-border)" }}>
+                        <td className="px-3 py-2">
+                          Compras <span style={{ color: "var(--kipu-subtle)" }}>({resumenV.compras.cantidad})</span>
+                        </td>
+                        <td className="text-right px-3 py-2">${fmt(resumenV.compras.subtotal)}</td>
+                        <td className="text-right px-3 py-2">${fmt(resumenV.compras.iva)}</td>
+                        <td className="text-right px-3 py-2">${fmt(resumenV.compras.total)}</td>
+                      </tr>
+                      <tr style={{ borderTop: "1px solid var(--kipu-border)", color: "var(--kipu-danger)" }}>
+                        <td className="px-3 py-2">
+                          Notas de crédito <span style={{ color: "var(--kipu-subtle)" }}>({resumenV.notas_credito.cantidad}, restan)</span>
+                        </td>
+                        <td className="text-right px-3 py-2">−${fmt(resumenV.notas_credito.subtotal)}</td>
+                        <td className="text-right px-3 py-2">−${fmt(resumenV.notas_credito.iva)}</td>
+                        <td className="text-right px-3 py-2">−${fmt(resumenV.notas_credito.total)}</td>
+                      </tr>
+                      <tr className="font-bold" style={{ borderTop: "2px solid var(--kipu-border)" }}>
+                        <td className="px-3 py-2">Compras netas</td>
+                        <td className="text-right px-3 py-2">${fmt(resumenV.neto.subtotal)}</td>
+                        <td className="text-right px-3 py-2">${fmt(resumenV.neto.iva)}</td>
+                        <td className="text-right px-3 py-2">${fmt(resumenV.neto.total)}</td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
+              )}
+
+              <div className={`grid grid-cols-1 gap-3 ${resumenV.retenciones ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
                 <div
                   className="rounded-xl p-4 text-center"
                   style={{
@@ -524,7 +560,7 @@ export default function FacturasRecibidasPage() {
                 >
                   <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: "var(--kipu-subtle)" }}>Deducible renta</p>
                   <p className="text-lg font-bold" style={{ color: "var(--kipu-success)" }}>${fmt(resumenV.total_deducible)}</p>
-                  <p className="text-[10px] mt-1" style={{ color: "var(--kipu-subtle)" }}>base sin IVA de docs deducibles</p>
+                  <p className="text-[10px] mt-1" style={{ color: "var(--kipu-subtle)" }}>base sin IVA, menos notas de crédito</p>
                 </div>
                 <div
                   className="rounded-xl p-4 text-center"
@@ -535,9 +571,30 @@ export default function FacturasRecibidasPage() {
                 >
                   <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: "var(--kipu-subtle)" }}>Crédito trib. IVA</p>
                   <p className="text-lg font-bold" style={{ color: "var(--kipu-info)" }}>${fmt(resumenV.iva_credito_tributario)}</p>
-                  <p className="text-[10px] mt-1" style={{ color: "var(--kipu-subtle)" }}>IVA recuperable del período</p>
+                  <p className="text-[10px] mt-1" style={{ color: "var(--kipu-subtle)" }}>IVA recuperable, menos notas de crédito</p>
                 </div>
+                {resumenV.retenciones && (
+                  <div
+                    className="rounded-xl p-4 text-center"
+                    style={{
+                      background: "color-mix(in srgb, var(--kipu-surface) 60%, transparent)",
+                      border: "1px solid var(--kipu-border)",
+                    }}
+                  >
+                    <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: "var(--kipu-subtle)" }}>Te retuvieron</p>
+                    <p className="text-lg font-bold" style={{ color: "var(--kipu-text)" }}>${fmt(resumenV.retenciones.total)}</p>
+                    <p className="text-[10px] mt-1" style={{ color: "var(--kipu-subtle)" }}>
+                      {resumenV.retenciones.cantidad} retenciones · IVA ${fmt(resumenV.retenciones.iva)} · renta ${fmt(resumenV.retenciones.renta)}
+                    </p>
+                  </div>
+                )}
               </div>
+
+              <p className="text-[11px] text-center" style={{ color: "var(--kipu-subtle)" }}>
+                Es la suma de tus documentos. Tu declaración de IVA (formulario 104) armada casillero por
+                casillero y revisada está en{" "}
+                <Link href="/reportes" className="underline" style={{ color: "var(--kipu-accent)" }}>Reportes</Link>.
+              </p>
             </div>
           )}
         </div>
