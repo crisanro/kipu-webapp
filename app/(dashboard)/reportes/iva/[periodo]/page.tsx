@@ -53,7 +53,10 @@ export default function ReporteIVAPage() {
   const router  = useRouter();
   const periodo = params.periodo as string;  // "2026-08" (o "2026-07" para el 2do semestre)
   // Volvió de pagar el pase en Stripe (?pase=pagado): se espera a que se active
-  const pasePagado = useSearchParams().get("pase") === "pagado";
+  const busqueda   = useSearchParams();
+  const pasePagado = busqueda.get("pase") === "pagado";
+  // "Ver un ejemplo del 104 completo" desde Reportes: datos inventados, sin tocar los reales
+  const pedirDemo  = busqueda.get("demo") === "1";
 
   const [data,        setData]        = useState<any>(null);
   const [decl,        setDecl]        = useState<DeclaracionPeriodo | null>(null);
@@ -68,9 +71,10 @@ export default function ReporteIVAPage() {
     else setLoading(true);
     try {
       // El backend decide mensual/semestral según la configuración de la empresa
-      const url = `/api/v1/app/declaraciones/iva?periodo=${periodo}${regen ? "&regenerar=true" : ""}`;
+      const url = `/api/v1/app/declaraciones/iva?periodo=${periodo}${regen ? "&regenerar=true" : ""}${pedirDemo ? "&demo=true" : ""}`;
       const res = await api.get(url);
       setData(res.data);
+      if (pedirDemo) return;
 
       // Estado de la declaración (vencimiento, declarado). Si no aplica, no rompe la página.
       try {
@@ -86,7 +90,7 @@ export default function ReporteIVAPage() {
       setLoading(false);
       setRegenerando(false);
     }
-  }, [periodo]);
+  }, [periodo, pedirDemo]);
 
   useEffect(() => { cargar(); }, [cargar]);
 
@@ -309,8 +313,9 @@ export default function ReporteIVAPage() {
         >
           <Info size={15} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-accent)" }} />
           <p className="text-xs" style={{ color: "var(--kipu-muted)" }}>
-            <span className="font-semibold" style={{ color: "var(--kipu-text)" }}>Estos son datos de ejemplo. </span>
-            Suscríbete para ver tu declaración de IVA calculada con tus comprobantes reales.
+            <span className="font-semibold" style={{ color: "var(--kipu-text)" }}>Estos son datos de ejemplo: </span>
+            así se ve el formulario 104 completo. El de tus meses se calcula con tus comprobantes
+            reales y se desbloquea con el pase del mes o con Kipu Pro.
           </p>
         </div>
       )}
