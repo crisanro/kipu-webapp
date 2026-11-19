@@ -8,7 +8,7 @@ interface Suscripcion {
   plan:    string | null;
 }
 
-interface Empresa {
+export interface Empresa {
   id:                     number;
   ruc:                    string;
   razon_social:           string;
