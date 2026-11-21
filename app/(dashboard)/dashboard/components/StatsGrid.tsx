@@ -51,7 +51,10 @@ export default function StatsGrid({ resumen, empresa }: Props) {
     },
     {
       label: gratis ? "Tu plan" : "Suscripción",
-      value: gratis ? "Gratis" : suscripcion?.plan ?? "—",
+      value: gratis ? "Gratis"
+        : suscripcion?.plan === "AL_DIA" ? "Kipu Al Día"   // el backend manda el código del plan
+        : suscripcion?.plan === "PRO" ? "Kipu Pro"
+        : suscripcion?.plan ?? "—",
       sub: suscripcion?.estado === "TRIAL"
         ? "⏳ En período de prueba"
         : suscripcion?.activa

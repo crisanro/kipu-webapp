@@ -12,6 +12,7 @@ import SeccionRetenciones  from "../_components/SeccionRetenciones";
 import ResumenImpositivo   from "../_components/ResumenImpositivo";
 import DocumentosIncluidos from "../_components/DocumentosIncluidos";
 import EstadoBadge         from "../_components/EstadoBadge";
+import { ES_APP_NATIVA } from "@/lib/plataforma";
 
 const fmt  = (n: number = 0) =>
   n.toLocaleString("es-EC", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -410,7 +411,9 @@ function ReporteATS({ periodo }: { periodo: string }) {
             <span className="font-semibold" style={{ color: "var(--kipu-text)" }}>Estos son datos de ejemplo. </span>
             {data?.motivo === "no_obligado"
               ? "El ATS lo presentan los obligados a llevar contabilidad y las sociedades; según tu configuración no te corresponde."
-              : "Suscríbete para ver tu ATS calculado con tus comprobantes reales y descargar el archivo para el SRI."}
+              : ES_APP_NATIVA
+                ? "El ATS con tus comprobantes reales no está incluido en tu plan actual."
+                : "Suscríbete para ver tu ATS calculado con tus comprobantes reales y descargar el archivo para el SRI."}
           </p>
         </div>
       )}

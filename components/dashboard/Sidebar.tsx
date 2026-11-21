@@ -110,7 +110,8 @@ export function Sidebar({
   };
 
   const planGratis = !empresa.suscripcion_activa && !!empresa.emision_gratis;   // plan gratis encendido
-  const planLabel = empresa.suscripcion_activa ? (empresa.suscripcion?.plan ?? "Pro") : planGratis ? "Gratis" : "Free";
+  // Nombre visible del plan (el backend manda PRO o AL_DIA). Sin suscripción es "Gratis", tenga o no créditos
+  const planLabel = !empresa.suscripcion_activa ? "Gratis" : empresa.suscripcion?.plan === "AL_DIA" ? "Kipu Al Día" : "Kipu Pro";
   // Con el plan gratis el panel emite sin créditos: no hay que alarmar por no tenerlos
   const sinCreditos = !empresa.suscripcion_activa && !planGratis && (empresa.balance_api ?? 0) === 0;
 
