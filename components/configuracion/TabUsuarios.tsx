@@ -36,12 +36,6 @@ const PERMISOS_POR_ROL: Record<string, Record<string, boolean>> = {
     declaraciones: false, reportes: false, auditoria: false,
     configuracion: false, api_keys: false, usuarios: false,
   },
-  asistente: {
-    emitir: true, descargar: true, clientes: true, productos: true,
-    estructura: true, documentos_recibidos: true,
-    declaraciones: false, reportes: false, auditoria: false,
-    configuracion: false, api_keys: false, usuarios: false,
-  },
   contador: {
     emitir: true, descargar: true, clientes: true, productos: true,
     estructura: true, declaraciones: true, reportes: true,
@@ -239,7 +233,6 @@ export default function TabUsuarios({ empresaId }: Props) {
             onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
           >
             <option value="emisor">Emisor</option>
-            <option value="asistente">Asistente</option>
             <option value="contador">Contador</option>
             <option value="admin">Admin</option>
           </select>
@@ -412,7 +405,7 @@ export default function TabUsuarios({ empresaId }: Props) {
                     >
                       <div className="flex items-center gap-2 py-3">
                         <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Plantilla:</span>
-                        {["emisor", "asistente", "contador"].map(rol => (
+                        {["emisor", "contador"].map(rol => (
                           <button
                             key={rol}
                             type="button"

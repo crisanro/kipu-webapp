@@ -6,9 +6,10 @@ interface Props {
   onDone:  () => void;
 }
 
-const VIDEO_ID        = "dQw4w9WgXcQ"; // placeholder — reemplazar con el real
-const CHROME_EXT_URL  = "https://chromewebstore.google.com/detail/kipu-%E2%80%94-importador-sri/fpaeflibkbihlpdkfbpniminocmplplo"; // placeholder — Chrome Web Store
-const FIREFOX_EXT_URL = "https://addons.mozilla.org/es-ES/firefox/addon/kipu-importador-sri/"; // placeholder — Firefox Add-ons
+// ID del video tutorial en YouTube. Mientras sea null, la sección del video no se muestra.
+const VIDEO_ID: string | null = null;
+const CHROME_EXT_URL  = "https://chromewebstore.google.com/detail/kipu-%E2%80%94-importador-sri/fpaeflibkbihlpdkfbpniminocmplplo";
+const FIREFOX_EXT_URL = "https://addons.mozilla.org/es-ES/firefox/addon/kipu-importador-sri/";
 
 export default function TabSRI({ empresa, onDone }: Props) {
   return (
@@ -130,7 +131,7 @@ export default function TabSRI({ empresa, onDone }: Props) {
         </div>
       </div>
 
-      {/* Video */}
+      {VIDEO_ID && (
       <div
         className="rounded-xl overflow-hidden"
         style={{
@@ -154,6 +155,7 @@ export default function TabSRI({ empresa, onDone }: Props) {
           />
         </div>
       </div>
+      )}
 
       {/* Link historial */}
       <div

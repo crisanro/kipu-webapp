@@ -417,7 +417,7 @@ export default function ReportesPage() {
                   Ver planes y suscribirme
                   <ChevronRight size={15} />
                 </Link>
-                <p className="text-[10px] mt-2" style={{ color: "var(--kipu-subtle)" }}>$69/año + IVA · Cancela cuando quieras</p>
+                <p className="text-[10px] mt-2" style={{ color: "var(--kipu-subtle)" }}>Pago anual · Cancela cuando quieras</p>
               </div>
             </div>
           </div>

@@ -59,9 +59,9 @@ const GRUPOS = [
   },
   {
     items: [
-      { href: "/personas",  label: "Personas",  icon: Users,    permiso: ["emitir", "clientes"] },
-      { href: "/cuentas",   label: "Cuentas",    icon: Wallet,   permiso: ["emitir", "clientes"] },
-      { href: "/productos", label: "Productos",  icon: Package,  permiso: ["emitir", "productos"] },
+      { href: "/personas",  label: "Personas",  icon: Users,    permiso: "clientes" },
+      { href: "/cuentas",   label: "Cuentas",    icon: Wallet,   permiso: "clientes" },
+      { href: "/productos", label: "Productos",  icon: Package,  permiso: "productos" },
     ],
   },
   {

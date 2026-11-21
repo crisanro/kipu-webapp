@@ -20,6 +20,12 @@ const ESTADO_CONFIG: Record<string, { label: string; color: string; bg: string; 
     bg: "color-mix(in srgb, var(--kipu-info) 10%, transparent)",
     icon: Clock,
   },
+  EN_REVISION: {
+    label: "En revisión",
+    color: "var(--kipu-info)",
+    bg: "color-mix(in srgb, var(--kipu-info) 10%, transparent)",
+    icon: Clock,
+  },
   FIRMADO: {
     label: "En cola",
     color: "var(--kipu-info)",

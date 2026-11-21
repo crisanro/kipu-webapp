@@ -465,7 +465,7 @@ export default function NuevaEmpresaPage() {
                 }}
               >
                 <p className="text-xs" style={{ color: "var(--kipu-accent)" }}>
-                  🎁 Recibirás <strong>10 créditos gratis</strong> para empezar a facturar.
+                  La empresa empieza <strong>en pruebas</strong>. Para facturar de verdad, sube su firma electrónica y pásala a producción.
                 </p>
               </div>
 

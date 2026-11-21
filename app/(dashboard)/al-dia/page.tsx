@@ -120,7 +120,7 @@ export default function KipuAlDiaPage() {
 
   const gestionarPago = async () => {
     try {
-      const r = await api.post("/api/v1/app/suscripcion/portal");
+      const r = await api.post("/api/v1/app/suscripcion/portal?volver=al-dia");
       window.location.href = r.data.portal_url;
     } catch (err: unknown) {
       setError(detalle(err, "No pudimos abrir la gestión del pago."));

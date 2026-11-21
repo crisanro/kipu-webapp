@@ -286,7 +286,7 @@ export default function NuevaNcrPage() {
         </p>
       </div>
 
-      {empresa && !empresa.suscripcion_activa && empresa.balance_api === 0 && (
+      {empresa && !empresa.suscripcion_activa && empresa.balance_api === 0 && !empresa.emision_gratis && (
         <div
           className="flex items-center gap-2 rounded-lg px-4 py-3"
           style={{

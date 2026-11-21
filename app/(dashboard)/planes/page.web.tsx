@@ -126,7 +126,12 @@ export default function PlanesPage() {
 
   const recargar = () => { setLoading(true); cargar(); };
 
-  useEffect(() => { cargar(); }, [cargar]);
+  useEffect(() => {
+    // Las notificaciones de créditos llegan con ?tab=creditos
+    cargar().then(() => {
+      if (new URLSearchParams(window.location.search).get("tab") === "creditos") setTab("creditos");
+    });
+  }, [cargar]);
 
   // Aparte del resto: si Stripe no responde, la página sigue funcionando
   const [precio, setPrecio] = useState<PrecioPlan | null>(null);
@@ -199,7 +204,8 @@ export default function PlanesPage() {
   };
 
   const enProduccion  = empresa?.ambiente === 2;
-  const esFree        = !sub?.activa;
+  const esAdmin       = empresa?.rol === "admin";      // contratar y cambiar el plan es solo del administrador
+  const esFree       = !sub?.activa;
   const planGratis    = !!empresa?.emision_gratis;   // interruptor del plan gratis en el backend
   const esAlDia       = !!sub?.activa && sub.plan === "AL_DIA";
   const verPro        = !sub?.activa || sub.cancel_at_period_end;
@@ -462,6 +468,11 @@ export default function PlanesPage() {
                       </span>
                     </div>
                   )}
+                  {!esAdmin ? (
+                    <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+                      Solo el administrador de la empresa puede cambiar la tarjeta o cancelar el plan.
+                    </p>
+                  ) : (
                   <div className="flex gap-2 flex-wrap">
                     <button
                       type="button"
@@ -523,6 +534,7 @@ export default function PlanesPage() {
                       </button>
                     )}
                   </div>
+                  )}
                 </div>
               )}
 
@@ -542,6 +554,7 @@ export default function PlanesPage() {
                 <TarjetaAlDia
                   estado={alDia}
                   enProduccion={enProduccion}
+                  esAdmin={esAdmin}
                   tienePro={!!sub?.activa && !esAlDia}
                 />
               )}
@@ -624,7 +637,7 @@ export default function PlanesPage() {
                   <button
                     type="button"
                     onClick={iniciarCheckout}
-                    disabled={!!pagando || !enProduccion}
+                    disabled={!!pagando || !enProduccion || !esAdmin}
                     className="w-full py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2
                                border border-[var(--kipu-accent)] text-[var(--kipu-accent)] bg-transparent
                                hover:bg-[color-mix(in_srgb,var(--kipu-accent)_10%,transparent)] active:scale-[0.98]
@@ -638,9 +651,9 @@ export default function PlanesPage() {
                     {pagando === "pro" ? "Redirigiendo..." : "Contratar Kipu Pro"}
                   </button>
 
-                  {!enProduccion && (
+                  {(!enProduccion || !esAdmin) && (
                     <p className="text-center text-xs mt-2" style={{ color: "var(--kipu-subtle)" }}>
-                      Disponible solo en producción
+                      {!enProduccion ? "Disponible solo en producción" : "Solo el administrador de la empresa puede contratarlo"}
                     </p>
                   )}
                 </div>
@@ -876,14 +889,16 @@ export default function PlanesPage() {
 
 // ── Tarjeta Kipu Al Día (la recomendada) ─────────────────────────────────────
 // Los términos y el pago están en /al-dia: aquí se presenta y se lleva allá.
-function TarjetaAlDia({ estado, enProduccion, tienePro }: {
-  estado: EstadoAlDia | null; enProduccion: boolean; tienePro: boolean;
+function TarjetaAlDia({ estado, enProduccion, esAdmin, tienePro }: {
+  estado: EstadoAlDia | null; enProduccion: boolean; esAdmin: boolean; tienePro: boolean;
 }) {
   const total = estado?.precio?.total ?? null;   // sin Stripe no se inventa un monto
 
   // Por qué no se puede contratar todavía (la producción primero, como en Pro)
   const bloqueo = !enProduccion
     ? "Disponible solo en producción"
+    : !esAdmin
+    ? "Solo el administrador de la empresa puede contratarlo"
     : estado?.motivo_no_elegible
       ?? (estado && !estado.disponible ? "Disponible muy pronto" : null);
 

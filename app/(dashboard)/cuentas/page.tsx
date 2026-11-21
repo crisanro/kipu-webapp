@@ -807,7 +807,7 @@ function CuentasContent() {
 
 // ── Página Principal Envuelta en Suspense ──────────────────────────────────────
 export default function CuentasPage() {
-  const puedeVer = usePermiso("reportes");
+  const puedeVer = usePermiso("clientes");   // como la API de cuentas
   if (!puedeVer) return <SinAcceso />;
   return (
     <Suspense fallback={

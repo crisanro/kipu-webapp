@@ -49,12 +49,19 @@ const VIEJAS: [RegExp, (v: string) => string][] = [
   [/^\/reportes\/renta\/([^/]+)$/,                       rutas.reporteRenta],
 ];
 
+// Pantallas que se mudaron: las notificaciones ya guardadas traen la dirección vieja
+const ENLACES_MOVIDOS: Record<string, string> = {
+  "/configuracion?tab=suscripcion": "/planes",
+  "/configuracion?tab=creditos":    "/planes?tab=creditos",
+};
+
 /**
  * Traduce una dirección del panel con el formato viejo (/documentos/123?x=1)
  * al nuevo (/documentos/ver?id=123&x=1). Si no es de las viejas, la devuelve igual.
  * En la app nativa, lo que solo existe en la web (/planes, /renta…) va al inicio.
  */
 export function rutaInterna(ruta: string): string {
+  ruta = ENLACES_MOVIDOS[ruta] ?? ruta;
   if (ES_APP_NATIVA && esRutaSoloWeb(ruta)) return "/dashboard";
   const [camino, query] = ruta.split("?", 2);
   const limpio = camino.length > 1 ? camino.replace(/\/+$/, "") : camino;

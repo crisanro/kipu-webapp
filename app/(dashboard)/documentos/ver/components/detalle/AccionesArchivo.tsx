@@ -5,18 +5,18 @@ import {
 } from "lucide-react";
 import { type FacturaBase, PDF_FORMATOS, urlXml, urlPdf, urlConsulta } from "./utils";
 
-// Estados que pueden generar PDF
-const ESTADOS_CON_PDF = ["AUTORIZADO", "ANULADO", "FIRMADO", "RECIBIDA", "EN_REVISION"];
+// Estados que pueden generar PDF. Los anulados no: el servidor ya no los entrega (410)
+const ESTADOS_CON_PDF = ["AUTORIZADO", "FIRMADO", "RECIBIDA", "EN_REVISION"];
 // Estados en proceso (PDF provisional)
 const ESTADOS_EN_PROCESO = ["FIRMADO", "RECIBIDA", "EN_REVISION"];
 // Estados que pueden descargar XML (solo autorizado tiene XML válido)
-const ESTADOS_CON_XML = ["AUTORIZADO", "ANULADO"];
+const ESTADOS_CON_XML = ["AUTORIZADO"];
 // Estados que pueden compartir (solo vigentes)
 const ESTADOS_COMPARTIR = ["AUTORIZADO"];
 
 // Descargas y compartir: PDF (A4 / T80 / T58), XML y enlace para el cliente.
-// PDF disponible en autorizados, anulados Y en proceso (provisional).
-// XML solo en autorizados/anulados. Compartir solo en vigentes.
+// PDF disponible en autorizados y en proceso (provisional).
+// XML solo en autorizados. Compartir solo en vigentes.
 export default function AccionesArchivo({ factura }: { factura: FacturaBase }) {
   const [showPdfMenu,   setShowPdfMenu]   = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
