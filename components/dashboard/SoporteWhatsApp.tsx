@@ -2,15 +2,19 @@
 
 import { useState } from "react";
 import { MessageCircle, X } from "lucide-react";
+import { auth } from "@/lib/firebase";
+import { enlaceWhatsApp, tieneSoporte } from "@/lib/soporte";
+import type { Empresa } from "@/store/auth.store";
 
-const WHATSAPP_NUMBER = "593960585581";
-
-export function SoporteWhatsApp({ empresa }: { empresa: any }) {
+// Botón de WhatsApp de soporte: en escritorio abre un QR, en móvil WhatsApp
+// directo. Solo para Pro y Al Día (lib/soporte.ts): con plan gratis no se
+// muestra. Ya no va en el menú (ahí está "Ayuda"): se usa al final de los
+// artículos del Centro de Ayuda.
+export function SoporteWhatsApp({ empresa }: { empresa: Empresa | null | undefined }) {
   const [showQR, setShowQR] = useState(false);
-  const mensaje = encodeURIComponent(
-    `Hola, necesito soporte con Kipu.\nMi correo es: ${empresa?.email ?? ""}\nMi RUC es: ${empresa?.ruc ?? ""}`
-  );
-  const waUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${mensaje}`;
+  if (!tieneSoporte(empresa)) return null;
+
+  const waUrl = enlaceWhatsApp(empresa, auth.currentUser?.email);
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(waUrl)}`;
 
   const hoverOn = (el: HTMLElement) => {

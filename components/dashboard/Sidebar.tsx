@@ -15,10 +15,10 @@ import {
   Bell,
   LogOut,
   CircleUser,
+  HelpCircle,
 } from "lucide-react";
 import { clsx } from "clsx";
 import { NAV_GROUPS, tienePermiso } from "./DashboardNav";
-import { SoporteWhatsApp } from "./SoporteWhatsApp";
 import { ThemeToggle } from "./ThemeToggle";
 import { useAuthStore } from "@/store/auth.store";
 import { ES_APP_NATIVA } from "@/lib/plataforma";
@@ -490,8 +490,26 @@ export function Sidebar({
             )}
           </button>
 
-          {/* Soporte WhatsApp */}
-          <SoporteWhatsApp empresa={empresa} />
+          {/* Ayuda: siempre primero el Centro de Ayuda, nunca WhatsApp directo
+              (el WhatsApp está al final de cada artículo, solo Pro y Al Día: lib/soporte.ts) */}
+          <Link
+            href="/ayuda"
+            onClick={() => setSidebarOpen(false)}
+            className="p-2 rounded-lg transition-colors"
+            style={{ color: pathname.startsWith("/ayuda") ? "var(--kipu-accent)" : "var(--kipu-muted)" }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = "var(--kipu-text)";
+              e.currentTarget.style.background = "var(--kipu-border)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = pathname.startsWith("/ayuda") ? "var(--kipu-accent)" : "var(--kipu-muted)";
+              e.currentTarget.style.background = "transparent";
+            }}
+            title="Ayuda"
+            aria-label="Ayuda"
+          >
+            <HelpCircle size={18} />
+          </Link>
 
           {/* Modo oscuro/claro */}
           <ThemeToggle compact />
