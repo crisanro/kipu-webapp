@@ -11,6 +11,7 @@ import {
 import api from "@/lib/api";
 import { hoyEC } from "@/lib/fecha";
 import { EtiquetaEjemplo } from "@/components/EjemploPro";
+import { ES_APP_NATIVA } from "@/lib/plataforma";
 
 const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio",
                "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
@@ -115,7 +116,8 @@ export function HeroAlDia({ precio, onContratar }: { precio: number | null; onCo
         </button>
       </div>
       <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
-        Incluye todo Kipu Pro · Tu precio no sube mientras sigas suscrito · Cancelas cuando quieras
+        {/* En la app no se nombra Kipu Pro (no se vende ahí): "incluye todo" en general */}
+        {ES_APP_NATIVA ? "Incluye todas las funciones de Kipu" : "Incluye todo Kipu Pro"} · Tu precio no sube mientras sigas suscrito · Cancelas cuando quieras
       </p>
     </div>
   );
@@ -289,7 +291,9 @@ export function QueIncluye() {
             </li>
           ))}
         </ul>
-        <p className="text-xs font-semibold pt-1" style={{ color: "var(--kipu-accent)" }}>Y además, todo Kipu Pro:</p>
+        <p className="text-xs font-semibold pt-1" style={{ color: "var(--kipu-accent)" }}>
+          {ES_APP_NATIVA ? "Y además, todas las funciones de Kipu:" : "Y además, todo Kipu Pro:"}
+        </p>
         <ul className="space-y-1.5">
           {SISTEMA.map((t) => (
             <li key={t} className="flex gap-2 text-xs" style={{ color: "var(--kipu-muted)" }}>

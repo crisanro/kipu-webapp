@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { notFound, useRouter, useSearchParams } from "next/navigation";
 import api from "@/lib/api";
+import { ES_APP_NATIVA } from "@/lib/plataforma";
 import {
   ArrowLeft, RefreshCw, CheckCircle2, AlertTriangle, Info, Calendar,
 } from "lucide-react";
@@ -321,7 +322,7 @@ function ReporteIVA({ periodo }: { periodo: string }) {
           <p className="text-xs" style={{ color: "var(--kipu-muted)" }}>
             <span className="font-semibold" style={{ color: "var(--kipu-text)" }}>Estos son datos de ejemplo: </span>
             así se ve el formulario 104 completo. El de tus meses se calcula con tus comprobantes
-            reales y se desbloquea con el pase del mes o con Kipu Pro.
+            reales{ES_APP_NATIVA ? "." : " y se desbloquea con el pase del mes o con Kipu Pro."}
           </p>
         </div>
       )}

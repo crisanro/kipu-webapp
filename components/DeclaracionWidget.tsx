@@ -1,6 +1,7 @@
 "use client";
 
 import { rutas } from "@/lib/rutas";
+import { ES_APP_NATIVA } from "@/lib/plataforma";
 import { useState } from "react";
 import Link from "next/link";
 import api from "@/lib/api";
@@ -251,7 +252,7 @@ export default function DeclaracionWidget({ data, onDeclarado }: Props) {
                 </p>
                 {data.formulario_completo === false && (
                   <Link
-                    href={data.periodo_key ? rutas.reporteIva(data.periodo_key) : "/planes"}
+                    href={data.periodo_key ? rutas.reporteIva(data.periodo_key) : ES_APP_NATIVA ? "/reportes" : "/planes"}
                     className="text-[11px] underline underline-offset-2 hover:no-underline"
                     style={{ color: "var(--kipu-accent)" }}
                   >

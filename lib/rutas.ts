@@ -8,6 +8,8 @@
 // páginas `[id]/page.web.tsx` redirigen. Para lo que llega del backend
 // (notificaciones, push) está `rutaInterna`, que también sirve en la app.
 
+import { ES_APP_NATIVA, esRutaSoloWeb } from "./plataforma";
+
 const q = (v: string | number) => encodeURIComponent(String(v));
 
 export const rutas = {
@@ -50,8 +52,10 @@ const VIEJAS: [RegExp, (v: string) => string][] = [
 /**
  * Traduce una dirección del panel con el formato viejo (/documentos/123?x=1)
  * al nuevo (/documentos/ver?id=123&x=1). Si no es de las viejas, la devuelve igual.
+ * En la app nativa, lo que solo existe en la web (/planes, /renta…) va al inicio.
  */
 export function rutaInterna(ruta: string): string {
+  if (ES_APP_NATIVA && esRutaSoloWeb(ruta)) return "/dashboard";
   const [camino, query] = ruta.split("?", 2);
   const limpio = camino.length > 1 ? camino.replace(/\/+$/, "") : camino;
   for (const [patron, nueva] of VIEJAS) {

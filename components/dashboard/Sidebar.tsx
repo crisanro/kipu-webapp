@@ -22,6 +22,32 @@ import { ThemeToggle } from "./ThemeToggle";
 import { useAuthStore } from "@/store/auth.store";
 import { ES_APP_NATIVA } from "@/lib/plataforma";
 
+// Tarjeta del plan: enlace a /planes en la web; en la app de las tiendas no se
+// ofrecen planes, así que es solo un recuadro informativo
+function EnlacePlan({ children }: { children: React.ReactNode }) {
+  if (ES_APP_NATIVA) {
+    return (
+      <div className="block rounded-lg px-3 py-2.5" style={{ background: "var(--kipu-bg)" }}>
+        {children}
+      </div>
+    );
+  }
+  return (
+    <Link
+      href="/planes"
+      className="block rounded-lg px-3 py-2.5 transition-colors"
+      style={{ background: "var(--kipu-bg)" }}
+      onMouseEnter={(e) =>
+        (e.currentTarget.style.background =
+          "color-mix(in srgb, var(--kipu-border) 60%, transparent)")
+      }
+      onMouseLeave={(e) => (e.currentTarget.style.background = "var(--kipu-bg)")}
+    >
+      {children}
+    </Link>
+  );
+}
+
 interface SidebarProps {
   sidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
@@ -322,17 +348,8 @@ export function Sidebar({
 
       {/* Footer sidebar */}
       <div className="px-4 py-4 space-y-3" style={{ borderTop: "2px solid var(--kipu-border)" }}>
-        {/* Plan activo */}
-        <Link
-          href="/planes"
-          className="block rounded-lg px-3 py-2.5 transition-colors"
-          style={{ background: "var(--kipu-bg)" }}
-          onMouseEnter={(e) =>
-            (e.currentTarget.style.background =
-              "color-mix(in srgb, var(--kipu-border) 60%, transparent)")
-          }
-          onMouseLeave={(e) => (e.currentTarget.style.background = "var(--kipu-bg)")}
-        >
+        {/* Plan activo: en la web lleva a /planes; en la app solo informa */}
+        <EnlacePlan>
           <p className="text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>
             Plan activo
           </p>
@@ -366,11 +383,11 @@ export function Sidebar({
             <div className="flex items-center gap-1 mt-1.5">
               <AlertTriangle size={11} style={{ color: "var(--kipu-danger)" }} />
               <span className="text-xs" style={{ color: "var(--kipu-danger)" }}>
-                Sin créditos — activa tu plan
+                {ES_APP_NATIVA ? "Sin comprobantes disponibles" : "Sin créditos — activa tu plan"}
               </span>
             </div>
           )}
-          {planGratis && (
+          {planGratis && !ES_APP_NATIVA && (
             <p className="text-xs mt-1.5 font-medium" style={{ color: "var(--kipu-accent)" }}>
               ✨ Pásate a Pro: sin límite y el 104 completo
             </p>
@@ -383,7 +400,7 @@ export function Sidebar({
               </span>
             </div>
           )}
-        </Link>
+        </EnlacePlan>
 
         {/* Toggle Sandbox */}
         {firmaOk ? (

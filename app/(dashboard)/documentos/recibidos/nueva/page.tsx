@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/auth.store";
+import { ES_APP_NATIVA } from "@/lib/plataforma";
 import { AlertTriangle, FileText, FileImage, Download } from "lucide-react";
 
 import TabXML              from "./_components/TabXML";
@@ -98,7 +99,9 @@ export default function NuevaRecibidaPage() {
         >
           <AlertTriangle size={16} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-warning)" }} />
           <p className="text-sm" style={{ color: "var(--kipu-warning)" }}>
-            Registrar tus compras es del Plan Pro. Las que ya registraste las sigues viendo.
+            {ES_APP_NATIVA
+              ? "Registrar compras no está incluido en tu plan actual. Las que ya registraste las sigues viendo."
+              : "Registrar tus compras es del Plan Pro. Las que ya registraste las sigues viendo."}
           </p>
         </div>
       )}

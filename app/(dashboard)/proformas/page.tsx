@@ -9,6 +9,8 @@ import SinAcceso from "@/components/SinAcceso";
 import { useAuthStore } from "@/store/auth.store";
 import { demoProformas } from "@/lib/demos";
 import { BannerEjemplo, EtiquetaEjemplo } from "@/components/EjemploPro";
+import SoloWeb from "@/components/SoloWeb";
+import { ES_APP_NATIVA } from "@/lib/plataforma";
 import {
   ClipboardList, Plus, Search,
   CheckCircle2, AlertTriangle, Clock,
@@ -91,7 +93,7 @@ function ProformasContenido() {
         <button
           onClick={() => tieneSub && router.push("/proformas/nueva")}
           disabled={!tieneSub}
-          title={!tieneSub ? "Disponible en el Plan Pro" : undefined}
+          title={!tieneSub ? (ES_APP_NATIVA ? "No incluido en tu plan actual" : "Disponible en el Plan Pro") : undefined}
           className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
           style={{
             background: tieneSub ? "var(--kipu-accent)" : "color-mix(in srgb, var(--kipu-text) 8%, transparent)",
@@ -111,7 +113,10 @@ function ProformasContenido() {
       </div>
 
       {esDemo && (
-        <BannerEjemplo texto="Así se ven tus proformas con el Plan Pro: las haces en segundos, las mandas en PDF y, cuando el cliente acepta, la conviertes en factura con un clic." />
+        <BannerEjemplo
+          texto="Así se ven tus proformas con el Plan Pro: las haces en segundos, las mandas en PDF y, cuando el cliente acepta, la conviertes en factura con un clic."
+          textoApp="Así se ven las proformas: las haces en segundos, las mandas en PDF y, cuando el cliente acepta, la conviertes en factura con un clic."
+        />
       )}
 
       {/* Banner de suscripción */}
@@ -125,18 +130,24 @@ function ProformasContenido() {
         >
           <AlertTriangle size={15} className="shrink-0" style={{ color: "var(--kipu-warning)" }} />
           <div className="flex-1">
-            <p className="text-sm font-medium" style={{ color: "var(--kipu-warning)" }}>Función del Plan Pro</p>
+            <p className="text-sm font-medium" style={{ color: "var(--kipu-warning)" }}>
+              {ES_APP_NATIVA ? "No incluido en tu plan actual" : "Función del Plan Pro"}
+            </p>
             <p className="text-xs" style={{ color: "color-mix(in srgb, var(--kipu-warning) 70%, transparent)" }}>
-              Crear proformas es del Plan Pro. Las que ya hiciste las sigues viendo y puedes facturarlas.
+              {ES_APP_NATIVA
+                ? "Crear proformas no está incluido en tu plan actual. Las que ya hiciste las sigues viendo y puedes facturarlas."
+                : "Crear proformas es del Plan Pro. Las que ya hiciste las sigues viendo y puedes facturarlas."}
             </p>
           </div>
-          <Link
-            href="/planes"
-            className="text-xs underline underline-offset-2 shrink-0 transition-colors"
-            style={{ color: "var(--kipu-warning)" }}
-          >
-            Ver planes
-          </Link>
+          <SoloWeb>
+            <Link
+              href="/planes"
+              className="text-xs underline underline-offset-2 shrink-0 transition-colors"
+              style={{ color: "var(--kipu-warning)" }}
+            >
+              Ver planes
+            </Link>
+          </SoloWeb>
         </div>
       )}
 
@@ -184,13 +195,15 @@ function ProformasContenido() {
                 Crear primera proforma
               </button>
             ) : (
-              <Link
-                href="/planes"
-                className="mt-4 px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors"
-                style={{ background: "var(--kipu-warning)" }}
-              >
-                Ver planes para crear proformas
-              </Link>
+              <SoloWeb>
+                <Link
+                  href="/planes"
+                  className="mt-4 px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors"
+                  style={{ background: "var(--kipu-warning)" }}
+                >
+                  Ver planes para crear proformas
+                </Link>
+              </SoloWeb>
             )
           )}
         </div>
@@ -209,7 +222,7 @@ function ProformasContenido() {
               return (
                 <Link
                   key={p.id}
-                  href={esDemo ? "/planes" : rutas.proforma(p.id)}
+                  href={esDemo ? (ES_APP_NATIVA ? "/proformas" : "/planes") : rutas.proforma(p.id)}
                   className="flex items-center gap-3 px-4 py-3 transition-colors"
                   style={{
                     borderTop: index > 0 ? "1px solid var(--kipu-border)" : "none",

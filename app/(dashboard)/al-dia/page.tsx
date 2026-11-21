@@ -10,6 +10,7 @@ import PanelCliente from "@/components/al-dia/PanelCliente";
 import TextoTerminos from "@/components/al-dia/TextoTerminos";
 import OfertaRenta from "@/components/renta/OfertaRenta";
 import { HeroAlDia, DemoAlDia, ComoFunciona, QueIncluye, Confianza, Preguntas } from "@/components/al-dia/Venta";
+import SoloWeb from "@/components/SoloWeb";
 
 const SOPORTE_WA = "593960585581";
 
@@ -270,9 +271,11 @@ export default function KipuAlDiaPage() {
         {/* ¿Solo la renta? Kipu Renta (pago único) */}
         <OfertaRenta variante="al-dia" />
 
-        <p className="text-xs text-center" style={{ color: "var(--kipu-subtle)" }}>
-          <Link href="/planes" className="underline">Ver todos los planes</Link>
-        </p>
+        <SoloWeb>
+          <p className="text-xs text-center" style={{ color: "var(--kipu-subtle)" }}>
+            <Link href="/planes" className="underline">Ver todos los planes</Link>
+          </p>
+        </SoloWeb>
       </div>
     );
   }
@@ -326,9 +329,11 @@ export default function KipuAlDiaPage() {
       {/* Clave del SRI: solo con el servicio contratado y para el administrador */}
       {estado?.contratado && esAdmin && <ClaveSri />}
 
-      <p className="text-xs text-center" style={{ color: "var(--kipu-subtle)" }}>
-        <Link href="/planes" className="underline">Volver a Plan y créditos</Link>
-      </p>
+      <SoloWeb>
+        <p className="text-xs text-center" style={{ color: "var(--kipu-subtle)" }}>
+          <Link href="/planes" className="underline">Volver a Plan y créditos</Link>
+        </p>
+      </SoloWeb>
     </div>
   );
 }

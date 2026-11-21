@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import api from "@/lib/api";
 import { rutas } from "@/lib/rutas";
+import { ES_APP_NATIVA } from "@/lib/plataforma";
 import { usePermiso } from "@/hooks/usePermiso";
 import SinAcceso from "@/components/SinAcceso";
 import OfertaRenta from "@/components/renta/OfertaRenta";
@@ -158,7 +159,9 @@ function DemoCards({ tab }: { tab: Tab }) {
       ))}
       <div className="flex items-center gap-2 justify-center py-2">
         <Lock size={12} style={{ color: "var(--kipu-subtle)" }} />
-        <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Datos de ejemplo — suscríbete para ver los tuyos</p>
+        <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+          {ES_APP_NATIVA ? "Datos de ejemplo — no incluido en tu plan actual" : "Datos de ejemplo — suscríbete para ver los tuyos"}
+        </p>
       </div>
     </div>
   );
@@ -345,11 +348,17 @@ export default function ReportesPage() {
           <Lock size={15} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-accent)" }} />
           <p className="text-xs" style={{ color: "var(--kipu-muted)" }}>
             <span className="font-semibold" style={{ color: "var(--kipu-text)" }}>Ver el total de tu IVA es gratis. </span>
-            El formulario 104 completo se desbloquea con el {obl?.iva === "SEMESTRAL" ? "pase del semestre" : "pase del mes"} o
-            con Kipu Pro, que además incluye Renta y ATS.{" "}
-            <Link href="/planes" className="font-semibold underline" style={{ color: "var(--kipu-accent)" }}>
-              Ver planes
-            </Link>
+            {ES_APP_NATIVA ? (
+              "El formulario 104 completo, Renta y ATS no están incluidos en tu plan actual."
+            ) : (
+              <>
+                El formulario 104 completo se desbloquea con el {obl?.iva === "SEMESTRAL" ? "pase del semestre" : "pase del mes"} o
+                con Kipu Pro, que además incluye Renta y ATS.{" "}
+                <Link href="/planes" className="font-semibold underline" style={{ color: "var(--kipu-accent)" }}>
+                  Ver planes
+                </Link>
+              </>
+            )}
           </p>
         </div>
       )}
@@ -357,7 +366,8 @@ export default function ReportesPage() {
       {/* ── SIN DATOS REALES (sin plan; o plan gratis en Renta/ATS) ─────────── */}
       {!verReales && (
         <>
-          {!planGratis && (
+          {/* Oferta de suscripción con precio: solo en la web */}
+          {!planGratis && !ES_APP_NATIVA && (
           <div
             className="relative overflow-hidden rounded-2xl p-5"
             style={{

@@ -1,8 +1,11 @@
 // components/EjemploPro.tsx — aviso y etiqueta de los datos de EJEMPLO (lib/demos.ts)
 import Link from "next/link";
 import { Sparkles } from "lucide-react";
+import SoloWeb from "@/components/SoloWeb";
+import { ES_APP_NATIVA } from "@/lib/plataforma";
 
-export function BannerEjemplo({ texto }: { texto: string }) {
+// textoApp: el mismo mensaje sin nombrar planes, para la app de las tiendas
+export function BannerEjemplo({ texto, textoApp }: { texto: string; textoApp: string }) {
   return (
     <div
       className="flex items-center gap-3 rounded-xl px-4 py-3 mb-4"
@@ -14,15 +17,17 @@ export function BannerEjemplo({ texto }: { texto: string }) {
       <Sparkles size={15} className="shrink-0" style={{ color: "var(--kipu-accent)" }} />
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium" style={{ color: "var(--kipu-accent)" }}>Esto es un ejemplo</p>
-        <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>{texto}</p>
+        <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>{ES_APP_NATIVA ? textoApp : texto}</p>
       </div>
-      <Link
-        href="/planes"
-        className="text-xs font-medium px-3 py-1.5 rounded-lg text-white shrink-0"
-        style={{ background: "var(--kipu-accent)" }}
-      >
-        Ver Plan Pro
-      </Link>
+      <SoloWeb>
+        <Link
+          href="/planes"
+          className="text-xs font-medium px-3 py-1.5 rounded-lg text-white shrink-0"
+          style={{ background: "var(--kipu-accent)" }}
+        >
+          Ver Plan Pro
+        </Link>
+      </SoloWeb>
     </div>
   );
 }

@@ -9,6 +9,7 @@ import SinAcceso from "@/components/SinAcceso";
 import { useAuthStore } from "@/store/auth.store";
 import { demoRecibidos, resumenRecibidos } from "@/lib/demos";
 import { BannerEjemplo, EtiquetaEjemplo } from "@/components/EjemploPro";
+import { ES_APP_NATIVA } from "@/lib/plataforma";
 import {
   Plus, FileText, RefreshCw, Search,
   ChevronDown, ChevronUp, TrendingUp, ArrowUpRight,
@@ -382,7 +383,7 @@ export default function FacturasRecibidasPage() {
   const esDemo    = !loading && !tieneSub && docs.length === 0 && !queryActivo;
   const filtrados = esDemo ? demoRecibidos() : docs;
   const resumenV: Resumen | null = esDemo ? resumenRecibidos(demoRecibidos()) : resumen;
-  const verDetalle = (id: string) => router.push(esDemo ? "/planes" : rutas.recibido(id));
+  const verDetalle = (id: string) => { if (esDemo && ES_APP_NATIVA) return; router.push(esDemo ? "/planes" : rutas.recibido(id)); };
 
   return (
     <div className="p-4 md:p-6 space-y-5">
@@ -475,7 +476,10 @@ export default function FacturasRecibidasPage() {
       )}
 
       {esDemo && (
-        <BannerEjemplo texto="Así se ven tus compras con el Plan Pro: las cargas desde el XML o desde el SRI con la extensión, y Kipu separa lo deducible y el IVA que puedes usar como crédito." />
+        <BannerEjemplo
+          texto="Así se ven tus compras con el Plan Pro: las cargas desde el XML o desde el SRI con la extensión, y Kipu separa lo deducible y el IVA que puedes usar como crédito."
+          textoApp="Así se ven tus compras: las cargas desde el XML y Kipu separa lo deducible y el IVA que puedes usar como crédito."
+        />
       )}
 
       {/* Resumen Fiscal */}

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Download, X, Share } from "lucide-react";
+import { ES_APP_NATIVA } from "@/lib/plataforma";
 
 // Detectar si es iOS
 const isIOS = () =>
@@ -21,8 +22,8 @@ export default function PWAInstallBanner() {
   const [visible,    setVisible]    = useState(false);
 
   useEffect(() => {
-    // Ya instalada — no mostrar nada
-    if (isInStandaloneMode()) return;
+    // Ya instalada — no mostrar nada (la app de las tiendas ya ES la app)
+    if (ES_APP_NATIVA || isInStandaloneMode()) return;
 
     const descartado = localStorage.getItem("pwa-install-dismissed");
     if (descartado) return;

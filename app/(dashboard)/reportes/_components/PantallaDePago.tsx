@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AlertTriangle, ArrowLeft, Calculator, CheckCircle2, Loader2, Sparkles, Ticket } from "lucide-react";
 import api from "@/lib/api";
+import { ES_APP_NATIVA } from "@/lib/plataforma";
 
 const dinero = (n: number = 0) =>
   n.toLocaleString("es-EC", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -46,6 +47,7 @@ export default function PantallaDePago({
   const [precioPro, setPrecioPro] = useState<{ base: number; total: number } | null>(null);
 
   useEffect(() => {
+    if (ES_APP_NATIVA) return;   // en la app no se muestran precios
     api.get("/api/v1/app/suscripcion/precio")
       .then((r) => setPrecioPro(r.data.data ?? null))
       .catch(() => setPrecioPro(null));
@@ -73,8 +75,8 @@ export default function PantallaDePago({
 
   const aFavor = total.iva_a_pagar === 0 && total.saldo_a_favor > 0;
 
-  return (
-    <div className="p-4 md:p-6 max-w-2xl mx-auto space-y-5">
+  const cabecera = (
+    <>
       <button
         type="button"
         onClick={onVolver}
@@ -98,6 +100,36 @@ export default function PantallaDePago({
           {aFavor ? "Saldo a favor para el próximo periodo" : "IVA a pagar"}
         </p>
       </div>
+    </>
+  );
+
+  // App de las tiendas: el total (que es gratis) y un aviso neutro, sin precios
+  // ni forma de comprar (ver components/SoloWeb.tsx)
+  if (ES_APP_NATIVA) {
+    return (
+      <div className="p-4 md:p-6 max-w-2xl mx-auto space-y-5">
+        {cabecera}
+        {alertasCantidad > 0 && (
+          <div className="rounded-xl p-3.5 flex items-start gap-3"
+               style={{ background: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)",
+                        border: "1px solid color-mix(in srgb, var(--kipu-warning) 30%, transparent)" }}>
+            <AlertTriangle size={16} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-warning)" }} />
+            <p className="text-sm" style={{ color: "var(--kipu-text)" }}>
+              Encontramos {alertasCantidad === 1 ? "1 alerta" : `${alertasCantidad} alertas`} en tu declaración
+              de {periodoFmt}.
+            </p>
+          </div>
+        )}
+        <p className="text-sm text-center" style={{ color: "var(--kipu-subtle)" }}>
+          El formulario 104 casillero por casillero y el detalle de las alertas no están incluidos en tu plan actual.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-4 md:p-6 max-w-2xl mx-auto space-y-5">
+      {cabecera}
 
       {esperandoPago && intentos < MAX_INTENTOS ? (
         <div className="rounded-xl p-4 flex items-center gap-3"

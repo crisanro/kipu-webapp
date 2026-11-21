@@ -3,6 +3,8 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
+import SoloWeb from "@/components/SoloWeb";
+import { ES_APP_NATIVA } from "@/lib/plataforma";
 import {
   Plus, Trash2, Shield, User, ChevronDown,
   ChevronUp, Check, X, AlertCircle
@@ -187,8 +189,12 @@ export default function TabUsuarios({ empresaId }: Props) {
         <h2 className="text-sm font-semibold mb-4" style={{ color: "var(--kipu-text)" }}>Invitar usuario</h2>
         {soloPro && (
           <p className="text-xs mb-3" style={{ color: "var(--kipu-warning)" }}>
-            Agregar usuarios es del Plan Pro (hasta 5 por empresa). Los que ya tienes siguen entrando normalmente.{" "}
-            <Link href="/planes" className="underline underline-offset-2">Ver planes</Link>
+            {ES_APP_NATIVA
+              ? "Agregar usuarios no está incluido en tu plan actual. Los que ya tienes siguen entrando normalmente."
+              : "Agregar usuarios es del Plan Pro (hasta 5 por empresa). Los que ya tienes siguen entrando normalmente."}{" "}
+            <SoloWeb>
+              <Link href="/planes" className="underline underline-offset-2">Ver planes</Link>
+            </SoloWeb>
           </p>
         )}
         <div className="flex gap-2 flex-wrap">

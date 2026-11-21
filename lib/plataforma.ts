@@ -2,10 +2,18 @@
 //
 // Dónde corre este build: la web (app.kipu.ec) o la app de las tiendas
 // (Capacitor, Android/iOS). Se decide AL COMPILAR con NEXT_PUBLIC_PLATAFORMA
-// (`npm run build:native`), así lo que es solo de la web ni siquiera entra al
-// paquete de la app y no hay parpadeos al cargar.
+// (`npm run build:native`): es una constante, así que no hay parpadeos al cargar.
 //
-// Los módulos que no van en la app (admin, equipo, planes, renta, api-keys)
-// tienen sus páginas como `page.web.tsx`: next.config.ts solo las compila en la web.
+// Ojo: lo que se oculta con ES_APP_NATIVA o <SoloWeb> no se muestra ni se puede
+// alcanzar en la app, pero su código sigue en el paquete (Turbopack no descarta
+// ramas por una constante importada). Lo que NO debe ir en la app, ni como
+// código, va en páginas `page.web.tsx` / `route.web.ts`: next.config.ts solo
+// las compila en la web (admin, equipo, planes, renta, api-keys).
 
 export const ES_APP_NATIVA = process.env.NEXT_PUBLIC_PLATAFORMA === "native";
+
+/** Pantallas que la app no tiene (sus páginas son `page.web.tsx`). */
+export const RUTAS_SOLO_WEB = ["/planes", "/renta", "/admin", "/equipo", "/api-keys"];
+
+export const esRutaSoloWeb = (ruta: string) =>
+  RUTAS_SOLO_WEB.some((r) => ruta === r || ruta.startsWith(r + "/") || ruta.startsWith(r + "?") || ruta.startsWith(r + "#"));

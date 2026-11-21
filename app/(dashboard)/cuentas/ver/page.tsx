@@ -6,6 +6,8 @@ import Link from "next/link";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
 import { hoyEC } from "@/lib/fecha";
+import SoloWeb from "@/components/SoloWeb";
+import { ES_APP_NATIVA } from "@/lib/plataforma";
 import {
   ArrowLeft, Save, Ban,
   CheckCircle2, Clock,
@@ -376,8 +378,14 @@ function DetalleCuenta({ id }: { id: string }) {
               }}
             >
               <AlertTriangle size={13} className="shrink-0" style={{ color: "var(--kipu-warning)" }} />
-              <p className="text-xs" style={{ color: "var(--kipu-warning)" }}>Registrar abonos y ajustes es del Plan Pro.</p>
-              <Link href="/planes" className="ml-auto text-xs underline shrink-0" style={{ color: "var(--kipu-warning)" }}>Ver planes</Link>
+              <p className="text-xs" style={{ color: "var(--kipu-warning)" }}>
+                {ES_APP_NATIVA
+                  ? "Registrar abonos y ajustes no está incluido en tu plan actual."
+                  : "Registrar abonos y ajustes es del Plan Pro."}
+              </p>
+              <SoloWeb>
+                <Link href="/planes" className="ml-auto text-xs underline shrink-0" style={{ color: "var(--kipu-warning)" }}>Ver planes</Link>
+              </SoloWeb>
             </div>
           </div>
         )}

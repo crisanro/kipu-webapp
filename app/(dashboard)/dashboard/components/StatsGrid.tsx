@@ -3,6 +3,7 @@ import {
   TrendingUp, FileText, Receipt,
   CreditCard, Zap, Users
 } from "lucide-react";
+import { ES_APP_NATIVA } from "@/lib/plataforma";
 
 interface Props {
   resumen: any;
@@ -56,7 +57,7 @@ export default function StatsGrid({ resumen, empresa }: Props) {
         : suscripcion?.activa
         ? "✅ Activa"
         : gratis
-        ? "🆓 Facturas gratis · Pro suma más"
+        ? (ES_APP_NATIVA ? "🆓 Facturas gratis" : "🆓 Facturas gratis · Pro suma más")
         : "❌ Inactiva",
       icon: CreditCard,
       color: tono,

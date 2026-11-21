@@ -7,6 +7,8 @@ import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
 import { ClipboardList, AlertTriangle } from "lucide-react";
 import { hoyEC } from "@/lib/fecha";
+import SoloWeb from "@/components/SoloWeb";
+import { ES_APP_NATIVA } from "@/lib/plataforma";
 
 // ── Componentes reutilizados de factura ────────────────────────────────────────
 import ClienteSelector from "../../documentos/emitir/components/ClienteSelector";
@@ -204,9 +206,13 @@ export default function NuevaProformaPage() {
           }}
         >
           <AlertTriangle size={36} className="mb-3" style={{ color: "var(--kipu-warning)" }} />
-          <h2 className="font-semibold mb-1" style={{ color: "var(--kipu-text)" }}>Función del Plan Pro</h2>
+          <h2 className="font-semibold mb-1" style={{ color: "var(--kipu-text)" }}>
+            {ES_APP_NATIVA ? "No incluido en tu plan actual" : "Función del Plan Pro"}
+          </h2>
           <p className="text-sm mb-4 max-w-xs" style={{ color: "var(--kipu-subtle)" }}>
-            Crear proformas es del Plan Pro. Con créditos solo se emiten comprobantes.
+            {ES_APP_NATIVA
+              ? "Crear proformas no está incluido en tu plan actual."
+              : "Crear proformas es del Plan Pro. Con créditos solo se emiten comprobantes."}
           </p>
           <div className="flex gap-3">
             <button
@@ -221,13 +227,15 @@ export default function NuevaProformaPage() {
             >
               Volver
             </button>
-            <button
-              onClick={() => router.push("/planes")}
-              className="px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors"
-              style={{ background: "var(--kipu-warning)" }}
-            >
-              Ver planes
-            </button>
+            <SoloWeb>
+              <button
+                onClick={() => router.push("/planes")}
+                className="px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors"
+                style={{ background: "var(--kipu-warning)" }}
+              >
+                Ver planes
+              </button>
+            </SoloWeb>
           </div>
         </div>
       )}

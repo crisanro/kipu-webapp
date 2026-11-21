@@ -3,6 +3,7 @@ import { AlertTriangle } from "lucide-react";
 import { r2 } from "@/lib/dinero";
 import Link from "next/link";
 import AccionesUsoJusto from "./AccionesUsoJusto";
+import { ES_APP_NATIVA } from "@/lib/plataforma";
 
 interface Totales {
   subtotal:    number;
@@ -150,14 +151,20 @@ export default function ResumenTotales({
             </span>
           </div>
           <p className="text-xs" style={{ color: "color-mix(in srgb, var(--kipu-danger) 70%, transparent)" }}>
-            Necesitas una{" "}
-            <Link href="/planes" className="underline" style={{ color: "var(--kipu-danger)" }}>
-              suscripción activa
-            </Link>
-            {" "}o{" "}
-            <Link href="/planes" className="underline" style={{ color: "var(--kipu-danger)" }}>
-              créditos API
-            </Link>.
+            {ES_APP_NATIVA ? (
+              "Tu plan actual no tiene comprobantes disponibles para emitir."
+            ) : (
+              <>
+                Necesitas una{" "}
+                <Link href="/planes" className="underline" style={{ color: "var(--kipu-danger)" }}>
+                  suscripción activa
+                </Link>
+                {" "}o{" "}
+                <Link href="/planes" className="underline" style={{ color: "var(--kipu-danger)" }}>
+                  créditos API
+                </Link>.
+              </>
+            )}
           </p>
         </div>
       )}
