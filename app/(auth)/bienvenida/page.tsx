@@ -6,9 +6,10 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { auth } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
 import Image from "next/image";
+import Link from "next/link";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
-import { Building2, Plus, Loader2, CheckCircle2, ArrowRight, MessageCircle, LogOut } from "lucide-react";
+import { Building2, Plus, Loader2, CheckCircle2, ArrowRight, CircleHelp, LogOut } from "lucide-react";
 import { useTheme } from "next-themes";
 import VerificarCorreo from "@/components/auth/VerificarCorreo";
 import EliminarCuenta from "@/components/cuenta/EliminarCuenta";
@@ -283,22 +284,21 @@ export default function BienvenidaPage() {
         {/* Botones de acción */}
         <div className="mt-8 space-y-3">
 
-          {/* Soporte */}
-          <a
-            href={`https://wa.me/593960585581?text=${encodeURIComponent("Hola, necesito soporte con Kipu.")}`}
-            target="_blank"
-            rel="noopener noreferrer"
+          {/* Ayuda: aquí todavía no hay empresa ni plan, así que no hay WhatsApp
+              (el soporte humano es de Pro y Al Día: lib/soporte.ts) */}
+          <Link
+            href="/ayuda"
             className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-colors"
             style={{
-              border: "1px solid color-mix(in srgb, var(--kipu-success) 30%, transparent)",
-              color:  "var(--kipu-success)",
+              border: "1px solid color-mix(in srgb, var(--kipu-accent) 30%, transparent)",
+              color:  "var(--kipu-accent)",
             }}
-            onMouseEnter={e => (e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-success) 10%, transparent)")}
+            onMouseEnter={e => (e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-accent) 10%, transparent)")}
             onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
           >
-            <MessageCircle size={15} />
-            Contactar soporte
-          </a>
+            <CircleHelp size={15} />
+            Centro de Ayuda
+          </Link>
 
           {/* Cerrar sesión */}
           <button
