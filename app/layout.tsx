@@ -16,7 +16,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  // Base de los enlaces canónicos y de Open Graph (/aprende, /ayuda)
+  // Base de los enlaces canónicos y de Open Graph (/blog, /ayuda)
   metadataBase: new URL(URL_SITIO),
   title:       "Kipu — Aplicación de facturación y contabilidad",
   description: "Facturación electrónica simple y rápida para Ecuador",

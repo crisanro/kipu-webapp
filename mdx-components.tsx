@@ -1,4 +1,4 @@
-// mdx-components.tsx — estilos de los artículos en MDX (content/ayuda y content/aprende).
+// mdx-components.tsx — estilos de los artículos en MDX (content/ayuda y content/blog).
 // Lo exige @next/mdx con App Router. Usa los colores del tema (--kipu-*), así
 // funciona en claro y oscuro sin plugins de tipografía.
 //

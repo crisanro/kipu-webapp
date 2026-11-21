@@ -1,11 +1,11 @@
 // content/datos-tributarios.ts
 //
 // Datos tributarios de Ecuador que cambian con una ley o una resolución del SRI.
-// Los artículos de /aprende los leen de aquí (import en el .mdx) para que el texto
+// Los artículos de /blog los leen de aquí (import en el .mdx) para que el texto
 // sea atemporal: cuando algo cambie, se corrige aquí y no artículo por artículo.
 //
 // Cada dato dice desde cuándo rige. Al cambiar uno, actualizar REVISADO y el
-// campo `actualizado` de los artículos que lo usan (content/aprende/articulos.ts).
+// campo `actualizado` de los artículos que lo usan (content/blog/articulos.ts).
 // Deben coincidir con lo que usa el backend (kipu-core1: declaraciones/periodos.py).
 
 /** Última vez que se revisaron todos los datos de este archivo. */

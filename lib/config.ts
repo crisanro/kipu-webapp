@@ -1,7 +1,7 @@
 // lib/config.ts
 import { ES_APP_NATIVA } from "./plataforma";
 
-/** Dirección pública del panel: enlaces canónicos, sitemap y robots (SEO de /aprende y /ayuda). */
+/** Dirección pública del panel: enlaces canónicos, sitemap y robots (SEO de /blog y /ayuda). */
 export const URL_SITIO = "https://app.kipu.ec";
 
 /**

@@ -1,6 +1,6 @@
 "use client";
 
-// Barra superior del Centro de Ayuda y de /aprende: el logo lleva a la portada
+// Barra superior del Centro de Ayuda y de /blog: el logo lleva a la portada
 // de la sección; a la derecha, "Ir al panel" con sesión o "Iniciar sesión" sin ella.
 
 import { useSyncExternalStore } from "react";
@@ -15,7 +15,7 @@ import { guardarVolver } from "@/lib/volver";
 
 const SECCIONES = {
   ayuda:   { nombre: "Ayuda",   href: "/ayuda",   etiqueta: "Centro de Ayuda de Kipu" },
-  aprende: { nombre: "Aprende", href: "/aprende", etiqueta: "Aprende con Kipu" },
+  blog:    { nombre: "Blog",    href: "/blog",    etiqueta: "Blog de Kipu" },
 };
 
 export default function EncabezadoAyuda({ seccion = "ayuda" }: { seccion?: keyof typeof SECCIONES }) {

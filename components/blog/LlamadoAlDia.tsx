@@ -1,13 +1,13 @@
 "use client";
 
-// Final de cada artículo de /aprende: invitación a Kipu Al Día.
+// Final de cada artículo del blog: invitación a Kipu Al Día.
 //   - Sin sesión (casi todos los que llegan de Google): crear cuenta, o iniciar
 //     sesión y llegar directo a /al-dia. Es la versión que va en el HTML, la que
 //     leen los buscadores.
 //   - Con sesión y sin Al Día: a /al-dia a contratarlo.
 //   - Con Al Día: "esto ya lo hacemos por ti".
 // El precio no se escribe aquí: lo da el backend en /al-dia (así no queda viejo).
-// /aprende solo existe en la web (lib/plataforma.ts), así que se puede nombrar Kipu Pro.
+// /blog solo existe en la web (lib/plataforma.ts), así que se puede nombrar Kipu Pro.
 
 import { useSyncExternalStore } from "react";
 import Link from "next/link";
@@ -75,6 +75,10 @@ export default function LlamadoAlDia() {
               </>
             )}
           </div>
+          {/* Lo mismo que app/legal/kipu_al_dia_v1.md ("Para quién es") y al_dia_service.motivo_no_elegible */}
+          <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+            Para personas naturales no obligadas a llevar contabilidad, del régimen general o del RIMPE Emprendedor.
+          </p>
         </>
       )}
     </aside>

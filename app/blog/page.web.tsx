@@ -1,28 +1,28 @@
-// app/aprende/page.web.tsx — portada de Aprende: todos los artículos.
+// app/blog/page.web.tsx — portada del blog: todos los artículos.
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
-import { ARTICULOS_APRENDE } from "@/content/aprende/articulos";
+import { ARTICULOS_BLOG } from "@/content/blog/articulos";
 
 export const metadata: Metadata = {
-  alternates: { canonical: "/aprende" },
+  alternates: { canonical: "/blog" },
 };
 
-export default function AprendePage() {
+export default function BlogPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold" style={{ color: "var(--kipu-text)" }}>Impuestos en Ecuador, explicados fácil</h1>
+        <h1 className="text-2xl font-bold" style={{ color: "var(--kipu-text)" }}>Tus dudas con el SRI, resueltas fácil</h1>
         <p className="text-sm mt-1" style={{ color: "var(--kipu-subtle)" }}>
-          Lo que necesitas saber del IVA, el RUC y tus declaraciones al SRI, sin palabras raras.
+          Respuestas cortas y claras a lo que todos nos preguntamos sobre el RUC, las declaraciones y los impuestos.
         </p>
       </div>
 
       <section className="space-y-2">
-        {ARTICULOS_APRENDE.map((a) => (
+        {ARTICULOS_BLOG.map((a) => (
           <Link
             key={a.slug}
-            href={`/aprende/${a.slug}`}
+            href={`/blog/${a.slug}`}
             className="group flex items-center gap-3 rounded-xl px-4 py-3 transition-colors hover:bg-[color-mix(in_srgb,var(--kipu-text)_4%,transparent)]"
             style={{ background: "var(--kipu-surface)", border: "1px solid var(--kipu-border)" }}
           >

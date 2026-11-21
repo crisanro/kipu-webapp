@@ -1,0 +1,34 @@
+import { SEMESTRES, VENCIMIENTOS } from "@/content/datos-tributarios";
+
+**Respuesta corta:** depende del **noveno dígito de tu RUC**. Si es 1, tienes hasta el día 10; si es 2, hasta el 12; y así hasta el 0, que vence el 28.
+
+## Busca tu día
+
+Mira el noveno dígito de tu RUC, contando desde la izquierda. Por ejemplo, en el RUC 17123456**7**8001 el noveno dígito es el 7, así que su día es el **22**.
+
+<Tabla
+  columnas={["Noveno dígito", "Declaras hasta el día"]}
+  filas={VENCIMIENTOS}
+/>
+
+Si ese día cae en fin de semana o feriado, tienes hasta el siguiente día hábil.
+
+## ¿Cada mes o cada seis meses?
+
+La mayoría declara el IVA **cada mes**: lo de marzo se declara en abril, hasta tu día.
+
+Algunos lo declaran **cada seis meses**, por ejemplo si estás en el RIMPE como emprendedor o si solo vendes cosas con IVA 0 %. En ese caso:
+
+- **{SEMESTRES[0].nombre}** ({SEMESTRES[0].meses}): se declara en {SEMESTRES[0].seDeclaraEn}.
+- **{SEMESTRES[1].nombre}** ({SEMESTRES[1].meses}): se declara en {SEMESTRES[1].seDeclaraEn}.
+
+¿No sabes cuál es tu caso? Está en tu RUC: entra a SRI en línea con tu clave y revisa tus obligaciones.
+
+## Dos cosas que mucha gente no sabe
+
+- **Se declara aunque no hayas vendido nada.** Si no presentas la declaración, el SRI la cuenta como no presentada. Te lo explicamos en [¿Tengo que declarar si no vendí nada?](/blog/declarar-si-no-vendi-nada).
+- **Pasarte del día sale caro.** La multa sube cada mes. Mira [qué pasa si te atrasas con el SRI](/blog/que-pasa-si-me-atraso-con-el-sri).
+
+<Nota>
+  Un truco simple: pon tu día en la alarma del celular, unos días antes, para que no te agarre la fecha.
+</Nota>
