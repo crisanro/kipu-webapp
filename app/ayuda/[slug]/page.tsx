@@ -7,6 +7,7 @@ import { notFound } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import BloqueSoporte from "@/components/ayuda/BloqueSoporte";
 import TarjetaArticulo from "@/components/ayuda/TarjetaArticulo";
+import VotoArticulo from "@/components/ayuda/VotoArticulo";
 import { ARTICULOS, articuloPorSlug, categoria } from "@/content/ayuda/articulos";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -19,7 +20,9 @@ export function generateStaticParams() {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const articulo = articuloPorSlug((await params).slug);
-  return articulo ? { title: articulo.titulo, description: articulo.resumen } : {};
+  return articulo
+    ? { title: articulo.titulo, description: articulo.resumen, alternates: { canonical: `/ayuda/${articulo.slug}` } }
+    : {};
 }
 
 export default async function ArticuloAyudaPage({ params }: Props) {
@@ -47,6 +50,8 @@ export default async function ArticuloAyudaPage({ params }: Props) {
       <div className="mt-6 pt-2" style={{ borderTop: "1px solid var(--kipu-border)" }}>
         <Contenido />
       </div>
+
+      <VotoArticulo slug={slug} />
 
       {relacionados.length > 0 && (
         <section className="mt-10 space-y-2">
