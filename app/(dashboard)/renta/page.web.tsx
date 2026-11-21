@@ -17,7 +17,8 @@ import PanelCliente from "@/components/al-dia/PanelCliente";
 import TextoTerminos from "@/components/al-dia/TextoTerminos";
 import type { EstadoRenta } from "@/components/renta/OfertaRenta";
 
-const SOPORTE_WA = "593960585581";
+// Contacto de ventas (transferencia, cambio de plan): el mismo número configurado
+import { WHATSAPP_SOPORTE as SOPORTE_WA } from "@/lib/soporte";
 const caja = { background: "var(--kipu-surface)", border: "1px solid var(--kipu-border)" };
 
 interface Terminos { version: string; texto: string; hash: string }

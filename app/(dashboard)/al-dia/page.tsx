@@ -12,7 +12,8 @@ import OfertaRenta from "@/components/renta/OfertaRenta";
 import { HeroAlDia, DemoAlDia, ComoFunciona, QueIncluye, Confianza, Preguntas } from "@/components/al-dia/Venta";
 import SoloWeb from "@/components/SoloWeb";
 
-const SOPORTE_WA = "593960585581";
+// Contacto de ventas (transferencia, cambio de plan): el mismo número configurado
+import { WHATSAPP_SOPORTE as SOPORTE_WA } from "@/lib/soporte";
 
 interface Precio { total: number; base: number; iva: number }
 interface Estado {
