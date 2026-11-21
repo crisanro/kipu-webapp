@@ -1,3 +1,6 @@
+import type { NextConfig } from "next";
+import createMDX from "@next/mdx";
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "https://core.kipu.ec";
 // La documentación para integradores la genera el backend de producción
 const DOCS_ORIGIN = "https://core.kipu.ec";
@@ -58,7 +61,7 @@ const securityHeaders = [
 // incluye; el de la app nativa no (ver lib/plataforma.ts).
 const EXTENSIONES = ["tsx", "ts", "jsx", "js"];
 
-const configWeb = {
+const configWeb: NextConfig = {
   output: "standalone",
   pageExtensions: [...EXTENSIONES.map((e) => `web.${e}`), ...EXTENSIONES],
   async headers() {
@@ -86,7 +89,7 @@ const configWeb = {
 // Sin servidor: no hay headers ni rewrites, ni optimización de imágenes.
 // trailingSlash: cada ruta queda como carpeta/index.html, que el WebView
 // encuentra también al recargar o con window.location.
-const configNativa = {
+const configNativa: NextConfig = {
   output:         "export",
   pageExtensions: EXTENSIONES,
   trailingSlash:  true,
@@ -95,4 +98,8 @@ const configNativa = {
 
 const nextConfig = process.env.NEXT_PUBLIC_PLATAFORMA === "native" ? configNativa : configWeb;
 
-export default nextConfig;
+// Artículos del Centro de Ayuda en MDX (content/ayuda/*.mdx). Se importan desde
+// las páginas, no son rutas: por eso no hace falta "mdx" en pageExtensions.
+const withMDX = createMDX({});
+
+export default withMDX(nextConfig);
