@@ -14,6 +14,7 @@ import {
   FlaskConical,
   Bell,
   LogOut,
+  CircleUser,
 } from "lucide-react";
 import { clsx } from "clsx";
 import { NAV_GROUPS, tienePermiso } from "./DashboardNav";
@@ -494,6 +495,26 @@ export function Sidebar({
 
           {/* Modo oscuro/claro */}
           <ThemeToggle compact />
+
+          {/* Mi cuenta (ahí se elimina: para todos, sin permisos) */}
+          <Link
+            href="/cuenta"
+            onClick={() => setSidebarOpen(false)}
+            className="p-2 rounded-lg transition-colors"
+            style={{ color: pathname === "/cuenta" ? "var(--kipu-accent)" : "var(--kipu-muted)" }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = "var(--kipu-text)";
+              e.currentTarget.style.background = "var(--kipu-border)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = pathname === "/cuenta" ? "var(--kipu-accent)" : "var(--kipu-muted)";
+              e.currentTarget.style.background = "transparent";
+            }}
+            title="Mi cuenta"
+            aria-label="Mi cuenta"
+          >
+            <CircleUser size={18} />
+          </Link>
 
           {/* Cerrar sesión */}
           <button

@@ -11,6 +11,7 @@ import { useAuthStore } from "@/store/auth.store";
 import { Building2, Plus, Loader2, CheckCircle2, ArrowRight, MessageCircle, LogOut } from "lucide-react";
 import { useTheme } from "next-themes";
 import VerificarCorreo from "@/components/auth/VerificarCorreo";
+import EliminarCuenta from "@/components/cuenta/EliminarCuenta";
 
 export default function BienvenidaPage() {
   const router       = useRouter();
@@ -99,15 +100,6 @@ export default function BienvenidaPage() {
     router.replace("/login");
   };
 
-  const handleEliminarCuenta = async () => {
-    try {
-      await auth.currentUser?.delete();
-      logout();
-      router.replace("/register");
-    } catch {
-      alert("Por seguridad, cierra sesión y vuelve a iniciar para eliminar tu cuenta.");
-    }
-  };
 
   // Correo mal escrito: no hay cómo verificarlo, se borra la cuenta y se registra de nuevo
   const handleCambiarCorreo = async () => {
@@ -342,26 +334,9 @@ export default function BienvenidaPage() {
                 Eliminar mi cuenta
               </button>
             ) : (
-              <div className="text-center space-y-2">
-                <p className="text-xs" style={{ color: "var(--kipu-danger)" }}>
-                  ¿Estás seguro? Esta acción no se puede deshacer.
-                </p>
-                <div className="flex gap-3 justify-center">
-                  <button
-                    onClick={() => setConfirmDelete(false)}
-                    className="text-xs transition-colors"
-                    style={{ color: "var(--kipu-muted)" }}
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    onClick={handleEliminarCuenta}
-                    className="text-xs font-medium transition-colors"
-                    style={{ color: "var(--kipu-danger)" }}
-                  >
-                    Sí, eliminar
-                  </button>
-                </div>
+              // Mismo flujo que /cuenta: lo hace el backend (perfil, Firebase y avisos)
+              <div className="w-full text-left">
+                <EliminarCuenta onCancelar={() => setConfirmDelete(false)} />
               </div>
             )}
           </div>

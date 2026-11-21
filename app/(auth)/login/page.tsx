@@ -11,6 +11,7 @@ import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { useAuthStore } from "@/store/auth.store";
 import { useTheme } from "next-themes";
 import { tomarVolver } from "@/lib/volver";
+import { CUENTA_ELIMINADA } from "@/lib/cuenta";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -18,8 +19,18 @@ export default function LoginPage() {
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
+  // Recién eliminó su cuenta (components/cuenta/EliminarCuenta.tsx)
+  const [eliminada, setEliminada] = useState<string | null>(null);
+
   useEffect(() => {
     setMounted(true);
+    try {
+      const v = sessionStorage.getItem(CUENTA_ELIMINADA);
+      if (v !== null) {
+        setEliminada(v);
+        sessionStorage.removeItem(CUENTA_ELIMINADA);
+      }
+    } catch {}
   }, []);
 
   useEffect(() => {
@@ -46,6 +57,8 @@ export default function LoginPage() {
         setError("Correo o contraseña incorrectos.");
       } else if (code === "auth/user-not-found") {
         setError("No existe una cuenta con ese correo.");
+      } else if (code === "auth/user-disabled") {
+        setError("Esta cuenta está en proceso de eliminación. Si fue un error, escríbenos a soporte.");
       } else if (code === "auth/too-many-requests") {
         setError("Demasiados intentos. Espera unos minutos.");
       } else {
@@ -137,6 +150,20 @@ export default function LoginPage() {
               </button>
             </div>
           </div>
+
+          {eliminada !== null && !error && (
+            <p
+              className="text-sm px-3 py-2 rounded-lg"
+              style={{
+                color: "var(--kipu-text)",
+                background: "color-mix(in srgb, var(--kipu-accent) 10%, transparent)",
+              }}
+            >
+              {eliminada
+                ? `Tu cuenta se eliminará el ${eliminada}. Te enviamos la confirmación por correo.`
+                : "Tu cuenta fue eliminada."}
+            </p>
+          )}
 
           {error && (
             <p
