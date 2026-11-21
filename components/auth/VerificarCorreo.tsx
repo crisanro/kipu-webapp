@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect } from "react";
-import { CheckCircle2, Loader2, Mail, MailCheck, RefreshCw } from "lucide-react";
+import { CheckCircle2, Loader2, Mail, MailCheck, MessageCircle, RefreshCw } from "lucide-react";
 import { auth } from "@/lib/firebase";
+import { enlaceWhatsAppFalla } from "@/lib/soporte";
 import { useVerificacionCorreo } from "@/hooks/useVerificacionCorreo";
 
 // Remitente de los correos de cuenta (SMTP_FROM del backend)
@@ -160,6 +161,23 @@ export default function VerificarCorreo({ onVerificado, onCambiarCorreo }: Props
           </>
         )}
       </div>
+
+      {/* Falla que bloquea: se atiende a todos (lib/soporte.ts). Solo después de
+          pedir el correo, para que primero revise spam y reenvíe */}
+      {(v.enviado || v.error) && (
+        <p className="text-xs text-center mt-4" style={{ color: "var(--kipu-subtle)" }}>
+          ¿Sigue sin llegar?{" "}
+          <a
+            href={enlaceWhatsAppFalla("Hola, no me llega el correo de verificación de Kipu.", email)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 underline"
+            style={{ color: "var(--kipu-accent)" }}
+          >
+            <MessageCircle size={12} /> Escríbenos por WhatsApp
+          </a>
+        </p>
+      )}
 
       {onCambiarCorreo && (
         <p className="text-xs text-center mt-4" style={{ color: "var(--kipu-subtle)" }}>

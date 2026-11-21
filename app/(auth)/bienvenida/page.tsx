@@ -7,9 +7,10 @@ import { auth } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
 import Image from "next/image";
 import Link from "next/link";
+import { enlaceWhatsAppFalla } from "@/lib/soporte";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
-import { Building2, Plus, Loader2, CheckCircle2, ArrowRight, CircleHelp, LogOut } from "lucide-react";
+import { Building2, Plus, Loader2, CheckCircle2, ArrowRight, CircleHelp, MessageCircle, LogOut } from "lucide-react";
 import { useTheme } from "next-themes";
 import VerificarCorreo from "@/components/auth/VerificarCorreo";
 import EliminarCuenta from "@/components/cuenta/EliminarCuenta";
@@ -284,8 +285,9 @@ export default function BienvenidaPage() {
         {/* Botones de acción */}
         <div className="mt-8 space-y-3">
 
-          {/* Ayuda: aquí todavía no hay empresa ni plan, así que no hay WhatsApp
-              (el soporte humano es de Pro y Al Día: lib/soporte.ts) */}
+          {/* Ayuda: las dudas van al Centro de Ayuda. Si algo falla y no puede
+              seguir, WhatsApp para todos (lib/soporte.ts). Mientras verifica el
+              correo, ese enlace ya está dentro de VerificarCorreo */}
           <Link
             href="/ayuda"
             className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-colors"
@@ -299,6 +301,20 @@ export default function BienvenidaPage() {
             <CircleHelp size={15} />
             Centro de Ayuda
           </Link>
+          {correoOk && (
+            <p className="text-xs text-center" style={{ color: "var(--kipu-subtle)" }}>
+              ¿Algo falla y no puedes continuar?{" "}
+              <a
+                href={enlaceWhatsAppFalla("Hola, no puedo continuar con mi registro en Kipu.", auth.currentUser?.email)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 underline"
+                style={{ color: "var(--kipu-accent)" }}
+              >
+                <MessageCircle size={12} /> Escríbenos por WhatsApp
+              </a>
+            </p>
+          )}
 
           {/* Cerrar sesión */}
           <button

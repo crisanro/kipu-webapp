@@ -4,6 +4,11 @@
 //   - El soporte humano (WhatsApp) es solo para Kipu Pro y Kipu Al Día.
 //   - Para todos, el primer paso es el Centro de Ayuda (/ayuda): el botón
 //     "Ayuda" del panel nunca abre WhatsApp directo.
+//   - Excepción: las fallas que bloquean a la persona antes de entrar al panel
+//     (no le llega el correo de verificación, no puede crear su empresa) se
+//     atienden a todos, con o sin plan: enlaceWhatsAppFalla(). Solo va en esas
+//     pantallas y con el problema ya escrito; las dudas de uso van al Centro
+//     de Ayuda.
 //
 // El plan es POR EMPRESA (la activa del store), no por persona: quien tiene
 // varias empresas tiene soporte según la que tenga abierta.
@@ -58,4 +63,13 @@ export function enlaceWhatsApp(
     email                 && `Correo: ${email}`,
   ].filter(Boolean);
   return `https://wa.me/${WHATSAPP_SOPORTE}?text=${encodeURIComponent(lineas.join("\n"))}`;
+}
+
+/**
+ * WhatsApp para una falla que bloquea (para todos, sin importar el plan).
+ * `problema` es el mensaje ya escrito; se le agrega el correo si se conoce.
+ */
+export function enlaceWhatsAppFalla(problema: string, email?: string | null): string {
+  const texto = email ? `${problema}\nCorreo: ${email}` : problema;
+  return `https://wa.me/${WHATSAPP_SOPORTE}?text=${encodeURIComponent(texto)}`;
 }
