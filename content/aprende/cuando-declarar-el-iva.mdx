@@ -1,0 +1,46 @@
+import { IVA, SEMESTRES, VENCIMIENTOS } from "@/content/datos-tributarios";
+
+Si tienes RUC y vendes bienes o servicios, cada cierto tiempo tienes que contarle al SRI cuánto IVA cobraste y cuánto pagaste. Eso es la **declaración de IVA**, y se presenta en el **formulario {IVA.formulario}**. La fecha límite no es la misma para todos: depende de tu RUC.
+
+## Qué se declara
+
+En cada venta cobras el IVA ({IVA.tarifaGeneral} % en la mayoría de bienes y servicios) y en cada compra para tu negocio lo pagas. En la declaración pones las dos cosas:
+
+- Si cobraste más IVA del que pagaste, le pagas la diferencia al SRI.
+- Si pagaste más del que cobraste, ese saldo queda a tu favor como **crédito tributario** para las siguientes declaraciones.
+
+<Nota>
+  La declaración se presenta **aunque no hayas vendido nada** en ese periodo: es la declaración "en cero". No presentarla también cuenta como atraso.
+</Nota>
+
+## ¿Mensual o semestral?
+
+Por regla general, el IVA se declara **cada mes**. Se declara **cada seis meses** en casos como estos:
+
+- Solo vendes bienes o servicios con tarifa 0 % de IVA.
+- Te retienen todo el IVA de tus ventas.
+- Estás en el régimen RIMPE.
+
+Tus obligaciones exactas aparecen en tu RUC: puedes revisarlas en la página del SRI con tu clave.
+
+## Qué día vence: el noveno dígito de tu RUC
+
+El día límite sale del **noveno dígito** de tu RUC. Por ejemplo, en el RUC 17123456**7**8001 el noveno dígito es el 7 (cuenta desde la izquierda: 1-7-1-2-3-4-5-6-**7**), así que su declaración vence el día **22**.
+
+<Tabla
+  columnas={["Noveno dígito", "Vence el día"]}
+  filas={VENCIMIENTOS}
+/>
+
+Si declaras **cada mes**, presentas en el mes siguiente: lo de marzo, en abril, hasta el día que te toca.
+
+Si declaras **cada seis meses**:
+
+- **{SEMESTRES[0].nombre}** ({SEMESTRES[0].meses}): se declara en {SEMESTRES[0].seDeclaraEn}.
+- **{SEMESTRES[1].nombre}** ({SEMESTRES[1].meses}): se declara en {SEMESTRES[1].seDeclaraEn}.
+
+Si la fecha cae en fin de semana o feriado, pasa al siguiente día hábil.
+
+## Qué pasa si te atrasas
+
+Si presentas la declaración después de la fecha, el SRI cobra **multa e intereses** sobre el impuesto que tenías que pagar. Aunque no tengas nada que pagar, presentarla tarde puede generar una multa. Lo más seguro es tener la fecha anotada y no dejarla para el último día.

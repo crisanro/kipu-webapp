@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { AppProviders } from "./providers";
+import { URL_SITIO } from "@/lib/config";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -15,6 +16,8 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
+  // Base de los enlaces canónicos y de Open Graph (/aprende, /ayuda)
+  metadataBase: new URL(URL_SITIO),
   title:       "Kipu — Aplicación de facturación y contabilidad",
   description: "Facturación electrónica simple y rápida para Ecuador",
   manifest:    "/manifest.webmanifest",

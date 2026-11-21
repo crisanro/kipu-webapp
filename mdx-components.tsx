@@ -1,10 +1,13 @@
-// mdx-components.tsx — estilos de los artículos en MDX (content/ayuda/*.mdx).
+// mdx-components.tsx — estilos de los artículos en MDX (content/ayuda y content/aprende).
 // Lo exige @next/mdx con App Router. Usa los colores del tema (--kipu-*), así
 // funciona en claro y oscuro sin plugins de tipografía.
 //
 // Además de Markdown, los artículos pueden usar:
 //   <Nota>…</Nota>               recuadro informativo
 //   <Nota tipo="aviso">…</Nota>  recuadro de advertencia
+//   <Tabla columnas={[…]} filas={[[…]]} />  tabla (Markdown no las trae sin remark-gfm)
+// Ojo: las etiquetas HTML escritas a mano en el .mdx (<ul>, <table>) no toman
+// estos estilos; solo lo escrito en Markdown y los componentes de aquí.
 import type { MDXComponents } from "mdx/types";
 import type { ReactNode } from "react";
 import Link from "next/link";
@@ -24,6 +27,35 @@ function Nota({ tipo = "info", children }: { tipo?: "info" | "aviso"; children: 
     >
       <Icono size={16} className="shrink-0 mt-0.5" style={{ color }} />
       <div className="min-w-0">{children}</div>
+    </div>
+  );
+}
+
+/** Tabla simple (sin remark-gfm): <Tabla columnas={["A", "B"]} filas={[["1", "2"]]} /> */
+function Tabla({ columnas, filas }: { columnas: string[]; filas: (string | number)[][] }) {
+  const celda = "py-2 px-3 text-left";
+  const borde = { borderBottom: "1px solid var(--kipu-border)" };
+  return (
+    <div className="my-5 overflow-x-auto rounded-xl" style={{ border: "1px solid var(--kipu-border)" }}>
+      <table className="w-full text-sm border-collapse">
+        <thead style={{ background: "var(--kipu-surface)" }}>
+          <tr>
+            {columnas.map((c) => (
+              <th key={c} className={`${celda} font-semibold`} style={{ ...borde, color: "var(--kipu-text)" }}>{c}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {filas.map((fila, i) => (
+            <tr key={i}>
+              {fila.map((v, j) => (
+                <td key={j} className={celda}
+                    style={{ ...(i < filas.length - 1 ? borde : {}), color: "var(--kipu-muted)" }}>{v}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
@@ -60,6 +92,7 @@ const components: MDXComponents = {
       : <a href={href} target="_blank" rel="noopener noreferrer" className={clase} style={estilo} {...props} />;
   },
   Nota,
+  Tabla,
 };
 
 export function useMDXComponents(): MDXComponents {

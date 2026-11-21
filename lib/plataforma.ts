@@ -8,12 +8,12 @@
 // alcanzar en la app, pero su código sigue en el paquete (Turbopack no descarta
 // ramas por una constante importada). Lo que NO debe ir en la app, ni como
 // código, va en páginas `page.web.tsx` / `route.web.ts`: next.config.ts solo
-// las compila en la web (admin, equipo, planes, renta, api-keys).
+// las compila en la web (admin, equipo, planes, renta, api-keys, aprende).
 
 export const ES_APP_NATIVA = process.env.NEXT_PUBLIC_PLATAFORMA === "native";
 
 /** Pantallas que la app no tiene (sus páginas son `page.web.tsx`). */
-export const RUTAS_SOLO_WEB = ["/planes", "/renta", "/admin", "/equipo", "/api-keys"];
+export const RUTAS_SOLO_WEB = ["/planes", "/renta", "/admin", "/equipo", "/api-keys", "/aprende"];
 
 export const esRutaSoloWeb = (ruta: string) =>
   RUTAS_SOLO_WEB.some((r) => ruta === r || ruta.startsWith(r + "/") || ruta.startsWith(r + "?") || ruta.startsWith(r + "#"));
