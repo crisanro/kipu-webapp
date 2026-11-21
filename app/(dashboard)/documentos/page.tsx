@@ -1,4 +1,5 @@
 "use client";
+import { rutas } from "@/lib/rutas";
 import { useState, useEffect, useCallback } from "react";
 import { useSandboxStore } from "@/store/sandbox.store";
 import Link from "next/link";
@@ -570,7 +571,7 @@ export default function HistorialPage() {
                     >
                       <td className="px-4 py-3">
                         <Link
-                          href={`/documentos/${d.id}`}
+                          href={rutas.documento(d.id)}
                           className="font-mono text-xs transition-colors hover:underline underline-offset-2"
                           style={{ color: "var(--kipu-accent)" }}
                         >
@@ -632,7 +633,7 @@ export default function HistorialPage() {
                 >
                   <div className="flex items-center justify-between gap-2">
                     <Link
-                      href={`/documentos/${d.id}`}
+                      href={rutas.documento(d.id)}
                       className="font-mono text-xs transition-colors"
                       style={{ color: "var(--kipu-accent)" }}
                     >

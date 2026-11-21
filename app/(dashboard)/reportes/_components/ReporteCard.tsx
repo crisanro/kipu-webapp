@@ -1,4 +1,5 @@
 "use client";
+import { rutas } from "@/lib/rutas";
 import Link from "next/link";
 import {
   FileText, ChevronRight, RefreshCw,
@@ -53,9 +54,9 @@ function fmtGenerado(iso?: string) {
 }
 
 function href(tipo: string, periodo: string) {
-  if (tipo === "RENTA") return `/reportes/renta/${periodo}`;
-  if (tipo === "ATS")   return `/reportes/ats/${periodo}`;
-  return `/reportes/iva/${periodo}`;
+  if (tipo === "RENTA") return rutas.reporteRenta(periodo);
+  if (tipo === "ATS")   return rutas.reporteAts(periodo);
+  return rutas.reporteIva(periodo);
 }
 
 export default function ReporteCard({

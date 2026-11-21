@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import api from "@/lib/api";
+import { rutas } from "@/lib/rutas";
 import { usePermiso } from "@/hooks/usePermiso";
 import SinAcceso from "@/components/SinAcceso";
 import OfertaRenta from "@/components/renta/OfertaRenta";
@@ -93,9 +94,9 @@ const colorTab = (tab: Tab) =>
 
 // ── Componente demo cards ──────────────────────────────────────────────────────
 function DemoCards({ tab }: { tab: Tab }) {
-  const href = tab === "IVA" ? "/reportes/iva/2026-07?demo=1"
-             : tab === "RENTA" ? "/reportes/renta/2025"
-             : "/reportes/ats/2026-08";
+  const href = tab === "IVA" ? `${rutas.reporteIva("2026-07")}&demo=1`
+             : tab === "RENTA" ? rutas.reporteRenta(2025)
+             : rutas.reporteAts("2026-08");
   const c = colorTab(tab);
   const bg     = `color-mix(in srgb, ${c.base} 20%, transparent)`;
   const border = `color-mix(in srgb, ${c.base} 20%, transparent)`;
@@ -577,7 +578,7 @@ export default function ReportesPage() {
 
               {!tieneSuscripcion && (
                 <Link
-                  href="/reportes/iva/2026-07?demo=1"
+                  href={`${rutas.reporteIva("2026-07")}&demo=1`}
                   className="flex items-center justify-center gap-1 py-1 text-xs"
                   style={{ color: "var(--kipu-subtle)" }}
                 >

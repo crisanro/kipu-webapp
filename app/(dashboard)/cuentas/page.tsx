@@ -1,4 +1,5 @@
 "use client";
+import { rutas } from "@/lib/rutas";
 import { useState, useEffect, useCallback, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -427,7 +428,7 @@ function CuentasContent() {
               return (
                 <Link
                   key={c.id}
-                  href={esDemo ? "/planes" : `/cuentas/${c.id}`}
+                  href={esDemo ? "/planes" : rutas.cuenta(c.id)}
                   className="flex items-center gap-3 px-4 py-3 transition-colors"
                   style={{
                     borderTop: idx > 0 ? "1px solid var(--kipu-border)" : "none",

@@ -3,6 +3,7 @@
 import {
   CheckCircle2, Clock, XCircle, AlertTriangle, Ban, SearchCheck,
 } from "lucide-react";
+import { API_BASE_URL } from "@/lib/config";
 
 // =============================================================================
 // TIPOS
@@ -191,7 +192,7 @@ export const MOTIVO_LABEL: Record<string, string> = {
 // =============================================================================
 // URLs públicas del comprobante
 // =============================================================================
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+export { API_BASE_URL };
 export const urlXml      = (clave: string) => `${API_BASE_URL}/api/v1/public/xml/${clave}`;
 export const urlPdf      = (clave: string, formato: string) => `${API_BASE_URL}/api/v1/public/pdf/${clave}?formato=${formato}`;
 export const urlConsulta = (clave: string) => `https://consulta.kipu.ec/?id=${clave}`;

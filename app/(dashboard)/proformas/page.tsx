@@ -1,4 +1,5 @@
 "use client";
+import { rutas } from "@/lib/rutas";
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -208,7 +209,7 @@ function ProformasContenido() {
               return (
                 <Link
                   key={p.id}
-                  href={esDemo ? "/planes" : `/proformas/${p.id}`}
+                  href={esDemo ? "/planes" : rutas.proforma(p.id)}
                   className="flex items-center gap-3 px-4 py-3 transition-colors"
                   style={{
                     borderTop: index > 0 ? "1px solid var(--kipu-border)" : "none",

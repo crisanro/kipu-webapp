@@ -1,6 +1,7 @@
 "use client";
+import { rutas } from "@/lib/rutas";
 import { useState, useEffect, useCallback } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { notFound, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
@@ -24,8 +25,14 @@ const ESTADO_CONFIG = {
 
 const FORMAS_PAGO = ["EFECTIVO", "TRANSFERENCIA", "CHEQUE", "TARJETA", "OTRO"];
 
+// /cuentas/ver?id=… (antes /cuentas/[id]; ver lib/rutas.ts)
 export default function DetalleCuentaPage() {
-  const { id }   = useParams();
+  const id = useSearchParams().get("id");
+  if (!id) notFound();
+  return <DetalleCuenta key={id} id={id} />;
+}
+
+function DetalleCuenta({ id }: { id: string }) {
   const router   = useRouter();
   const empresa  = useAuthStore((s) => s.empresa);
   const tieneSub = empresa?.suscripcion_activa ?? false;
@@ -266,7 +273,7 @@ export default function DetalleCuentaPage() {
               <User size={13} /> Persona
             </span>
             <Link
-              href={`/personas/${cuenta.cliente_id}`}
+              href={rutas.persona(cuenta.cliente_id)}
               className="font-medium truncate max-w-[60%] text-right transition-colors"
               style={{ color: "var(--kipu-accent)" }}
               onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent-h)"}

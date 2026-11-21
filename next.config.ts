@@ -53,8 +53,14 @@ const securityHeaders = [
   { key: "Referrer-Policy",         value: "strict-origin-when-cross-origin" },
 ];
 
-const nextConfig = {
+// Las páginas que solo existen en la web (admin, equipo, planes, renta,
+// api-keys) se llaman `page.web.tsx` / `layout.web.tsx`: el build web las
+// incluye; el de la app nativa no (ver lib/plataforma.ts).
+const EXTENSIONES = ["tsx", "ts", "jsx", "js"];
+
+const configWeb = {
   output: "standalone",
+  pageExtensions: [...EXTENSIONES.map((e) => `web.${e}`), ...EXTENSIONES],
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },
@@ -76,5 +82,17 @@ const nextConfig = {
   },
 };
 
+// App de las tiendas (Capacitor): `npm run build:native` → carpeta out/.
+// Sin servidor: no hay headers ni rewrites, ni optimización de imágenes.
+// trailingSlash: cada ruta queda como carpeta/index.html, que el WebView
+// encuentra también al recargar o con window.location.
+const configNativa = {
+  output:         "export",
+  pageExtensions: EXTENSIONES,
+  trailingSlash:  true,
+  images:         { unoptimized: true },
+};
+
+const nextConfig = process.env.NEXT_PUBLIC_PLATAFORMA === "native" ? configNativa : configWeb;
 
 export default nextConfig;

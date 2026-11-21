@@ -1,6 +1,7 @@
 "use client";
+import { rutas } from "@/lib/rutas";
 import { useState, useEffect, useCallback } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { notFound, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import api from "@/lib/api";
 import {
@@ -37,8 +38,14 @@ function validarEmail(email: string): boolean {
 }
 
 // ── Componente ────────────────────────────────────────────────────────────────
+// /personas/ver?id=… (antes /personas/[id]; ver lib/rutas.ts)
 export default function DetallePersonaPage() {
-  const { id } = useParams();
+  const id = useSearchParams().get("id");
+  if (!id) notFound();
+  return <DetallePersona key={id} id={id} />;
+}
+
+function DetallePersona({ id }: { id: string }) {
   const router  = useRouter();
 
   const [data,    setData]    = useState<any>(null);
@@ -521,7 +528,7 @@ export default function DetallePersonaPage() {
               return (
                 <Link
                   key={f.id}
-                  href={`/documentos/${f.id}`}
+                  href={rutas.documento(f.id)}
                   className="flex items-center gap-3 px-4 py-3 transition-colors"
                   style={{
                     borderTop: idx > 0 ? "1px solid var(--kipu-border)" : "none",
@@ -640,7 +647,7 @@ export default function DetallePersonaPage() {
               return (
                 <Link
                   key={c.id}
-                  href={`/cuentas/${c.id}`}
+                  href={rutas.cuenta(c.id)}
                   className="flex items-center gap-3 px-4 py-3 transition-colors"
                   style={{
                     borderTop: idx > 0 ? "1px solid var(--kipu-border)" : "none",

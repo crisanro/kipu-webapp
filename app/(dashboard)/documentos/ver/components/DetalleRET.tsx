@@ -1,4 +1,5 @@
 "use client";
+import { rutas } from "@/lib/rutas";
 import { useRouter } from "next/navigation";
 import { fmt, TIPO_ID, type FacturaBase } from "./DetalleShared";
 
@@ -115,7 +116,7 @@ export default function DetalleRET({ factura }: Props) {
               </div>
               <button
                 type="button"
-                onClick={() => router.push(`/documentos/${factura.doc_origen_emitido.id}`)}
+                onClick={() => router.push(rutas.documento(factura.doc_origen_emitido.id))}
                 className="text-xs transition-colors"
                 style={{ color: "var(--kipu-info)" }}
               >
@@ -133,7 +134,7 @@ export default function DetalleRET({ factura }: Props) {
               </p>
               <button
                 type="button"
-                onClick={() => router.push(`/documentos/recibidos/${factura.doc_origen_recibido_id}`)}
+                onClick={() => router.push(rutas.recibido(factura.doc_origen_recibido_id ?? ""))}
                 className="mt-2 text-xs transition-colors"
                 style={{ color: "var(--kipu-info)" }}
               >

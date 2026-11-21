@@ -2,6 +2,7 @@
 import { getToken, deleteToken, onMessage, type MessagePayload } from "firebase/messaging";
 import { getFirebaseMessaging } from "./firebase";
 import api from "./api";
+import { rutaInterna } from "./rutas";
 
 const VAPID_KEY = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY;
 const FLAG_SESION = "kipu-fcm-ok";
@@ -140,7 +141,7 @@ export async function escucharPrimerPlano(
 
       const titulo = n.title || d.title || "Kipu";
       const cuerpo = n.body || d.body || "";
-      const url = d.url || "/dashboard";
+      const url = rutaInterna(d.url || "/dashboard");
 
       try {
         if (Notification.permission === "granted") {

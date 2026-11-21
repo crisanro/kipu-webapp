@@ -1,4 +1,5 @@
 "use client";
+import { rutas } from "@/lib/rutas";
 import { useRouter } from "next/navigation";
 import { type FacturaBase, ESTADO_CONFIG, TIPO_LABEL, fmt } from "./utils";
 
@@ -29,7 +30,7 @@ export default function DocumentosVinculados({ factura }: { factura: FacturaBase
               </p>
             </div>
             <button
-              onClick={() => router.push(`/documentos/${factura.doc_origen_emitido.id}`)}
+              onClick={() => router.push(rutas.documento(factura.doc_origen_emitido.id))}
               className="text-xs transition-colors"
               style={{ color: "var(--kipu-accent)" }}
               onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent-h)"}
@@ -93,7 +94,7 @@ export default function DocumentosVinculados({ factura }: { factura: FacturaBase
                   <div className="flex items-center gap-3">
                     <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>${fmt(d.importe_total)}</span>
                     <button
-                      onClick={() => router.push(`/documentos/${d.id}`)}
+                      onClick={() => router.push(rutas.documento(d.id))}
                       className="text-xs transition-colors"
                       style={{ color: "var(--kipu-accent)" }}
                       onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent-h)"}

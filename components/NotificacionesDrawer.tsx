@@ -9,6 +9,7 @@ import {
   FileText, CreditCard, Info, ClipboardList, BadgeCheck
 } from "lucide-react";
 import { EVENTO_NOTIF } from "@/lib/notifications";
+import { rutaInterna } from "@/lib/rutas";
 
 const NOTIF_URL     = "/api/v1/app/notificaciones";
 
@@ -206,7 +207,9 @@ export function NotificacionesDrawer({
   const handleClick = (notif: Notificacion) => {
     if (!notif.is_read) onMarcarLeida(notif.id);
     if (notif.redirection) {
-      router.push(notif.redirection);
+      // El backend puede mandar la dirección vieja (/documentos/123): en la app
+      // nativa esa ruta no existe, así que se traduce a la nueva
+      router.push(rutaInterna(notif.redirection));
       onClose();
     }
   };

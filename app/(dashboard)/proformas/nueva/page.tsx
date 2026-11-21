@@ -1,4 +1,5 @@
 "use client";
+import { rutas } from "@/lib/rutas";
 import { useState, useEffect } from "react";
 import { r2 } from "@/lib/dinero";
 import { useRouter } from "next/navigation";
@@ -168,7 +169,7 @@ export default function NuevaProformaPage() {
         }),
       });
 
-      router.push(`/proformas/${res.data.id}`);
+      router.push(rutas.proforma(res.data.id));
     } catch (err: any) {
       const detail = err?.response?.data?.detail;
       setError(

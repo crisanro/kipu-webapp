@@ -20,6 +20,7 @@ import { NAV_GROUPS, tienePermiso } from "./DashboardNav";
 import { SoporteWhatsApp } from "./SoporteWhatsApp";
 import { ThemeToggle } from "./ThemeToggle";
 import { useAuthStore } from "@/store/auth.store";
+import { ES_APP_NATIVA } from "@/lib/plataforma";
 
 interface SidebarProps {
   sidebarOpen: boolean;
@@ -285,8 +286,8 @@ export function Sidebar({
           </div>
         ))}
 
-        {/* Equipo de Kipu Al Día: superadmin y contadores */}
-        {equipoAlDia && (
+        {/* Equipo de Kipu Al Día: superadmin y contadores (solo en la web) */}
+        {equipoAlDia && !ES_APP_NATIVA && (
           <>
             <div className="my-2" style={{ borderTop: "2px solid var(--kipu-border)" }} />
             <Link
@@ -302,7 +303,7 @@ export function Sidebar({
           </>
         )}
 
-        {role === "superadmin" && (
+        {role === "superadmin" && !ES_APP_NATIVA && (
           <>
             <div className="my-2" style={{ borderTop: "2px solid var(--kipu-border)" }} />
             <Link

@@ -16,12 +16,13 @@ import {
   Settings,
   CalendarCheck,
 } from "lucide-react";
+import { ES_APP_NATIVA } from "@/lib/plataforma";
 
 // permiso: string       → usuario necesita ESE permiso
 // permiso: string[]     → usuario necesita AL MENOS UNO (OR)
 // permiso: null          → visible para todos
 
-export const NAV_GROUPS = [
+const GRUPOS = [
   {
     items: [
       { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, permiso: null },
@@ -77,6 +78,13 @@ export const NAV_GROUPS = [
     ],
   },
 ];
+
+// Páginas que la app nativa no compila (son `page.web.tsx`): fuera del menú
+const SOLO_WEB = ["/planes", "/api-keys"];
+
+export const NAV_GROUPS = ES_APP_NATIVA
+  ? GRUPOS.map((g) => (g.items ? { ...g, items: g.items.filter((i) => !SOLO_WEB.includes(i.href)) } : g))
+  : GRUPOS;
 
 type EmpresaConPermisos = { rol?: string | null; permisos?: Record<string, boolean> | null } | null | undefined;
 

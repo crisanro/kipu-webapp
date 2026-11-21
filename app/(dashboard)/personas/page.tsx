@@ -1,4 +1,5 @@
 "use client";
+import { rutas } from "@/lib/rutas";
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import api from "@/lib/api";
@@ -303,7 +304,7 @@ function PersonasContenido() {
             {filtrados.map((c, idx) => (
               <Link
                 key={c.uid}
-                href={`/personas/${c.uid}`}
+                href={rutas.persona(c.uid)}
                 className="flex items-center gap-3 px-4 py-3 transition-colors"
                 style={{
                   borderTop: idx > 0 ? "1px solid var(--kipu-border)" : "none",

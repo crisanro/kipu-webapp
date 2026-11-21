@@ -1,12 +1,14 @@
 "use client";
+import { rutas } from "@/lib/rutas";
 import { useState, useEffect, useCallback } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { notFound, useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowLeft, FileText, Download, Pencil,
   CheckCircle2, X, Save,
   Link2, Shield, Receipt
 } from "lucide-react";
 import api from "@/lib/api";
+import { API_BASE_URL } from "@/lib/config";
 
 const fmt = (n: any) => parseFloat(String(n ?? 0)).toFixed(2);
 
@@ -295,8 +297,14 @@ function ModalClasificacion({ doc, onClose, onSaved }: {
 }
 
 // ── Página principal ──────────────────────────────────────────────────────────
+// /documentos/recibidos/ver?id=… (antes /documentos/recibidos/[id]; ver lib/rutas.ts)
 export default function DetalleRecibidoPage() {
-  const { id }  = useParams();
+  const id = useSearchParams().get("id");
+  if (!id) notFound();
+  return <DetalleRecibido key={id} id={id} />;
+}
+
+function DetalleRecibido({ id }: { id: string }) {
   const router  = useRouter();
 
   const [doc,      setDoc]      = useState<any>(null);
@@ -343,7 +351,7 @@ export default function DetalleRecibidoPage() {
   const pago           = doc.estado_pago ? PAGO_CONFIG[doc.estado_pago] : null;
   const totalDeducible = (doc.items_detalle ?? []).filter((i: any) => i.deducible_renta).reduce((s: number, i: any) => s + i.subtotal, 0);
   const totalCredito   = (doc.items_detalle ?? []).filter((i: any) => i.credito_tributario_iva).reduce((s: number, i: any) => s + i.valor_iva, 0);
-  const base_url      = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+  const base_url      = API_BASE_URL;
   const tColor        = TIPO_COLOR[doc.tipo_doc] ?? TIPO_COLOR.FAC;
 
   return (
@@ -619,7 +627,7 @@ export default function DetalleRecibidoPage() {
             </h2>
           </div>
           <button
-            onClick={() => router.push(`/documentos/recibidos/${doc.doc_origen_recibido_id}`)}
+            onClick={() => router.push(rutas.recibido(doc.doc_origen_recibido_id))}
             className="text-sm transition-colors"
             style={{ color: "var(--kipu-accent)" }}
             onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent-h)"}
@@ -646,7 +654,7 @@ export default function DetalleRecibidoPage() {
             </h2>
           </div>
           <button
-            onClick={() => router.push(`/documentos/${doc.doc_origen_emitido_id}`)}
+            onClick={() => router.push(rutas.documento(doc.doc_origen_emitido_id))}
             className="text-sm transition-colors"
             style={{ color: "var(--kipu-accent)" }}
             onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent-h)"}
@@ -674,7 +682,7 @@ export default function DetalleRecibidoPage() {
               </h2>
             </div>
             <button
-              onClick={() => router.push(`/documentos/${doc.retencion_emitida.id}`)}
+              onClick={() => router.push(rutas.documento(doc.retencion_emitida.id))}
               className="text-xs transition-colors"
               style={{ color: "var(--kipu-accent)" }}
               onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent-h)"}

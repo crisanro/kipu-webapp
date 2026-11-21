@@ -1,6 +1,7 @@
 "use client";
+import { rutas } from "@/lib/rutas";
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { notFound, useRouter, useSearchParams } from "next/navigation";
 import api from "@/lib/api";
 import {
   ArrowLeft, FileText, CheckCircle2,
@@ -19,8 +20,14 @@ const TIPO_ID: Record<string, string> = {
   "08": "Exterior",
 };
 
+// /proformas/ver?id=… (antes /proformas/[id]; ver lib/rutas.ts)
 export default function DetalleProformaPage() {
-  const { id } = useParams();
+  const id = useSearchParams().get("id");
+  if (!id) notFound();
+  return <DetalleProforma key={id} id={id} />;
+}
+
+function DetalleProforma({ id }: { id: string }) {
   const router = useRouter();
 
   const [data,         setData]         = useState<any>(null);
@@ -441,7 +448,7 @@ export default function DetalleProformaPage() {
             <p className="text-sm font-medium" style={{ color: "var(--kipu-success)" }}>Esta proforma fue facturada</p>
           </div>
           <button
-            onClick={() => router.push(`/documentos/${data.documento_emitido_id}`)}
+            onClick={() => router.push(rutas.documento(data.documento_emitido_id))}
             className="text-xs transition-colors"
             style={{ color: "var(--kipu-accent)" }}
             onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent-h)"}

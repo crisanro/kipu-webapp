@@ -1,21 +1,21 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { notFound, useRouter, useSearchParams } from "next/navigation";
 import api from "@/lib/api";
 import {
   ArrowLeft, RefreshCw, CheckCircle2, AlertTriangle, Info, Calendar,
 } from "lucide-react";
 
-import PreguntasSRI        from "../../_components/PreguntasSRI";
-import SeccionVentas       from "../../_components/SeccionVentas";
-import SeccionCompras      from "../../_components/SeccionCompras";
-import SeccionRetenciones  from "../../_components/SeccionRetenciones";
-import ResumenImpositivo   from "../../_components/ResumenImpositivo";
-import DocumentosIncluidos from "../../_components/DocumentosIncluidos";
-import EstadoBadge, { EstadoReporte } from "../../_components/EstadoBadge";
-import PantallaDePago      from "../../_components/PantallaDePago";
-import Alertas104          from "../../_components/Alertas104";
-import AyudaAlDia          from "../../_components/AyudaAlDia";
+import PreguntasSRI        from "../_components/PreguntasSRI";
+import SeccionVentas       from "../_components/SeccionVentas";
+import SeccionCompras      from "../_components/SeccionCompras";
+import SeccionRetenciones  from "../_components/SeccionRetenciones";
+import ResumenImpositivo   from "../_components/ResumenImpositivo";
+import DocumentosIncluidos from "../_components/DocumentosIncluidos";
+import EstadoBadge, { EstadoReporte } from "../_components/EstadoBadge";
+import PantallaDePago      from "../_components/PantallaDePago";
+import Alertas104          from "../_components/Alertas104";
+import AyudaAlDia          from "../_components/AyudaAlDia";
 
 const fmt = (n: number = 0) =>
   n.toLocaleString("es-EC", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -48,10 +48,16 @@ interface DeclaracionPeriodo {
   periodo_fmt:    string;
 }
 
+// /reportes/iva?periodo=2026-08 (antes /reportes/iva/[periodo]; ver lib/rutas.ts)
 export default function ReporteIVAPage() {
-  const params  = useParams();
+  const periodo = useSearchParams().get("periodo");
+  if (!periodo) notFound();
+  return <ReporteIVA key={periodo} periodo={periodo} />;
+}
+
+// periodo: "2026-08" (o "2026-07" para el 2do semestre)
+function ReporteIVA({ periodo }: { periodo: string }) {
   const router  = useRouter();
-  const periodo = params.periodo as string;  // "2026-08" (o "2026-07" para el 2do semestre)
   // Volvió de pagar el pase en Stripe (?pase=pagado): se espera a que se active
   const busqueda   = useSearchParams();
   const pasePagado = busqueda.get("pase") === "pagado";

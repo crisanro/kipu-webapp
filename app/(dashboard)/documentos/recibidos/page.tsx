@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { rutas } from "@/lib/rutas";
 import Link from "next/link";
 import api from "@/lib/api";
 import { usePermiso } from "@/hooks/usePermiso";
@@ -381,7 +382,7 @@ export default function FacturasRecibidasPage() {
   const esDemo    = !loading && !tieneSub && docs.length === 0 && !queryActivo;
   const filtrados = esDemo ? demoRecibidos() : docs;
   const resumenV: Resumen | null = esDemo ? resumenRecibidos(demoRecibidos()) : resumen;
-  const verDetalle = (id: string) => router.push(esDemo ? "/planes" : `/documentos/recibidos/${id}`);
+  const verDetalle = (id: string) => router.push(esDemo ? "/planes" : rutas.recibido(id));
 
   return (
     <div className="p-4 md:p-6 space-y-5">

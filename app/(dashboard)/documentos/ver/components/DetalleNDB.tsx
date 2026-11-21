@@ -1,4 +1,5 @@
 "use client";
+import { rutas } from "@/lib/rutas";
 import { useRouter } from "next/navigation";
 import { fmt, TIPO_ID, type FacturaBase } from "./DetalleShared";
 
@@ -112,7 +113,7 @@ export default function DetalleNDB({ factura }: Props) {
         </div>
         {factura.doc_origen_emitido_id && (
           <button
-            onClick={() => router.push(`/documentos/${factura.doc_origen_emitido_id}`)}
+            onClick={() => router.push(rutas.documento(factura.doc_origen_emitido_id!))}
             className="mt-3 text-xs transition-colors underline-offset-2 hover:underline"
             style={{ color: "var(--kipu-warning)" }}
           >

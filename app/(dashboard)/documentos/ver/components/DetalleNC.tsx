@@ -1,4 +1,5 @@
 "use client";
+import { rutas } from "@/lib/rutas";
 import { useRouter } from "next/navigation";
 import { Copy } from "lucide-react";
 import { fmt, TIPO_ID, type FacturaBase } from "./DetalleShared";
@@ -135,7 +136,7 @@ export default function DetalleNC({ factura }: Props) {
         {/* Link al documento origen */}
         {factura.doc_origen_emitido_id && (
           <button
-            onClick={() => router.push(`/documentos/${factura.doc_origen_emitido_id}`)}
+            onClick={() => router.push(rutas.documento(factura.doc_origen_emitido_id!))}
             className="mt-3 text-xs transition-colors underline-offset-2 hover:underline"
             style={{ color: "var(--kipu-muted)" }}
           >

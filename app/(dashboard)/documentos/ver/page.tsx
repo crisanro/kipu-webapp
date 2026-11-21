@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { notFound, useRouter, useSearchParams } from "next/navigation";
 import { FileText } from "lucide-react";
 import api from "@/lib/api";
 import DetalleShared, { type FacturaBase } from "./components/DetalleShared";
@@ -10,8 +10,15 @@ import DetalleNC      from "./components/DetalleNC";
 import DetalleNDB     from "./components/DetalleNDB";
 import DetalleRET     from "./components/DetalleRET";
 
+// /documentos/ver?id=… (antes /documentos/[id]; ver lib/rutas.ts). La key hace
+// que otro id sea otra pantalla, sin arrastrar el estado del anterior.
 export default function DetalleDocumentoPage() {
-  const { id }  = useParams();
+  const id = useSearchParams().get("id");
+  if (!id) notFound();
+  return <DetalleDocumento key={id} id={id} />;
+}
+
+function DetalleDocumento({ id }: { id: string }) {
   const router  = useRouter();
   const [documento, setDocumento] = useState<any>(null);
   const [loading,   setLoading]   = useState(true);

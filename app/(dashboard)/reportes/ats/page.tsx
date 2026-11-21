@@ -1,17 +1,17 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { notFound, useRouter, useSearchParams } from "next/navigation";
 import api from "@/lib/api";
 import {
   ArrowLeft, RefreshCw, AlertTriangle,
   FileText, ChevronDown, ChevronUp, Download, Info,
 } from "lucide-react";
 
-import PreguntasSRI        from "../../_components/PreguntasSRI";
-import SeccionRetenciones  from "../../_components/SeccionRetenciones";
-import ResumenImpositivo   from "../../_components/ResumenImpositivo";
-import DocumentosIncluidos from "../../_components/DocumentosIncluidos";
-import EstadoBadge         from "../../_components/EstadoBadge";
+import PreguntasSRI        from "../_components/PreguntasSRI";
+import SeccionRetenciones  from "../_components/SeccionRetenciones";
+import ResumenImpositivo   from "../_components/ResumenImpositivo";
+import DocumentosIncluidos from "../_components/DocumentosIncluidos";
+import EstadoBadge         from "../_components/EstadoBadge";
 
 const fmt  = (n: number = 0) =>
   n.toLocaleString("es-EC", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -139,10 +139,15 @@ function TablaDetalle({ titulo, rows, columnas, color = "indigo" }: {
   );
 }
 
+// /reportes/ats?periodo=2026-08 (antes /reportes/ats/[periodo]; ver lib/rutas.ts)
 export default function ReporteATSPage() {
-  const params  = useParams();
+  const periodo = useSearchParams().get("periodo");
+  if (!periodo) notFound();
+  return <ReporteATS key={periodo} periodo={periodo} />;
+}
+
+function ReporteATS({ periodo }: { periodo: string }) {
   const router  = useRouter();
-  const periodo = params.periodo as string;
 
   const [data,        setData]        = useState<any>(null);
   const [decl,        setDecl]        = useState<any>(null);

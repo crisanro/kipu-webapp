@@ -1,8 +1,9 @@
-// app/(dashboard)/reportes/renta/[anio]/page.tsx
+// app/(dashboard)/reportes/renta/page.tsx — /reportes/renta?anio=2025
+// (antes /reportes/renta/[anio]; ver lib/rutas.ts)
 
 "use client";
 import { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { notFound, useRouter, useSearchParams } from "next/navigation";
 import api from "@/lib/api";
 import OfertaRenta from "@/components/renta/OfertaRenta";
 import { ArrowLeft, RefreshCw, FileText, AlertTriangle, TrendingUp, TrendingDown, Receipt } from "lucide-react";
@@ -10,9 +11,13 @@ import { ArrowLeft, RefreshCw, FileText, AlertTriangle, TrendingUp, TrendingDown
 const fmt = (n: number = 0) => n.toLocaleString("es-EC", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export default function ReporteRentaPage() {
-  const params = useParams();
+  const anio = useSearchParams().get("anio");
+  if (!anio) notFound();
+  return <ReporteRenta key={anio} anio={anio} />;
+}
+
+function ReporteRenta({ anio }: { anio: string }) {
   const router = useRouter();
-  const anio = params.anio;
 
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
