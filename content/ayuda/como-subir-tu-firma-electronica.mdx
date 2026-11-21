@@ -9,35 +9,47 @@ antes de enviarlo al SRI: sin firma no puedes emitir.
 3. Escribe la **contraseña del certificado** (la que te dio la entidad al emitir la firma).
 4. Pulsa **Guardar firma**.
 
-Si todo está bien, verás el nombre del titular y la fecha de vencimiento de tu firma.
+Si todo está bien, verás **Firma configurada correctamente** y la etiqueta
+**Vigente hasta el** con la fecha de vencimiento.
 
 <Nota>
   Para subir o eliminar la firma necesitas el permiso de **Configuración**. El
   administrador de la empresa lo tiene siempre.
 </Nota>
 
+## Si no se puede subir
+
+- **"P12 inválido o contraseña incorrecta"**: casi siempre es la contraseña. Es la del
+  certificado, no la de tu cuenta de Kipu ni la del SRI. Si no la recuerdas, pídela a tu
+  entidad de certificación. Si la contraseña está bien, el archivo puede estar dañado:
+  descárgalo de nuevo.
+- **"RUC no coincide"**: la firma es de otra persona o de otra empresa. Tiene que ser la
+  firma del RUC de la empresa que tienes abierta.
+- **"El archivo .p12 no puede superar 1MB"**: no es un archivo de firma normal; revisa
+  que sea el correcto.
+- **Tu firma está en un token** (un dispositivo USB): Kipu necesita el archivo .p12. Pídelo
+  a tu entidad de certificación.
+
 ## Cuando tu firma vence
 
 Las firmas tienen fecha de caducidad. En **Firma electrónica** ves hasta cuándo está
-vigente y, en los últimos 30 días, la etiqueta **Próxima a vencer**. Renuévala con tu
-entidad de certificación con tiempo: con la firma vencida no puedes emitir.
+vigente y, en los últimos 30 días, la etiqueta **Próxima a vencer**. Cuando vence, dice
+**Expirada**.
+
+<Nota tipo="aviso">
+  Con la firma vencida **no puedes emitir nada**, ni siquiera en el modo sandbox. Renuévala
+  con tu entidad de certificación antes de la fecha: Kipu no te manda un recordatorio.
+</Nota>
 
 ## Reemplazar la firma
 
 Para subir una firma nueva primero debes eliminar la actual:
 
-1. En **Firma electrónica**, pulsa **Eliminar firma** y confirma.
+1. En **Firma electrónica**, pulsa **Eliminar firma** y confirma con **Sí, eliminar**.
 2. Sube la nueva como se explica arriba.
+3. Revisa que la fecha de **Vigente hasta el** sea la de la firma nueva.
 
-<Nota tipo="aviso">
+<Nota>
   Entre que eliminas la firma y subes la nueva no puedes emitir. Ten el archivo nuevo y su
   contraseña a la mano antes de empezar.
 </Nota>
-
-## Si no se puede subir
-
-- **La contraseña no es la correcta**: es la del certificado, no la de tu cuenta de Kipu ni
-  la del SRI. Si no la recuerdas, pídela a tu entidad de certificación.
-- **El archivo no es .p12**: algunas entidades entregan la firma en un dispositivo (token).
-  Kipu necesita el archivo .p12.
-- **La firma ya venció**: renuévala y sube el archivo nuevo.

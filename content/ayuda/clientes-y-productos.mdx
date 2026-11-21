@@ -1,0 +1,42 @@
+Guardar tus clientes y productos te ahorra escribirlos en cada factura: al emitir, los
+buscas por nombre o código y se llenan solos.
+
+## Clientes
+
+**Se guardan solos.** Cuando registras un cliente nuevo al hacer una factura, queda guardado
+en **Personas** al emitir.
+
+También puedes crearlos antes, en [Personas](/personas):
+
+1. Pulsa **+ Nueva persona**.
+2. Elige el **Tipo ID** (RUC, Cédula, Pasaporte o Exterior) y escribe la **Identificación**.
+3. Con la lupa, Kipu busca el nombre. Si no lo encuentra, escríbelo a mano.
+4. Completa **Email**, **Teléfono** y **Dirección** si los tienes, y pulsa **Guardar**.
+
+<Nota>
+  Pon el **email** del cliente: es a donde le llega su factura cuando el SRI la autoriza.
+</Nota>
+
+Si un cliente ya está guardado y lo vuelves a escribir en una factura, Kipu usa los datos
+guardados (nombre, email y dirección). Para cambiarlos, edítalos en **Personas**.
+
+## Productos y servicios
+
+A diferencia de los clientes, **los productos no se guardan solos**. Dos formas de
+guardarlos:
+
+- **Al facturar:** en el ítem, marca **Guardar en mi catálogo** y ponle un código.
+- **En [Productos](/productos):** pulsa **+ Nuevo** y completa:
+  - **Código** (no se puede cambiar después) y **Descripción**;
+  - **Precio**, con **+ IVA** o **IVA incluido**;
+  - **IVA** y **Unidad**;
+  - **Stock** si quieres llevar inventario (pon -1 para no controlarlo) y un **Stock mínimo**
+    para que Kipu te avise cuando se esté acabando.
+
+Al facturar, busca el producto por código o descripción, o escanea su código de barras.
+
+## Inventario
+
+Si llevas stock, cada factura lo descuenta y cada liquidación de compra lo suma. Los
+comprobantes de prueba no lo mueven. Si un producto no se vende más, desactívalo: no se
+borra y lo puedes reactivar.
