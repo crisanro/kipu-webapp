@@ -5,6 +5,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
+import BloqueSoporte from "@/components/ayuda/BloqueSoporte";
 import TarjetaArticulo from "@/components/ayuda/TarjetaArticulo";
 import { ARTICULOS, articuloPorSlug, categoria } from "@/content/ayuda/articulos";
 
@@ -53,6 +54,8 @@ export default async function ArticuloAyudaPage({ params }: Props) {
           {relacionados.map((a) => <TarjetaArticulo key={a.slug} articulo={a} />)}
         </section>
       )}
+
+      <BloqueSoporte />
     </article>
   );
 }

@@ -1,4 +1,5 @@
 // app/ayuda/page.tsx — portada del Centro de Ayuda: buscador y categorías.
+import BloqueSoporte from "@/components/ayuda/BloqueSoporte";
 import Buscador from "@/components/ayuda/Buscador";
 import { ARTICULOS, CATEGORIAS } from "@/content/ayuda/articulos";
 
@@ -12,6 +13,7 @@ export default function AyudaPage() {
         </p>
       </div>
       <Buscador articulos={ARTICULOS} categorias={CATEGORIAS} />
+      <BloqueSoporte />
     </div>
   );
 }
