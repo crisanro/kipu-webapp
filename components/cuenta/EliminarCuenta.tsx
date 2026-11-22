@@ -5,7 +5,7 @@
 // borra a los 30 días. Por cada empresa dice qué pasa: salir, eliminarla (era el
 // único usuario) o, si era el único admin y hay más usuarios, elegir entre
 // dejar a otro como administrador o eliminarla para todos.
-// Se usa en /cuenta (con empresa) y en /bienvenida (sin empresa todavía).
+// Se usa en Configuración → Zona de riesgo (con empresa) y en /bienvenida (sin empresa todavía).
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";

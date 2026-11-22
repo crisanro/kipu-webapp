@@ -350,7 +350,7 @@ export default function BienvenidaPage() {
                 Eliminar mi cuenta
               </button>
             ) : (
-              // Mismo flujo que /cuenta: lo hace el backend (perfil, Firebase y avisos)
+              // Mismo flujo que Configuración → Zona de riesgo: lo hace el backend (perfil, Firebase y avisos)
               <div className="w-full text-left">
                 <EliminarCuenta onCancelar={() => setConfirmDelete(false)} />
               </div>

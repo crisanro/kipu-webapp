@@ -74,7 +74,8 @@ const GRUPOS = [
       { href: "/usuarios",      label: "Usuarios",      icon: UserCog,   permiso: "usuarios" },
       { href: "/api-keys",      label: "API Keys",      icon: Key,       permiso: "api_keys" },
       { href: "/auditoria",     label: "Auditoría",     icon: Shield,    permiso: "auditoria" },
-      { href: "/configuracion", label: "Configuración", icon: Settings,  permiso: "configuracion" },
+      // Para todos: ahí está tu cuenta y "Eliminar mi cuenta"; lo de la empresa pide permiso adentro
+      { href: "/configuracion", label: "Configuración", icon: Settings,  permiso: null },
     ],
   },
 ];
