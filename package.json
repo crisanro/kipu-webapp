@@ -1,6 +1,6 @@
 {
   "name": "kipu-web",
-  "version": "0.1.0",
+  "version": "1.0.1",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -11,6 +11,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@capacitor-firebase/messaging": "8.6.0",
     "@capacitor/android": "8.6.0",
     "@capacitor/core": "8.6.0",
     "@mdx-js/loader": "^3.1.1",

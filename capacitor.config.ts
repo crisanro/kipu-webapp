@@ -17,6 +17,16 @@ const config: CapacitorConfig = {
     // La app solo llama a la API por HTTPS
     allowMixedContent: false,
   },
+  experimental: {
+    ios: {
+      spm: {
+        // Lo pide @capacitor-firebase/messaging en iOS (choque de nombres en Swift Package Manager)
+        packageOptions: {
+          "@capacitor-firebase/messaging": { symlink: true },
+        },
+      },
+    },
+  },
 };
 
 export default config;

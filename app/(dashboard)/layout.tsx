@@ -86,10 +86,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const activarPush = useCallback(async (): Promise<boolean> => {
     const ok = await registrarNotificaciones();
     if (ok && montado.current && !desuscribirPush.current) {
-      desuscribirPush.current = await escucharPrimerPlano();
+      // App nativa: al tocar una notificación se abre su pantalla sin recargar
+      desuscribirPush.current = await escucharPrimerPlano(undefined, (url) => router.push(url));
     }
     return ok;
-  }, []);
+  }, [router]);
 
   const hayEmpresa = !!empresa?.id;
 
