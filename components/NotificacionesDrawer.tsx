@@ -220,7 +220,7 @@ export function NotificacionesDrawer({
         <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose} />
       )}
       <div
-        className="fixed top-0 right-0 h-full w-full sm:w-96 z-50 flex flex-col transition-transform duration-300 ease-in-out"
+        className="fixed top-0 right-0 h-full w-full sm:w-96 z-50 flex flex-col transition-transform duration-300 ease-in-out area-segura-y"
         style={{
           background: "var(--kipu-surface)",
           borderLeft: "1px solid var(--kipu-border)",

@@ -124,6 +124,8 @@ export function Sidebar({
     <aside
       className={clsx(
         "fixed lg:static inset-y-0 left-0 z-30 w-64 flex flex-col transition-transform duration-200",
+        // En móvil es un panel fijo de alto completo: dentro del área segura (globals.css)
+        "max-lg:pt-[var(--sa-top)] max-lg:pb-[var(--sa-bottom)]",
         sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
       )}
       style={{

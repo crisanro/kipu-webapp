@@ -13,6 +13,9 @@ export const viewport: Viewport = {
   initialScale:  1,
   maximumScale:  1,
   userScalable:  false,
+  // Toda la pantalla, también bajo la barra de estado y la isla: el área segura
+  // la respeta app/globals.css (sin esto iOS no da los env(safe-area-inset-*))
+  viewportFit:   "cover",
 };
 
 export const metadata: Metadata = {

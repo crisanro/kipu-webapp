@@ -148,7 +148,7 @@ export function SelectorEmpresa({ onClose }: { onClose: () => void }) {
   });
 
   return (
-    <div className="fixed inset-0 bg-black/70 z-50 flex items-end sm:items-center justify-center p-4">
+    <div className="fixed inset-0 bg-black/70 z-50 flex items-end sm:items-center justify-center p-4 area-segura-abajo">
       <div
         className="rounded-xl w-full max-w-sm"
         style={{
