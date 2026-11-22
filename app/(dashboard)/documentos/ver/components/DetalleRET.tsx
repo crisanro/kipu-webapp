@@ -1,6 +1,8 @@
 "use client";
 import { rutas } from "@/lib/rutas";
 import { useRouter } from "next/navigation";
+import { useAuthStore } from "@/store/auth.store";
+import { rutaFueraDelPlan } from "@/lib/plataforma";
 import { fmt, TIPO_ID, type FacturaBase } from "./DetalleShared";
 
 interface Props { factura: FacturaBase; }
@@ -21,6 +23,8 @@ const DOCS_SUSTENTO: Record<string, string> = {
 
 export default function DetalleRET({ factura }: Props) {
   const router = useRouter();
+  // App de las tiendas: sin enlace a Recibidos si el plan no los incluye
+  const sinRecibidos = rutaFueraDelPlan("/documentos/recibidos", useAuthStore((s) => s.empresa));
   const datos   = factura.datos ?? {};
   const trib    = datos.infoTributaria    ?? {};
   const infoRET = datos.infoCompRetencion ?? {};
@@ -132,14 +136,14 @@ export default function DetalleRET({ factura }: Props) {
                 {factura.doc_origen_recibido.razon_social_proveedor}
                 {" · "}${fmt(factura.doc_origen_recibido.importe_total)}
               </p>
-              <button
+              {!sinRecibidos && <button
                 type="button"
                 onClick={() => router.push(rutas.recibido(factura.doc_origen_recibido_id ?? ""))}
                 className="mt-2 text-xs transition-colors"
                 style={{ color: "var(--kipu-info)" }}
               >
                 Ver factura recibida →
-              </button>
+              </button>}
             </div>
           ) : null}
         </div>

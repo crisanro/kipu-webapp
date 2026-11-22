@@ -5,6 +5,8 @@ import {
   FileText, Users, Package, FileInput,
   Settings, BarChart2
 } from "lucide-react";
+import { useAuthStore } from "@/store/auth.store";
+import { rutaFueraDelPlan } from "@/lib/plataforma";
 
 const accesos = [
   {
@@ -46,6 +48,9 @@ const accesos = [
 ];
 
 export default function AccesosRapidos() {
+  // App de las tiendas: sin lo que el plan no incluye (lib/plataforma.ts)
+  const empresa = useAuthStore((s) => s.empresa);
+  const visibles = accesos.filter(({ href }) => !rutaFueraDelPlan(href, empresa));
   return (
     <div
       className="rounded-xl p-5 h-full"
@@ -58,7 +63,7 @@ export default function AccesosRapidos() {
         Accesos rápidos
       </h2>
       <div className="grid grid-cols-2 gap-2">
-        {accesos.map(({ href, icon: Icon, label, color }) => (
+        {visibles.map(({ href, icon: Icon, label, color }) => (
           <Link
             key={href}
             href={href}

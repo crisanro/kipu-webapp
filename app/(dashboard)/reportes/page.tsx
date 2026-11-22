@@ -262,12 +262,17 @@ export default function ReportesPage() {
     };
   });
 
-  const TabsBar = (
+  // App de las tiendas con el plan gratis: solo el IVA, que es lo que incluye
+  // (Renta y ATS no se muestran: lib/plataforma.ts)
+  const tabsVisibles = (Object.keys(TAB_CONFIG) as Tab[])
+    .filter((t) => !ES_APP_NATIVA || tieneSuscripcion || t === "IVA");
+
+  const TabsBar = tabsVisibles.length < 2 ? null : (
     <div
       className="flex gap-1 rounded-xl p-1"
       style={{ background: "var(--kipu-surface)", border: "1px solid var(--kipu-border)" }}
     >
-      {(Object.keys(TAB_CONFIG) as Tab[]).map((t) => {
+      {tabsVisibles.map((t) => {
         const activo = tab === t;
         return (
           <button
@@ -337,7 +342,7 @@ export default function ReportesPage() {
       </div>
 
       {/* ── PLAN GRATIS: el total es gratis, el 104 completo con pase o Pro ─── */}
-      {planGratis && (
+      {planGratis && !ES_APP_NATIVA && (
         <div
           className="flex items-start gap-3 rounded-xl px-4 py-3"
           style={{
@@ -348,17 +353,11 @@ export default function ReportesPage() {
           <Lock size={15} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-accent)" }} />
           <p className="text-xs" style={{ color: "var(--kipu-muted)" }}>
             <span className="font-semibold" style={{ color: "var(--kipu-text)" }}>Ver el total de tu IVA es gratis. </span>
-            {ES_APP_NATIVA ? (
-              "El formulario 104 completo, Renta y ATS no están incluidos en tu plan actual."
-            ) : (
-              <>
-                El formulario 104 completo se desbloquea con el {obl?.iva === "SEMESTRAL" ? "pase del semestre" : "pase del mes"} o
-                con Kipu Pro, que además incluye Renta y ATS.{" "}
-                <Link href="/planes" className="font-semibold underline" style={{ color: "var(--kipu-accent)" }}>
-                  Ver planes
-                </Link>
-              </>
-            )}
+            El formulario 104 completo se desbloquea con el {obl?.iva === "SEMESTRAL" ? "pase del semestre" : "pase del mes"} o
+            con Kipu Pro, que además incluye Renta y ATS.{" "}
+            <Link href="/planes" className="font-semibold underline" style={{ color: "var(--kipu-accent)" }}>
+              Ver planes
+            </Link>
           </p>
         </div>
       )}

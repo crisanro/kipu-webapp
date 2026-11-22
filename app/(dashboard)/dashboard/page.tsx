@@ -13,7 +13,7 @@ import UltimosDocumentos from "./components/UltimosDocumentos";
 import DocumentosRecibidos from "./components/DocumentosRecibidos";
 import AccesosRapidos from "./components/AccesosRapidos";
 import OfertaRenta from "@/components/renta/OfertaRenta";
-import { ES_APP_NATIVA } from "@/lib/plataforma";
+import { ES_APP_NATIVA, rutaFueraDelPlan } from "@/lib/plataforma";
 
 interface DashboardData {
   health?: HealthData;
@@ -195,10 +195,15 @@ export default function DashboardPage() {
             </div>
             <AccesosRapidos />
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* App de las tiendas: Recibidos solo si el plan lo incluye (lib/plataforma.ts) */}
+          {rutaFueraDelPlan("/documentos/recibidos", empresa) ? (
             <UltimosDocumentos documentos={data?.documentos ?? []} />
-            <DocumentosRecibidos docs={data?.recibidos_recientes ?? []} />
-          </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <UltimosDocumentos documentos={data?.documentos ?? []} />
+              <DocumentosRecibidos docs={data?.recibidos_recientes ?? []} />
+            </div>
+          )}
         </div>
       )}
 

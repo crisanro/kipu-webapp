@@ -20,7 +20,7 @@ import { clsx } from "clsx";
 import { NAV_GROUPS, tienePermiso } from "./DashboardNav";
 import { ThemeToggle } from "./ThemeToggle";
 import { useAuthStore } from "@/store/auth.store";
-import { ES_APP_NATIVA } from "@/lib/plataforma";
+import { ES_APP_NATIVA, rutaFueraDelPlan } from "@/lib/plataforma";
 
 // Tarjeta del plan: enlace a /planes en la web; en la app de las tiendas no se
 // ofrecen planes, así que es solo un recuadro informativo
@@ -242,7 +242,7 @@ export function Sidebar({
                       style={{ borderLeft: "2px solid var(--kipu-border)" }}
                     >
                       {group.children
-                        .filter((child) => tienePermiso(empresa, (child as any).permiso ?? null))
+                        .filter((child) => tienePermiso(empresa, (child as any).permiso ?? null) && !rutaFueraDelPlan(child.href, empresa))
                         .map((child) => {
                           const active = isActive(child.href);
                           const Icon = child.icon;
@@ -277,7 +277,7 @@ export function Sidebar({
               )
             ) : (
               group.items
-                ?.filter((item) => tienePermiso(empresa, (item as any).permiso ?? null))
+                ?.filter((item) => tienePermiso(empresa, (item as any).permiso ?? null) && !rutaFueraDelPlan(item.href, empresa))
                 .map((item) => {
                   const active = isActive(item.href);
                   const Icon = item.icon;

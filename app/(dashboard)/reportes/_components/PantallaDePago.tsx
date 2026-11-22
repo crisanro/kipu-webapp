@@ -106,22 +106,13 @@ export default function PantallaDePago({
   // App de las tiendas: el total (que es gratis) y un aviso neutro, sin precios
   // ni forma de comprar (ver components/SoloWeb.tsx)
   if (ES_APP_NATIVA) {
+    // Sin "no incluido en tu plan" ni alertas que no se pueden abrir: en la app
+    // no se ofrece lo que no se puede contratar ahí (lib/plataforma.ts)
     return (
       <div className="p-4 md:p-6 max-w-2xl mx-auto space-y-5">
         {cabecera}
-        {alertasCantidad > 0 && (
-          <div className="rounded-xl p-3.5 flex items-start gap-3"
-               style={{ background: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)",
-                        border: "1px solid color-mix(in srgb, var(--kipu-warning) 30%, transparent)" }}>
-            <AlertTriangle size={16} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-warning)" }} />
-            <p className="text-sm" style={{ color: "var(--kipu-text)" }}>
-              Encontramos {alertasCantidad === 1 ? "1 alerta" : `${alertasCantidad} alertas`} en tu declaración
-              de {periodoFmt}.
-            </p>
-          </div>
-        )}
         <p className="text-sm text-center" style={{ color: "var(--kipu-subtle)" }}>
-          El formulario 104 casillero por casillero y el detalle de las alertas no están incluidos en tu plan actual.
+          Calculado con los comprobantes de {periodoFmt} que tienes en Kipu.
         </p>
       </div>
     );

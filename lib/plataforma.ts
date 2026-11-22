@@ -17,3 +17,28 @@ export const RUTAS_SOLO_WEB = ["/planes", "/renta", "/admin", "/equipo", "/api-k
 
 export const esRutaSoloWeb = (ruta: string) =>
   RUTAS_SOLO_WEB.some((r) => ruta === r || ruta.startsWith(r + "/") || ruta.startsWith(r + "?") || ruta.startsWith(r + "#"));
+
+// ── Lo que incluye el plan, en la app ─────────────────────────────────────────
+// En la web, lo que el plan no incluye se muestra con datos de ejemplo para
+// venderlo. En la app no: no se puede comprar ahí (Apple 3.1.1 / Google Play),
+// así que una función bloqueada sin salida invita a pagar fuera o parece rota.
+// La app muestra solo lo que el plan incluye; lo demás no está ni en el menú.
+// Mismas reglas que las pantallas usan para decidir los ejemplos.
+type EmpresaPlan = { suscripcion_activa?: boolean | null; emision_gratis?: boolean | null } | null | undefined;
+
+/** Solo con Pro o Al Día (suscripcion_activa). */
+const RUTAS_CON_SUSCRIPCION = ["/cuentas", "/proformas", "/reportes/ats", "/reportes/renta"];
+/** Con suscripción o con el plan gratis (emision_gratis): en Reportes, solo el IVA. */
+const RUTAS_CON_PLAN = ["/documentos/recibidos", "/reportes"];
+
+const empiezaCon = (ruta: string, r: string) =>
+  ruta === r || ruta.startsWith(r + "/") || ruta.startsWith(r + "?") || ruta.startsWith(r + "#");
+
+/** true: en la app esta ruta no se muestra ni se puede abrir con este plan. */
+export function rutaFueraDelPlan(ruta: string, empresa: EmpresaPlan): boolean {
+  if (!ES_APP_NATIVA || !empresa) return false;
+  if (empresa.suscripcion_activa) return false;
+  if (RUTAS_CON_SUSCRIPCION.some((r) => empiezaCon(ruta, r))) return true;
+  if (RUTAS_CON_PLAN.some((r) => empiezaCon(ruta, r))) return !empresa.emision_gratis;
+  return false;
+}

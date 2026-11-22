@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from "react";
 import { notFound, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import api from "@/lib/api";
+import { useAuthStore } from "@/store/auth.store";
+import { rutaFueraDelPlan } from "@/lib/plataforma";
 import {
   ArrowLeft, User, Mail, Phone, MapPin, FileText,
   CheckCircle2, Clock, AlertTriangle, XCircle,
@@ -47,6 +49,8 @@ export default function DetallePersonaPage() {
 
 function DetallePersona({ id }: { id: string }) {
   const router  = useRouter();
+  const empresaActiva = useAuthStore((s) => s.empresa);
+  const sinCuentas = rutaFueraDelPlan("/cuentas", empresaActiva);
 
   const [data,    setData]    = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -588,7 +592,8 @@ function DetallePersona({ id }: { id: string }) {
         )}
       </div>
 
-      {/* Cuentas */}
+      {/* Cuentas (en la app, solo si el plan las incluye: lib/plataforma.ts) */}
+      {!sinCuentas && (
       <div
         className="rounded-xl overflow-hidden"
         style={{
@@ -685,6 +690,7 @@ function DetallePersona({ id }: { id: string }) {
           </div>
         )}
       </div>
+      )}
     </div>
   );
 }
