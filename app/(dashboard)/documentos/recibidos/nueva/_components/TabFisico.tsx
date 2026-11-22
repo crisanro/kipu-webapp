@@ -2,7 +2,7 @@
 import { useState, useRef } from "react";
 import api from "@/lib/api";
 import {
-  Camera, X, AlertTriangle, Plus, Trash2,
+  Camera, ImageIcon, X, AlertTriangle, Plus, Trash2,
 } from "lucide-react";
 import { hoyEC } from "@/lib/fecha";
 import { formatoNumeroDoc } from "@/lib/teclado";
@@ -82,6 +82,7 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
   const [imagenFile,    setImagenFile]    = useState<File | null>(null);
   const [imagenPreview, setImagenPreview] = useState<string | null>(null);
   const imagenRef = useRef<HTMLInputElement>(null);
+  const camaraRef = useRef<HTMLInputElement>(null);
 
   const [saving, setSaving] = useState(false);
   const [error,  setError]  = useState("");
@@ -707,33 +708,51 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
             )}
           </div>
         ) : (
-          <button
-            type="button"
-            onClick={() => imagenRef.current?.click()}
-            className="w-full flex flex-col items-center gap-3 py-8 border-2 border-dashed rounded-xl transition-colors cursor-pointer"
-            style={{ borderColor: "var(--kipu-border)" }}
-            onMouseEnter={e => {
-              e.currentTarget.style.borderColor = "color-mix(in srgb, var(--kipu-accent) 50%, transparent)";
-              e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-accent) 5%, transparent)";
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.borderColor = "var(--kipu-border)";
-              e.currentTarget.style.background = "transparent";
-            }}
-          >
-            <Camera size={24} style={{ color: "var(--kipu-subtle)" }} />
-            <div className="text-center">
-              <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>Tomar foto o seleccionar imagen</p>
-              <p className="text-xs mt-0.5" style={{ color: "var(--kipu-subtle)" }}>JPG, PNG o WEBP</p>
-            </div>
-          </button>
+          // Dos botones: en Android (app y navegador) un mismo selector abre o la
+          // cámara o la galería, nunca ofrece ambas. En computadora la cámara no
+          // aplica: queda solo "Elegir imagen".
+          <div className="grid grid-cols-2 md:grid-cols-1 gap-3">
+            {([
+              { ref: camaraRef, icono: Camera,    texto: "Tomar foto",   extra: "md:hidden" },
+              { ref: imagenRef, icono: ImageIcon, texto: "Elegir imagen", extra: "" },
+            ] as const).map(({ ref, icono: Icono, texto, extra }) => (
+              <button
+                key={texto}
+                type="button"
+                onClick={() => ref.current?.click()}
+                className={`w-full flex flex-col items-center gap-3 py-8 border-2 border-dashed rounded-xl transition-colors cursor-pointer ${extra}`}
+                style={{ borderColor: "var(--kipu-border)" }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.borderColor = "color-mix(in srgb, var(--kipu-accent) 50%, transparent)";
+                  e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-accent) 5%, transparent)";
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.borderColor = "var(--kipu-border)";
+                  e.currentTarget.style.background = "transparent";
+                }}
+              >
+                <Icono size={24} style={{ color: "var(--kipu-subtle)" }} />
+                <div className="text-center">
+                  <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>{texto}</p>
+                  <p className="text-xs mt-0.5" style={{ color: "var(--kipu-subtle)" }}>JPG, PNG o WEBP</p>
+                </div>
+              </button>
+            ))}
+          </div>
         )}
+        <input
+          ref={camaraRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={e => { const f = e.target.files?.[0]; if (f) seleccionarImagen(f); e.target.value = ""; }}
+          className="hidden"
+        />
         <input
           ref={imagenRef}
           type="file"
           accept="image/*"
-          capture="environment"
-          onChange={e => { const f = e.target.files?.[0]; if (f) seleccionarImagen(f); }}
+          onChange={e => { const f = e.target.files?.[0]; if (f) seleccionarImagen(f); e.target.value = ""; }}
           className="hidden"
         />
       </div>
