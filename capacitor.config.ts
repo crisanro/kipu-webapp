@@ -17,6 +17,18 @@ const config: CapacitorConfig = {
     // La app solo llama a la API por HTTPS
     allowMixedContent: false,
   },
+  plugins: {
+    // iOS: con la app abierta, mostrar el aviso (banner, sonido y número en el ícono)
+    FirebaseMessaging: {
+      presentationOptions: ["alert", "badge", "sound"],
+    },
+    // Android: con la app abierta el sistema no muestra el push; lib/notifications.ts
+    // lo muestra como notificación local, con el mismo ícono y color que el push
+    LocalNotifications: {
+      smallIcon: "ic_stat_kipu",
+      iconColor: "#059669",   // = @color/ic_launcher_background
+    },
+  },
   experimental: {
     ios: {
       spm: {

@@ -238,21 +238,60 @@ async function registrarNativo(): Promise<boolean> {
   return true;
 }
 
+// Destino de una notificación tocada: solo rutas internas
+function destinoNotificacion(data: unknown): string {
+  const url = (data as Record<string, unknown> | null | undefined)?.url;
+  return rutaInterna(typeof url === "string" && url.startsWith("/") ? url : "/dashboard");
+}
+
+// Con la app abierta Android no muestra el push (iOS sí: presentationOptions en
+// capacitor.config.ts). Se muestra como notificación local, igual que la web.
+async function mostrarLocalAndroid(titulo: string, cuerpo: string, data: unknown): Promise<void> {
+  const { LocalNotifications } = await import("@capacitor/local-notifications");
+  await LocalNotifications.schedule({
+    notifications: [{
+      id:    Math.floor(Math.random() * 2_000_000_000),   // entero de 32 bits
+      title: titulo,
+      body:  cuerpo,
+      extra: { url: destinoNotificacion(data) },
+    }],
+  });
+}
+
 async function escucharNativo(onAbrir?: (url: string) => void): Promise<() => void> {
   try {
+    const { Capacitor } = await import("@capacitor/core");
+    const esAndroid = Capacitor.getPlatform() === "android";
+    const abrir = (destino: string) => {
+      if (onAbrir) onAbrir(destino);
+      else window.location.assign(destino);
+    };
+
     const { FirebaseMessaging: fm } = await moduloNativo();
     const handles = await Promise.all([
-      // Con la app abierta Android no muestra el aviso: se recarga el cajón (y la campana)
+      // Llegó con la app abierta: recargar el cajón (y la campana) y, en Android, mostrar el aviso
       fm.addListener("notificationReceived", (e) => {
         window.dispatchEvent(new CustomEvent(EVENTO_NOTIF, { detail: e.notification }));
+        if (esAndroid) {
+          const n = e.notification;
+          const data = (n.data ?? {}) as Record<string, unknown>;
+          const titulo = n.title || (typeof data.title === "string" ? data.title : "") || "Kipu";
+          const cuerpo = n.body  || (typeof data.body  === "string" ? data.body  : "");
+          mostrarLocalAndroid(titulo, cuerpo, data).catch((err) =>
+            console.warn("[FCM] ⚠️ No se pudo mostrar la notificación con la app abierta:", err));
+        }
       }),
-      // Tocó la notificación: abrir la pantalla que indica (solo rutas internas)
+      // Tocó la notificación: abrir la pantalla que indica
       fm.addListener("notificationActionPerformed", (e) => {
-        const data = (e.notification.data ?? {}) as Record<string, unknown>;
-        const destino = rutaInterna(typeof data.url === "string" && data.url.startsWith("/") ? data.url : "/dashboard");
-        if (onAbrir) onAbrir(destino);
-        else window.location.assign(destino);
+        abrir(destinoNotificacion(e.notification.data));
       }),
+      // Android: tocó la notificación local de arriba
+      ...(esAndroid ? [
+        import("@capacitor/local-notifications").then(({ LocalNotifications }) =>
+          LocalNotifications.addListener("localNotificationActionPerformed", (e) => {
+            abrir(destinoNotificacion(e.notification.extra));
+          })),
+      ] : []),
       // Firebase renueva el token de vez en cuando: avisar al backend
       fm.addListener("tokenReceived", (e) => {
         enviarTokenNativo(e.token).catch(() => {});
