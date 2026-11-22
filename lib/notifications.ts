@@ -124,7 +124,8 @@ export async function olvidarDispositivoLocal(): Promise<void> {
   } catch {}
   if (ES_APP_NATIVA) {
     try {
-      await (await pluginNativo()).deleteToken();
+      const { FirebaseMessaging: fm } = await moduloNativo();
+      await fm.deleteToken();
     } catch (e) {
       console.warn("[FCM] ⚠️ No se pudo eliminar el token local:", e);
     }
@@ -207,8 +208,12 @@ export function mostrarNotificacionLocal(titulo: string, cuerpo: string, url?: s
 }
 // ── App nativa (Android / iOS) ────────────────────────────────────────────────
 // Import dinámico: el plugin solo se descarga dentro de la app, nunca en la web.
-const pluginNativo = () =>
-  import("@capacitor-firebase/messaging").then((m) => m.FirebaseMessaging);
+// Ojo: se devuelve el MÓDULO, no el plugin. Los plugins de Capacitor son un
+// proxy que responde a cualquier método, también a .then(): si una promesa
+// resuelve con el plugin, JS lo trata como otra promesa, llama a .then() y
+// falla ("FirebaseMessaging.then() is not implemented"). Nunca se pedía el permiso.
+// Uso: `const { FirebaseMessaging: fm } = await moduloNativo();`
+const moduloNativo = () => import("@capacitor-firebase/messaging");
 
 async function enviarTokenNativo(token: string): Promise<void> {
   await api.post("/api/v1/app/notificaciones/fcm-token", {
@@ -220,7 +225,7 @@ async function enviarTokenNativo(token: string): Promise<void> {
 // Al entrar: la primera vez el sistema pregunta "¿Permitir que Kipu te envíe
 // notificaciones?" (Android 13+ e iOS). Si ya respondió, no vuelve a preguntar.
 async function registrarNativo(): Promise<boolean> {
-  const fm = await pluginNativo();
+  const { FirebaseMessaging: fm } = await moduloNativo();
   let { receive } = await fm.checkPermissions();
   if (receive === "prompt" || receive === "prompt-with-rationale") {
     ({ receive } = await fm.requestPermissions());
@@ -235,7 +240,7 @@ async function registrarNativo(): Promise<boolean> {
 
 async function escucharNativo(onAbrir?: (url: string) => void): Promise<() => void> {
   try {
-    const fm = await pluginNativo();
+    const { FirebaseMessaging: fm } = await moduloNativo();
     const handles = await Promise.all([
       // Con la app abierta Android no muestra el aviso: se recarga el cajón (y la campana)
       fm.addListener("notificationReceived", (e) => {
