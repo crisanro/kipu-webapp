@@ -16,12 +16,13 @@ import {
   Settings,
   CalendarCheck,
 } from "lucide-react";
+import { ES_APP_NATIVA, esRutaSoloWeb } from "@/lib/plataforma";
 
 // permiso: string       → usuario necesita ESE permiso
 // permiso: string[]     → usuario necesita AL MENOS UNO (OR)
 // permiso: null          → visible para todos
 
-export const NAV_GROUPS = [
+const GRUPOS = [
   {
     items: [
       { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, permiso: null },
@@ -58,9 +59,9 @@ export const NAV_GROUPS = [
   },
   {
     items: [
-      { href: "/personas",  label: "Personas",  icon: Users,    permiso: ["emitir", "clientes"] },
-      { href: "/cuentas",   label: "Cuentas",    icon: Wallet,   permiso: ["emitir", "clientes"] },
-      { href: "/productos", label: "Productos",  icon: Package,  permiso: ["emitir", "productos"] },
+      { href: "/personas",  label: "Personas",  icon: Users,    permiso: "clientes" },
+      { href: "/cuentas",   label: "Cuentas",    icon: Wallet,   permiso: "clientes" },
+      { href: "/productos", label: "Productos",  icon: Package,  permiso: "productos" },
     ],
   },
   {
@@ -73,10 +74,16 @@ export const NAV_GROUPS = [
       { href: "/usuarios",      label: "Usuarios",      icon: UserCog,   permiso: "usuarios" },
       { href: "/api-keys",      label: "API Keys",      icon: Key,       permiso: "api_keys" },
       { href: "/auditoria",     label: "Auditoría",     icon: Shield,    permiso: "auditoria" },
-      { href: "/configuracion", label: "Configuración", icon: Settings,  permiso: "configuracion" },
+      // Para todos: ahí está tu cuenta y "Eliminar mi cuenta"; lo de la empresa pide permiso adentro
+      { href: "/configuracion", label: "Configuración", icon: Settings,  permiso: null },
     ],
   },
 ];
+
+// Páginas que la app nativa no compila (son `page.web.tsx`): fuera del menú
+export const NAV_GROUPS = ES_APP_NATIVA
+  ? GRUPOS.map((g) => (g.items ? { ...g, items: g.items.filter((i) => !esRutaSoloWeb(i.href)) } : g))
+  : GRUPOS;
 
 type EmpresaConPermisos = { rol?: string | null; permisos?: Record<string, boolean> | null } | null | undefined;
 

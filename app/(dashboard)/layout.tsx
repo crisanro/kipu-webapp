@@ -17,6 +17,7 @@ import {
 } from "@/lib/notifications";
 import { AlertTriangle, Bell, FlaskConical } from "lucide-react";
 import { useTheme } from "next-themes";
+import { rutaFueraDelPlan } from "@/lib/plataforma";
 import {
   useNotificaciones,
   NotificacionesDrawer,
@@ -58,6 +59,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   useEffect(() => setMounted(true), []);
 
+  // App de las tiendas: lo que el plan no incluye no se abre ni desde un enlace
+  // o una notificación (ver rutaFueraDelPlan en lib/plataforma.ts)
+  const fueraDelPlan = rutaFueraDelPlan(pathname, empresa);
+  useEffect(() => {
+    if (fueraDelPlan) router.replace("/dashboard");
+  }, [fueraDelPlan, router]);
+
   const firmaOk = empresa?.firma_ok ?? false;
   const puedeProduccion = firmaOk && empresa?.ambiente === 2;
 
@@ -86,10 +94,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const activarPush = useCallback(async (): Promise<boolean> => {
     const ok = await registrarNotificaciones();
     if (ok && montado.current && !desuscribirPush.current) {
-      desuscribirPush.current = await escucharPrimerPlano();
+      // App nativa: al tocar una notificación se abre su pantalla sin recargar
+      desuscribirPush.current = await escucharPrimerPlano(undefined, (url) => router.push(url));
     }
     return ok;
-  }, []);
+  }, [router]);
 
   const hayEmpresa = !!empresa?.id;
 
@@ -305,7 +314,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {/* Sin plan: en cada página, qué suma Kipu Pro */}
           <AvisoPro />
 
-          {children}
+          {fueraDelPlan ? null : children}
         </main>
       </div>
 

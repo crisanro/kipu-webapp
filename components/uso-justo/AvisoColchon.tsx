@@ -7,6 +7,7 @@
 import Link from "next/link";
 import { AlertTriangle, Sparkles } from "lucide-react";
 import SolicitarAmpliacion from "./SolicitarAmpliacion";
+import SoloWeb from "@/components/SoloWeb";
 
 export interface AvisoUsoJusto {
   codigo:               string;
@@ -31,13 +32,15 @@ export default function AvisoColchon({ aviso }: { aviso: AvisoUsoJusto }) {
         </span>
       </p>
       {aviso.solicitar_ampliacion && <SolicitarAmpliacion />}
-      <Link
-        href="/planes"
-        className="mt-2 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-semibold text-white transition-opacity hover:opacity-90"
-        style={{ background: "var(--kipu-accent)" }}
-      >
-        <Sparkles size={13} /> Ver Kipu Pro: emite sin límite
-      </Link>
+      <SoloWeb>
+        <Link
+          href="/planes"
+          className="mt-2 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-semibold text-white transition-opacity hover:opacity-90"
+          style={{ background: "var(--kipu-accent)" }}
+        >
+          <Sparkles size={13} /> Ver Kipu Pro: emite sin límite
+        </Link>
+      </SoloWeb>
     </div>
   );
 }

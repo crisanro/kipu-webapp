@@ -1,4 +1,5 @@
 "use client";
+import SoloWeb from "@/components/SoloWeb";
 
 import { useState, useEffect, useRef } from "react";
 import { errorIdentificacion } from "@/lib/identificacion";
@@ -591,7 +592,7 @@ export default function NuevaFacturaPage() {
           <AlertTriangle size={16} className="shrink-0" style={{ color: "var(--kipu-danger)" }} />
           <p className="text-sm" style={{ color: "var(--kipu-danger)" }}>
             Sin acceso para emitir.{" "}
-            <a href="/planes" className="underline">Ver opciones</a>
+            <SoloWeb><a href="/planes" className="underline">Ver opciones</a></SoloWeb>
           </p>
         </div>
       )}

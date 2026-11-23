@@ -1,4 +1,5 @@
 "use client";
+import { rutas } from "@/lib/rutas";
 import { useState, useEffect, useCallback, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -9,6 +10,8 @@ import { useAuthStore } from "@/store/auth.store";
 import { hoyEC } from "@/lib/fecha";
 import { demoCuentas, resumenCuentas } from "@/lib/demos";
 import { BannerEjemplo, EtiquetaEjemplo } from "@/components/EjemploPro";
+import SoloWeb from "@/components/SoloWeb";
+import { ES_APP_NATIVA } from "@/lib/plataforma";
 import {
   Wallet, Plus, X, ChevronDown, Save,
   TrendingUp, TrendingDown, Scale, Search,
@@ -204,7 +207,7 @@ function CuentasContent() {
           type="button"
           onClick={() => { if (!tieneSub) return; setShowModal(true); resetModal(); }}
           disabled={!tieneSub}
-          title={!tieneSub ? "Disponible en el Plan Pro" : undefined}
+          title={!tieneSub ? (ES_APP_NATIVA ? "No incluido en tu plan actual" : "Disponible en el Plan Pro") : undefined}
           className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:cursor-not-allowed"
           style={{
             background: tieneSub ? "var(--kipu-accent)" : "var(--kipu-surface)",
@@ -224,7 +227,10 @@ function CuentasContent() {
       </div>
 
       {esDemo && (
-        <BannerEjemplo texto="Así llevas con el Plan Pro lo que te deben y lo que debes: registras abonos, ves qué está vencido y cuánto te queda por cobrar." />
+        <BannerEjemplo
+          texto="Así llevas con el Plan Pro lo que te deben y lo que debes: registras abonos, ves qué está vencido y cuánto te queda por cobrar."
+          textoApp="Así se llevan lo que te deben y lo que debes: registras abonos, ves qué está vencido y cuánto te queda por cobrar."
+        />
       )}
 
       {!tieneSub && !esDemo && (
@@ -237,16 +243,24 @@ function CuentasContent() {
         >
           <AlertTriangle size={15} className="shrink-0" style={{ color: "var(--kipu-warning)" }} />
           <div className="flex-1">
-            <p className="text-sm font-medium" style={{ color: "var(--kipu-warning)" }}>Función del Plan Pro</p>
-            <p className="text-xs" style={{ color: "color-mix(in srgb, var(--kipu-warning) 80%, transparent)" }}>Las cuentas por cobrar y pagar son del Plan Pro. Las que ya registraste las sigues viendo.</p>
+            <p className="text-sm font-medium" style={{ color: "var(--kipu-warning)" }}>
+              {ES_APP_NATIVA ? "No incluido en tu plan actual" : "Función del Plan Pro"}
+            </p>
+            <p className="text-xs" style={{ color: "color-mix(in srgb, var(--kipu-warning) 80%, transparent)" }}>
+              {ES_APP_NATIVA
+                ? "Las cuentas por cobrar y pagar no están incluidas en tu plan actual. Las que ya registraste las sigues viendo."
+                : "Las cuentas por cobrar y pagar son del Plan Pro. Las que ya registraste las sigues viendo."}
+            </p>
           </div>
-          <Link
-            href="/planes"
-            className="text-xs underline underline-offset-2 shrink-0 transition-colors"
-            style={{ color: "var(--kipu-warning)" }}
-          >
-            Ver planes
-          </Link>
+          <SoloWeb>
+            <Link
+              href="/planes"
+              className="text-xs underline underline-offset-2 shrink-0 transition-colors"
+              style={{ color: "var(--kipu-warning)" }}
+            >
+              Ver planes
+            </Link>
+          </SoloWeb>
         </div>
       )}
 
@@ -398,13 +412,15 @@ function CuentasContent() {
                 Registrar primera cuenta
               </button>
             ) : (
-              <Link
-                href="/planes"
-                className="mt-4 px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors inline-block"
-                style={{ background: "var(--kipu-warning)" }}
-              >
-                Ver planes
-              </Link>
+              <SoloWeb>
+                <Link
+                  href="/planes"
+                  className="mt-4 px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors inline-block"
+                  style={{ background: "var(--kipu-warning)" }}
+                >
+                  Ver planes
+                </Link>
+              </SoloWeb>
             )
           )}
         </div>
@@ -427,7 +443,7 @@ function CuentasContent() {
               return (
                 <Link
                   key={c.id}
-                  href={esDemo ? "/planes" : `/cuentas/${c.id}`}
+                  href={esDemo ? (ES_APP_NATIVA ? "/cuentas" : "/planes") : rutas.cuenta(c.id)}
                   className="flex items-center gap-3 px-4 py-3 transition-colors"
                   style={{
                     borderTop: idx > 0 ? "1px solid var(--kipu-border)" : "none",
@@ -791,7 +807,7 @@ function CuentasContent() {
 
 // ── Página Principal Envuelta en Suspense ──────────────────────────────────────
 export default function CuentasPage() {
-  const puedeVer = usePermiso("reportes");
+  const puedeVer = usePermiso("clientes");   // como la API de cuentas
   if (!puedeVer) return <SinAcceso />;
   return (
     <Suspense fallback={

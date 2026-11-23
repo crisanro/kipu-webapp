@@ -31,7 +31,7 @@ export default function DocumentosRecibidos({ docs = [] }: Props) {
           </p>
         </div>
         <Link
-          href="/documentos/recibidas"
+          href="/documentos/recibidos"
           className="flex items-center gap-1 text-xs transition-colors"
           style={{ color: "var(--kipu-accent)" }}
           onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent-h)"}
@@ -48,7 +48,7 @@ export default function DocumentosRecibidos({ docs = [] }: Props) {
             Sin documentos recibidos
           </p>
           <Link
-            href="/documentos/recibidas/nueva"
+            href="/documentos/recibidos/nueva"
             className="mt-3 text-xs transition-colors"
             style={{ color: "var(--kipu-accent)" }}
             onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent-h)"}

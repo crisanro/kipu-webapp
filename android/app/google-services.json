@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "264857219159",
+    "project_id": "kipu-cdo8wk",
+    "storage_bucket": "kipu-cdo8wk.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:264857219159:android:1569f2ba7f84ace523f312",
+        "android_client_info": {
+          "package_name": "com.androga.kipu"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBAg49vxieVL4rb1ZKDUIbjIFYCgqN22NA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:264857219159:android:96c8f93a7db56a0023f312",
+        "android_client_info": {
+          "package_name": "com.mycompany.kipugastospersonales"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBAg49vxieVL4rb1ZKDUIbjIFYCgqN22NA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

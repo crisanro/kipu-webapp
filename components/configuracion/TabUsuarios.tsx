@@ -3,6 +3,8 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
+import SoloWeb from "@/components/SoloWeb";
+import { ES_APP_NATIVA } from "@/lib/plataforma";
 import {
   Plus, Trash2, Shield, User, ChevronDown,
   ChevronUp, Check, X, AlertCircle
@@ -31,12 +33,6 @@ const PERMISOS_POR_ROL: Record<string, Record<string, boolean>> = {
   emisor: {
     emitir: true, descargar: true, documentos_recibidos: true,
     clientes: false, productos: false, estructura: false,
-    declaraciones: false, reportes: false, auditoria: false,
-    configuracion: false, api_keys: false, usuarios: false,
-  },
-  asistente: {
-    emitir: true, descargar: true, clientes: true, productos: true,
-    estructura: true, documentos_recibidos: true,
     declaraciones: false, reportes: false, auditoria: false,
     configuracion: false, api_keys: false, usuarios: false,
   },
@@ -187,8 +183,12 @@ export default function TabUsuarios({ empresaId }: Props) {
         <h2 className="text-sm font-semibold mb-4" style={{ color: "var(--kipu-text)" }}>Invitar usuario</h2>
         {soloPro && (
           <p className="text-xs mb-3" style={{ color: "var(--kipu-warning)" }}>
-            Agregar usuarios es del Plan Pro (hasta 5 por empresa). Los que ya tienes siguen entrando normalmente.{" "}
-            <Link href="/planes" className="underline underline-offset-2">Ver planes</Link>
+            {ES_APP_NATIVA
+              ? "Agregar usuarios no está incluido en tu plan actual. Los que ya tienes siguen entrando normalmente."
+              : "Agregar usuarios es del Plan Pro (hasta 5 por empresa). Los que ya tienes siguen entrando normalmente."}{" "}
+            <SoloWeb>
+              <Link href="/planes" className="underline underline-offset-2">Ver planes</Link>
+            </SoloWeb>
           </p>
         )}
         <div className="flex gap-2 flex-wrap">
@@ -233,7 +233,6 @@ export default function TabUsuarios({ empresaId }: Props) {
             onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
           >
             <option value="emisor">Emisor</option>
-            <option value="asistente">Asistente</option>
             <option value="contador">Contador</option>
             <option value="admin">Admin</option>
           </select>
@@ -406,7 +405,7 @@ export default function TabUsuarios({ empresaId }: Props) {
                     >
                       <div className="flex items-center gap-2 py-3">
                         <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Plantilla:</span>
-                        {["emisor", "asistente", "contador"].map(rol => (
+                        {["emisor", "contador"].map(rol => (
                           <button
                             key={rol}
                             type="button"

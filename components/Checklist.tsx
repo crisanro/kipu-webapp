@@ -50,6 +50,7 @@ export default function Checklist({ health, compact = false, onUpdate }: Props) 
 
   const puedeConfig     = usePermiso("configuracion");
   const puedeEstructura = usePermiso("estructura");
+  const esAdmin         = empresa?.rol === "admin";   // pasar a producción es solo del administrador
 
   // ── Estado modal producción ─────────────────────────────────────
   const [showProdModal, setShowProdModal] = useState(false);
@@ -127,11 +128,12 @@ export default function Checklist({ health, compact = false, onUpdate }: Props) 
     {
       key:    "firma",
       label:  "Firma electrónica",
-      desc:   "Certificado P12 vigente",
+      desc:   puedeConfig ? "Certificado P12 vigente" : "Pide al administrador que complete este paso",
       done:   firmaOk,
       href:   "/configuracion#firma",
       icon:   Shield,
       action: !firmaOk ? () => setShowFirmaModal(true) : undefined,
+      noAcceso: !puedeConfig,
     },
     {
       key:      "establecimiento",
@@ -154,7 +156,9 @@ export default function Checklist({ health, compact = false, onUpdate }: Props) 
     {
       key:      "activar_produccion",
       label:    "Activar producción",
-      desc:     pasos1a5Completos
+      desc:     !esAdmin
+                  ? "Solo el administrador puede pasar la empresa a producción"
+                  : pasos1a5Completos
                   ? "¡Todo listo! Emite comprobantes reales ante el SRI"
                   : "Completa los pasos anteriores primero",
       done:     health.en_produccion ?? false,
@@ -162,7 +166,7 @@ export default function Checklist({ health, compact = false, onUpdate }: Props) 
       icon:     Rocket,
       locked:   !pasos1a5Completos,
       action:   pasos1a5Completos ? () => setShowProdModal(true) : undefined,
-      noAcceso: !puedeConfig,
+      noAcceso: !esAdmin,
     },
   ];
 

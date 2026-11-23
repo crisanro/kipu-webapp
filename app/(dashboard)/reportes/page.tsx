@@ -2,6 +2,8 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import api from "@/lib/api";
+import { rutas } from "@/lib/rutas";
+import { ES_APP_NATIVA } from "@/lib/plataforma";
 import { usePermiso } from "@/hooks/usePermiso";
 import SinAcceso from "@/components/SinAcceso";
 import OfertaRenta from "@/components/renta/OfertaRenta";
@@ -93,9 +95,9 @@ const colorTab = (tab: Tab) =>
 
 // ── Componente demo cards ──────────────────────────────────────────────────────
 function DemoCards({ tab }: { tab: Tab }) {
-  const href = tab === "IVA" ? "/reportes/iva/2026-07?demo=1"
-             : tab === "RENTA" ? "/reportes/renta/2025"
-             : "/reportes/ats/2026-08";
+  const href = tab === "IVA" ? `${rutas.reporteIva("2026-07")}&demo=1`
+             : tab === "RENTA" ? rutas.reporteRenta(2025)
+             : rutas.reporteAts("2026-08");
   const c = colorTab(tab);
   const bg     = `color-mix(in srgb, ${c.base} 20%, transparent)`;
   const border = `color-mix(in srgb, ${c.base} 20%, transparent)`;
@@ -157,7 +159,9 @@ function DemoCards({ tab }: { tab: Tab }) {
       ))}
       <div className="flex items-center gap-2 justify-center py-2">
         <Lock size={12} style={{ color: "var(--kipu-subtle)" }} />
-        <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Datos de ejemplo — suscríbete para ver los tuyos</p>
+        <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+          {ES_APP_NATIVA ? "Datos de ejemplo — no incluido en tu plan actual" : "Datos de ejemplo — suscríbete para ver los tuyos"}
+        </p>
       </div>
     </div>
   );
@@ -258,12 +262,17 @@ export default function ReportesPage() {
     };
   });
 
-  const TabsBar = (
+  // App de las tiendas con el plan gratis: solo el IVA, que es lo que incluye
+  // (Renta y ATS no se muestran: lib/plataforma.ts)
+  const tabsVisibles = (Object.keys(TAB_CONFIG) as Tab[])
+    .filter((t) => !ES_APP_NATIVA || tieneSuscripcion || t === "IVA");
+
+  const TabsBar = tabsVisibles.length < 2 ? null : (
     <div
       className="flex gap-1 rounded-xl p-1"
       style={{ background: "var(--kipu-surface)", border: "1px solid var(--kipu-border)" }}
     >
-      {(Object.keys(TAB_CONFIG) as Tab[]).map((t) => {
+      {tabsVisibles.map((t) => {
         const activo = tab === t;
         return (
           <button
@@ -333,7 +342,7 @@ export default function ReportesPage() {
       </div>
 
       {/* ── PLAN GRATIS: el total es gratis, el 104 completo con pase o Pro ─── */}
-      {planGratis && (
+      {planGratis && !ES_APP_NATIVA && (
         <div
           className="flex items-start gap-3 rounded-xl px-4 py-3"
           style={{
@@ -356,7 +365,8 @@ export default function ReportesPage() {
       {/* ── SIN DATOS REALES (sin plan; o plan gratis en Renta/ATS) ─────────── */}
       {!verReales && (
         <>
-          {!planGratis && (
+          {/* Oferta de suscripción con precio: solo en la web */}
+          {!planGratis && !ES_APP_NATIVA && (
           <div
             className="relative overflow-hidden rounded-2xl p-5"
             style={{
@@ -406,7 +416,7 @@ export default function ReportesPage() {
                   Ver planes y suscribirme
                   <ChevronRight size={15} />
                 </Link>
-                <p className="text-[10px] mt-2" style={{ color: "var(--kipu-subtle)" }}>$69/año + IVA · Cancela cuando quieras</p>
+                <p className="text-[10px] mt-2" style={{ color: "var(--kipu-subtle)" }}>Pago anual · Cancela cuando quieras</p>
               </div>
             </div>
           </div>
@@ -577,7 +587,7 @@ export default function ReportesPage() {
 
               {!tieneSuscripcion && (
                 <Link
-                  href="/reportes/iva/2026-07?demo=1"
+                  href={`${rutas.reporteIva("2026-07")}&demo=1`}
                   className="flex items-center justify-center gap-1 py-1 text-xs"
                   style={{ color: "var(--kipu-subtle)" }}
                 >

@@ -12,6 +12,7 @@ import { ArrowRight, FileCheck2 } from "lucide-react";
 import api from "@/lib/api";
 import { hoyEC } from "@/lib/fecha";
 import { useAuthStore } from "@/store/auth.store";
+import { ES_APP_NATIVA } from "@/lib/plataforma";
 
 export interface EstadoRenta {
   disponible:         boolean;
@@ -31,7 +32,8 @@ export default function OfertaRenta({ variante, anio }: { variante: Variante; an
   const [estado, setEstado] = useState<EstadoRenta | null>(null);
 
   useEffect(() => {
-    if (!enProduccion) return;
+    // Kipu Renta se vende solo en la web: la app no tiene /renta
+    if (!enProduccion || ES_APP_NATIVA) return;
     let vivo = true;
     api.get("/api/v1/app/renta/estado")
       .then((r) => { if (vivo) setEstado(r.data.data); })

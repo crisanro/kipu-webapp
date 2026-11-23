@@ -1,0 +1,601 @@
+"use client";
+import { useState, useEffect, useCallback } from "react";
+import { notFound, useRouter, useSearchParams } from "next/navigation";
+import api from "@/lib/api";
+import {
+  ArrowLeft, RefreshCw, AlertTriangle,
+  FileText, ChevronDown, ChevronUp, Download, Info,
+} from "lucide-react";
+
+import PreguntasSRI        from "../_components/PreguntasSRI";
+import SeccionRetenciones  from "../_components/SeccionRetenciones";
+import ResumenImpositivo   from "../_components/ResumenImpositivo";
+import DocumentosIncluidos from "../_components/DocumentosIncluidos";
+import EstadoBadge         from "../_components/EstadoBadge";
+import { ES_APP_NATIVA } from "@/lib/plataforma";
+
+const fmt  = (n: number = 0) =>
+  n.toLocaleString("es-EC", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmtN = (n: number = 0) => n.toLocaleString("es-EC");
+
+function TablaDetalle({ titulo, rows, columnas, color = "indigo" }: {
+  titulo:   string;
+  rows:     any[];
+  columnas: { key: string; label: string; mono?: boolean; right?: boolean }[];
+  color?:   string;
+}) {
+  const [expandido, setExpandido] = useState(false);
+  const MAX_VISIBLE = 5;
+  const visibles = expandido ? rows : rows.slice(0, MAX_VISIBLE);
+
+  if (rows.length === 0) return null;
+
+  const iconColor = color === "emerald" ? "var(--kipu-success)" : "var(--kipu-accent)";
+
+  return (
+    <div
+      className="rounded-xl overflow-hidden"
+      style={{
+        background: "var(--kipu-surface)",
+        border: "1px solid var(--kipu-border)",
+      }}
+    >
+      <div
+        className="px-4 py-3 flex items-center justify-between"
+        style={{ borderBottom: "1px solid var(--kipu-border)" }}
+      >
+        <div className="flex items-center gap-2">
+          <FileText size={14} style={{ color: iconColor }} />
+          <p className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>{titulo}</p>
+          <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>({fmtN(rows.length)})</span>
+        </div>
+      </div>
+
+      {/* Desktop */}
+      <div className="hidden md:block overflow-x-auto">
+        <table className="w-full text-xs">
+          <thead>
+            <tr
+              className="text-[10px] uppercase tracking-wider"
+              style={{
+                borderBottom: "1px solid var(--kipu-border)",
+                color: "var(--kipu-subtle)",
+              }}
+            >
+              {columnas.map(c => (
+                <th key={c.key} className={`px-4 py-2 font-medium ${c.right ? "text-right" : "text-left"}`}>
+                  {c.label}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody style={{ borderTop: "1px solid var(--kipu-border)" }}>
+            {visibles.map((row, idx) => (
+              <tr
+                key={idx}
+                className="transition-colors"
+                style={{ borderBottom: idx < visibles.length - 1 ? "1px solid var(--kipu-border)" : "none" }}
+                onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 4%, transparent)"}
+                onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+              >
+                {columnas.map(c => (
+                  <td key={c.key} className={`px-4 py-2.5 ${c.right ? "text-right" : ""} ${c.mono ? "font-mono" : ""}`}>
+                    <span style={{ color: "var(--kipu-text)" }}>{row[c.key] ?? "—"}</span>
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Mobile */}
+      <div className="md:hidden">
+        {visibles.map((row, idx) => (
+          <div
+            key={idx}
+            className="px-4 py-3 space-y-1"
+            style={{ borderTop: idx > 0 ? "1px solid var(--kipu-border)" : "none" }}
+          >
+            {columnas.slice(0, 3).map(c => (
+              <div key={c.key} className="flex justify-between gap-2">
+                <span className="text-[10px]" style={{ color: "var(--kipu-subtle)" }}>{c.label}</span>
+                <span className={`text-xs ${c.mono ? "font-mono" : ""}`} style={{ color: "var(--kipu-text)" }}>
+                  {row[c.key] ?? "—"}
+                </span>
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+
+      {/* Ver más */}
+      {rows.length > MAX_VISIBLE && (
+        <button
+          type="button"
+          onClick={() => setExpandido(!expandido)}
+          className="w-full flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs transition-colors"
+          style={{
+            borderTop: "1px solid var(--kipu-border)",
+            color: "var(--kipu-subtle)",
+            background: "transparent",
+          }}
+          onMouseEnter={e => {
+            e.currentTarget.style.color = "var(--kipu-text)";
+            e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 4%, transparent)";
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.color = "var(--kipu-subtle)";
+            e.currentTarget.style.background = "transparent";
+          }}
+        >
+          {expandido ? (
+            <><ChevronUp size={13} /> Ver menos</>
+          ) : (
+            <><ChevronDown size={13} /> Ver {rows.length - MAX_VISIBLE} más</>
+          )}
+        </button>
+      )}
+    </div>
+  );
+}
+
+// /reportes/ats?periodo=2026-08 (antes /reportes/ats/[periodo]; ver lib/rutas.ts)
+export default function ReporteATSPage() {
+  const periodo = useSearchParams().get("periodo");
+  if (!periodo) notFound();
+  return <ReporteATS key={periodo} periodo={periodo} />;
+}
+
+function ReporteATS({ periodo }: { periodo: string }) {
+  const router  = useRouter();
+
+  const [data,        setData]        = useState<any>(null);
+  const [decl,        setDecl]        = useState<any>(null);
+  const [loading,     setLoading]     = useState(true);
+  const [regenerando, setRegenerando] = useState(false);
+  const [descargando, setDescargando] = useState(false);
+  const [error,       setError]       = useState("");
+
+  const periodoFmt = (() => {
+    try {
+      const [a, m] = periodo.split("-");
+      return new Date(parseInt(a), parseInt(m) - 1, 1)
+        .toLocaleDateString("es-EC", { month: "long", year: "numeric" });
+    } catch { return periodo; }
+  })();
+
+  const cargar = useCallback(async (regen = false) => {
+    setError("");
+    if (regen) setRegenerando(true);
+    else setLoading(true);
+    try {
+      const url = `/api/v1/app/declaraciones/ats?periodo=${periodo}${regen ? "&regenerar=true" : ""}`;
+      const res = await api.get(url);
+      setData(res.data);
+
+      // Estado real de la declaración (antes "Declarado" = "ya se abrió una vez")
+      try {
+        const [a, m] = periodo.split("-");
+        const resDecl = await api.get(`/api/v1/app/declaraciones/periodo/${a}/${parseInt(m)}?tipo=ATS`);
+        setDecl(resDecl.data.data ?? null);
+      } catch {
+        setDecl(null);
+      }
+    } catch (e: any) {
+      setError(e?.response?.data?.detail ?? "Error al cargar el ATS.");
+    } finally {
+      setLoading(false);
+      setRegenerando(false);
+    }
+  }, [periodo]);
+
+  useEffect(() => { cargar(); }, [cargar]);
+
+  // Genera el XML con los datos actuales y lo descarga (zip para subir al SRI)
+  const descargarATS = async () => {
+    setDescargando(true);
+    setError("");
+    try {
+      const res = await api.post(`/api/v1/app/declaraciones/ats/generar?periodo=${periodo}`);
+      const url = res.data?.download_url;
+      if (!url) throw new Error("sin url");
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = res.data?.nombre_zip ?? `ATS-${periodo}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    } catch (e: any) {
+      setError(e?.response?.data?.detail ?? "No se pudo generar el archivo del ATS.");
+    } finally {
+      setDescargando(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center space-y-3">
+          <div
+            className="w-7 h-7 border-2 border-t-transparent rounded-full animate-spin mx-auto"
+            style={{ borderColor: "#22d3ee", borderTopColor: "transparent" }}
+          />
+          <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>Generando Anexo Transaccional...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error && !data) {
+    return (
+      <div className="p-6 max-w-2xl mx-auto">
+        <div
+          className="flex items-start gap-3 rounded-xl px-4 py-3"
+          style={{
+            background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
+            border: "1px solid color-mix(in srgb, var(--kipu-danger) 20%, transparent)",
+          }}
+        >
+          <AlertTriangle size={16} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-danger)" }} />
+          <p className="text-sm" style={{ color: "var(--kipu-danger)" }}>{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  const reporte      = data?.data;
+  const esDemo       = data?.demo     ?? false;
+  const enCurso      = decl?.en_curso ?? data?.en_curso ?? false;
+  const declarado    = decl?.declarado ?? false;
+  const totalEmit    = data?.total_doc_emitidos  ?? 0;
+  const totalRecib   = data?.total_doc_recibidos ?? 0;
+  const generadoAt   = data?.generado_at;
+  const regeneradoAt = data?.regenerado_at;
+
+  const ventas           = reporte?.ventas   ?? {};
+  const compras          = reporte?.compras  ?? {};
+  const totalesVentas    = ventas.totales    ?? {};
+  const totalesCompras   = compras.totales   ?? {};
+  const detalleVentas    = ventas.detalle    ?? [];
+  const detalleCompras   = compras.detalle   ?? [];
+  const retEmitidas      = ventas.retenciones   ?? [];
+  const retRecibidas     = compras.retenciones ?? [];
+
+  // Columnas tabla ventas
+  const colVentas = [
+    { key: "numero_doc",    label: "Número",     mono: true  },
+    { key: "fecha_emision", label: "Fecha"                   },
+    { key: "identificacion",label: "Identificación", mono: true },
+    { key: "razon_social",  label: "Cliente"                  },
+    { key: "base_iva_nz",   label: "Base IVA",    right: true },
+    { key: "base_iva_0",    label: "Base 0%",     right: true },
+    { key: "iva",           label: "IVA",         right: true },
+  ];
+
+  // Columnas tabla compras
+  const colCompras = [
+    { key: "numero_doc",      label: "Número",     mono: true  },
+    { key: "fecha_emision",   label: "Fecha"                   },
+    { key: "ruc_proveedor",   label: "RUC",        mono: true  },
+    { key: "razon_proveedor", label: "Proveedor"               },
+    { key: "base_iva_nz",     label: "Base IVA",   right: true },
+    { key: "iva_credito",     label: "IVA Créd.",  right: true },
+    { key: "fuente",          label: "Fuente"                  },
+  ];
+
+  // Formatear valores para tabla
+  const ventasFormateadas = detalleVentas.map((r: any) => ({
+    ...r,
+    base_iva_nz: `$${fmt(r.base_iva_nz)}`,
+    base_iva_0:  `$${fmt(r.base_iva_0)}`,
+    iva:         `$${fmt(r.iva)}`,
+  }));
+
+  const comprasFormateadas = detalleCompras.map((r: any) => ({
+    ...r,
+    base_iva_nz:  `$${fmt(r.base_iva_nz)}`,
+    iva_credito:  `$${fmt(r.iva_credito)}`,
+    fuente:       r.fuente === "FISICO" ? "📄 Físico" : r.fuente === "EMITIDA" ? "🧾 Liquidación emitida" : "🔵 XML",
+  }));
+
+  return (
+    <div className="p-4 md:p-6 max-w-3xl mx-auto space-y-5">
+
+      {/* Header */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-3">
+          <button
+            type="button"
+            onClick={() => router.push("/reportes")}
+            className="p-2 rounded-lg transition-colors mt-0.5"
+            style={{
+              border: "1px solid var(--kipu-border)",
+              color: "var(--kipu-subtle)",
+              background: "transparent",
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.color = "var(--kipu-text)";
+              e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 5%, transparent)";
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.color = "var(--kipu-subtle)";
+              e.currentTarget.style.background = "transparent";
+            }}
+          >
+            <ArrowLeft size={16} />
+          </button>
+          <div>
+            <div className="flex items-center gap-2 flex-wrap mb-1">
+              <span
+                className="text-xs font-bold px-2 py-0.5 rounded-full"
+                style={{
+                  background: "color-mix(in srgb, #06b6d4 20%, transparent)",
+                  color: "#22d3ee",
+                  border: "1px solid color-mix(in srgb, #06b6d4 20%, transparent)",
+                }}
+              >
+                ATS
+              </span>
+              <h1 className="text-xl font-bold capitalize" style={{ color: "var(--kipu-text)" }}>{periodoFmt}</h1>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              {!esDemo && (
+                <EstadoBadge
+                  estado={declarado ? "DECLARADO" : enCurso ? "EN_CURSO" : decl?.estado ?? "PENDIENTE"}
+                  diasRestantes={declarado || enCurso ? null : decl?.dias_restantes}
+                  size="sm"
+                />
+              )}
+              {enCurso && (
+                <span className="text-[10px]" style={{ color: "var(--kipu-warning)" }}>
+                  · Período en curso
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => cargar(true)}
+            disabled={regenerando}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs transition-colors disabled:opacity-40 font-medium"
+            style={{
+              border: "1px solid var(--kipu-border)",
+              color: "var(--kipu-muted)",
+              background: "transparent",
+            }}
+            onMouseEnter={e => {
+              if (!regenerando) e.currentTarget.style.color = "var(--kipu-text)";
+            }}
+            onMouseLeave={e => {
+              if (!regenerando) e.currentTarget.style.color = "var(--kipu-muted)";
+            }}
+          >
+            {regenerando ? (
+              <div
+                className="w-3.5 h-3.5 border-2 border-t-transparent rounded-full animate-spin"
+                style={{ borderColor: "currentColor", borderTopColor: "transparent" }}
+              />
+            ) : (
+              <RefreshCw size={13} />
+            )}
+            {regenerando ? "Generando..." : "Regenerar"}
+          </button>
+          {!esDemo && !enCurso && (
+            <button
+              type="button"
+              onClick={descargarATS}
+              disabled={descargando}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-colors disabled:opacity-40"
+              style={{ background: "var(--kipu-accent)", color: "#FFFFFF" }}
+            >
+              <Download size={13} />
+              {descargando ? "Generando..." : "Descargar ATS (.zip)"}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {esDemo && (
+        <div
+          className="flex items-start gap-3 rounded-xl px-4 py-3"
+          style={{
+            background: "color-mix(in srgb, var(--kipu-accent) 10%, transparent)",
+            border: "1px solid color-mix(in srgb, var(--kipu-accent) 20%, transparent)",
+          }}
+        >
+          <Info size={15} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-accent)" }} />
+          <p className="text-xs" style={{ color: "var(--kipu-muted)" }}>
+            <span className="font-semibold" style={{ color: "var(--kipu-text)" }}>Estos son datos de ejemplo. </span>
+            {data?.motivo === "no_obligado"
+              ? "El ATS lo presentan los obligados a llevar contabilidad y las sociedades; según tu configuración no te corresponde."
+              : ES_APP_NATIVA
+                ? "El ATS con tus comprobantes reales no está incluido en tu plan actual."
+                : "Suscríbete para ver tu ATS calculado con tus comprobantes reales y descargar el archivo para el SRI."}
+          </p>
+        </div>
+      )}
+
+      {!esDemo && !enCurso && (
+        <p className="text-[11px]" style={{ color: "var(--kipu-subtle)" }}>
+          Antes de presentarlo, valida el archivo en el DIMM Anexos del SRI. Si te marca algún error, avísanos.
+        </p>
+      )}
+
+      {error && (
+        <div
+          className="flex items-start gap-2 rounded-lg px-3 py-2.5"
+          style={{
+            background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
+            border: "1px solid color-mix(in srgb, var(--kipu-danger) 20%, transparent)",
+          }}
+        >
+          <AlertTriangle size={14} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-danger)" }} />
+          <p className="text-sm" style={{ color: "var(--kipu-danger)" }}>{error}</p>
+        </div>
+      )}
+
+      {/* Resumen rápido */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[
+          { label: "Ventas",      value: fmtN(totalesVentas.num_docs  ?? 0), sub: `$${fmt(totalesVentas.total  ?? 0)}`, color: "var(--kipu-accent)" },
+          { label: "Compras",     value: fmtN(totalesCompras.num_docs ?? 0), sub: `$${fmt(totalesCompras.total ?? 0)}`, color: "var(--kipu-success)" },
+          { label: "Ret. emit.",  value: fmtN(retEmitidas.length),           sub: "comprobantes",                       color: "var(--kipu-warning)" },
+          { label: "Ret. recib.", value: fmtN(retRecibidas.length),          sub: "comprobantes",                       color: "var(--kipu-info)" },
+        ].map(({ label, value, sub, color }) => (
+          <div
+            key={label}
+            className="rounded-xl p-3 text-center"
+            style={{
+              background: "var(--kipu-surface)",
+              border: "1px solid var(--kipu-border)",
+            }}
+          >
+            <p className="text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>{label}</p>
+            <p className="text-xl font-bold" style={{ color: "var(--kipu-text)" }}>{value}</p>
+            <p className="text-[10px] mt-0.5" style={{ color: "var(--kipu-subtle)" }}>{sub}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Preguntas */}
+      {reporte?.preguntas && (
+        <PreguntasSRI preguntas={reporte.preguntas} tipo="ATS" />
+      )}
+
+      {/* Info ATS */}
+      <div
+        className="rounded-xl p-4"
+        style={{
+          background: "color-mix(in srgb, #06b6d4 5%, transparent)",
+          border: "1px solid color-mix(in srgb, #06b6d4 20%, transparent)",
+        }}
+      >
+        <p className="text-xs font-semibold mb-1" style={{ color: "#22d3ee" }}>
+          ¿Qué es el ATS?
+        </p>
+        <p className="text-xs" style={{ color: "#67e8f9" }}>
+          El Anexo Transaccional Simplificado es un reporte mensual que detalla todas
+          tus compras y ventas. Debes subirlo al portal del SRI en Línea antes del
+          vencimiento. Aquí tienes el resumen completo listo para revisión.
+        </p>
+      </div>
+
+      {/* Detalle ventas */}
+      <div>
+        <p className="text-sm font-semibold mb-2" style={{ color: "var(--kipu-text)" }}>
+          Comprobantes emitidos — ventas
+        </p>
+
+        {/* Totales ventas */}
+        <div className="grid grid-cols-3 gap-2 mb-3">
+          {[
+            { label: "Base IVA ≠ 0", value: totalesVentas.base_iva_diferente_0 ?? 0, color: "var(--kipu-accent)" },
+            { label: "Base 0%",      value: totalesVentas.base_iva_0            ?? 0, color: "var(--kipu-subtle)" },
+            { label: "IVA generado", value: totalesVentas.iva                   ?? 0, color: "var(--kipu-accent)" },
+          ].map(({ label, value, color }) => (
+            <div
+              key={label}
+              className="rounded-lg px-3 py-2"
+              style={{
+                background: "var(--kipu-surface)",
+                border: "1px solid var(--kipu-border)",
+              }}
+            >
+              <p className="text-[10px]" style={{ color: "var(--kipu-subtle)" }}>{label}</p>
+              <p className="text-sm font-bold" style={{ color: color }}>${fmt(value)}</p>
+            </div>
+          ))}
+        </div>
+
+        <TablaDetalle
+          titulo="Ventas del período"
+          rows={ventasFormateadas}
+          columnas={colVentas}
+          color="indigo"
+        />
+      </div>
+
+      {/* Detalle compras */}
+      <div>
+        <p className="text-sm font-semibold mb-2" style={{ color: "var(--kipu-text)" }}>
+          Comprobantes recibidos — compras
+        </p>
+
+        {/* Totales compras */}
+        <div className="grid grid-cols-3 gap-2 mb-3">
+          {[
+            { label: "Base IVA ≠ 0",    value: totalesCompras.base_iva_diferente_0 ?? 0, color: "var(--kipu-success)" },
+            { label: "IVA con crédito",  value: totalesCompras.iva_con_credito       ?? 0, color: "var(--kipu-success)" },
+            { label: "IVA sin crédito",  value: totalesCompras.iva_sin_credito       ?? 0, color: "var(--kipu-subtle)" },
+          ].map(({ label, value, color }) => (
+            <div
+              key={label}
+              className="rounded-lg px-3 py-2"
+              style={{
+                background: "var(--kipu-surface)",
+                border: "1px solid var(--kipu-border)",
+              }}
+            >
+              <p className="text-[10px]" style={{ color: "var(--kipu-subtle)" }}>{label}</p>
+              <p className="text-sm font-bold" style={{ color: color }}>${fmt(value)}</p>
+            </div>
+          ))}
+        </div>
+
+        <TablaDetalle
+          titulo="Compras del período"
+          rows={comprasFormateadas}
+          columnas={colCompras}
+          color="emerald"
+        />
+      </div>
+
+      {/* Retenciones */}
+      <div>
+        <p className="text-sm font-semibold mb-2" style={{ color: "var(--kipu-text)" }}>Retenciones</p>
+        <SeccionRetenciones
+          modo="ATS"
+          detalleEmitidas={retEmitidas}
+          detalleRecibidas={retRecibidas}
+        />
+      </div>
+
+      {/* Resumen */}
+      <ResumenImpositivo
+        tipo="ATS"
+        casilleros={{}}
+        camposManuales={[]}
+      />
+
+      {/* Documentos */}
+      <DocumentosIncluidos
+        totalEmitidos={totalEmit}
+        totalRecibidos={totalRecib}
+        periodo={periodo}
+        tipo="ATS"
+        generadoAt={generadoAt}
+        regeneradoAt={regeneradoAt}
+      />
+
+      {/* Notas */}
+      {reporte?.notas?.length > 0 && (
+        <div
+          className="rounded-xl p-4 space-y-1.5"
+          style={{
+            background: "var(--kipu-surface)",
+            border: "1px solid var(--kipu-border)",
+          }}
+        >
+          <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: "var(--kipu-subtle)" }}>Notas</p>
+          {reporte.notas.map((nota: string, i: number) => (
+            <p key={i} className="text-xs" style={{ color: "var(--kipu-subtle)" }}>· {nota}</p>
+          ))}
+        </div>
+      )}
+
+    </div>
+  );
+}

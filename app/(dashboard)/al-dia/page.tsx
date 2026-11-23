@@ -10,8 +10,11 @@ import PanelCliente from "@/components/al-dia/PanelCliente";
 import TextoTerminos from "@/components/al-dia/TextoTerminos";
 import OfertaRenta from "@/components/renta/OfertaRenta";
 import { HeroAlDia, DemoAlDia, ComoFunciona, QueIncluye, Confianza, Preguntas } from "@/components/al-dia/Venta";
+import SoloWeb from "@/components/SoloWeb";
+import { ES_APP_NATIVA } from "@/lib/plataforma";
 
-const SOPORTE_WA = "593960585581";
+// Contacto de ventas (transferencia, cambio de plan): el mismo número configurado
+import { WHATSAPP_SOPORTE as SOPORTE_WA } from "@/lib/soporte";
 
 interface Precio { total: number; base: number; iva: number }
 interface Estado {
@@ -119,7 +122,7 @@ export default function KipuAlDiaPage() {
 
   const gestionarPago = async () => {
     try {
-      const r = await api.post("/api/v1/app/suscripcion/portal");
+      const r = await api.post("/api/v1/app/suscripcion/portal?volver=al-dia");
       window.location.href = r.data.portal_url;
     } catch (err: unknown) {
       setError(detalle(err, "No pudimos abrir la gestión del pago."));
@@ -211,7 +214,7 @@ export default function KipuAlDiaPage() {
                           ? ", a la tarjeta con la que pagaste (se ve en 5 a 10 días hábiles)."
                           : ": te pediremos tu cuenta bancaria y te lo transferimos."}</>
                     : "Cuando se confirme el pago de Al Día cancelamos tu Pro y te devolvemos los días que no vas a usar; te confirmamos el monto por correo."}
-                {" "}Kipu Al Día incluye todo lo de Kipu Pro.
+                {ES_APP_NATIVA ? "" : " Kipu Al Día incluye todo lo de Kipu Pro."}
               </p>
             </div>
           );
@@ -270,9 +273,11 @@ export default function KipuAlDiaPage() {
         {/* ¿Solo la renta? Kipu Renta (pago único) */}
         <OfertaRenta variante="al-dia" />
 
-        <p className="text-xs text-center" style={{ color: "var(--kipu-subtle)" }}>
-          <Link href="/planes" className="underline">Ver todos los planes</Link>
-        </p>
+        <SoloWeb>
+          <p className="text-xs text-center" style={{ color: "var(--kipu-subtle)" }}>
+            <Link href="/planes" className="underline">Ver todos los planes</Link>
+          </p>
+        </SoloWeb>
       </div>
     );
   }
@@ -326,9 +331,11 @@ export default function KipuAlDiaPage() {
       {/* Clave del SRI: solo con el servicio contratado y para el administrador */}
       {estado?.contratado && esAdmin && <ClaveSri />}
 
-      <p className="text-xs text-center" style={{ color: "var(--kipu-subtle)" }}>
-        <Link href="/planes" className="underline">Volver a Plan y créditos</Link>
-      </p>
+      <SoloWeb>
+        <p className="text-xs text-center" style={{ color: "var(--kipu-subtle)" }}>
+          <Link href="/planes" className="underline">Volver a Plan y créditos</Link>
+        </p>
+      </SoloWeb>
     </div>
   );
 }

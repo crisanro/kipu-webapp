@@ -1,4 +1,5 @@
 "use client";
+import SoloWeb from "@/components/SoloWeb";
 
 import { useState, useEffect, useRef } from "react";
 import { r2 } from "@/lib/dinero";
@@ -144,6 +145,8 @@ export default function NuevaRetPage() {
   const router       = useRouter();
   const searchParams = useSearchParams();
   const empresa      = useAuthStore((s) => s.empresa);
+  // Con plan gratis no se gastan créditos (mismo criterio que ResumenTotales)
+  const usaCreditos  = !empresa?.suscripcion_activa && !empresa?.emision_gratis && (empresa?.balance_api ?? 0) > 0;
 
   // Lista de países ordenada desde el módulo externo
   const paisesOrdenados = getPaisesOrdenados();
@@ -510,7 +513,7 @@ export default function NuevaRetPage() {
         </p>
       </div>
 
-      {empresa && !empresa.suscripcion_activa && empresa.balance_api === 0 && (
+      {empresa && !empresa.suscripcion_activa && empresa.balance_api === 0 && !empresa.emision_gratis && (
         <div
           className="flex items-center gap-2 rounded-lg px-4 py-3"
           style={{
@@ -521,7 +524,7 @@ export default function NuevaRetPage() {
           <AlertTriangle size={16} className="shrink-0" style={{ color: "var(--kipu-danger)" }} />
           <p className="text-sm" style={{ color: "var(--kipu-danger)" }}>
             Sin acceso para emitir.{" "}
-            <a href="/planes" className="underline">Ver opciones</a>
+            <SoloWeb><a href="/planes" className="underline">Ver opciones</a></SoloWeb>
           </p>
         </div>
       )}
@@ -1153,22 +1156,24 @@ export default function NuevaRetPage() {
               </div>
             </div>
 
-            {empresa?.suscripcion_activa || (empresa?.balance_api ?? 0) > 0 ? (
+            {empresa?.suscripcion_activa || (empresa?.balance_api ?? 0) > 0 || empresa?.emision_gratis ? (
               <div
                 className="mt-3 px-3 py-2 rounded-lg text-xs"
                 style={{
-                  background: !empresa?.suscripcion_activa
+                  background: usaCreditos
                     ? "color-mix(in srgb, var(--kipu-warning) 10%, transparent)"
                     : "color-mix(in srgb, var(--kipu-success) 10%, transparent)",
-                  border: !empresa?.suscripcion_activa
+                  border: usaCreditos
                     ? "1px solid color-mix(in srgb, var(--kipu-warning) 20%, transparent)"
                     : "1px solid color-mix(in srgb, var(--kipu-success) 20%, transparent)",
-                  color: !empresa?.suscripcion_activa ? "var(--kipu-warning)" : "var(--kipu-success)",
+                  color: usaCreditos ? "var(--kipu-warning)" : "var(--kipu-success)",
                 }}
               >
-                {!empresa?.suscripcion_activa
+                {usaCreditos
                   ? `Consumirá 1 crédito API · Disponibles: ${empresa?.balance_api}`
-                  : "✅ Incluido en tu suscripción"
+                  : !empresa?.suscripcion_activa
+                    ? "Plan gratis · uso justo de comprobantes al mes"
+                    : "✅ Incluido en tu suscripción"
                 }
               </div>
             ) : (

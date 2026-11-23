@@ -8,6 +8,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { useAuthStore } from "@/store/auth.store";
+import { ES_APP_NATIVA } from "@/lib/plataforma";
 
 // Páginas de venta o internas: ahí no hace falta el aviso. El dashboard tiene su
 // propio recuadro del plan (gratis o suscripción inactiva), con lo mismo; /uso-justo
@@ -34,6 +35,8 @@ export default function AvisoPro() {
   const empresa  = useAuthStore((s) => s.empresa);
   const pathname = usePathname() ?? "";
 
+  // En la app de las tiendas no se ofrecen planes (ver components/SoloWeb.tsx)
+  if (ES_APP_NATIVA) return null;
   if (!empresa || empresa.suscripcion_activa) return null;
   if (OCULTO_EN.some((r) => pathname.startsWith(r))) return null;
 

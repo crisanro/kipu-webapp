@@ -1,4 +1,5 @@
 "use client";
+import { rutas } from "@/lib/rutas";
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import api from "@/lib/api";
@@ -237,7 +238,7 @@ function CobrosContenido() {
                     </button>
                   )}
                   {c.estado === "FACTURADO" && c.documento_id && (
-                    <Link href={`/documentos/${c.documento_id}`} className={boton} style={estiloBoton}>
+                    <Link href={rutas.documento(c.documento_id)} className={boton} style={estiloBoton}>
                       <FileText size={12} /> Ver factura{c.numero_doc ? ` ${c.numero_doc}` : ""}
                     </Link>
                   )}

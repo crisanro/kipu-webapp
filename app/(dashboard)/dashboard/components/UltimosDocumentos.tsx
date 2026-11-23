@@ -1,4 +1,5 @@
 "use client";
+import { rutas } from "@/lib/rutas";
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, Clock, AlertTriangle, XCircle, Ban } from "lucide-react";
 
@@ -15,6 +16,12 @@ const ESTADO_CONFIG: Record<string, { label: string; color: string; bg: string; 
   },
   RECIBIDA: {
     label: "En proceso",
+    color: "var(--kipu-info)",
+    bg: "color-mix(in srgb, var(--kipu-info) 10%, transparent)",
+    icon: Clock,
+  },
+  EN_REVISION: {
+    label: "En revisión",
     color: "var(--kipu-info)",
     bg: "color-mix(in srgb, var(--kipu-info) 10%, transparent)",
     icon: Clock,
@@ -115,7 +122,7 @@ export default function UltimosDocumentos({ documentos }: Props) {
             return (
               <Link
                 key={d.id}
-                href={`/documentos/${d.id}`}
+                href={rutas.documento(d.id)}
                 className="flex items-center gap-3 px-5 py-3.5 transition-colors group"
                 style={{
                   borderTop: index > 0 ? "1px solid var(--kipu-border)" : "none",

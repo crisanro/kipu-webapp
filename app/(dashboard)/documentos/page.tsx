@@ -1,4 +1,5 @@
 "use client";
+import { rutas } from "@/lib/rutas";
 import { useState, useEffect, useCallback } from "react";
 import { useSandboxStore } from "@/store/sandbox.store";
 import Link from "next/link";
@@ -40,6 +41,7 @@ interface PaginationInfo {
 const ESTADO_CONFIG: Record<string, { label: string; color: string; bg: string; icon: any }> = {
   AUTORIZADO: { label: "Autorizado", color: "var(--kipu-success)", bg: "color-mix(in srgb, var(--kipu-success) 10%, transparent)", icon: CheckCircle2 },
   RECIBIDA:   { label: "En proceso", color: "var(--kipu-info)", bg: "color-mix(in srgb, var(--kipu-info) 10%, transparent)", icon: Clock },
+  EN_REVISION:{ label: "En revisión", color: "var(--kipu-info)", bg: "color-mix(in srgb, var(--kipu-info) 10%, transparent)", icon: Clock },
   POR_FIRMAR: { label: "Firmando",   color: "var(--kipu-info)", bg: "color-mix(in srgb, var(--kipu-info) 10%, transparent)", icon: Clock },
   FIRMADO:    { label: "En cola",    color: "var(--kipu-info)", bg: "color-mix(in srgb, var(--kipu-info) 10%, transparent)", icon: Clock },
   ERROR_FIRMA:{ label: "Error de firma", color: "var(--kipu-danger)", bg: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)", icon: AlertTriangle },
@@ -570,7 +572,7 @@ export default function HistorialPage() {
                     >
                       <td className="px-4 py-3">
                         <Link
-                          href={`/documentos/${d.id}`}
+                          href={rutas.documento(d.id)}
                           className="font-mono text-xs transition-colors hover:underline underline-offset-2"
                           style={{ color: "var(--kipu-accent)" }}
                         >
@@ -632,7 +634,7 @@ export default function HistorialPage() {
                 >
                   <div className="flex items-center justify-between gap-2">
                     <Link
-                      href={`/documentos/${d.id}`}
+                      href={rutas.documento(d.id)}
                       className="font-mono text-xs transition-colors"
                       style={{ color: "var(--kipu-accent)" }}
                     >

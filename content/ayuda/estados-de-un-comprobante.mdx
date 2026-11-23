@@ -1,0 +1,44 @@
+Cada comprobante pasa por varios estados desde que lo emites hasta que el SRI lo autoriza.
+Los ves en **Documentos** → **Emitidos** y, con más detalle, al abrir el comprobante.
+
+<Tabla
+  columnas={["Estado", "Qué quiere decir", "Qué hacer"]}
+  filas={[
+    ["Firmando / En cola", "Kipu lo está firmando o enviando al SRI.", "Nada: tarda unos segundos."],
+    ["En proceso", "El SRI lo recibió y está por autorizarlo.", "Esperar. Kipu lo consulta solo."],
+    ["Autorizado", "El SRI lo aprobó. Tiene validez.", "Listo. Le llega al cliente por correo."],
+    ["En revisión", "No pudimos confirmar el estado con el SRI. No es un rechazo.", "Esperar: Kipu sigue verificando."],
+    ["Error de firma", "No se pudo firmar.", "Revisa tu firma en Configuración."],
+    ["Devuelto / Rechazado", "El SRI no lo aceptó.", "Lee el error y emite uno nuevo corregido."],
+    ["Anulado", "Lo anulaste en el SRI.", "Nada. Ya no tiene validez, así que no se descarga ni se comparte."],
+  ]}
+/>
+
+## Si el SRI lo devolvió o lo rechazó
+
+Abre el comprobante: en el recuadro rojo **Errores del SRI** está el motivo, con su código.
+Los más comunes son datos del cliente o de la empresa que no coinciden con el SRI.
+
+<Nota tipo="aviso">
+  **Reintentar** vuelve a enviar el mismo comprobante, sin cambios. Sirve cuando el problema
+  fue de conexión, no cuando el SRI encontró un error en los datos. En ese caso, corrige el
+  dato y **emite un comprobante nuevo**.
+</Nota>
+
+Un comprobante devuelto o rechazado no tiene validez y no cuenta para tu declaración. Si
+llevas control de inventario, el stock vuelve a su lugar.
+
+## Si se queda en proceso o en revisión
+
+El SRI a veces tarda. Kipu lo vuelve a consultar solo durante las siguientes horas. Si
+quieres saberlo ya, abre el comprobante y pulsa **Consultar en el SRI**.
+
+## Si dice "Error de firma"
+
+Kipu no pudo firmarlo, casi siempre porque la firma venció o cambió su contraseña. Revisa
+[tu firma electrónica](/ayuda/como-subir-tu-firma-electronica); Kipu lo reintenta solo.
+
+<Nota>
+  Cuando el SRI devuelve o rechaza un comprobante, te llega un aviso en las notificaciones
+  de Kipu.
+</Nota>

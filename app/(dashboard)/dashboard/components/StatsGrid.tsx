@@ -3,6 +3,7 @@ import {
   TrendingUp, FileText, Receipt,
   CreditCard, Zap, Users
 } from "lucide-react";
+import { ES_APP_NATIVA } from "@/lib/plataforma";
 
 interface Props {
   resumen: any;
@@ -50,13 +51,16 @@ export default function StatsGrid({ resumen, empresa }: Props) {
     },
     {
       label: gratis ? "Tu plan" : "Suscripción",
-      value: gratis ? "Gratis" : suscripcion?.plan ?? "—",
+      value: gratis ? "Gratis"
+        : suscripcion?.plan === "AL_DIA" ? "Kipu Al Día"   // el backend manda el código del plan
+        : suscripcion?.plan === "PRO" ? "Kipu Pro"
+        : suscripcion?.plan ?? "—",
       sub: suscripcion?.estado === "TRIAL"
         ? "⏳ En período de prueba"
         : suscripcion?.activa
         ? "✅ Activa"
         : gratis
-        ? "🆓 Facturas gratis · Pro suma más"
+        ? (ES_APP_NATIVA ? "🆓 Facturas gratis" : "🆓 Facturas gratis · Pro suma más")
         : "❌ Inactiva",
       icon: CreditCard,
       color: tono,

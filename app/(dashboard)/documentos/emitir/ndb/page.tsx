@@ -1,4 +1,5 @@
 "use client";
+import SoloWeb from "@/components/SoloWeb";
 
 import { useState, useEffect, useRef } from "react";
 import { r2 } from "@/lib/dinero";
@@ -332,7 +333,7 @@ export default function NuevaNdbPage() {
         </p>
       </div>
 
-      {empresa && !empresa.suscripcion_activa && empresa.balance_api === 0 && (
+      {empresa && !empresa.suscripcion_activa && empresa.balance_api === 0 && !empresa.emision_gratis && (
         <div
           className="flex items-center gap-2 rounded-lg px-4 py-3"
           style={{
@@ -343,7 +344,7 @@ export default function NuevaNdbPage() {
           <AlertTriangle size={16} className="shrink-0" style={{ color: "var(--kipu-danger)" }} />
           <p className="text-sm" style={{ color: "var(--kipu-danger)" }}>
             Sin acceso para emitir.{" "}
-            <a href="/planes" className="underline">Ver opciones</a>
+            <SoloWeb><a href="/planes" className="underline">Ver opciones</a></SoloWeb>
           </p>
         </div>
       )}

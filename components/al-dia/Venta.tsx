@@ -11,6 +11,7 @@ import {
 import api from "@/lib/api";
 import { hoyEC } from "@/lib/fecha";
 import { EtiquetaEjemplo } from "@/components/EjemploPro";
+import { ES_APP_NATIVA } from "@/lib/plataforma";
 
 const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio",
                "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
@@ -90,15 +91,33 @@ export function HeroAlDia({ precio, onContratar }: { precio: number | null; onCo
          }}>
       <div className="flex items-center gap-2">
         <CalendarCheck size={18} style={{ color: "var(--kipu-accent)" }} />
-        <span className="text-sm font-semibold" style={{ color: "var(--kipu-accent)" }}>Kipu Al Día</span>
+        <span className="text-sm font-semibold" style={{ color: "var(--kipu-accent)" }}>
+          {ES_APP_NATIVA ? "Kipu Al Día · Tu contador" : "Kipu Al Día"}
+        </span>
       </div>
-      <h1 className="text-2xl md:text-3xl font-extrabold leading-tight" style={{ color: "var(--kipu-text)" }}>
-        Tú facturas.<br />Nosotros declaramos.
-      </h1>
-      <p className="text-sm md:text-base max-w-xl" style={{ color: "var(--kipu-muted)" }}>
-        Cada mes revisamos tus ventas y compras, te mandamos el resumen por WhatsApp y presentamos
-        tus declaraciones de IVA y renta al SRI. Tú sigues con tu negocio.
-      </p>
+      {/* En la app se vende como el servicio de un contador (Apple 3.1.3(e));
+          la web conserva su texto */}
+      {ES_APP_NATIVA ? (
+        <>
+          <h1 className="text-2xl md:text-3xl font-extrabold leading-tight" style={{ color: "var(--kipu-text)" }}>
+            Tú facturas.<br />Tu contador declara.
+          </h1>
+          <p className="text-sm md:text-base max-w-xl" style={{ color: "var(--kipu-muted)" }}>
+            Un contador del equipo de Kipu revisa cada mes tus ventas y compras, te manda el resumen
+            por WhatsApp y presenta tus declaraciones de IVA y renta al SRI. Tú sigues con tu negocio.
+          </p>
+        </>
+      ) : (
+        <>
+          <h1 className="text-2xl md:text-3xl font-extrabold leading-tight" style={{ color: "var(--kipu-text)" }}>
+            Tú facturas.<br />Nosotros declaramos.
+          </h1>
+          <p className="text-sm md:text-base max-w-xl" style={{ color: "var(--kipu-muted)" }}>
+            Cada mes revisamos tus ventas y compras, te mandamos el resumen por WhatsApp y presentamos
+            tus declaraciones de IVA y renta al SRI. Tú sigues con tu negocio.
+          </p>
+        </>
+      )}
       <div className="flex flex-wrap items-center gap-4 pt-1">
         {precio !== null ? (
           <div>
@@ -115,7 +134,11 @@ export function HeroAlDia({ precio, onContratar }: { precio: number | null; onCo
         </button>
       </div>
       <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
-        Incluye todo Kipu Pro · Tu precio no sube mientras sigas suscrito · Cancelas cuando quieras
+        {/* En la app se vende el servicio del contador (Apple/Google: servicio
+            profesional, no contenido digital). No se nombra Kipu Pro ni las funciones. */}
+        {ES_APP_NATIVA
+          ? "Servicio mensual de contadores del equipo de Kipu · Tu precio no sube mientras sigas · Cancelas cuando quieras"
+          : "Incluye todo Kipu Pro · Tu precio no sube mientras sigas suscrito · Cancelas cuando quieras"}
       </p>
     </div>
   );
@@ -281,7 +304,9 @@ export function QueIncluye() {
   return (
     <section className="grid md:grid-cols-2 gap-3">
       <div className="rounded-xl p-5 space-y-3" style={caja}>
-        <h2 className="text-base font-bold" style={{ color: "var(--kipu-text)" }}>Qué incluye</h2>
+        <h2 className="text-base font-bold" style={{ color: "var(--kipu-text)" }}>
+          {ES_APP_NATIVA ? "Qué hace tu contador" : "Qué incluye"}
+        </h2>
         <ul className="space-y-2">
           {INCLUYE.map((t) => (
             <li key={t} className="flex gap-2 text-sm" style={{ color: "var(--kipu-text)" }}>
@@ -289,7 +314,9 @@ export function QueIncluye() {
             </li>
           ))}
         </ul>
-        <p className="text-xs font-semibold pt-1" style={{ color: "var(--kipu-accent)" }}>Y además, todo Kipu Pro:</p>
+        <p className="text-xs font-semibold pt-1" style={{ color: "var(--kipu-accent)" }}>
+          {ES_APP_NATIVA ? "Para que tu contador trabaje con todos tus datos, mientras dure el servicio tienes:" : "Y además, todo Kipu Pro:"}
+        </p>
         <ul className="space-y-1.5">
           {SISTEMA.map((t) => (
             <li key={t} className="flex gap-2 text-xs" style={{ color: "var(--kipu-muted)" }}>

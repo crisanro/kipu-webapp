@@ -14,12 +14,39 @@ import {
   FlaskConical,
   Bell,
   LogOut,
+  HelpCircle,
 } from "lucide-react";
 import { clsx } from "clsx";
 import { NAV_GROUPS, tienePermiso } from "./DashboardNav";
-import { SoporteWhatsApp } from "./SoporteWhatsApp";
 import { ThemeToggle } from "./ThemeToggle";
 import { useAuthStore } from "@/store/auth.store";
+import { ES_APP_NATIVA, rutaFueraDelPlan } from "@/lib/plataforma";
+
+// Tarjeta del plan: enlace a /planes en la web; en la app de las tiendas no se
+// ofrecen planes, así que es solo un recuadro informativo
+function EnlacePlan({ children }: { children: React.ReactNode }) {
+  if (ES_APP_NATIVA) {
+    return (
+      <div className="block rounded-lg px-3 py-2.5" style={{ background: "var(--kipu-bg)" }}>
+        {children}
+      </div>
+    );
+  }
+  return (
+    <Link
+      href="/planes"
+      className="block rounded-lg px-3 py-2.5 transition-colors"
+      style={{ background: "var(--kipu-bg)" }}
+      onMouseEnter={(e) =>
+        (e.currentTarget.style.background =
+          "color-mix(in srgb, var(--kipu-border) 60%, transparent)")
+      }
+      onMouseLeave={(e) => (e.currentTarget.style.background = "var(--kipu-bg)")}
+    >
+      {children}
+    </Link>
+  );
+}
 
 interface SidebarProps {
   sidebarOpen: boolean;
@@ -82,7 +109,8 @@ export function Sidebar({
   };
 
   const planGratis = !empresa.suscripcion_activa && !!empresa.emision_gratis;   // plan gratis encendido
-  const planLabel = empresa.suscripcion_activa ? (empresa.suscripcion?.plan ?? "Pro") : planGratis ? "Gratis" : "Free";
+  // Nombre visible del plan (el backend manda PRO o AL_DIA). Sin suscripción es "Gratis", tenga o no créditos
+  const planLabel = !empresa.suscripcion_activa ? "Gratis" : empresa.suscripcion?.plan === "AL_DIA" ? "Kipu Al Día" : "Kipu Pro";
   // Con el plan gratis el panel emite sin créditos: no hay que alarmar por no tenerlos
   const sinCreditos = !empresa.suscripcion_activa && !planGratis && (empresa.balance_api ?? 0) === 0;
 
@@ -96,6 +124,8 @@ export function Sidebar({
     <aside
       className={clsx(
         "fixed lg:static inset-y-0 left-0 z-30 w-64 flex flex-col transition-transform duration-200",
+        // En móvil es un panel fijo de alto completo: dentro del área segura (globals.css)
+        "max-lg:pt-[var(--sa-top)] max-lg:pb-[var(--sa-bottom)]",
         sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
       )}
       style={{
@@ -214,7 +244,7 @@ export function Sidebar({
                       style={{ borderLeft: "2px solid var(--kipu-border)" }}
                     >
                       {group.children
-                        .filter((child) => tienePermiso(empresa, (child as any).permiso ?? null))
+                        .filter((child) => tienePermiso(empresa, (child as any).permiso ?? null) && !rutaFueraDelPlan(child.href, empresa))
                         .map((child) => {
                           const active = isActive(child.href);
                           const Icon = child.icon;
@@ -249,7 +279,7 @@ export function Sidebar({
               )
             ) : (
               group.items
-                ?.filter((item) => tienePermiso(empresa, (item as any).permiso ?? null))
+                ?.filter((item) => tienePermiso(empresa, (item as any).permiso ?? null) && !rutaFueraDelPlan(item.href, empresa))
                 .map((item) => {
                   const active = isActive(item.href);
                   const Icon = item.icon;
@@ -285,8 +315,8 @@ export function Sidebar({
           </div>
         ))}
 
-        {/* Equipo de Kipu Al Día: superadmin y contadores */}
-        {equipoAlDia && (
+        {/* Equipo de Kipu Al Día: superadmin y contadores (solo en la web) */}
+        {equipoAlDia && !ES_APP_NATIVA && (
           <>
             <div className="my-2" style={{ borderTop: "2px solid var(--kipu-border)" }} />
             <Link
@@ -302,7 +332,7 @@ export function Sidebar({
           </>
         )}
 
-        {role === "superadmin" && (
+        {role === "superadmin" && !ES_APP_NATIVA && (
           <>
             <div className="my-2" style={{ borderTop: "2px solid var(--kipu-border)" }} />
             <Link
@@ -321,17 +351,8 @@ export function Sidebar({
 
       {/* Footer sidebar */}
       <div className="px-4 py-4 space-y-3" style={{ borderTop: "2px solid var(--kipu-border)" }}>
-        {/* Plan activo */}
-        <Link
-          href="/planes"
-          className="block rounded-lg px-3 py-2.5 transition-colors"
-          style={{ background: "var(--kipu-bg)" }}
-          onMouseEnter={(e) =>
-            (e.currentTarget.style.background =
-              "color-mix(in srgb, var(--kipu-border) 60%, transparent)")
-          }
-          onMouseLeave={(e) => (e.currentTarget.style.background = "var(--kipu-bg)")}
-        >
+        {/* Plan activo: en la web lleva a /planes; en la app solo informa */}
+        <EnlacePlan>
           <p className="text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>
             Plan activo
           </p>
@@ -365,11 +386,11 @@ export function Sidebar({
             <div className="flex items-center gap-1 mt-1.5">
               <AlertTriangle size={11} style={{ color: "var(--kipu-danger)" }} />
               <span className="text-xs" style={{ color: "var(--kipu-danger)" }}>
-                Sin créditos — activa tu plan
+                {ES_APP_NATIVA ? "Sin comprobantes disponibles" : "Sin créditos — activa tu plan"}
               </span>
             </div>
           )}
-          {planGratis && (
+          {planGratis && !ES_APP_NATIVA && (
             <p className="text-xs mt-1.5 font-medium" style={{ color: "var(--kipu-accent)" }}>
               ✨ Pásate a Pro: sin límite y el 104 completo
             </p>
@@ -382,7 +403,7 @@ export function Sidebar({
               </span>
             </div>
           )}
-        </Link>
+        </EnlacePlan>
 
         {/* Toggle Sandbox */}
         {firmaOk ? (
@@ -471,8 +492,26 @@ export function Sidebar({
             )}
           </button>
 
-          {/* Soporte WhatsApp */}
-          <SoporteWhatsApp empresa={empresa} />
+          {/* Ayuda: siempre primero el Centro de Ayuda, nunca WhatsApp directo
+              (el WhatsApp está al final de cada artículo, solo Pro y Al Día: lib/soporte.ts) */}
+          <Link
+            href="/ayuda"
+            onClick={() => setSidebarOpen(false)}
+            className="p-2 rounded-lg transition-colors"
+            style={{ color: pathname.startsWith("/ayuda") ? "var(--kipu-accent)" : "var(--kipu-muted)" }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = "var(--kipu-text)";
+              e.currentTarget.style.background = "var(--kipu-border)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = pathname.startsWith("/ayuda") ? "var(--kipu-accent)" : "var(--kipu-muted)";
+              e.currentTarget.style.background = "transparent";
+            }}
+            title="Ayuda"
+            aria-label="Ayuda"
+          >
+            <HelpCircle size={18} />
+          </Link>
 
           {/* Modo oscuro/claro */}
           <ThemeToggle compact />

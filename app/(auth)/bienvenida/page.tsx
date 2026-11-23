@@ -6,11 +6,14 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { auth } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
 import Image from "next/image";
+import Link from "next/link";
+import { enlaceWhatsAppFalla } from "@/lib/soporte";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
-import { Building2, Plus, Loader2, CheckCircle2, ArrowRight, MessageCircle, LogOut } from "lucide-react";
+import { Building2, Plus, Loader2, CheckCircle2, ArrowRight, CircleHelp, MessageCircle, LogOut } from "lucide-react";
 import { useTheme } from "next-themes";
 import VerificarCorreo from "@/components/auth/VerificarCorreo";
+import EliminarCuenta from "@/components/cuenta/EliminarCuenta";
 
 export default function BienvenidaPage() {
   const router       = useRouter();
@@ -99,15 +102,6 @@ export default function BienvenidaPage() {
     router.replace("/login");
   };
 
-  const handleEliminarCuenta = async () => {
-    try {
-      await auth.currentUser?.delete();
-      logout();
-      router.replace("/register");
-    } catch {
-      alert("Por seguridad, cierra sesión y vuelve a iniciar para eliminar tu cuenta.");
-    }
-  };
 
   // Correo mal escrito: no hay cómo verificarlo, se borra la cuenta y se registra de nuevo
   const handleCambiarCorreo = async () => {
@@ -291,22 +285,36 @@ export default function BienvenidaPage() {
         {/* Botones de acción */}
         <div className="mt-8 space-y-3">
 
-          {/* Soporte */}
-          <a
-            href={`https://wa.me/593960585581?text=${encodeURIComponent("Hola, necesito soporte con Kipu.")}`}
-            target="_blank"
-            rel="noopener noreferrer"
+          {/* Ayuda: las dudas van al Centro de Ayuda. Si algo falla y no puede
+              seguir, WhatsApp para todos (lib/soporte.ts). Mientras verifica el
+              correo, ese enlace ya está dentro de VerificarCorreo */}
+          <Link
+            href="/ayuda"
             className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-colors"
             style={{
-              border: "1px solid color-mix(in srgb, var(--kipu-success) 30%, transparent)",
-              color:  "var(--kipu-success)",
+              border: "1px solid color-mix(in srgb, var(--kipu-accent) 30%, transparent)",
+              color:  "var(--kipu-accent)",
             }}
-            onMouseEnter={e => (e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-success) 10%, transparent)")}
+            onMouseEnter={e => (e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-accent) 10%, transparent)")}
             onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
           >
-            <MessageCircle size={15} />
-            Contactar soporte
-          </a>
+            <CircleHelp size={15} />
+            Centro de Ayuda
+          </Link>
+          {correoOk && (
+            <p className="text-xs text-center" style={{ color: "var(--kipu-subtle)" }}>
+              ¿Algo falla y no puedes continuar?{" "}
+              <a
+                href={enlaceWhatsAppFalla("Hola, no puedo continuar con mi registro en Kipu.", auth.currentUser?.email)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 underline"
+                style={{ color: "var(--kipu-accent)" }}
+              >
+                <MessageCircle size={12} /> Escríbenos por WhatsApp
+              </a>
+            </p>
+          )}
 
           {/* Cerrar sesión */}
           <button
@@ -342,26 +350,9 @@ export default function BienvenidaPage() {
                 Eliminar mi cuenta
               </button>
             ) : (
-              <div className="text-center space-y-2">
-                <p className="text-xs" style={{ color: "var(--kipu-danger)" }}>
-                  ¿Estás seguro? Esta acción no se puede deshacer.
-                </p>
-                <div className="flex gap-3 justify-center">
-                  <button
-                    onClick={() => setConfirmDelete(false)}
-                    className="text-xs transition-colors"
-                    style={{ color: "var(--kipu-muted)" }}
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    onClick={handleEliminarCuenta}
-                    className="text-xs font-medium transition-colors"
-                    style={{ color: "var(--kipu-danger)" }}
-                  >
-                    Sí, eliminar
-                  </button>
-                </div>
+              // Mismo flujo que Configuración → Zona de riesgo: lo hace el backend (perfil, Firebase y avisos)
+              <div className="w-full text-left">
+                <EliminarCuenta onCancelar={() => setConfirmDelete(false)} />
               </div>
             )}
           </div>

@@ -1,5 +1,7 @@
 "use client";
 
+import { rutas } from "@/lib/rutas";
+import { ES_APP_NATIVA } from "@/lib/plataforma";
 import { useState } from "react";
 import Link from "next/link";
 import api from "@/lib/api";
@@ -248,9 +250,10 @@ export default function DeclaracionWidget({ data, onDeclarado }: Props) {
                     ? <>Saldo a favor: <strong>${(data.saldo_a_favor ?? 0).toFixed(2)}</strong></>
                     : <>IVA a pagar: <strong>${data.iva_a_pagar.toFixed(2)}</strong></>}
                 </p>
-                {data.formulario_completo === false && (
+                {/* En la app no se ofrece lo que el plan no incluye (lib/plataforma.ts) */}
+                {data.formulario_completo === false && !ES_APP_NATIVA && (
                   <Link
-                    href={data.periodo_key ? `/reportes/iva/${data.periodo_key}` : "/planes"}
+                    href={data.periodo_key ? rutas.reporteIva(data.periodo_key) : ES_APP_NATIVA ? "/reportes" : "/planes"}
                     className="text-[11px] underline underline-offset-2 hover:no-underline"
                     style={{ color: "var(--kipu-accent)" }}
                   >

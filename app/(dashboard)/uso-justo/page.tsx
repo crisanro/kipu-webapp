@@ -15,6 +15,8 @@ import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
 import { SESSION_EMPRESA_KEY } from "@/app/providers";
 import SolicitarAmpliacion from "@/components/uso-justo/SolicitarAmpliacion";
+import SoloWeb from "@/components/SoloWeb";
+import { ES_APP_NATIVA } from "@/lib/plataforma";
 
 interface UsoJusto {
   plan_pro:        boolean;
@@ -170,7 +172,7 @@ export default function UsoJustoPage() {
                  style={{ color: "var(--kipu-warning)", background: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)" }}>
                 <AlertTriangle size={13} className="mt-0.5 shrink-0" />
                 Llegaste a tu límite de este mes. Te {datos.restantes_mes === 1 ? "queda 1 comprobante" : `quedan ${n(datos.restantes_mes)} comprobantes`} de
-                margen; después tendrás que esperar al próximo mes, solicitar ampliación o pasarte a Kipu Pro.
+                margen; después tendrás que esperar al próximo mes{ES_APP_NATIVA ? " o solicitar ampliación." : ", solicitar ampliación o pasarte a Kipu Pro."}
               </p>
             )}
             {!datos.en_colchon && datos.usados_mes >= datos.limite_mes + datos.colchon && (
@@ -188,22 +190,24 @@ export default function UsoJustoPage() {
             <SolicitarAmpliacion onResultado={cargar} />
           </div>
 
-          <div className="rounded-xl p-5 space-y-3"
-               style={{ background: "color-mix(in srgb, var(--kipu-accent) 6%, transparent)",
-                        border: "1px solid color-mix(in srgb, var(--kipu-accent) 20%, transparent)" }}>
-            <p className="flex items-start gap-2 text-sm" style={{ color: "var(--kipu-text)" }}>
-              <Sparkles size={15} className="mt-0.5 shrink-0" style={{ color: "var(--kipu-accent)" }} />
-              Con Kipu Pro no tienes límite de uso justo: emites sin límite desde el panel y por API,
-              tus facturas salen sin la marca de Kipu, y tienes el 104 con alertas y el resumen de la renta.
-            </p>
-            <Link
-              href="/planes"
-              className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-semibold text-white transition-opacity hover:opacity-90"
-              style={{ background: "var(--kipu-accent)" }}
-            >
-              <Sparkles size={13} /> Ver Kipu Pro
-            </Link>
-          </div>
+          <SoloWeb>
+            <div className="rounded-xl p-5 space-y-3"
+                 style={{ background: "color-mix(in srgb, var(--kipu-accent) 6%, transparent)",
+                          border: "1px solid color-mix(in srgb, var(--kipu-accent) 20%, transparent)" }}>
+              <p className="flex items-start gap-2 text-sm" style={{ color: "var(--kipu-text)" }}>
+                <Sparkles size={15} className="mt-0.5 shrink-0" style={{ color: "var(--kipu-accent)" }} />
+                Con Kipu Pro no tienes límite de uso justo: emites sin límite desde el panel y por API,
+                tus facturas salen sin la marca de Kipu, y tienes el 104 con alertas y el resumen de la renta.
+              </p>
+              <Link
+                href="/planes"
+                className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-semibold text-white transition-opacity hover:opacity-90"
+                style={{ background: "var(--kipu-accent)" }}
+              >
+                <Sparkles size={13} /> Ver Kipu Pro
+              </Link>
+            </div>
+          </SoloWeb>
         </>
       )}
     </div>

@@ -13,6 +13,7 @@ import UltimosDocumentos from "./components/UltimosDocumentos";
 import DocumentosRecibidos from "./components/DocumentosRecibidos";
 import AccesosRapidos from "./components/AccesosRapidos";
 import OfertaRenta from "@/components/renta/OfertaRenta";
+import { ES_APP_NATIVA, rutaFueraDelPlan } from "@/lib/plataforma";
 
 interface DashboardData {
   health?: HealthData;
@@ -106,8 +107,8 @@ export default function DashboardPage() {
       {/* Temporada de renta (enero a inicios de marzo): Kipu Renta */}
       <OfertaRenta variante="dashboard" />
 
-      {/* Plan gratis: no necesita un plan para facturar */}
-      {empresa && !empresa.suscripcion_activa && empresa.emision_gratis && (
+      {/* Plan gratis: no necesita un plan para facturar (ofrece planes: solo web) */}
+      {!ES_APP_NATIVA && empresa && !empresa.suscripcion_activa && empresa.emision_gratis && (
         <div
           className="flex items-start gap-3 rounded-xl px-4 py-3"
           style={{
@@ -144,17 +145,23 @@ export default function DashboardPage() {
           <AlertTriangle size={16} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-danger)" }} />
           <div>
             <p className="text-sm font-semibold" style={{ color: "var(--kipu-danger)" }}>
-              Suscripción inactiva
+              {ES_APP_NATIVA ? "Sin comprobantes disponibles" : "Suscripción inactiva"}
             </p>
             <p className="text-xs mt-0.5" style={{ color: "color-mix(in srgb, var(--kipu-danger) 70%, transparent)" }}>
-              Activa tu plan para emitir comprobantes.{" "}
-              <Link
-                href="/planes"
-                className="underline"
-                style={{ color: "var(--kipu-danger)" }}
-              >
-                Ver planes
-              </Link>
+              {ES_APP_NATIVA ? (
+                "Tu plan actual no tiene comprobantes disponibles para emitir."
+              ) : (
+                <>
+                  Activa tu plan para emitir comprobantes.{" "}
+                  <Link
+                    href="/planes"
+                    className="underline"
+                    style={{ color: "var(--kipu-danger)" }}
+                  >
+                    Ver planes
+                  </Link>
+                </>
+              )}
             </p>
           </div>
         </div>
@@ -188,10 +195,15 @@ export default function DashboardPage() {
             </div>
             <AccesosRapidos />
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* App de las tiendas: Recibidos solo si el plan lo incluye (lib/plataforma.ts) */}
+          {rutaFueraDelPlan("/documentos/recibidos", empresa) ? (
             <UltimosDocumentos documentos={data?.documentos ?? []} />
-            <DocumentosRecibidos docs={data?.recibidos_recientes ?? []} />
-          </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <UltimosDocumentos documentos={data?.documentos ?? []} />
+              <DocumentosRecibidos docs={data?.recibidos_recientes ?? []} />
+            </div>
+          )}
         </div>
       )}
 

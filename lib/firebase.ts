@@ -1,10 +1,13 @@
 // lib/firebase.ts
 import { initializeApp, getApps } from "firebase/app";
-import { getAuth } from "firebase/auth";
+import {
+  getAuth, initializeAuth, indexedDBLocalPersistence, browserLocalPersistence, type Auth,
+} from "firebase/auth";
 import { getMessaging, isSupported } from "firebase/messaging";
 import {
   initializeAppCheck, getToken, ReCaptchaEnterpriseProvider, ReCaptchaV3Provider, type AppCheck,
 } from "firebase/app-check";
+import { ES_APP_NATIVA } from "@/lib/plataforma";
 
 const firebaseConfig = {
   apiKey:            process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -17,7 +20,22 @@ const firebaseConfig = {
 
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
 
-export const auth = getAuth(app);
+// En la app nativa no se usa getAuth(): carga un iframe de authDomain para los
+// inicios de sesión con ventana/redirección, y en iOS (capacitor://localhost)
+// ese iframe nunca responde, así que onAuthStateChanged no llega y la app se
+// queda en blanco cargando. La app no usa ventana ni redirección: sin ellos.
+function crearAuth(): Auth {
+  if (typeof window === "undefined" || !ES_APP_NATIVA) return getAuth(app);
+  try {
+    return initializeAuth(app, {
+      persistence: [indexedDBLocalPersistence, browserLocalPersistence],
+    });
+  } catch {
+    return getAuth(app); // ya estaba iniciado (recarga en caliente)
+  }
+}
+
+export const auth = crearAuth();
 
 // ── App Check ────────────────────────────────────────────────────────────────
 // Prueba ante el backend que la petición sale de esta página en un navegador

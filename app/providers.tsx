@@ -14,10 +14,17 @@ import { guardarVolver } from "@/lib/volver";
 
 // Todo lo demás requiere sesión. Lista de públicas (y no de protegidas) para
 // que una pantalla nueva quede protegida por defecto.
-const RUTAS_PUBLICAS = ["/", "/login", "/register", "/reset"];
+const RUTAS_PUBLICAS = ["/", "/login", "/register", "/reset", "/ayuda", "/blog"];
 
 const esRutaPublica = (path: string) =>
   RUTAS_PUBLICAS.some((r) => path === r || (r !== "/" && path.startsWith(r + "/")));
+
+// Contenido (Centro de Ayuda y /blog): se muestra al instante, sin esperar a Firebase,
+// para que se vea sin sesión y lo lean los buscadores. La sesión carga detrás
+// (el bloque de soporte de cada artículo depende del plan).
+const RUTAS_CONTENIDO = ["/ayuda", "/blog"];
+const esRutaContenido = (path: string | null) =>
+  !!path && RUTAS_CONTENIDO.some((r) => path === r || path.startsWith(r + "/"));
 
 // Pantallas donde es normal todavía no tener empresa
 const RUTAS_SIN_EMPRESA = ["/bienvenida", "/onboarding"];
@@ -115,6 +122,8 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
 
         if (data.empresas.length === 0) {
           cargadoPara.current = user.uid;
+          // Leyendo la ayuda: que la lea; la bienvenida espera a que vuelva al panel
+          if (esRutaContenido(pathnameRef.current)) return;
           const params       = new URLSearchParams(window.location.search);
           const empresaParam = params.get("empresa");
           router.replace(empresaParam ? `/bienvenida?empresa=${encodeURIComponent(empresaParam)}` : "/bienvenida");
@@ -192,7 +201,9 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
     void cargarRef.current?.(user);
   }, [pathname]);
 
-  if (errorCarga) {
+  const contenido = esRutaContenido(pathname);
+
+  if (errorCarga && !contenido) {
     return (
       <div className="h-screen flex flex-col items-center justify-center gap-4 p-6 text-center"
            style={{ background: "var(--kipu-bg)", color: "var(--kipu-text)" }}>
@@ -208,7 +219,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!listo) {
+  if (!listo && !contenido) {
     return (
       <div className="h-screen flex items-center justify-center" style={{ background: "var(--kipu-bg)" }}>
         <div className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin"

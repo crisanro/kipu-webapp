@@ -1,5 +1,8 @@
 import { MetadataRoute } from "next";
 
+// Archivo fijo: lo exige el build de la app nativa (output: "export")
+export const dynamic = "force-static";
+
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name:             "Kipu — Facturación Electrónica",

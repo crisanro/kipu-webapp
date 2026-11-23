@@ -8,14 +8,13 @@ import { signOut } from "firebase/auth";
 import { useAuthStore } from "@/store/auth.store";
 import { Zap, Building2, CheckCircle2, Search, Loader2, MessageCircle, ShieldCheck, Upload } from "lucide-react";
 import { consultarRuc } from "@/lib/consultar-ruc";
+import { enlaceWhatsAppFalla } from "@/lib/soporte";
 import Turnstile, { TURNSTILE_ACTIVO } from "@/components/auth/Turnstile";
 
 const PASOS = ["Empresa", "Confirmar"];
 
-// ── Soporte ───────────────────────────────────────────────────────────────────
-const SOPORTE_WA = "593960585581";
-const waSoporte  = (texto: string) =>
-  `https://wa.me/${SOPORTE_WA}?text=${encodeURIComponent(texto)}`;
+// ── Soporte: fallas que bloquean, para todos (lib/soporte.ts) ─────────────────
+const waSoporte = (texto: string) => enlaceWhatsAppFalla(texto, auth.currentUser?.email);
 
 const limpiarTexto = (texto: string): string => {
   return texto
@@ -211,7 +210,7 @@ function ErrorBox({ error, ruc }: { error: string; ruc: string }) {
         onMouseEnter={e => e.currentTarget.style.opacity = "0.8"}
         onMouseLeave={e => e.currentTarget.style.opacity = "1"}
       >
-        💬 Contactar soporte
+        💬 Escríbenos por WhatsApp
       </a>
     </div>
   );
@@ -239,7 +238,7 @@ function SoporteFooter({ ruc }: { ruc: string }) {
         onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-subtle)"}
       >
         <MessageCircle size={13} />
-        ¿Problemas? Escríbenos por WhatsApp
+        ¿Algo falla y no puedes continuar? Escríbenos por WhatsApp
       </a>
       <button
         type="button"
