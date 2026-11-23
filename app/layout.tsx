@@ -4,6 +4,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { AppProviders } from "./providers";
 import { URL_SITIO } from "@/lib/config";
+import { ES_APP_NATIVA } from "@/lib/plataforma";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -13,9 +14,10 @@ export const viewport: Viewport = {
   initialScale:  1,
   maximumScale:  1,
   userScalable:  false,
-  // Toda la pantalla, también bajo la barra de estado y la isla: el área segura
-  // la respeta app/globals.css (sin esto iOS no da los env(safe-area-inset-*))
-  viewportFit:   "cover",
+  // App de las tiendas: toda la pantalla, también bajo la barra de estado y la
+  // isla; el área segura la respeta app/globals.css (sin esto iOS no da los
+  // env(safe-area-inset-*)). En la web queda como siempre: los insets valen 0.
+  ...(ES_APP_NATIVA ? { viewportFit: "cover" as const } : {}),
 };
 
 export const metadata: Metadata = {
