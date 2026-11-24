@@ -17,6 +17,10 @@ import { usePuntoEmision } from "../components/usePuntoEmision";
 import CamposAdicionales, { CampoAdicional } from "../components/CamposAdicionales";
 import DocOrigenSelector, { DocOrigen } from "../components/DocOrigenSelector";
 import { getPaisesOrdenados } from "@/lib/catalogos/paises-sri";
+import {
+  fechaCatalogo, obtenerCatalogoRetenciones, type CatalogoRetenciones,
+  MAS_USADOS_RESIDENTES, MAS_USADOS_NO_RESIDENTES,
+} from "@/lib/catalogos/retenciones";
 import { formatoPeriodo } from "@/lib/teclado";
 
 const fmt = (n: number) => r2(n).toFixed(2);
@@ -32,19 +36,33 @@ interface ImpuestoRet {
 }
 
 // ── Catálogos de retención ───────────────────────────────────────────────────
-// Fase 1: catálogo en el front. En la Fase 2 pasa al backend (versionado por
-// vigencia) junto con un validador. Fuentes: Catálogo ATS del SRI (tabla 3.10,
-// vigente desde 06/08/2026), Resolución NAC-DGERCGC26-00000009 (desde
-// 01/03/2026) y ficha técnica de comprobantes electrónicos v2.34 (tabla 20).
+// El catálogo viene del backend (lib/catalogos/retenciones.ts), versionado por
+// la fecha del documento sustento. Si no se puede cargar, se usa RESPALDO: la
+// lista de la Fase 1 (Catálogo ATS, bloque "Desde 06/08/2026", y ficha técnica
+// v2.34, tabla 20).
 interface OpcionRet {
   cod:   string;
   label: string;
   pct:   number;
 }
 
-// Renta, pago a residentes. Códigos y % del Catálogo ATS, hoja "TABLAS
-// RETENCIONES", bloque "Desde 06/08/2026". El primero es el sugerido.
-const RENTA_RESIDENTES: OpcionRet[] = [
+// No residentes: el % depende del régimen fiscal (tipoRegi)
+interface OpcionNoResidente extends OpcionRet {
+  pctParaiso: number;   // paraíso fiscal (02) o régimen preferente (03)
+}
+
+// Lo que usa la pantalla. En cada lista, el primero es el sugerido.
+interface CatalogoUI {
+  version:      string | null;   // null = respaldo local
+  residentes:   OpcionRet[];
+  noResidentes: OpcionNoResidente[];
+  iva:          OpcionRet[];
+  isd:          OpcionRet[];
+  sustento:     { value: string; label: string }[];
+}
+
+// Renta, pago a residentes (respaldo)
+const RESPALDO_RESIDENTES: OpcionRet[] = [
   { cod: "303",  label: "Honorarios profesionales (relacionados con el título)", pct: 10 },
   { cod: "303A", label: "Servicios profesionales prestados por sociedades residentes", pct: 5 },
   { cod: "304",  label: "Servicios donde predomina el intelecto (no relacionados con el título)", pct: 10 },
@@ -65,24 +83,17 @@ const RENTA_RESIDENTES: OpcionRet[] = [
   { cod: "332",  label: "Otras compras no sujetas a retención (incluye RIMPE negocios populares)", pct: 0 },
 ];
 
-// Renta, pago a no residentes (serie 5xx del Catálogo ATS, bloque "Desde
-// 06/08/2026"). El primero es el sugerido. El porcentaje depende del régimen
-// fiscal (tipoRegi). 501 admite 25 o 37. 501A admite 3, 5, 8, 10, 15, 25 y 37
-// (las tarifas menores son de convenio): se sugiere 25/37 y, con convenio, el %
-// queda editable.
+// Renta, pago a no residentes (respaldo). 501 admite 25 o 37. 501A admite 3, 5,
+// 8, 10, 15, 25 y 37 (las tarifas menores son de convenio): se sugiere 25/37 y,
+// con convenio, el % queda editable.
 // NOTA: 501 confirmado en el Catálogo ATS. Mapeo al casillero 422/472 del 103 deducido (501A ↔ 421 por descripción idéntica), sin tabla oficial.
-const RENTA_NO_RESIDENTES: Omit<OpcionRet, "pct">[] = [
-  { cod: "501",  label: "Exterior · Beneficios / servicios empresariales" },
-  { cod: "501A", label: "Exterior · Servicios técnicos, administrativos, consultoría y regalías" },
+const RESPALDO_NO_RESIDENTES: OpcionNoResidente[] = [
+  { cod: "501",  label: "Beneficios / servicios empresariales", pct: 25, pctParaiso: 37 },
+  { cod: "501A", label: "Servicios técnicos, administrativos, consultoría y regalías", pct: 25, pctParaiso: 37 },
 ];
 
-// Régimen general (01) → 25%; paraíso fiscal (02) o régimen preferente (03) → 37%
-function pctNoResidente(tipoRegi: string): number {
-  return tipoRegi === "01" ? 25 : 37;
-}
-
-// Códigos de IVA de la tabla 20 de la ficha técnica
-const RETENCIONES_IVA: OpcionRet[] = [
+// Códigos de IVA (respaldo)
+const RESPALDO_IVA: OpcionRet[] = [
   { cod: "9",  label: "Retención 10% del IVA",  pct: 10  },
   { cod: "10", label: "Retención 20% del IVA",  pct: 20  },
   { cod: "1",  label: "Retención 30% del IVA",  pct: 30  },
@@ -93,21 +104,106 @@ const RETENCIONES_IVA: OpcionRet[] = [
   { cod: "8",  label: "No procede retención",   pct: 0   },
 ];
 
-// ISD: tabla 20 de la ficha v2.34 (2,5% desde el 01/05/2025)
-const RETENCIONES_ISD: OpcionRet[] = [
+// ISD (respaldo): 2,5% desde el 01/05/2025
+const RESPALDO_ISD: OpcionRet[] = [
   { cod: "4586", label: "Impuesto a la salida de divisas 2,5%", pct: 2.5 },
 ];
 
-function getOpciones(codigo: string, exterior: boolean, tipoRegi: string): OpcionRet[] {
-  if (codigo === "2") return RETENCIONES_IVA;
-  if (codigo === "6") return RETENCIONES_ISD;
-  if (!exterior) return RENTA_RESIDENTES;
-  const pct = pctNoResidente(tipoRegi);
-  return RENTA_NO_RESIDENTES.map(o => ({ ...o, pct }));
+// Sustento (respaldo): Tabla 5 del Catálogo ATS, solo códigos vigentes
+const RESPALDO_SUSTENTO = [
+  { value: "01", label: "Crédito tributario para IVA" },
+  { value: "02", label: "Costo o gasto para IR" },
+  { value: "03", label: "Activo fijo — Crédito tributario IVA" },
+  { value: "04", label: "Activo fijo — Costo o gasto IR" },
+  { value: "05", label: "Liquidación gastos de viaje, hospedaje y alimentación (a nombre de empleados)" },
+  { value: "06", label: "Inventario — Crédito tributario IVA" },
+  { value: "07", label: "Inventario — Costo o gasto IR" },
+  { value: "08", label: "Valor pagado para solicitar reembolso de gasto (intermediario)" },
+  { value: "09", label: "Reembolso por siniestros" },
+  { value: "10", label: "Distribución de dividendos, beneficios o utilidades" },
+  { value: "11", label: "Convenios de débito o recaudación para IFIs" },
+  { value: "12", label: "Impuestos y retenciones presuntivos" },
+  { value: "13", label: "Valores reconocidos por entidades del sector público" },
+  { value: "14", label: "Valores facturados por socios a operadoras de transporte" },
+  { value: "15", label: "Pagos por consumos propios y de terceros de servicios digitales" },
+];
+
+const RESPALDO: CatalogoUI = {
+  version:      null,
+  residentes:   RESPALDO_RESIDENTES,
+  noResidentes: RESPALDO_NO_RESIDENTES,
+  iva:          RESPALDO_IVA,
+  isd:          RESPALDO_ISD,
+  sustento:     RESPALDO_SUSTENTO,
+};
+
+// Pone primero el código sugerido por defecto (303 local, 501 exterior)
+function primeroEl<T extends { cod: string }>(lista: T[], cod: string): T[] {
+  const i = lista.findIndex(o => o.cod === cod);
+  return i <= 0 ? lista : [lista[i], ...lista.slice(0, i), ...lista.slice(i + 1)];
 }
 
-function lineaRenta(base: number, exterior: boolean, tipoRegi: string): ImpuestoRet {
-  const opcion = getOpciones("1", exterior, tipoRegi)[0];
+// Catálogo del backend → listas de la pantalla. Solo códigos con
+// ofrecer_en_ui y con % sugerido: los que tienen varios % sin sugerido (326,
+// 504…) esperan al selector de % de la Fase B. Una lista vacía usa el respaldo.
+function catalogoUI(c: CatalogoRetenciones): CatalogoUI {
+  const renta = c.renta.codigos.filter(x => x.ofrecer_en_ui && x.porcentaje_sugerido !== null);
+  const residentes = renta
+    .filter(x => x.residencia === "residente")
+    .map(x => ({ cod: x.codigo, label: x.descripcion, pct: x.porcentaje_sugerido as number }));
+  const noResidentes = renta
+    .filter(x => x.residencia === "no_residente")
+    .map(x => ({
+      cod:        x.codigo,
+      label:      x.descripcion.replace(/^Pago a no residentes\s*[-–]\s*/i, ""),
+      pct:        x.porcentaje_sugerido as number,
+      pctParaiso: x.porcentaje_sugerido_paraiso ?? (x.porcentaje_sugerido as number),
+    }));
+  const impuesto = (l: CatalogoRetenciones["iva"]) => l.map(i => ({ cod: i.codigo, label: i.descripcion, pct: i.porcentaje }));
+  const iva = impuesto(c.iva);
+  const isd = impuesto(c.isd);
+  const sustento = c.sustento.map(s => ({ value: s.codigo, label: s.descripcion }));
+  return {
+    version:      c.version,
+    residentes:   residentes.length   ? primeroEl(residentes, "303")   : RESPALDO.residentes,
+    noResidentes: noResidentes.length ? primeroEl(noResidentes, "501") : RESPALDO.noResidentes,
+    iva:          iva.length      ? iva      : RESPALDO.iva,
+    isd:          isd.length      ? isd      : RESPALDO.isd,
+    sustento:     sustento.length ? sustento : RESPALDO.sustento,
+  };
+}
+
+// Catálogo para la fecha del documento sustento; si el backend falla, el respaldo
+async function cargarCatalogoUI(fecha: string): Promise<{ cat: CatalogoUI; ok: boolean }> {
+  try {
+    return { cat: catalogoUI(await obtenerCatalogoRetenciones(fecha)), ok: true };
+  } catch {
+    return { cat: RESPALDO, ok: false };
+  }
+}
+
+// Régimen general (01) → % general; paraíso fiscal (02) o preferente (03) → % de paraíso
+function getOpciones(cat: CatalogoUI, codigo: string, exterior: boolean, tipoRegi: string): OpcionRet[] {
+  if (codigo === "2") return cat.iva;
+  if (codigo === "6") return cat.isd;
+  if (!exterior) return cat.residentes;
+  return cat.noResidentes.map(o => ({ cod: o.cod, label: o.label, pct: tipoRegi === "01" ? o.pct : o.pctParaiso }));
+}
+
+// Selector de renta: "Más usados" (en el orden de la constante) y después el
+// resto en orden numérico, sin repetir
+function agruparRenta(opciones: OpcionRet[], exterior: boolean) {
+  const lista     = exterior ? MAS_USADOS_NO_RESIDENTES : MAS_USADOS_RESIDENTES;
+  const masUsados = lista.flatMap(cod => opciones.filter(o => o.cod === cod));
+  const enGrupo   = new Set(masUsados.map(o => o.cod));
+  const todos     = opciones
+    .filter(o => !enGrupo.has(o.cod))
+    .sort((a, b) => a.cod.localeCompare(b.cod, "es", { numeric: true }));
+  return { masUsados, todos };
+}
+
+function lineaRenta(cat: CatalogoUI, base: number, exterior: boolean, tipoRegi: string): ImpuestoRet {
+  const opcion = getOpciones(cat, "1", exterior, tipoRegi)[0];
   return {
     _id: genId(), codigo: "1", codigoRetencion: opcion.cod,
     baseImponible: r2(base), porcentajeRetener: opcion.pct,
@@ -121,12 +217,12 @@ function lineaRenta(base: number, exterior: boolean, tipoRegi: string): Impuesto
 // Local: renta 303 al 10% e IVA código 1 al 30%.
 // Exterior: renta 501 según el régimen e IVA código 3 al 100%.
 // El usuario ajusta códigos y porcentajes antes de emitir.
-function lineasSugeridas(base: number, ivas: number[], exterior: boolean, tipoRegi: string): ImpuestoRet[] {
+function lineasSugeridas(cat: CatalogoUI, base: number, ivas: number[], exterior: boolean, tipoRegi: string): ImpuestoRet[] {
   const iva = exterior
     ? { codigoRetencion: "3", porcentajeRetener: 100 }
     : { codigoRetencion: "1", porcentajeRetener: 30 };
   return [
-    lineaRenta(base, exterior, tipoRegi),
+    lineaRenta(cat, base, exterior, tipoRegi),
     ...ivas.filter(v => v > 0).map(v => ({
       _id: genId(), codigo: "2", ...iva,
       baseImponible: r2(v), valorRetenido: r2(v * (iva.porcentajeRetener / 100)),
@@ -135,18 +231,32 @@ function lineasSugeridas(base: number, ivas: number[], exterior: boolean, tipoRe
 }
 
 // FAC y NDB recibidas: siempre pago local
-function retencionesSugeridas(base: number, iva: number): ImpuestoRet[] {
-  return lineasSugeridas(base, [iva], false, "01");
+function retencionesSugeridas(cat: CatalogoUI, base: number, iva: number): ImpuestoRet[] {
+  return lineasSugeridas(cat, base, [iva], false, "01");
 }
 
 // Ajusta las líneas de renta al catálogo del tipo de pago y régimen actuales:
 // un código que no está en la lista toma el primero de ella, y el % se toma de
 // la lista (así un cambio de régimen pasa el 501 de 25% a 37%).
-function reajustarRenta(lineas: ImpuestoRet[], exterior: boolean, tipoRegi: string): ImpuestoRet[] {
-  const opciones = getOpciones("1", exterior, tipoRegi);
+function reajustarRenta(cat: CatalogoUI, lineas: ImpuestoRet[], exterior: boolean, tipoRegi: string): ImpuestoRet[] {
+  const opciones = getOpciones(cat, "1", exterior, tipoRegi);
   return lineas.map(l => {
     if (l.codigo !== "1") return l;
     const opcion = opciones.find(o => o.cod === l.codigoRetencion) ?? opciones[0];
+    return {
+      ...l, codigoRetencion: opcion.cod, porcentajeRetener: opcion.pct,
+      valorRetenido: r2(l.baseImponible * (opcion.pct / 100)),
+    };
+  });
+}
+
+// Al cambiar de catálogo (otra fecha de sustento): solo las líneas de renta
+// cuyo código ya no se ofrece pasan al primero de la lista; las demás no se tocan.
+function reemplazarNoOfrecidos(cat: CatalogoUI, lineas: ImpuestoRet[], exterior: boolean, tipoRegi: string): ImpuestoRet[] {
+  const opciones = getOpciones(cat, "1", exterior, tipoRegi);
+  return lineas.map(l => {
+    if (l.codigo !== "1" || opciones.some(o => o.cod === l.codigoRetencion)) return l;
+    const opcion = opciones[0];
     return {
       ...l, codigoRetencion: opcion.cod, porcentajeRetener: opcion.pct,
       valorRetenido: r2(l.baseImponible * (opcion.pct / 100)),
@@ -176,7 +286,7 @@ async function tipoIdProveedorLiq(liqId: string): Promise<string | null> {
 
 // Líneas sugeridas para una LIQ emitida a partir de su desglose. Sin desglose,
 // el total se toma como base sin IVA.
-async function lineasDesdeLiq(liqId: string, importeTotal: number, exterior: boolean, tipoRegi: string): Promise<ImpuestoRet[]> {
+async function lineasDesdeLiq(cat: CatalogoUI, liqId: string, importeTotal: number, exterior: boolean, tipoRegi: string): Promise<ImpuestoRet[]> {
   try {
     const res     = await api.get(`/api/v1/app/documentos/${liqId}/desglose`);
     const desglose = res.data.data as {
@@ -186,9 +296,9 @@ async function lineasDesdeLiq(liqId: string, importeTotal: number, exterior: boo
     const ivas = (desglose.resumen_impuestos ?? [])
       .filter(imp => parseFloat(String(imp.tarifa ?? "0")) > 0)
       .map(imp => parseFloat(String(imp.valor ?? "0")));
-    return lineasSugeridas(Number(desglose.subtotal) || 0, ivas, exterior, tipoRegi);
+    return lineasSugeridas(cat, Number(desglose.subtotal) || 0, ivas, exterior, tipoRegi);
   } catch {
-    return lineasSugeridas(Number(importeTotal) || 0, [], exterior, tipoRegi);
+    return lineasSugeridas(cat, Number(importeTotal) || 0, [], exterior, tipoRegi);
   }
 }
 
@@ -233,26 +343,6 @@ const ORIGEN_CONFIG: Record<OrigenRet, {
     nota:     "Retención sobre una nota de débito que recibiste de un proveedor",
   },
 };
-
-// Tabla 5 del Catálogo ATS (hoja "TABLAS REFERENCIALES"), solo códigos
-// vigentes. El 00 "Casos especiales" tiene fecha fin 28/02/2015 y ya no aplica.
-const CODIGOS_SUSTENTO = [
-  { value: "01", label: "Crédito tributario para IVA" },
-  { value: "02", label: "Costo o gasto para IR" },
-  { value: "03", label: "Activo fijo — Crédito tributario IVA" },
-  { value: "04", label: "Activo fijo — Costo o gasto IR" },
-  { value: "05", label: "Liquidación gastos de viaje, hospedaje y alimentación (a nombre de empleados)" },
-  { value: "06", label: "Inventario — Crédito tributario IVA" },
-  { value: "07", label: "Inventario — Costo o gasto IR" },
-  { value: "08", label: "Valor pagado para solicitar reembolso de gasto (intermediario)" },
-  { value: "09", label: "Reembolso por siniestros" },
-  { value: "10", label: "Distribución de dividendos, beneficios o utilidades" },
-  { value: "11", label: "Convenios de débito o recaudación para IFIs" },
-  { value: "12", label: "Impuestos y retenciones presuntivos" },
-  { value: "13", label: "Valores reconocidos por entidades del sector público" },
-  { value: "14", label: "Valores facturados por socios a operadoras de transporte" },
-  { value: "15", label: "Pagos por consumos propios y de terceros de servicios digitales" },
-];
 
 const FORMAS_PAGO_RET = [
   { value: "01", label: "Sin sistema financiero" },
@@ -317,7 +407,34 @@ export default function NuevaRetPage() {
   const esExterior = pagoLocExt === "02";
 
   // Impuestos
-  const [impuestos, setImpuestos] = useState<ImpuestoRet[]>(() => [lineaRenta(0, false, "01")]);
+  const [impuestos, setImpuestos] = useState<ImpuestoRet[]>(() => [lineaRenta(RESPALDO, 0, false, "01")]);
+
+  // Catálogo vigente para la fecha del documento sustento (sin documento, hoy)
+  const [catalogo,      setCatalogo]      = useState<CatalogoUI>(RESPALDO);
+  const [avisoCatalogo, setAvisoCatalogo] = useState("");
+  const fechaSustento = fechaCatalogo(
+    docOrigen?.tipo === "kipu" ? docOrigen.data.fecha_emision
+    : docOrigen?.tipo === "manual" ? docOrigen.data.fecha
+    : null
+  );
+  // Pago y régimen al llegar el catálogo (los cambios del usuario los ajustan
+  // cambiarPagoLocExt y cambiarTipoRegi; este efecto solo reacciona a la fecha)
+  const pagoActual = useRef({ esExterior, tipoRegi });
+  useEffect(() => { pagoActual.current = { esExterior, tipoRegi }; }, [esExterior, tipoRegi]);
+
+  // Único efecto que reajusta líneas: al cambiar el catálogo, solo las de renta
+  // con un código que ya no se ofrece
+  useEffect(() => {
+    let vigente = true;
+    cargarCatalogoUI(fechaSustento).then(({ cat, ok }) => {
+      if (!vigente) return;
+      setCatalogo(cat);
+      setAvisoCatalogo(ok ? "" : "No se pudo cargar el catálogo actualizado");
+      const { esExterior: exterior, tipoRegi: regimen } = pagoActual.current;
+      setImpuestos(prev => reemplazarNoOfrecidos(cat, prev, exterior, regimen));
+    });
+    return () => { vigente = false; };
+  }, [fechaSustento]);
 
   const [camposAdicionales, setCamposAdicionales] = useState<CampoAdicional[]>([]);
 
@@ -368,7 +485,8 @@ export default function NuevaRetPage() {
           // Al cargar la página el régimen fiscal siempre es el inicial (01)
           const exterior = esProveedorExterior(info.tipoIdentificacionProveedor, info.identificacionProveedor);
           setPagoLocExt(exterior ? "02" : "01");
-          setImpuestos(await lineasDesdeLiq(d.id, d.importe_total, exterior, "01"));
+          const { cat } = await cargarCatalogoUI(fechaCatalogo(d.fecha_emision));
+          setImpuestos(await lineasDesdeLiq(cat, d.id, d.importe_total, exterior, "01"));
         } catch (e) { console.error(e); }
       };
       cargar();
@@ -398,7 +516,8 @@ export default function NuevaRetPage() {
           });
           const { base, iva } = baseEIva(d);
           setPagoLocExt("01");
-          setImpuestos(retencionesSugeridas(base, iva));
+          const { cat } = await cargarCatalogoUI(fechaCatalogo(d.fecha_emision));
+          setImpuestos(retencionesSugeridas(cat, base, iva));
         } catch (e) { console.error(e); }
       };
       cargar();
@@ -411,25 +530,25 @@ export default function NuevaRetPage() {
   };
 
   // La línea nueva toma el primer código del catálogo vigente (residente o exterior)
-  const addImpuesto = () => setImpuestos([...impuestos, lineaRenta(0, esExterior, tipoRegi)]);
+  const addImpuesto = () => setImpuestos([...impuestos, lineaRenta(catalogo, 0, esExterior, tipoRegi)]);
 
   // Pago local/exterior: cambia el catálogo de renta
   const cambiarPagoLocExt = (valor: string) => {
     setPagoLocExt(valor);
-    setImpuestos(prev => reajustarRenta(prev, valor === "02", tipoRegi));
+    setImpuestos(prev => reajustarRenta(catalogo, prev, valor === "02", tipoRegi));
   };
 
   // Régimen fiscal: cambia el % de renta (25 o 37) y pagoRegFis
   const cambiarTipoRegi = (valor: string) => {
     setTipoRegi(valor);
     setPagoRegFis(valor === "01" ? "NO" : "SI");
-    setImpuestos(prev => reajustarRenta(prev, esExterior, valor));
+    setImpuestos(prev => reajustarRenta(catalogo, prev, esExterior, valor));
   };
 
   // Sin convenio, el % de renta vuelve a la tarifa del catálogo
   const cambiarConvenio = (valor: string) => {
     setAplicConvDobTrib(valor);
-    if (valor === "NO") setImpuestos(prev => reajustarRenta(prev, esExterior, tipoRegi));
+    if (valor === "NO") setImpuestos(prev => reajustarRenta(catalogo, prev, esExterior, tipoRegi));
   };
 
   // Con convenio de doble tributación, el % de renta se ajusta a la tarifa del convenio
@@ -439,15 +558,17 @@ export default function NuevaRetPage() {
   // Detección local/exterior y retenciones sugeridas al elegir el documento sustento
   const sugerirDesdeOrigen = async (selected: DocOrigen) => {
     if (selected?.tipo !== "kipu") return;
+    // Mismo pedido (en caché) que el efecto del catálogo: las líneas salen del de esa fecha
+    const { cat } = await cargarCatalogoUI(fechaCatalogo(selected.data.fecha_emision));
     if (origenTipo === "liq_emitida") {
       const tipoId   = await tipoIdProveedorLiq(selected.data.id);
       const exterior = esProveedorExterior(tipoId, selected.data.identificacion);
       setPagoLocExt(exterior ? "02" : "01");
-      setImpuestos(await lineasDesdeLiq(selected.data.id, selected.data.importe_total, exterior, tipoRegi));
+      setImpuestos(await lineasDesdeLiq(cat, selected.data.id, selected.data.importe_total, exterior, tipoRegi));
     } else {
       const { base, iva } = baseEIva(selected.data);
       setPagoLocExt("01");
-      setImpuestos(retencionesSugeridas(base, iva));
+      setImpuestos(retencionesSugeridas(cat, base, iva));
     }
   };
 
@@ -467,13 +588,13 @@ export default function NuevaRetPage() {
         );
       }
       if (field === "codigo") {
-        const opciones = getOpciones(value, esExterior, tipoRegi);
+        const opciones = getOpciones(catalogo, value, esExterior, tipoRegi);
         updated.codigoRetencion   = opciones[0].cod;
         updated.porcentajeRetener = opciones[0].pct;
         updated.valorRetenido     = r2(updated.baseImponible * (opciones[0].pct / 100));
       }
       if (field === "codigoRetencion") {
-        const opciones = getOpciones(updated.codigo, esExterior, tipoRegi);
+        const opciones = getOpciones(catalogo, updated.codigo, esExterior, tipoRegi);
         const opcion   = opciones.find(o => o.cod === value);
         if (opcion) {
           updated.porcentajeRetener = opcion.pct;
@@ -490,7 +611,7 @@ export default function NuevaRetPage() {
     setResultado(null);
     setDocOrigen(null);
     setOrigenTipo("fac_recibida");
-    setImpuestos([lineaRenta(0, false, "01")]);
+    setImpuestos([lineaRenta(catalogo, 0, false, "01")]);
     setCamposAdicionales([]);
     setCodSustento("01");
     setPagoLocExt("01");
@@ -828,7 +949,7 @@ export default function NuevaRetPage() {
                   onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
                   onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
                 >
-                  {CODIGOS_SUSTENTO.map(c => (
+                  {catalogo.sustento.map(c => (
                     <option key={c.value} value={c.value}>{c.value} · {c.label}</option>
                   ))}
                 </select>
@@ -1082,6 +1203,12 @@ export default function NuevaRetPage() {
               )}
             </div>
 
+            {avisoCatalogo && (
+              <p className="text-xs flex items-center gap-1.5" style={{ color: "var(--kipu-warning)" }}>
+                <AlertTriangle size={12} className="shrink-0" /> {avisoCatalogo}
+              </p>
+            )}
+
             {esLiqEmitida && (
               <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
                 Las bases imponibles se calcularon automáticamente desde la liquidación. Puedes ajustar el tipo y porcentaje de retención.
@@ -1089,7 +1216,7 @@ export default function NuevaRetPage() {
             )}
 
             {impuestos.map((imp, idx) => {
-              const opciones = getOpciones(imp.codigo, esExterior, tipoRegi);
+              const opciones = getOpciones(catalogo, imp.codigo, esExterior, tipoRegi);
               return (
                 <div
                   key={imp._id}
@@ -1165,7 +1292,18 @@ export default function NuevaRetPage() {
                         onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
                         onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
                       >
-                        {opciones.map(o => (
+                        {imp.codigo === "1" ? (() => {
+                          const { masUsados, todos } = agruparRenta(opciones, esExterior);
+                          const opcion = (o: OpcionRet) => (
+                            <option key={o.cod} value={o.cod}>{o.cod} · {o.label}</option>
+                          );
+                          return (
+                            <>
+                              {masUsados.length > 0 && <optgroup label="Más usados">{masUsados.map(opcion)}</optgroup>}
+                              {todos.length > 0 && <optgroup label="Todos los códigos">{todos.map(opcion)}</optgroup>}
+                            </>
+                          );
+                        })() : opciones.map(o => (
                           <option key={o.cod} value={o.cod}>{o.cod} · {o.label}</option>
                         ))}
                       </select>
