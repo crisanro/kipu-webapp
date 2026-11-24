@@ -17,7 +17,8 @@ import { ES_APP_NATIVA } from "@/lib/plataforma";
 export interface EstadoRenta {
   disponible:         boolean;
   anio:               number;
-  precio:             { total: number; base: number; iva: number; tarifa_iva: number };
+  // Del Price de Stripe; null si no se pudo leer (sin él no se inventa un monto: se ve al pagar)
+  precio:             { total: number; base: number; iva: number; tarifa_iva: number } | null;
   motivo_no_elegible: string | null;
   incluida_en_al_dia: boolean;
   aceptado:           boolean;
@@ -47,7 +48,9 @@ export default function OfertaRenta({ variante, anio }: { variante: Variante; an
   if (variante === "dashboard" && estado.anio >= Number(hoyEC().slice(0, 4))) return null;
   if (variante === "al-dia" && estado.comprado) return null;
 
-  const precio = `$${estado.precio.total.toFixed(0)}`;
+  const pago = estado.precio
+    ? `por $${estado.precio.total.toFixed(2)}, IVA incluido, en un solo pago`
+    : "en un solo pago (el precio lo ves al pagar)";
   const titulo = estado.comprado
     ? `Tu renta ${estado.anio} la está preparando el equipo de Kipu`
     : variante === "al-dia"
@@ -56,8 +59,8 @@ export default function OfertaRenta({ variante, anio }: { variante: Variante; an
   const texto = estado.comprado
     ? "Mira en qué va y guarda tu clave del SRI si todavía no lo hiciste."
     : variante === "al-dia"
-      ? `Sin el servicio mensual: el equipo de Kipu prepara y presenta tu renta ${estado.anio} por ${precio}, IVA incluido, en un solo pago.`
-      : `El equipo de Kipu revisa tus ingresos, gastos y retenciones, te manda el resumen y la presenta por ti. ${precio}, IVA incluido, en un solo pago.`;
+      ? `Sin el servicio mensual: el equipo de Kipu prepara y presenta tu renta ${estado.anio} ${pago}.`
+      : `El equipo de Kipu revisa tus ingresos, gastos y retenciones, te manda el resumen y la presenta por ti, ${pago}.`;
 
   return (
     <div

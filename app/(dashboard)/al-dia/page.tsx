@@ -20,6 +20,7 @@ import { WHATSAPP_SOPORTE as SOPORTE_WA } from "@/lib/soporte";
 interface Estado {
   disponible:           boolean;
   precios:              PreciosPlan;   // mensual y anual, de Stripe (null = no se ofrece)
+  precio_renta:         { total: number } | null;   // Kipu Renta (Stripe), para quien no llega a 6 meses
   motivo_no_elegible:   string | null;
   version_terminos:     string;
   aceptado:             boolean;
@@ -282,7 +283,7 @@ export default function KipuAlDiaPage() {
         <HeroAlDia precio={precio} periodo={periodo} onContratar={irAContratar} />
         <DemoAlDia ruc={empresa?.ruc} semestral={empresa?.periodo_iva === "SEMESTRAL"} enProduccion={enProduccion} />
         <ComoFunciona />
-        <QueIncluye />
+        <QueIncluye precioRenta={estado?.precio_renta?.total ?? null} />
         <Confianza />
         <Preguntas />
 

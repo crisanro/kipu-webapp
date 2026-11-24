@@ -298,15 +298,22 @@ const SISTEMA = [
   "Cuentas por cobrar y pagar, y proformas",
   "Hasta 5 usuarios",
 ];
-const EXTRAS: [string, string][] = [
-  ["Renta anual si estuviste menos de 6 meses en el plan", "$50"],
+// Servicios aparte que se cotizan caso por caso (no son cobros automáticos ni
+// Prices de Stripe): sus rangos viven solo aquí.
+const EXTRAS_COTIZADOS: [string, string][] = [
   ["Declaraciones de meses anteriores a contratar", "$10 por periodo"],
   ["Sustitutivas de declaraciones que no hicimos nosotros", "$15 cada una"],
   ["Devolución de IVA o de renta", "$40 a $60"],
   ["Actualizar el RUC o ayuda con la firma electrónica", "$10 a $20"],
 ];
 
-export function QueIncluye() {
+// precioRenta: el de Kipu Renta, del Price de Stripe (GET /al-dia/estado → precio_renta)
+export function QueIncluye({ precioRenta = null }: { precioRenta?: number | null }) {
+  const extras: [string, string][] = [
+    ["Renta anual si estuviste menos de 6 meses en el plan",
+     precioRenta !== null ? `$${precioRenta.toFixed(2)}` : "Precio de Kipu Renta"],
+    ...EXTRAS_COTIZADOS,
+  ];
   return (
     <section className="grid md:grid-cols-2 gap-3">
       <div className="rounded-xl p-5 space-y-3" style={caja}>
@@ -337,7 +344,7 @@ export function QueIncluye() {
           Antes de empezar te confirmamos el precio y esperamos tu visto bueno. IVA incluido.
         </p>
         <ul className="space-y-2">
-          {EXTRAS.map(([t, p]) => (
+          {extras.map(([t, p]) => (
             <li key={t} className="flex items-start justify-between gap-3 text-sm" style={{ color: "var(--kipu-text)" }}>
               <span className="flex gap-2">
                 <XCircle size={15} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-subtle)" }} /> {t}

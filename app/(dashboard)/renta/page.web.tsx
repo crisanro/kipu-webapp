@@ -92,12 +92,16 @@ function Venta({ estado, onContratar }: { estado: EstadoRenta; onContratar: () =
           revises y presenta tu declaración al SRI. Tú solo pagas el impuesto, si sale a pagar.
         </p>
         <div className="flex flex-wrap items-center gap-4 pt-1">
-          <div>
-            <span className="text-3xl font-extrabold" style={{ color: "var(--kipu-text)" }}>
-              ${estado.precio.total.toFixed(0)}
-            </span>
-            <span className="text-sm ml-1.5" style={{ color: "var(--kipu-muted)" }}>IVA incluido, un solo pago</span>
-          </div>
+          {estado.precio ? (
+            <div>
+              <span className="text-3xl font-extrabold" style={{ color: "var(--kipu-text)" }}>
+                ${estado.precio.total.toFixed(2)}
+              </span>
+              <span className="text-sm ml-1.5" style={{ color: "var(--kipu-muted)" }}>IVA incluido, un solo pago</span>
+            </div>
+          ) : (
+            <span className="text-sm" style={{ color: "var(--kipu-subtle)" }}>Un solo pago · el precio lo ves al pagar</span>
+          )}
           <button type="button" onClick={onContratar}
                   className="px-5 py-2.5 rounded-xl text-white font-semibold text-sm shadow-md transition-all
                              bg-[var(--kipu-accent)] hover:bg-[var(--kipu-accent-h)] active:scale-[0.97]">
@@ -350,7 +354,7 @@ export default function KipuRentaPage() {
   }
 
   // ── Sin contratar: venta, términos y pago ───────────────────────────────
-  const precio = estado.precio.total;
+  const precio = estado.precio?.total ?? null;     // de Stripe; sin él, se ve al pagar
   const contratarBloque = (
     !enProduccion ? (
       <div className="rounded-xl p-4 text-sm" style={{ ...caja, color: "var(--kipu-muted)" }}>
@@ -408,7 +412,7 @@ export default function KipuRentaPage() {
         >
           {enviando
             ? <><Loader2 size={16} className="animate-spin" /> Abriendo el pago...</>
-            : `Pagar $${precio.toFixed(0)} y empezar`}
+            : precio !== null ? `Pagar $${precio.toFixed(2)} y empezar` : "Continuar al pago"}
         </button>
         <p className="text-xs text-center" style={{ color: "var(--kipu-subtle)" }}>
           Pagas con tarjeta en Stripe. Te enviamos por correo la factura y una copia de los términos que aceptaste.
