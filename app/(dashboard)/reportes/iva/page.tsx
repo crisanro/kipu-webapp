@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { notFound, useRouter, useSearchParams } from "next/navigation";
 import api from "@/lib/api";
 import { ES_APP_NATIVA } from "@/lib/plataforma";
+import { rutas } from "@/lib/rutas";
 import {
   ArrowLeft, RefreshCw, CheckCircle2, AlertTriangle, Info, Calendar,
 } from "lucide-react";
@@ -15,6 +16,7 @@ import ResumenImpositivo   from "../_components/ResumenImpositivo";
 import DocumentosIncluidos from "../_components/DocumentosIncluidos";
 import EstadoBadge, { EstadoReporte } from "../_components/EstadoBadge";
 import PantallaDePago      from "../_components/PantallaDePago";
+import ElegirPeriodo       from "../_components/ElegirPeriodo";
 import Alertas104          from "../_components/Alertas104";
 import AyudaAlDia          from "../_components/AyudaAlDia";
 
@@ -159,6 +161,19 @@ function ReporteIVA({ periodo }: { periodo: string }) {
           <p className="text-sm" style={{ color: "var(--kipu-danger)" }}>{error}</p>
         </div>
       </div>
+    );
+  }
+
+  // Pro mensual sin este periodo habilitado: elegir el periodo del ciclo (sin cifras).
+  // Al elegir se abre el 104 de ese periodo (si es este mismo, se recarga).
+  if (data?.bloqueado && data?.elegir) {
+    return (
+      <ElegirPeriodo
+        periodoVisto={periodo}
+        periodoVistoFmt={nombrePeriodo(periodo, data?.data?.periodo?.tipo)}
+        onElegido={(p) => (p === periodo ? cargar() : router.push(rutas.reporteIva(p)))}
+        onVolver={() => router.push("/reportes")}
+      />
     );
   }
 
