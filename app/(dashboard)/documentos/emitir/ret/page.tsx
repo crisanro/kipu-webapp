@@ -10,6 +10,7 @@ import { debeRenovarClave, esUsoJusto, mensajeErrorEmision } from "@/lib/emision
 import api from "@/lib/api";
 import AvisoColchon from "@/components/uso-justo/AvisoColchon";
 import { useAuthStore } from "@/store/auth.store";
+import { useSandboxStore } from "@/store/sandbox.store";
 import { CheckCircle2, AlertTriangle, Plus, Trash2, Calendar } from "lucide-react";
 import PuntoEmision from "../components/PuntoEmision";
 import { usePuntoEmision } from "../components/usePuntoEmision";
@@ -262,10 +263,24 @@ const FORMAS_PAGO_RET = [
   { value: "15", label: "Compensación de deudas" },
 ];
 
+const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio",
+  "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+
+// "11/2026" → "noviembre de 2026" (si no tiene ese formato, se devuelve tal cual)
+// PENDIENTE-CONSULTA: confirmar con contador si el 103 corresponde a periodoFiscal o al mes de emisión de la RET (caso: compra fin de mes, RET inicio del mes siguiente).
+function mesDelPeriodo(periodo: string): string {
+  const m = /^(\d{2})\/(\d{4})$/.exec(periodo.trim());
+  const mes = m ? MESES[Number(m[1]) - 1] : undefined;
+  return mes ? `${mes} de ${m![2]}` : periodo;
+}
+
 export default function NuevaRetPage() {
   const router       = useRouter();
   const searchParams = useSearchParams();
   const empresa      = useAuthStore((s) => s.empresa);
+  // Con el sandbox activo el backend emite en pruebas aunque la empresa esté en producción
+  const sandboxActivo = useSandboxStore((s) => s.activo);
+  const enProduccion  = empresa?.ambiente === 2 && !sandboxActivo;
   // Con plan gratis no se gastan créditos (mismo criterio que ResumenTotales)
   const usaCreditos  = !empresa?.suscripcion_activa && !empresa?.emision_gratis && (empresa?.balance_api ?? 0) > 0;
 
@@ -315,6 +330,11 @@ export default function NuevaRetPage() {
   const [resultado,  setResultado]  = useState<any>(null);
   const [error,      setError]      = useState("");
   const [usoJusto,   setUsoJusto]   = useState("");   // mensaje del uso justo (para ofrecer Pro o créditos)
+  // En producción, una retención genera la obligación del 103 (y del 104 si
+  // retiene IVA): se pide confirmar antes de emitir para evitar "pruebas" reales.
+  const [confirmarProduccion, setConfirmarProduccion] = useState(false);
+  // Solo una retención de IVA con valor activa el 104: los códigos 7 y 8 (0%) no
+  const retieneIva = impuestos.some(i => i.codigo === "2" && i.valorRetenido > 0);
 
   const totalRetenido = r2(impuestos.reduce((s, i) => s + (i.valorRetenido || 0), 0));
 
@@ -482,10 +502,11 @@ export default function NuevaRetPage() {
     setPagExtSujRetNorLeg("SI");
     setPagoRegFis("NO");
     setTipoSujetoRetenido("02");
+    setConfirmarProduccion(false);
     setError("");
   };
 
-  const emitir = async () => {
+  const emitir = async (confirmado = false) => {
     setError("");
     if (!docOrigen)                     { setError("Selecciona el documento sustento."); return; }
     if (!estabSelected || !ptoSelected) { setError("Elige el establecimiento y el punto de emisión."); return; }
@@ -494,6 +515,9 @@ export default function NuevaRetPage() {
 
     const puedeEmitir = empresa?.suscripcion_activa || (empresa?.balance_api ?? 0) > 0 || !!empresa?.emision_gratis;
     if (!puedeEmitir) { setError("Se requiere suscripción activa o créditos API."); return; }
+
+    if (enProduccion && !confirmado) { setConfirmarProduccion(true); return; }
+    setConfirmarProduccion(false);
 
     setSubmitting(true);
     try {
@@ -1325,8 +1349,44 @@ export default function NuevaRetPage() {
             )}
             {error && usoJusto === error && <AccionesUsoJusto />}
 
+            {confirmarProduccion && !submitting ? (
+              <div
+                className="mt-4 rounded-lg px-3 py-3 space-y-2"
+                style={{
+                  background: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)",
+                  border: "1px solid color-mix(in srgb, var(--kipu-warning) 30%, transparent)",
+                }}
+              >
+                <div className="flex items-start gap-1.5">
+                  <AlertTriangle size={14} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-warning)" }} />
+                  <p className="text-xs font-semibold" style={{ color: "var(--kipu-text)" }}>
+                    Esta retención te obliga a presentar el formulario 103 de {mesDelPeriodo(periodoFiscal)}
+                    {retieneIva && <> y, por la retención de IVA, también el formulario 104 de ese mes</>}.
+                  </p>
+                </div>
+                <p className="text-[11px]" style={{ color: "var(--kipu-subtle)" }}>
+                  Se emite en ambiente de producción y tiene validez tributaria. Si solo querías probar, activa el modo de pruebas antes de emitir.
+                </p>
+                <div className="flex gap-2 pt-1">
+                  <button
+                    onClick={() => setConfirmarProduccion(false)}
+                    className="flex-1 py-2 rounded-lg text-xs font-semibold"
+                    style={{ border: "1px solid var(--kipu-border)", color: "var(--kipu-text)", background: "var(--kipu-surface)" }}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={() => emitir(true)}
+                    className="flex-1 py-2 rounded-lg text-xs font-semibold text-white"
+                    style={{ background: "var(--kipu-accent)" }}
+                  >
+                    Entiendo, emitir
+                  </button>
+                </div>
+              </div>
+            ) : (
             <button
-              onClick={emitir}
+              onClick={() => emitir()}
               disabled={submitting || (!empresa?.suscripcion_activa && (empresa?.balance_api ?? 0) === 0
                                        && !empresa?.emision_gratis)}
               className="mt-4 w-full py-3 rounded-lg text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -1354,6 +1414,7 @@ export default function NuevaRetPage() {
                 `Emitir retención${pe.serie ? ` desde ${pe.serie}` : ""} · $${fmt(totalRetenido)}`
               )}
             </button>
+            )}
           </div>
         </div>
       </div>
