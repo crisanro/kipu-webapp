@@ -82,7 +82,9 @@ function useVentasMesPasado(enProduccion: boolean): Ventas | null {
 }
 
 // ── Encabezado ────────────────────────────────────────────────────────────────
-export function HeroAlDia({ precio, onContratar }: { precio: number | null; onContratar: () => void }) {
+export function HeroAlDia({ precio, periodo = "MENSUAL", onContratar }: {
+  precio: number | null; periodo?: "MENSUAL" | "ANUAL"; onContratar: () => void;
+}) {
   return (
     <div className="rounded-2xl p-6 md:p-8 space-y-4"
          style={{
@@ -121,11 +123,15 @@ export function HeroAlDia({ precio, onContratar }: { precio: number | null; onCo
       <div className="flex flex-wrap items-center gap-4 pt-1">
         {precio !== null ? (
           <div>
-            <span className="text-3xl font-extrabold" style={{ color: "var(--kipu-text)" }}>${precio.toFixed(0)}</span>
-            <span className="text-sm ml-1.5" style={{ color: "var(--kipu-muted)" }}>al mes, IVA incluido</span>
+            <span className="text-3xl font-extrabold" style={{ color: "var(--kipu-text)" }}>${precio.toFixed(2)}</span>
+            <span className="text-sm ml-1.5" style={{ color: "var(--kipu-muted)" }}>
+              {periodo === "ANUAL" ? "al año" : "al mes"}, IVA incluido
+            </span>
           </div>
         ) : (
-          <span className="text-sm" style={{ color: "var(--kipu-subtle)" }}>Mensual · el precio lo ves al pagar</span>
+          <span className="text-sm" style={{ color: "var(--kipu-subtle)" }}>
+            {periodo === "ANUAL" ? "Anual" : "Mensual"} · el precio lo ves al pagar
+          </span>
         )}
         <button type="button" onClick={onContratar}
                 className="px-5 py-2.5 rounded-xl text-white font-semibold text-sm shadow-md transition-all
@@ -137,7 +143,7 @@ export function HeroAlDia({ precio, onContratar }: { precio: number | null; onCo
         {/* En la app se vende el servicio del contador (Apple/Google: servicio
             profesional, no contenido digital). No se nombra Kipu Pro ni las funciones. */}
         {ES_APP_NATIVA
-          ? "Servicio mensual de contadores del equipo de Kipu · Tu precio no sube mientras sigas · Cancelas cuando quieras"
+          ? "Servicio de contadores del equipo de Kipu, mensual o anual · Tu precio no sube mientras sigas · Cancelas cuando quieras"
           : "Incluye todo Kipu Pro · Tu precio no sube mientras sigas suscrito · Cancelas cuando quieras"}
       </p>
     </div>

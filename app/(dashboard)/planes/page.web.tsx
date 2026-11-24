@@ -4,6 +4,7 @@ import Link from "next/link";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
 import { detalleError } from "@/lib/errores";
+import SelectorPeriodo, { periodoDisponible, type Periodo, type PreciosPlan } from "@/components/SelectorPeriodo";
 import {
   CreditCard, Zap, RefreshCw,
   CheckCircle2, AlertTriangle, TrendingDown, Star, ArrowRight, Info, CalendarCheck, MinusCircle
@@ -38,19 +39,15 @@ interface Transaccion {
   created_at:   string;
 }
 
-// El precio sale de Stripe vía backend (GET /suscripcion/precio): para cambiarlo
-// basta con cambiar STRIPE_PRICE_PRO_ANUAL en el .env del backend.
-interface PrecioPlan {
-  base:      number;          // sin IVA
-  total:     number;          // lo que cobra Stripe
-  iva:       number;
-  intervalo: string | null;   // year | month
-  etiqueta:  string | null;   // p. ej. "Precio de lanzamiento" (metadatos del Price en Stripe)
+// Los precios salen de Stripe vía backend (GET /suscripcion/precios): para
+// cambiarlos basta con cambiar los STRIPE_PRICE_* en el .env del backend.
+interface Precios {
+  PRO:    PreciosPlan;
+  AL_DIA: PreciosPlan;
 }
 
 interface EstadoAlDia {
   disponible:         boolean;
-  precio:             PrecioPlan | null;
   motivo_no_elegible: string | null;
 }
 
@@ -134,14 +131,23 @@ export default function PlanesPage() {
   }, [cargar]);
 
   // Aparte del resto: si Stripe no responde, la página sigue funcionando
-  const [precio, setPrecio] = useState<PrecioPlan | null>(null);
+  const [precios, setPrecios] = useState<Precios | null>(null);
   const [precioFallo, setPrecioFallo] = useState(false);
   useEffect(() => {
-    api.get("/api/v1/app/suscripcion/precio")
-      .then((r) => { setPrecio(r.data.data ?? null); setPrecioFallo(!r.data.data); })
+    api.get("/api/v1/app/suscripcion/precios")
+      .then((r) => setPrecios(r.data.data ?? null))
       .catch(() => setPrecioFallo(true));
   }, []);
-  const textoPrecio = precio ? `$${precio.base.toFixed(2)}/año + IVA` : "un pago anual";
+
+  // Un solo Mensual / Anual para las dos tarjetas (el periodo efectivo se calcula abajo)
+  const [periodoElegido, setPeriodo] = useState<Periodo>("ANUAL");
+
+  // "desde $10,99 al mes" en los avisos (el mensual si existe; si no, el anual)
+  const proMes  = precios?.PRO?.MENSUAL;
+  const proAnio = precios?.PRO?.ANUAL;
+  const textoPrecio = proMes ? `$${proMes.total.toFixed(2)} al mes`
+                    : proAnio ? `$${proAnio.total.toFixed(2)} al año`
+                    : "un pago mensual o anual";
 
   // Kipu Al Día: precio y si esta empresa puede contratarlo (mismo criterio que /al-dia)
   const [alDia, setAlDia] = useState<EstadoAlDia | null>(null);
@@ -154,7 +160,8 @@ export default function PlanesPage() {
   const iniciarCheckout = async () => {
     setPagando("pro");
     try {
-      const res = await api.post("/api/v1/app/suscripcion/checkout");
+      // Siempre con el periodo explícito (sin cuerpo el backend asume anual)
+      const res = await api.post("/api/v1/app/suscripcion/checkout", { periodo });
       window.location.assign(res.data.checkout_url);
     } catch (err) {
       alert(detalleError(err, "Error al iniciar el pago."));
@@ -210,6 +217,13 @@ export default function PlanesPage() {
   const esAlDia       = !!sub?.activa && sub.plan === "AL_DIA";
   const verPro        = !sub?.activa || sub.cancel_at_period_end;
   const verAlDia      = !esAlDia;
+
+  // Mensual / Anual según los precios del plan que se ve (el Pro, o solo Al Día si ya tiene Pro).
+  // Si el elegido no se ofrece, el otro.
+  const preciosVisibles = verPro ? precios?.PRO : precios?.AL_DIA;
+  const periodo   = periodoDisponible(preciosVisibles, periodoElegido);
+  const precio    = precios?.PRO?.[periodo] ?? null;
+  const sinPrecio = precioFallo || (precios !== null && !precio);   // se ve al pagar
 
   return (
     <div className="p-4 md:p-6 max-w-3xl mx-auto space-y-5">
@@ -549,10 +563,17 @@ export default function PlanesPage() {
                 </div>
               )}
               {(verPro || verAlDia) && (
+                <div className="flex justify-center pt-1">
+                  <SelectorPeriodo valor={periodo} onCambio={setPeriodo} precios={preciosVisibles} />
+                </div>
+              )}
+              {(verPro || verAlDia) && (
               <div className={`grid gap-5 pt-3 ${verPro && verAlDia ? "md:grid-cols-2" : ""}`}>
               {verAlDia && (
                 <TarjetaAlDia
                   estado={alDia}
+                  precios={precios?.AL_DIA ?? null}
+                  periodo={periodo}
                   enProduccion={enProduccion}
                   esAdmin={esAdmin}
                   tienePro={!!sub?.activa && !esAlDia}
@@ -572,7 +593,7 @@ export default function PlanesPage() {
                       style={{ background: "var(--kipu-surface)", color: "var(--kipu-text)", border: "1px solid var(--kipu-border)" }}
                     >
                       <CreditCard size={11} />
-                      Kipu Pro · Anual
+                      Kipu Pro · {periodo === "ANUAL" ? "Anual" : "Mensual"}
                     </span>
                   </div>
 
@@ -593,8 +614,8 @@ export default function PlanesPage() {
                     </p>
                     <div className="flex items-baseline gap-2">
                       {precio ? (
-                        <span className="text-4xl font-extrabold" style={{ color: "var(--kipu-text)" }}>${precio.base.toFixed(2)}</span>
-                      ) : precioFallo ? (
+                        <span className="text-4xl font-extrabold" style={{ color: "var(--kipu-text)" }}>${precio.total.toFixed(2)}</span>
+                      ) : sinPrecio ? (
                         <span className="text-sm" style={{ color: "var(--kipu-subtle)" }}>
                           No pudimos cargar el precio; lo verás al pagar
                         </span>
@@ -602,15 +623,21 @@ export default function PlanesPage() {
                         <span className="inline-block h-9 w-28 rounded-lg animate-pulse"
                               style={{ background: "color-mix(in srgb, var(--kipu-text) 8%, transparent)" }} />
                       )}
-                      {!precioFallo && <span className="text-sm" style={{ color: "var(--kipu-subtle)" }}>+ IVA / año</span>}
+                      {!sinPrecio && (
+                        <span className="text-sm" style={{ color: "var(--kipu-subtle)" }}>
+                          IVA incluido / {periodo === "ANUAL" ? "año" : "mes"}
+                        </span>
+                      )}
                     </div>
                     {precio && (
                       <p className="text-xs mt-1" style={{ color: "var(--kipu-subtle)" }}>
-                        ${precio.total.toFixed(2)} IVA incluido · equivale a ${(precio.total / 12).toFixed(2)}/mes
+                        ${precio.base.toFixed(2)} + IVA
+                        {periodo === "ANUAL" && ` · equivale a $${(precio.total / 12).toFixed(2)}/mes`}
                       </p>
                     )}
                     <p className="text-xs mt-1" style={{ color: "var(--kipu-subtle)" }}>
-                      Se renueva cada año con el mismo precio. Cancela cuando quieras.
+                      Se renueva cada {periodo === "ANUAL" ? "año" : "mes"} con el mismo precio. Cancela cuando quieras.
+                      {periodo === "MENSUAL" && " Cada mes pagado incluye una declaración."}
                     </p>
                   </div>
 
@@ -889,10 +916,14 @@ export default function PlanesPage() {
 
 // ── Tarjeta Kipu Al Día (la recomendada) ─────────────────────────────────────
 // Los términos y el pago están en /al-dia: aquí se presenta y se lleva allá.
-function TarjetaAlDia({ estado, enProduccion, esAdmin, tienePro }: {
-  estado: EstadoAlDia | null; enProduccion: boolean; esAdmin: boolean; tienePro: boolean;
+function TarjetaAlDia({ estado, precios, periodo: pedido, enProduccion, esAdmin, tienePro }: {
+  estado: EstadoAlDia | null; precios: PreciosPlan | null; periodo: Periodo;
+  enProduccion: boolean; esAdmin: boolean; tienePro: boolean;
 }) {
-  const total = estado?.precio?.total ?? null;   // sin Stripe no se inventa un monto
+  // El mismo Mensual / Anual de arriba; si Al Día no se ofrece en ese, el otro
+  const periodo = periodoDisponible(precios, pedido);
+  const total = precios?.[periodo]?.total ?? null;   // sin Stripe no se inventa un monto
+  const unidad = periodo === "ANUAL" ? "año" : "mes";
 
   // Por qué no se puede contratar todavía (la producción primero, como en Pro)
   const bloqueo = !enProduccion
@@ -927,11 +958,18 @@ function TarjetaAlDia({ estado, enProduccion, esAdmin, tienePro }: {
         </p>
         {total !== null ? (
           <div className="flex items-baseline gap-2">
-            <span className="text-4xl font-extrabold" style={{ color: "var(--kipu-text)" }}>${total.toFixed(0)}</span>
-            <span className="text-sm" style={{ color: "var(--kipu-subtle)" }}>IVA incluido / mes</span>
+            <span className="text-4xl font-extrabold" style={{ color: "var(--kipu-text)" }}>${total.toFixed(2)}</span>
+            <span className="text-sm" style={{ color: "var(--kipu-subtle)" }}>IVA incluido / {unidad}</span>
           </div>
         ) : (
-          <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>Mensual · el precio lo ves al pagar</p>
+          <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>
+            {periodo === "ANUAL" ? "Anual" : "Mensual"} · el precio lo ves al pagar
+          </p>
+        )}
+        {total !== null && periodo === "ANUAL" && (
+          <p className="text-xs mt-1" style={{ color: "var(--kipu-subtle)" }}>
+            equivale a ${(total / 12).toFixed(2)}/mes
+          </p>
         )}
         <p className="text-xs mt-1" style={{ color: "var(--kipu-subtle)" }}>
           Tu precio no sube mientras sigas suscrito. Sin permanencia.
@@ -974,7 +1012,7 @@ function TarjetaAlDia({ estado, enProduccion, esAdmin, tienePro }: {
         </>
       ) : (
         <Link
-          href="/al-dia#contratar"
+          href={`/al-dia?periodo=${periodo}#contratar`}
           className="w-full py-3 rounded-xl text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg transition-all
                      bg-[var(--kipu-accent)] hover:bg-[var(--kipu-accent-h)] active:scale-[0.98]"
         >

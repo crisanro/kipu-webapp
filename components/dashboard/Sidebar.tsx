@@ -109,8 +109,11 @@ export function Sidebar({
   };
 
   const planGratis = !empresa.suscripcion_activa && !!empresa.emision_gratis;   // plan gratis encendido
-  // Nombre visible del plan (el backend manda PRO o AL_DIA). Sin suscripción es "Gratis", tenga o no créditos
-  const planLabel = !empresa.suscripcion_activa ? "Gratis" : empresa.suscripcion?.plan === "AL_DIA" ? "Kipu Al Día" : "Kipu Pro";
+  // Nombre visible del plan (el backend manda PRO o AL_DIA). Sin suscripción es "Gratis", tenga o no créditos.
+  // En la app no se nombra Kipu Pro (reglas de las tiendas): "Plan activo".
+  const planLabel = !empresa.suscripcion_activa ? "Gratis"
+    : empresa.suscripcion?.plan === "AL_DIA" ? "Kipu Al Día"
+    : ES_APP_NATIVA ? "Plan activo" : "Kipu Pro";
   // Con el plan gratis el panel emite sin créditos: no hay que alarmar por no tenerlos
   const sinCreditos = !empresa.suscripcion_activa && !planGratis && (empresa.balance_api ?? 0) === 0;
 
