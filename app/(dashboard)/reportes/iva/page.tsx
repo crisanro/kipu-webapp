@@ -61,9 +61,7 @@ export default function ReporteIVAPage() {
 // periodo: "2026-08" (o "2026-07" para el 2do semestre)
 function ReporteIVA({ periodo }: { periodo: string }) {
   const router  = useRouter();
-  // Volvió de pagar el pase en Stripe (?pase=pagado): se espera a que se active
   const busqueda   = useSearchParams();
-  const pasePagado = busqueda.get("pase") === "pagado";
   // "Ver un ejemplo del 104 completo" desde Reportes: datos inventados, sin tocar los reales
   const pedirDemo  = busqueda.get("demo") === "1";
 
@@ -102,14 +100,6 @@ function ReporteIVA({ periodo }: { periodo: string }) {
   }, [periodo, pedirDemo]);
 
   useEffect(() => { cargar(); }, [cargar]);
-
-  // Sin la pantalla de carga: para esperar la activación del pase
-  const recargarSilencioso = useCallback(async () => {
-    try {
-      const res = await api.get(`/api/v1/app/declaraciones/iva?periodo=${periodo}`);
-      setData(res.data);
-    } catch {}
-  }, [periodo]);
 
   const guardarCamposManuales = async (valores: Record<string, number | null>) => {
     await api.patch(
@@ -164,30 +154,30 @@ function ReporteIVA({ periodo }: { periodo: string }) {
     );
   }
 
-  // Pro mensual sin este periodo habilitado: elegir el periodo del ciclo (sin cifras).
-  // Al elegir se abre el 104 de ese periodo (si es este mismo, se recarga).
+  // Pro mensual sin este periodo habilitado: elegir el periodo del ciclo. Como el
+  // plan gratis, ve solo el total y cuántas alertas hay; el 104 completo, al confirmar
+  // (se abre el de ese periodo; si es este mismo, se recarga).
   if (data?.bloqueado && data?.elegir) {
     return (
       <ElegirPeriodo
         periodoVisto={periodo}
         periodoVistoFmt={nombrePeriodo(periodo, data?.data?.periodo?.tipo)}
+        totalVisto={data.total ?? null}
+        alertasVisto={data.alertas_cantidad ?? 0}
         onElegido={(p) => (p === periodo ? cargar() : router.push(rutas.reporteIva(p)))}
         onVolver={() => router.push("/reportes")}
       />
     );
   }
 
-  // Plan gratis sin Pro ni pase: el total ya calculado y cómo desbloquear el 104
+  // Plan gratis sin el periodo habilitado: el total ya calculado y cómo tener el 104
   if (data?.bloqueado) {
     return (
       <PantallaDePago
         periodoFmt={nombrePeriodo(periodo, data?.data?.periodo?.tipo)}
         enCurso={data.en_curso ?? false}
         total={data.total}
-        pase={data.pase}
-        esperandoPago={pasePagado}
         alertasCantidad={data.alertas_cantidad ?? 0}
-        onRecargar={recargarSilencioso}
         onVolver={() => router.push("/reportes")}
       />
     );
@@ -337,7 +327,7 @@ function ReporteIVA({ periodo }: { periodo: string }) {
           <p className="text-xs" style={{ color: "var(--kipu-muted)" }}>
             <span className="font-semibold" style={{ color: "var(--kipu-text)" }}>Estos son datos de ejemplo: </span>
             así se ve el formulario 104 completo. El de tus meses se calcula con tus comprobantes
-            reales{ES_APP_NATIVA ? "." : " y se desbloquea con el pase del mes o con Kipu Pro."}
+            reales{ES_APP_NATIVA ? "." : " y se desbloquea con Kipu Pro."}
           </p>
         </div>
       )}
@@ -356,7 +346,7 @@ function ReporteIVA({ periodo }: { periodo: string }) {
         </div>
       )}
 
-      {/* Alertas de errores (pase o Pro) */}
+      {/* Alertas de errores (con el periodo habilitado) */}
       {!esDemo && <Alertas104 alertas={data?.alertas ?? []} />}
 
       {/* Se está enredando (vencida sin declarar o varias alertas importantes): Kipu Al Día */}

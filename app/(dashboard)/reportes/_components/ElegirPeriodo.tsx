@@ -1,20 +1,36 @@
 "use client";
 
-// Pro mensual: elegir el periodo de la declaración del ciclo. Sin cifras: el
-// periodo se elige antes de ver resultados. El sugerido viene marcado (noveno
-// dígito del RUC); al confirmar se abre el 104 de ese periodo. El anual y Al Día
-// no llegan aquí: el backend les abre el 104 directo.
+// Pro mensual: elegir el periodo de la declaración del ciclo. Como el plan gratis,
+// ve solo el total de cada periodo y cuántas alertas hay; el desglose y los
+// casilleros del 104, al confirmar. El sugerido viene marcado (noveno dígito del
+// RUC); al confirmar se abre el 104 de ese periodo. El anual y Al Día no llegan
+// aquí: el backend les abre el 104 directo.
 // Datos: GET/POST /declaraciones/periodos-habilitados (y .../elegir).
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, CalendarCheck, Loader2 } from "lucide-react";
+import { AlertTriangle, ArrowLeft, CalendarCheck, Loader2 } from "lucide-react";
 import api from "@/lib/api";
 import { detalleError } from "@/lib/errores";
 import { ES_APP_NATIVA } from "@/lib/plataforma";
 
 const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio",
                "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+
+const dinero = (n: number = 0) =>
+  n.toLocaleString("es-EC", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+interface TotalPeriodo {
+  iva_a_pagar:   number;
+  saldo_a_favor: number;
+}
+
+/** "IVA a pagar $12,40" o "Saldo a favor $3,10" */
+function textoTotal(t: TotalPeriodo) {
+  return t.iva_a_pagar === 0 && t.saldo_a_favor > 0
+    ? `Saldo a favor $${dinero(t.saldo_a_favor)}`
+    : `IVA a pagar $${dinero(t.iva_a_pagar)}`;
+}
 
 interface OpcionPeriodo {
   periodo:      string;                       // 2026-10 (el semestre: su primer mes)
@@ -23,6 +39,7 @@ interface OpcionPeriodo {
   en_curso:     boolean;
   vencimiento:  string;                       // 2026-11-30
   habilitado:   boolean;
+  total:        TotalPeriodo | null;          // solo el total (null si no se pudo calcular)
 }
 
 interface EstadoEleccion {
@@ -48,11 +65,15 @@ const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 interface Props {
   periodoVisto:    string;                    // el que abrió (puede estar fuera de la ventana)
   periodoVistoFmt: string;                    // su nombre: "septiembre de 2026"
+  totalVisto:      TotalPeriodo | null;       // su total (de /iva)
+  alertasVisto:    number;                    // cuántas alertas tiene (el detalle, en el 104)
   onElegido:       (periodo: string) => void; // lleva al 104 de ese periodo
   onVolver:        () => void;
 }
 
-export default function ElegirPeriodo({ periodoVisto, periodoVistoFmt, onElegido, onVolver }: Props) {
+export default function ElegirPeriodo({
+  periodoVisto, periodoVistoFmt, totalVisto, alertasVisto, onElegido, onVolver,
+}: Props) {
   const [estado,           setEstado]           = useState<EstadoEleccion | null>(null);
   const [cargando,         setCargando]         = useState(true);
   const [marcado,          setMarcado]          = useState<string | null>(null);
@@ -168,9 +189,21 @@ export default function ElegirPeriodo({ periodoVisto, periodoVistoFmt, onElegido
         {fueraDeVentana && (
           <p className="text-xs rounded-lg px-3 py-2"
              style={{ background: "color-mix(in srgb, var(--kipu-text) 5%, transparent)", color: "var(--kipu-subtle)" }}>
-            {capital(periodoVistoFmt)} ya no se puede elegir: la declaración es para el último periodo
-            cerrado o el que está en curso.
+            {capital(periodoVistoFmt)}{totalVisto ? ` (${textoTotal(totalVisto)})` : ""} ya no se puede
+            elegir: la declaración es para el último periodo cerrado o el que está en curso.
           </p>
+        )}
+
+        {alertasVisto > 0 && (
+          <div className="rounded-lg px-3 py-2 flex items-start gap-2"
+               style={{ background: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)",
+                        border: "1px solid color-mix(in srgb, var(--kipu-warning) 30%, transparent)" }}>
+            <AlertTriangle size={14} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-warning)" }} />
+            <p className="text-xs" style={{ color: "var(--kipu-text)" }}>
+              Encontramos {alertasVisto === 1 ? "1 alerta" : `${alertasVisto} alertas`} en {periodoVistoFmt}:
+              las verás con el formulario 104 completo.
+            </p>
+          </div>
         )}
 
         <div role="radiogroup" aria-label="Periodo" className="space-y-2">
@@ -196,6 +229,11 @@ export default function ElegirPeriodo({ periodoVisto, periodoVistoFmt, onElegido
                   <span className="block text-xs" style={{ color: "var(--kipu-subtle)" }}>
                     {o.en_curso ? "En curso · " : ""}vence el {diaYMes(o.vencimiento)}
                   </span>
+                  {o.total && (
+                    <span className="block text-xs font-medium tabular-nums mt-0.5" style={{ color: "var(--kipu-text)" }}>
+                      {textoTotal(o.total)}{o.en_curso ? " hasta hoy" : ""}
+                    </span>
+                  )}
                 </span>
                 {o.habilitado ? (
                   <span className="text-xs font-semibold shrink-0" style={{ color: "var(--kipu-success)" }}>

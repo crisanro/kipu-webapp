@@ -203,7 +203,7 @@ export default function ReportesPage() {
   const empresa          = useAuthStore((s) => s.empresa);
   const tieneSuscripcion = empresa?.suscripcion_activa ?? false;
   // Plan gratis (sin Pro): en IVA ve sus meses reales y el total de cada uno;
-  // el 104 completo se desbloquea con el pase o Pro. Renta y ATS siguen siendo de Pro.
+  // el 104 completo, con Pro. Renta y ATS siguen siendo de Pro.
   const planGratis       = !tieneSuscripcion && !!empresa?.emision_gratis;
 
   const [tab,           setTab]           = useState<Tab>("IVA");
@@ -341,7 +341,7 @@ export default function ReportesPage() {
         )}
       </div>
 
-      {/* ── PLAN GRATIS: el total es gratis, el 104 completo con pase o Pro ─── */}
+      {/* ── PLAN GRATIS: el total es gratis, el 104 completo con Pro ─────────── */}
       {planGratis && !ES_APP_NATIVA && (
         <div
           className="flex items-start gap-3 rounded-xl px-4 py-3"
@@ -353,8 +353,7 @@ export default function ReportesPage() {
           <Lock size={15} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-accent)" }} />
           <p className="text-xs" style={{ color: "var(--kipu-muted)" }}>
             <span className="font-semibold" style={{ color: "var(--kipu-text)" }}>Ver el total de tu IVA es gratis. </span>
-            El formulario 104 completo se desbloquea con el {obl?.iva === "SEMESTRAL" ? "pase del semestre" : "pase del mes"} o
-            con Kipu Pro, que además incluye Renta y ATS.{" "}
+            El formulario 104 completo se desbloquea con Kipu Pro, que además incluye Renta y ATS.{" "}
             <Link href="/planes" className="font-semibold underline" style={{ color: "var(--kipu-accent)" }}>
               Ver planes
             </Link>

@@ -24,7 +24,7 @@ interface Props {
     totalDocs?:       number;
   };
   generadoAt?: string;
-  sinPlan?:    boolean;  // plan gratis: el total se ve gratis, el 104 completo con pase o Pro
+  sinPlan?:    boolean;  // plan gratis: el total se ve gratis, el 104 completo con Pro
 }
 
 const TIPO_CONFIG = {
