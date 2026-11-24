@@ -35,12 +35,15 @@ export function periodoDisponible(p: PreciosPlan | null | undefined, pedido: Per
 
 const dinero = (n: number) => `$${n.toFixed(2)}`;
 
-export default function SelectorPeriodo({ valor, onCambio, precios }: {
+export default function SelectorPeriodo({ valor, onCambio, precios, disponibles }: {
   valor:    Periodo;
   onCambio: (p: Periodo) => void;
   // Para apagar la opción que no se ofrece y mostrar el ahorro del anual. Si
   // ninguno se pudo leer (Stripe caído), las dos opciones quedan disponibles.
   precios:  PreciosPlan | null | undefined;
+  // Con varias tarjetas (/planes): qué opciones ofrece alguna de ellas. Manda
+  // sobre `precios` para apagar; `precios` queda solo para el ahorro.
+  disponibles?: Record<Periodo, boolean>;
 }) {
   const conocidos = !!(precios?.MENSUAL || precios?.ANUAL);
   const ahorro    = ahorroAnual(precios);
@@ -55,7 +58,7 @@ export default function SelectorPeriodo({ valor, onCambio, precios }: {
          style={{ background: "var(--kipu-surface)", border: "1px solid var(--kipu-border)" }}>
       {opciones.map(({ id, texto }) => {
         const activo    = valor === id;
-        const apagado   = conocidos && !precios?.[id];
+        const apagado   = disponibles ? !disponibles[id] : conocidos && !precios?.[id];
         return (
           <button
             key={id}

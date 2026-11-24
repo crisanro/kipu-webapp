@@ -4,7 +4,7 @@ import Link from "next/link";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
 import { detalleError } from "@/lib/errores";
-import SelectorPeriodo, { periodoDisponible, type Periodo, type PreciosPlan } from "@/components/SelectorPeriodo";
+import SelectorPeriodo, { ahorroAnual, periodoDisponible, type Periodo, type PreciosPlan } from "@/components/SelectorPeriodo";
 import {
   CreditCard, Zap, RefreshCw,
   CheckCircle2, AlertTriangle, TrendingDown, Star, ArrowRight, Info, CalendarCheck, MinusCircle
@@ -218,10 +218,21 @@ export default function PlanesPage() {
   const verPro        = !sub?.activa || sub.cancel_at_period_end;
   const verAlDia      = !esAlDia;
 
-  // Mensual / Anual según los precios del plan que se ve (el Pro, o solo Al Día si ya tiene Pro).
-  // Si el elegido no se ofrece, el otro.
-  const preciosVisibles = verPro ? precios?.PRO : precios?.AL_DIA;
-  const periodo   = periodoDisponible(preciosVisibles, periodoElegido);
+  // Mensual / Anual: el selector apaga una opción solo si ninguna tarjeta visible la
+  // ofrece; cada tarjeta usa su propio periodo (si el Pro no tiene mensual, la suya
+  // queda en anual con "Solo anual por ahora" y Al Día sigue en mensual).
+  const visibles: PreciosPlan[] = [verPro ? precios?.PRO : null, verAlDia ? precios?.AL_DIA : null]
+    .filter((p): p is PreciosPlan => !!p);
+  const conocidos   = visibles.some((p) => p.MENSUAL || p.ANUAL);   // Stripe caído: las dos opciones
+  const disponibles: Record<Periodo, boolean> = {
+    MENSUAL: !conocidos || visibles.some((p) => !!p.MENSUAL),
+    ANUAL:   !conocidos || visibles.some((p) => !!p.ANUAL),
+  };
+  const periodoSel: Periodo = disponibles[periodoElegido] ? periodoElegido
+                            : periodoElegido === "ANUAL" ? "MENSUAL" : "ANUAL";
+
+  const periodo      = periodoDisponible(precios?.PRO, periodoSel);       // el de la tarjeta del Pro
+  const soloAnualPro = periodoSel === "MENSUAL" && periodo === "ANUAL";
   const precio    = precios?.PRO?.[periodo] ?? null;
   const sinPrecio = precioFallo || (precios !== null && !precio);   // se ve al pagar
 
@@ -564,7 +575,9 @@ export default function PlanesPage() {
               )}
               {(verPro || verAlDia) && (
                 <div className="flex justify-center pt-1">
-                  <SelectorPeriodo valor={periodo} onCambio={setPeriodo} precios={preciosVisibles} />
+                  {/* Sin "ahorras $X": cada tarjeta muestra el suyo en la vista anual */}
+                  <SelectorPeriodo valor={periodoSel} onCambio={setPeriodo} precios={null}
+                                   disponibles={disponibles} />
                 </div>
               )}
               {(verPro || verAlDia) && (
@@ -573,7 +586,7 @@ export default function PlanesPage() {
                 <TarjetaAlDia
                   estado={alDia}
                   precios={precios?.AL_DIA ?? null}
-                  periodo={periodo}
+                  periodo={periodoSel}
                   enProduccion={enProduccion}
                   esAdmin={esAdmin}
                   tienePro={!!sub?.activa && !esAlDia}
@@ -593,7 +606,7 @@ export default function PlanesPage() {
                       style={{ background: "var(--kipu-surface)", color: "var(--kipu-text)", border: "1px solid var(--kipu-border)" }}
                     >
                       <CreditCard size={11} />
-                      Kipu Pro · {periodo === "ANUAL" ? "Anual" : "Mensual"}
+                      Kipu Pro · {soloAnualPro ? "Solo anual por ahora" : periodo === "ANUAL" ? "Anual" : "Mensual"}
                     </span>
                   </div>
 
@@ -635,6 +648,7 @@ export default function PlanesPage() {
                         {periodo === "ANUAL" && ` · equivale a $${(precio.total / 12).toFixed(2)}/mes`}
                       </p>
                     )}
+                    {periodo === "ANUAL" && <AhorroAnual precios={precios?.PRO} />}
                     <p className="text-xs mt-1" style={{ color: "var(--kipu-subtle)" }}>
                       Se renueva cada {periodo === "ANUAL" ? "año" : "mes"} con el mismo precio. Cancela cuando quieras.
                       {periodo === "MENSUAL" && " Cada mes pagado incluye una declaración."}
@@ -914,6 +928,18 @@ export default function PlanesPage() {
   );
 }
 
+// ── Ahorro del anual frente a 12 meses, de un solo plan ──────────────────────
+// Sin los dos precios de ese plan (p. ej. el Pro sin mensual), no se muestra nada.
+function AhorroAnual({ precios }: { precios: PreciosPlan | null | undefined }) {
+  const ahorro = ahorroAnual(precios);
+  if (ahorro === null) return null;
+  return (
+    <p className="text-xs font-semibold mt-1" style={{ color: "var(--kipu-accent)" }}>
+      Ahorras ${ahorro.toFixed(2)} al año frente al pago mensual
+    </p>
+  );
+}
+
 // ── Tarjeta Kipu Al Día (la recomendada) ─────────────────────────────────────
 // Los términos y el pago están en /al-dia: aquí se presenta y se lleva allá.
 function TarjetaAlDia({ estado, precios, periodo: pedido, enProduccion, esAdmin, tienePro }: {
@@ -971,6 +997,7 @@ function TarjetaAlDia({ estado, precios, periodo: pedido, enProduccion, esAdmin,
             equivale a ${(total / 12).toFixed(2)}/mes
           </p>
         )}
+        {periodo === "ANUAL" && <AhorroAnual precios={precios} />}
         <p className="text-xs mt-1" style={{ color: "var(--kipu-subtle)" }}>
           Tu precio no sube mientras sigas suscrito. Sin permanencia.
         </p>
