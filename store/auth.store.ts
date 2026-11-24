@@ -6,6 +6,8 @@ interface Suscripcion {
   activa:  boolean;
   estado:  string | null;
   plan:    string | null;
+  // Stripe no pudo cobrar y está reintentando (el plan sigue activo): aviso para actualizar la tarjeta
+  pago_fallido?: boolean;
 }
 
 export interface Empresa {
