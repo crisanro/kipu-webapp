@@ -4,15 +4,17 @@
 // ve solo el total de cada periodo y cuántas alertas hay; el desglose y los
 // casilleros del 104, al confirmar. El sugerido viene marcado (noveno dígito del
 // RUC); al confirmar se abre el 104 de ese periodo. El anual y Al Día no llegan
-// aquí: el backend les abre el 104 directo.
+// aquí: el backend les abre el 104 directo. El aviso de «solo lo emitido en Kipu»
+// se ve antes de elegir: marcado en cada periodo y completo en el que está marcado.
 // Datos: GET/POST /declaraciones/periodos-habilitados (y .../elegir).
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { AlertTriangle, ArrowLeft, CalendarCheck, Loader2 } from "lucide-react";
+import { AlertTriangle, ArrowLeft, CalendarCheck, Info, Loader2 } from "lucide-react";
 import api from "@/lib/api";
 import { detalleError } from "@/lib/errores";
 import { ES_APP_NATIVA } from "@/lib/plataforma";
+import Alertas104, { type Alerta104 } from "./Alertas104";
 
 const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio",
                "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
@@ -40,6 +42,7 @@ interface OpcionPeriodo {
   vencimiento:  string;                       // 2026-11-30
   habilitado:   boolean;
   total:        TotalPeriodo | null;          // solo el total (null si no se pudo calcular)
+  aviso:        Alerta104 | null;             // SOLO_KIPU, si aplica a ese periodo
 }
 
 interface EstadoEleccion {
@@ -66,14 +69,16 @@ interface Props {
   periodoVisto:    string;                    // el que abrió (puede estar fuera de la ventana)
   periodoVistoFmt: string;                    // su nombre: "septiembre de 2026"
   totalVisto:      TotalPeriodo | null;       // su total (de /iva)
-  alertasVisto:    number;                    // cuántas alertas tiene (el detalle, en el 104)
+  alertasVisto:    number;                    // cuántas alertas tiene, aviso incluido (el detalle, en el 104)
+  avisoVisto?:     Alerta104 | null;          // su SOLO_KIPU (de /iva)
   onElegido:       (periodo: string) => void; // lleva al 104 de ese periodo
   onVolver:        () => void;
 }
 
 export default function ElegirPeriodo({
-  periodoVisto, periodoVistoFmt, totalVisto, alertasVisto, onElegido, onVolver,
+  periodoVisto, periodoVistoFmt, totalVisto, alertasVisto, avisoVisto = null, onElegido, onVolver,
 }: Props) {
+  const otrasVisto = alertasVisto - (avisoVisto ? 1 : 0);   // el aviso se muestra aparte
   const [estado,           setEstado]           = useState<EstadoEleccion | null>(null);
   const [cargando,         setCargando]         = useState(true);
   const [marcado,          setMarcado]          = useState<string | null>(null);
@@ -194,13 +199,16 @@ export default function ElegirPeriodo({
           </p>
         )}
 
-        {alertasVisto > 0 && (
+        {/* El que abrió, si no está entre las opciones (las opciones traen el suyo) */}
+        {fueraDeVentana && avisoVisto && <Alertas104 alertas={[avisoVisto]} encabezado={false} />}
+
+        {otrasVisto > 0 && (
           <div className="rounded-lg px-3 py-2 flex items-start gap-2"
                style={{ background: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)",
                         border: "1px solid color-mix(in srgb, var(--kipu-warning) 30%, transparent)" }}>
             <AlertTriangle size={14} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-warning)" }} />
             <p className="text-xs" style={{ color: "var(--kipu-text)" }}>
-              Encontramos {alertasVisto === 1 ? "1 alerta" : `${alertasVisto} alertas`} en {periodoVistoFmt}:
+              Encontramos {otrasVisto === 1 ? "1 alerta" : `${otrasVisto} alertas`} en {periodoVistoFmt}:
               las verás con el formulario 104 completo.
             </p>
           </div>
@@ -234,6 +242,11 @@ export default function ElegirPeriodo({
                       {textoTotal(o.total)}{o.en_curso ? " hasta hoy" : ""}
                     </span>
                   )}
+                  {o.aviso && (
+                    <span className="flex items-center gap-1 text-xs mt-0.5" style={{ color: "var(--kipu-warning)" }}>
+                      <Info size={12} className="shrink-0" /> {o.aviso.titulo}
+                    </span>
+                  )}
                 </span>
                 {o.habilitado ? (
                   <span className="text-xs font-semibold shrink-0" style={{ color: "var(--kipu-success)" }}>
@@ -249,6 +262,9 @@ export default function ElegirPeriodo({
             );
           })}
         </div>
+
+        {/* El aviso completo del periodo marcado, antes de usar la declaración */}
+        {opcion?.aviso && <Alertas104 alertas={[opcion.aviso]} encabezado={false} />}
 
         {error && <p className="text-xs text-center" style={{ color: "var(--kipu-danger)" }}>{error}</p>}
 

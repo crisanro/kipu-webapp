@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 import { notFound, useRouter, useSearchParams } from "next/navigation";
 import api from "@/lib/api";
 import OfertaRenta from "@/components/renta/OfertaRenta";
+import Alertas104, { type Alerta104 } from "../_components/Alertas104";
 import { ArrowLeft, RefreshCw, FileText, AlertTriangle, TrendingUp, TrendingDown, Receipt } from "lucide-react";
 
 const fmt = (n: number = 0) => n.toLocaleString("es-EC", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -20,6 +21,7 @@ function ReporteRenta({ anio }: { anio: string }) {
   const router = useRouter();
 
   const [data, setData] = useState<any>(null);
+  const [alertas, setAlertas] = useState<Alerta104[]>([]);   // SOLO_KIPU (no viene con datos de ejemplo)
   const [loading, setLoading] = useState(true);
 
   const cargar = async () => {
@@ -29,6 +31,7 @@ function ReporteRenta({ anio }: { anio: string }) {
       // Acceder a .resumen.resumen_anual en lugar de .resumen_anual directo
       const resumenAnual = res.data.data?.resumen?.resumen_anual || res.data.data?.resumen_anual;
       setData(resumenAnual);
+      setAlertas(res.data.alertas ?? []);
     } catch (e) {
       console.error(e);
     } finally {
@@ -65,6 +68,9 @@ function ReporteRenta({ anio }: { anio: string }) {
           <strong>Aviso Informativo:</strong> Este reporte consolida únicamente las facturas, notas de crédito, liquidaciones y retenciones registradas en Kipu durante el año {anio}. Recuerda incorporar en el portal del SRI tus ingresos por relación de dependencia, arrendamientos, rendimientos financieros y gastos personales.
         </p>
       </div>
+
+      {/* Solo lo emitido en Kipu: el año de la primera venta en Kipu (o antes) */}
+      <Alertas104 alertas={alertas} encabezado={false} />
 
       {/* Kipu Renta: si es el año que se vende, que el equipo de Kipu la presente */}
       <OfertaRenta variante="reportes" anio={Number(anio)} />

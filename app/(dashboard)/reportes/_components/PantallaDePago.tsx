@@ -3,12 +3,14 @@
 // Plan gratis sin el periodo habilitado: la declaración ya está calculada (se ve
 // solo el total y cuántas alertas hay) y se ofrece Kipu Pro para el 104 casillero
 // por casillero. El pase del mes ya no se vende (los pagados siguen valiendo).
+// El aviso de «solo lo emitido en Kipu» va completo, también en la app.
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AlertTriangle, ArrowLeft, Calculator, CheckCircle2, Sparkles } from "lucide-react";
 import api from "@/lib/api";
 import { ES_APP_NATIVA } from "@/lib/plataforma";
+import Alertas104, { type Alerta104 } from "./Alertas104";
 
 const dinero = (n: number = 0) =>
   n.toLocaleString("es-EC", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -17,12 +19,15 @@ interface Props {
   periodoFmt:       string;
   enCurso:          boolean;
   total:            { iva_a_pagar: number; saldo_a_favor: number };
-  alertasCantidad?: number;        // alertas encontradas: el detalle es del 104 completo
+  alertasCantidad?: number;        // alertas encontradas (incluye el aviso): el detalle es del 104 completo
+  aviso?:           Alerta104 | null;   // SOLO_KIPU: se muestra entero
   onVolver:         () => void;
 }
 
-export default function PantallaDePago({ periodoFmt, enCurso, total, alertasCantidad = 0, onVolver }: Props) {
+export default function PantallaDePago({ periodoFmt, enCurso, total, alertasCantidad = 0, aviso = null,
+                                         onVolver }: Props) {
   const [precioPro, setPrecioPro] = useState<{ base: number; total: number } | null>(null);
+  const otrasAlertas = alertasCantidad - (aviso ? 1 : 0);   // el aviso ya se ve: no se cuenta
 
   useEffect(() => {
     if (ES_APP_NATIVA) return;   // en la app no se muestran precios
@@ -58,6 +63,8 @@ export default function PantallaDePago({ periodoFmt, enCurso, total, alertasCant
           {aFavor ? "Saldo a favor para el próximo periodo" : "IVA a pagar"}
         </p>
       </div>
+
+      {aviso && <Alertas104 alertas={[aviso]} encabezado={false} />}
     </>
   );
 
@@ -78,14 +85,14 @@ export default function PantallaDePago({ periodoFmt, enCurso, total, alertasCant
     <div className="p-4 md:p-6 max-w-2xl mx-auto space-y-5">
       {cabecera}
 
-      {alertasCantidad > 0 && (
+      {otrasAlertas > 0 && (
         <div className="rounded-xl p-3.5 flex items-start gap-3"
              style={{ background: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)",
                       border: "1px solid color-mix(in srgb, var(--kipu-warning) 30%, transparent)" }}>
           <AlertTriangle size={16} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-warning)" }} />
           <p className="text-sm" style={{ color: "var(--kipu-text)" }}>
             <strong>
-              Encontramos {alertasCantidad === 1 ? "1 alerta" : `${alertasCantidad} alertas`} en tu declaración
+              Encontramos {otrasAlertas === 1 ? "1 alerta" : `${otrasAlertas} alertas`} en tu declaración
               de {periodoFmt}.
             </strong>{" "}
             Retenciones que no llegaron, IVA sin crédito y más: míralas con Kipu Pro.
