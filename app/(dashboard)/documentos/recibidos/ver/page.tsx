@@ -5,10 +5,9 @@ import { notFound, useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowLeft, FileText, Download, Pencil,
   CheckCircle2, X, Save,
-  Link2, Shield, Receipt, Lock
+  Link2, Shield, Receipt, Lock, Loader2
 } from "lucide-react";
 import api from "@/lib/api";
-import { API_BASE_URL } from "@/lib/config";
 import { useAuthStore } from "@/store/auth.store";
 import { rutaFueraDelPlan } from "@/lib/plataforma";
 import { aplicaALaEmpresa, bloqueadoPorPlan } from "@/components/dashboard/DashboardNav";
@@ -305,6 +304,72 @@ function ModalClasificacion({ doc, onClose, onSaved }: {
 
 // ── Página principal ──────────────────────────────────────────────────────────
 // /documentos/recibidos/ver?id=… (antes /documentos/recibidos/[id]; ver lib/rutas.ts)
+// ── Archivo original ──────────────────────────────────────────────────────────
+// GET /recibidos/{id}/archivo devuelve lo que se guardó: el XML subido o la foto
+// del físico. Los importados del SRI o a mano solo guardan datos (.json): sin botón.
+// Se baja con api (lleva la sesión); un <a href> directo no la manda.
+const ARCHIVO_ORIGINAL: Record<string, string> = {
+  xml: "Descargar XML", pdf: "Descargar PDF",
+  jpg: "Descargar imagen", jpeg: "Descargar imagen", png: "Descargar imagen", webp: "Descargar imagen",
+};
+
+interface DocConArchivo {
+  id: string; xml_path?: string | null; clave_acceso?: string | null; numero_doc?: string | null;
+}
+
+function BotonArchivoOriginal({ doc }: { doc: DocConArchivo }) {
+  const [descargando, setDescargando] = useState(false);
+  const [error,       setError]       = useState("");
+
+  const ext   = String(doc.xml_path ?? "").split(".").pop()?.toLowerCase() ?? "";
+  const texto = ARCHIVO_ORIGINAL[ext];
+  if (!texto) return null;
+
+  const descargar = async () => {
+    setError("");
+    setDescargando(true);
+    try {
+      const res = await api.get(`/api/v1/app/recibidos/${doc.id}/archivo`, { responseType: "blob" });
+      const url = URL.createObjectURL(res.data);
+      const a   = document.createElement("a");
+      a.href     = url;
+      a.download = `${doc.clave_acceso || doc.numero_doc || doc.id}.${ext}`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (e) {
+      // Con responseType "blob" el detalle del error también llega como blob
+      let detalle = "";
+      const blob = (e as { response?: { data?: Blob } })?.response?.data;
+      try { detalle = blob ? JSON.parse(await blob.text())?.detail ?? "" : ""; } catch {}
+      setError(typeof detalle === "string" && detalle ? detalle : "No pudimos descargar el archivo. Intenta de nuevo.");
+    } finally {
+      setDescargando(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-1">
+      <button
+        onClick={descargar}
+        disabled={descargando}
+        className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs transition-colors disabled:opacity-60"
+        style={{
+          background: "var(--kipu-surface)",
+          color: "var(--kipu-text)",
+          border: "1px solid var(--kipu-border)",
+        }}
+        onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 5%, transparent)"}
+        onMouseLeave={e => e.currentTarget.style.background = "var(--kipu-surface)"}
+      >
+        {descargando ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />} {texto}
+      </button>
+      {error && <p className="text-xs" style={{ color: "var(--kipu-danger)" }}>{error}</p>}
+    </div>
+  );
+}
+
 export default function DetalleRecibidoPage() {
   const id = useSearchParams().get("id");
   if (!id) notFound();
@@ -361,7 +426,6 @@ function DetalleRecibido({ id }: { id: string }) {
   const pago           = doc.estado_pago ? PAGO_CONFIG[doc.estado_pago] : null;
   const totalDeducible = (doc.items_detalle ?? []).filter((i: any) => i.deducible_renta).reduce((s: number, i: any) => s + i.subtotal, 0);
   const totalCredito   = (doc.items_detalle ?? []).filter((i: any) => i.credito_tributario_iva).reduce((s: number, i: any) => s + i.valor_iva, 0);
-  const base_url      = API_BASE_URL;
   const tColor        = TIPO_COLOR[doc.tipo_doc] ?? TIPO_COLOR.FAC;
 
   return (
@@ -717,23 +781,8 @@ function DetalleRecibido({ id }: { id: string }) {
 
       {/* Acciones */}
       <div className="flex gap-2 flex-wrap">
-        {/* Descargar XML original */}
-        {doc.xml_path && (
-          <a
-            href={`${base_url}/api/v1/app/recibidos/${doc.id}/xml`}
-            download
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs transition-colors"
-            style={{
-              background: "var(--kipu-surface)",
-              color: "var(--kipu-text)",
-              border: "1px solid var(--kipu-border)",
-            }}
-            onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 5%, transparent)"}
-            onMouseLeave={e => e.currentTarget.style.background = "var(--kipu-surface)"}
-          >
-            <Download size={13} /> Descargar XML
-          </a>
-        )}
+        {/* Archivo original: XML subido o foto del físico */}
+        <BotonArchivoOriginal doc={doc} />
         {/* Emitir RET — solo FAC/LIQ sin retención */}
         {["FAC", "LIQ"].includes(doc.tipo_doc) && !doc.retencion_emitida && verRet && (
           <button

@@ -1,4 +1,5 @@
 "use client";
+import dynamic from "next/dynamic";
 import useSWR from "swr";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
@@ -8,12 +9,31 @@ import Link from "next/link";
 import Checklist, { HealthData } from "@/components/Checklist";
 import DeclaracionWidget from "@/components/DeclaracionWidget";
 import StatsGrid from "./components/StatsGrid";
-import GraficoFacturacion from "./components/GraficoFacturacion";
 import UltimosDocumentos from "./components/UltimosDocumentos";
 import DocumentosRecibidos from "./components/DocumentosRecibidos";
 import AccesosRapidos from "./components/AccesosRapidos";
 import OfertaRenta from "@/components/renta/OfertaRenta";
 import { ES_APP_NATIVA, rutaFueraDelPlan } from "@/lib/plataforma";
+
+// El gráfico usa recharts (~370 KB): se baja aparte, después de pintar el panel.
+// Mientras tanto, un esqueleto del mismo tamaño para que la pantalla no salte.
+const GraficoFacturacion = dynamic(() => import("./components/GraficoFacturacion"), {
+  ssr: false,
+  loading: () => (
+    <div
+      className="rounded-xl p-5 h-full"
+      style={{ background: "var(--kipu-surface)", border: "1px solid var(--kipu-border)" }}
+      aria-busy="true"
+      aria-label="Cargando gráfico"
+    >
+      <div className="mb-4 space-y-2">
+        <div className="h-4 w-40 rounded animate-pulse" style={{ background: "var(--kipu-border)" }} />
+        <div className="h-3 w-28 rounded animate-pulse" style={{ background: "var(--kipu-border)" }} />
+      </div>
+      <div className="h-[200px] rounded-lg animate-pulse" style={{ background: "color-mix(in srgb, var(--kipu-border) 50%, transparent)" }} />
+    </div>
+  ),
+});
 
 interface DashboardData {
   health?: HealthData;

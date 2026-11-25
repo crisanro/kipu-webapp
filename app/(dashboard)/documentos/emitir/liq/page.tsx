@@ -2,16 +2,15 @@
 import { useState, useEffect, useRef } from "react";
 import { errorIdentificacion } from "@/lib/identificacion";
 import { r2 } from "@/lib/dinero";
-import { useRouter } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
-import { debeRenovarClave, esPlanRequerido, esUsoJusto, mensajeErrorEmision } from "@/lib/emision";
+import { anotarEnvio, claveParaEnviar, esPlanRequerido, esUsoJusto, mensajeErrorEmision } from "@/lib/emision";
 import { refrescarEmpresaActual } from "@/lib/empresa";
 import api from "@/lib/api";
-import AvisoColchon from "@/components/uso-justo/AvisoColchon";
 import BloqueoPlanPro from "@/components/dashboard/BloqueoPlanPro";
 import { useAuthStore } from "@/store/auth.store";
-import { CheckCircle2, User, Search, X } from "lucide-react";
+import { User, Search, X } from "lucide-react";
 import PuntoEmision from "../components/PuntoEmision";
+import PantallaResultado from "../components/PantallaResultado";
 import { usePuntoEmision } from "../components/usePuntoEmision";
 import ItemsEditor, { Item, calcItem, genId, EMPTY_ITEM } from "../components/ItemsEditor";
 import PagosMixtos, { PagoItem, PAGO_INICIAL } from "../components/PagosMixtos";
@@ -63,7 +62,6 @@ interface ProveedorNuevo {
 
 // ── Página ────────────────────────────────────────────────────────────────────
 export default function NuevaLiqPage() {
-  const router  = useRouter();
   const empresa = useAuthStore((s) => s.empresa);
 
   // ── Idempotencia ────────────────────────────────────────────────────────────
@@ -176,48 +174,50 @@ export default function NuevaLiqPage() {
 
     setSubmitting(true);
     try {
+      const payload = {
+        establecimiento: estabSelected,
+        punto_emision:   ptoSelected,
+        cliente_id:      proveedorNuevo ? undefined : proveedorSelected?.id,
+        cliente:         proveedorNuevo ? {
+          tipo_id:        proveedorNuevo.tipo_identificacion_sri,
+          nombre:         proveedorNuevo.razon_social,
+          identificacion: proveedorNuevo.identificacion,
+          email:          proveedorNuevo.email,
+          direccion:      proveedorNuevo.direccion,
+        } : undefined,
+        items: items.map(i => {
+          const c = calcItem(i);
+          return {
+            codigo:          i.codigo || undefined,
+            descripcion:     i.descripcion,
+            cantidad:        i.cantidad,
+            precio_unitario: i.precio,
+            descuento:       c.descuento,
+            tipo_iva:        i.tipo_iva,
+            unidad_medida:   i.unidad,
+          };
+        }),
+        pagos: pagos.map(p => ({
+          forma_pago: p.forma_pago,
+          ...(p.total !== null ? { total: p.total } : {}),
+        })),
+        campos_adicionales: camposAdicionales.filter(c => c.nombre && c.valor),
+      };
       const res = await api.post(
         "/api/v1/app/documentos/emit/LIQ",
-        {
-          establecimiento: estabSelected,
-          punto_emision:   ptoSelected,
-          cliente_id:      proveedorNuevo ? undefined : proveedorSelected?.id,
-          cliente:         proveedorNuevo ? {
-            tipo_id:        proveedorNuevo.tipo_identificacion_sri,
-            nombre:         proveedorNuevo.razon_social,
-            identificacion: proveedorNuevo.identificacion,
-            email:          proveedorNuevo.email,
-            direccion:      proveedorNuevo.direccion,
-          } : undefined,
-          items: items.map(i => {
-            const c = calcItem(i);
-            return {
-              codigo:          i.codigo || undefined,
-              descripcion:     i.descripcion,
-              cantidad:        i.cantidad,
-              precio_unitario: i.precio,
-              descuento:       c.descuento,
-              tipo_iva:        i.tipo_iva,
-              unidad_medida:   i.unidad,
-            };
-          }),
-          pagos: pagos.map(p => ({
-            forma_pago: p.forma_pago,
-            ...(p.total !== null ? { total: p.total } : {}),
-          })),
-          campos_adicionales: camposAdicionales.filter(c => c.nombre && c.valor),
-        },
+        payload,
         {
           headers: {
-            "X-Idempotency-Key": idempotencyKey.current,
+            "X-Idempotency-Key": claveParaEnviar(idempotencyKey, "LIQ", payload),
           },
         }
       );
+      anotarEnvio(idempotencyKey, "LIQ");
       setResultado(res.data);
     } catch (err: any) {
       // Solo con un rechazo definitivo se usa otra clave; ante timeout, red,
-      // 5xx o 409 se reintenta con la misma para no duplicar el comprobante
-      if (debeRenovarClave(err)) idempotencyKey.current = uuidv4();
+      // 5xx o 409 se reintenta con la misma (aunque la app se recargue)
+      anotarEnvio(idempotencyKey, "LIQ", err);
       const mensaje = mensajeErrorEmision(err, "Error al emitir la liquidación.");
       setError(mensaje);
       setUsoJusto(esUsoJusto(err) ? mensaje : "");
@@ -242,58 +242,7 @@ export default function NuevaLiqPage() {
   // Pantalla resultado
   if (resultado) {
     return (
-      <div
-        className="min-h-screen flex items-center justify-center p-6"
-        style={{ background: "var(--kipu-bg)" }}
-      >
-        <div className="w-full max-w-sm text-center">
-          <div
-            className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
-            style={{
-              background: "color-mix(in srgb, var(--kipu-success) 20%, transparent)",
-            }}
-          >
-            <CheckCircle2 size={32} style={{ color: "var(--kipu-success)" }} />
-          </div>
-          <h2 className="text-xl font-bold mb-1" style={{ color: "var(--kipu-text)" }}>
-            Liquidación emitida
-          </h2>
-          <p className="text-sm mb-2" style={{ color: "var(--kipu-subtle)" }}>{resultado.claveAcceso}</p>
-          {resultado.aviso_uso_justo && <AvisoColchon aviso={resultado.aviso_uso_justo} />}
-          <span
-            className="inline-block px-3 py-1 rounded-full text-xs font-medium mb-6"
-            style={{
-              background: "color-mix(in srgb, var(--kipu-success) 20%, transparent)",
-              color: "var(--kipu-success)",
-            }}
-          >
-            {resultado.estado}
-          </span>
-          <div className="flex gap-3">
-            <button
-              onClick={reset}
-              className="flex-1 py-2.5 rounded-lg text-sm transition-colors"
-              style={{
-                border: "1px solid var(--kipu-border)",
-                color: "var(--kipu-muted)",
-              }}
-              onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
-              onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-muted)"}
-            >
-              Nueva LIQ
-            </button>
-            <button
-              onClick={() => router.push("/documentos")}
-              className="flex-1 py-2.5 rounded-lg text-white text-sm font-medium transition-colors"
-              style={{ background: "var(--kipu-accent)" }}
-              onMouseEnter={e => e.currentTarget.style.background = "var(--kipu-accent-h)"}
-              onMouseLeave={e => e.currentTarget.style.background = "var(--kipu-accent)"}
-            >
-              Ver documentos
-            </button>
-          </div>
-        </div>
-      </div>
+      <PantallaResultado tipo="LIQ" resultado={resultado} onNueva={reset} />
     );
   }
 

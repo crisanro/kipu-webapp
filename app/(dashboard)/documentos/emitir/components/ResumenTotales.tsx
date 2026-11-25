@@ -31,13 +31,14 @@ interface Props {
   onEmitir:          () => void;
   serie?:            string;   // "002-001": desde dónde sale, a la vista justo antes de emitir
   textoBoton?:       string;   // p. ej. "Crear link de cobro" (la factura se emite cuando paguen)
+  aviso?:            string | null;  // problema que se ve antes de emitir (p. ej. Consumidor Final > $50)
 }
 
 const fmt = (n: number) => r2(n).toFixed(2);
 
 export default function ResumenTotales({
   totales, submitting, error, suscripcionActiva, balanceApi, emisionGratis = false, usoJusto = false,
-  onEmitir, serie, textoBoton,
+  onEmitir, serie, textoBoton, aviso,
 }: Props) {
   const gratis      = !suscripcionActiva && emisionGratis;
   const puedeEmitir = suscripcionActiva || balanceApi > 0 || gratis;
@@ -167,6 +168,20 @@ export default function ResumenTotales({
             )}
           </p>
         </div>
+      )}
+
+      {/* Aviso antes de emitir (si ya es el error, no se repite) */}
+      {aviso && aviso !== error && (
+        <p
+          className="mt-3 flex items-start gap-1.5 text-xs px-3 py-2 rounded-lg"
+          style={{
+            color: "var(--kipu-warning)",
+            background: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)",
+          }}
+        >
+          <AlertTriangle size={13} className="mt-0.5 shrink-0" />
+          {aviso}
+        </p>
       )}
 
       {/* Error */}

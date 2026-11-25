@@ -27,6 +27,14 @@ function TablaDetalle({ titulo, rows, columnas, color = "indigo" }: {
   const [expandido, setExpandido] = useState(false);
   const MAX_VISIBLE = 5;
   const visibles = expandido ? rows : rows.slice(0, MAX_VISIBLE);
+  // En el celular cada fila muestra las primeras columnas; tocarla muestra el resto
+  const COLUMNAS_MOVIL = 3;
+  const [filasAbiertas, setFilasAbiertas] = useState<Set<number>>(new Set());
+  const alternarFila = (idx: number) => setFilasAbiertas(prev => {
+    const s = new Set(prev);
+    if (s.has(idx)) s.delete(idx); else s.add(idx);
+    return s;
+  });
 
   if (rows.length === 0) return null;
 
@@ -89,24 +97,38 @@ function TablaDetalle({ titulo, rows, columnas, color = "indigo" }: {
         </table>
       </div>
 
-      {/* Mobile */}
+      {/* Mobile: las 3 primeras columnas; al tocar la fila, el resto (montos incluidos) */}
       <div className="md:hidden">
-        {visibles.map((row, idx) => (
-          <div
-            key={idx}
-            className="px-4 py-3 space-y-1"
-            style={{ borderTop: idx > 0 ? "1px solid var(--kipu-border)" : "none" }}
-          >
-            {columnas.slice(0, 3).map(c => (
-              <div key={c.key} className="flex justify-between gap-2">
-                <span className="text-[10px]" style={{ color: "var(--kipu-subtle)" }}>{c.label}</span>
-                <span className={`text-xs ${c.mono ? "font-mono" : ""}`} style={{ color: "var(--kipu-text)" }}>
-                  {row[c.key] ?? "—"}
+        {visibles.map((row, idx) => {
+          const abierta = filasAbiertas.has(idx);
+          const ocultas = columnas.length - COLUMNAS_MOVIL;
+          return (
+            <button
+              key={idx}
+              type="button"
+              onClick={() => alternarFila(idx)}
+              aria-expanded={abierta}
+              className="w-full text-left px-4 py-3 space-y-1 active:opacity-70"
+              style={{ borderTop: idx > 0 ? "1px solid var(--kipu-border)" : "none" }}
+            >
+              {(abierta ? columnas : columnas.slice(0, COLUMNAS_MOVIL)).map(c => (
+                <div key={c.key} className="flex justify-between gap-2">
+                  <span className="text-[10px]" style={{ color: "var(--kipu-subtle)" }}>{c.label}</span>
+                  <span className={`text-xs text-right ${c.mono ? "font-mono" : ""}`} style={{ color: "var(--kipu-text)" }}>
+                    {row[c.key] ?? "—"}
+                  </span>
+                </div>
+              ))}
+              {ocultas > 0 && (
+                <span className="flex items-center gap-1 pt-1 text-[11px]" style={{ color: "var(--kipu-accent)" }}>
+                  {abierta
+                    ? <><ChevronUp size={12} /> Ver menos</>
+                    : <><ChevronDown size={12} /> Ver {ocultas} más</>}
                 </span>
-              </div>
-            ))}
-          </div>
-        ))}
+              )}
+            </button>
+          );
+        })}
       </div>
 
       {/* Ver más */}

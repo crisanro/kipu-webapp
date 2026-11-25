@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, lazy, Suspense } from "react";
+import { useState, useEffect, useCallback, useRef, lazy, Suspense } from "react";
 import { etiquetaIva, opcionesIva } from "@/lib/iva";
 import { baseDesdeTotal, tarifaPct } from "@/lib/precios";
 import { r2 } from "@/lib/dinero";
@@ -67,7 +67,11 @@ export default function ProductosPage() {
   const [total,        setTotal]        = useState(0);
   const [loadingMore,  setLoadingMore]  = useState(false);
 
+  // Búsqueda en el servidor (antes solo filtraba los productos ya cargados)
   const [query,        setQuery]        = useState("");
+  const [queryActivo,  setQueryActivo]  = useState("");
+  const debounceRef                     = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pedidoRef                       = useRef(0);   // descarta respuestas de búsquedas viejas
   const [showModal,    setShowModal]    = useState(false);
   const [editando,     setEditando]     = useState<Producto | null>(null);
   const [form,         setForm]         = useState(EMPTY_FORM);
@@ -78,33 +82,42 @@ export default function ProductosPage() {
   const [scanMode,     setScanMode]     = useState<ScanMode>("buscar");
 
   const cargar = useCallback(async (append = false) => {
+    const pedido = ++pedidoRef.current;
     if (append) setLoadingMore(true); else setLoading(true);
     try {
-      const offset = append ? productos.length : 0;
-      const res = await api.get(
-        `/api/v1/app/productos?incluir_inactivos=${verInactivos}&limit=${PRODUCTOS_LIMIT}&offset=${offset}`
-      );
+      const params = new URLSearchParams({
+        incluir_inactivos: String(verInactivos),
+        limit:             String(PRODUCTOS_LIMIT),
+        offset:            String(append ? productos.length : 0),
+      });
+      if (queryActivo) params.set("q", queryActivo);
+      const res = await api.get(`/api/v1/app/productos?${params.toString()}`);
+      if (pedido !== pedidoRef.current) return;
       const nuevos = res.data.data ?? [];
       setTotal(res.data.total ?? 0);
       setProductos(prev => append ? [...prev, ...nuevos] : nuevos);
     } catch (e) {
       console.error(e);
     } finally {
-      if (append) setLoadingMore(false); else setLoading(false);
+      if (pedido === pedidoRef.current) {
+        if (append) setLoadingMore(false); else setLoading(false);
+      }
     }
-  }, [verInactivos, productos.length]);
+  }, [verInactivos, queryActivo, productos.length]);
 
   useEffect(() => {
     cargar();
-  }, [verInactivos]);
+  }, [verInactivos, queryActivo]);
+
+  const cambiarQuery = (val: string, inmediato = false) => {
+    setQuery(val);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (inmediato) { setQueryActivo(val.trim()); return; }
+    debounceRef.current = setTimeout(() => setQueryActivo(val.trim()), 400);
+  };
+  useEffect(() => () => { if (debounceRef.current) clearTimeout(debounceRef.current); }, []);
 
   if (!puedeVer) return <SinAcceso />;
-
-  const filtrados = productos.filter((p) =>
-    !query ||
-    p.descripcion?.toLowerCase().includes(query.toLowerCase()) ||
-    p.codigo?.toLowerCase().includes(query.toLowerCase())
-  );
 
   const abrirCrear = () => {
     setEditando(null);
@@ -145,8 +158,8 @@ export default function ProductosPage() {
   const handleScan = (code: string) => {
     setShowScanner(false);
     if (scanMode === "buscar") {
-      // Poner el código escaneado en el filtro de búsqueda
-      setQuery(code);
+      // Buscar el código escaneado en el servidor, sin esperar
+      cambiarQuery(code, true);
     } else {
       // Llenar el campo código del formulario
       setForm(prev => ({ ...prev, codigo: code.toUpperCase() }));
@@ -255,8 +268,10 @@ export default function ProductosPage() {
         <div className="relative flex-1">
           <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--kipu-subtle)" }} />
           <input
+            type="search"
+            enterKeyHint="search"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => cambiarQuery(e.target.value)}
             placeholder="Buscar por descripción o código..."
             className="w-full pl-9 pr-10 py-2.5 rounded-lg text-sm transition-colors focus:outline-none"
             style={{
@@ -307,13 +322,13 @@ export default function ProductosPage() {
             style={{ borderColor: "var(--kipu-accent)", borderTopColor: "transparent" }}
           />
         </div>
-      ) : filtrados.length === 0 ? (
+      ) : productos.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <Package size={40} className="mb-3" style={{ color: "var(--kipu-subtle)" }} />
           <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>
-            {query ? "No hay productos que coincidan." : "Aún no tienes productos en el catálogo."}
+            {queryActivo ? "No hay productos que coincidan." : "Aún no tienes productos en el catálogo."}
           </p>
-          {!query && (
+          {!queryActivo && (
             <button
               type="button"
               onClick={abrirCrear}
@@ -351,7 +366,7 @@ export default function ProductosPage() {
               <span className="col-span-2 text-right">Acciones</span>
             </div>
             <div>
-              {filtrados.map((p, idx) => (
+              {productos.map((p, idx) => (
                 <div
                   key={p.id}
                   className="flex md:grid md:grid-cols-12 gap-3 items-center px-4 py-3 transition-colors"

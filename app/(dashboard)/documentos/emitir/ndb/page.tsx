@@ -3,14 +3,14 @@ import SoloWeb from "@/components/SoloWeb";
 
 import { useState, useEffect, useRef } from "react";
 import { r2 } from "@/lib/dinero";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
-import { debeRenovarClave, esUsoJusto, mensajeErrorEmision } from "@/lib/emision";
+import { anotarEnvio, claveParaEnviar, esUsoJusto, mensajeErrorEmision } from "@/lib/emision";
 import api from "@/lib/api";
-import AvisoColchon from "@/components/uso-justo/AvisoColchon";
 import { useAuthStore } from "@/store/auth.store";
-import { CheckCircle2, AlertTriangle, Plus, Trash2, ChevronDown } from "lucide-react";
+import { AlertTriangle, Plus, Trash2, ChevronDown } from "lucide-react";
 import PuntoEmision from "../components/PuntoEmision";
+import PantallaResultado from "../components/PantallaResultado";
 import { usePuntoEmision } from "../components/usePuntoEmision";
 import CamposAdicionales, { CampoAdicional } from "../components/CamposAdicionales";
 import EstadoCobro, { DatosCobro, cobroInicial } from "../components/EstadoCobro";
@@ -88,7 +88,6 @@ function calcTotalesNdb(motivos: Motivo[]) {
 }
 
 export default function NuevaNdbPage() {
-  const router       = useRouter();
   const searchParams = useSearchParams();
   const empresa      = useAuthStore((s) => s.empresa);
 
@@ -245,15 +244,16 @@ export default function NuevaNdbPage() {
         payload,
         {
           headers: {
-            "X-Idempotency-Key": idempotencyKey.current,
+            "X-Idempotency-Key": claveParaEnviar(idempotencyKey, "NDB", payload),
           },
         }
       );
+      anotarEnvio(idempotencyKey, "NDB");
       setResultado(res.data);
     } catch (err: any) {
       // Solo con un rechazo definitivo se usa otra clave; ante timeout, red,
-      // 5xx o 409 se reintenta con la misma para no duplicar el comprobante
-      if (debeRenovarClave(err)) idempotencyKey.current = uuidv4();
+      // 5xx o 409 se reintenta con la misma (aunque la app se recargue)
+      anotarEnvio(idempotencyKey, "NDB", err);
       const mensaje = mensajeErrorEmision(err, "Error al emitir la nota de débito.");
       setError(mensaje);
       setUsoJusto(esUsoJusto(err) ? mensaje : "");
@@ -264,58 +264,7 @@ export default function NuevaNdbPage() {
 
   if (resultado) {
     return (
-      <div
-        className="min-h-screen flex items-center justify-center p-6"
-        style={{ background: "var(--kipu-bg)" }}
-      >
-        <div className="w-full max-w-sm text-center">
-          <div
-            className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
-            style={{
-              background: "color-mix(in srgb, var(--kipu-warning) 20%, transparent)",
-            }}
-          >
-            <CheckCircle2 size={32} style={{ color: "var(--kipu-warning)" }} />
-          </div>
-          <h2 className="text-xl font-bold mb-1" style={{ color: "var(--kipu-text)" }}>
-            Nota de débito emitida
-          </h2>
-          <p className="text-sm mb-2" style={{ color: "var(--kipu-subtle)" }}>{resultado.claveAcceso}</p>
-          {resultado.aviso_uso_justo && <AvisoColchon aviso={resultado.aviso_uso_justo} />}
-          <span
-            className="inline-block px-3 py-1 rounded-full text-xs font-medium mb-6"
-            style={{
-              background: "color-mix(in srgb, var(--kipu-warning) 20%, transparent)",
-              color: "var(--kipu-warning)",
-            }}
-          >
-            {resultado.estado}
-          </span>
-          <div className="flex gap-3">
-            <button
-              onClick={reset}
-              className="flex-1 py-2.5 rounded-lg text-sm transition-colors"
-              style={{
-                border: "1px solid var(--kipu-border)",
-                color: "var(--kipu-muted)",
-              }}
-              onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
-              onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-muted)"}
-            >
-              Nueva NDB
-            </button>
-            <button
-              onClick={() => router.push("/documentos")}
-              className="flex-1 py-2.5 rounded-lg text-white text-sm font-medium transition-colors"
-              style={{ background: "var(--kipu-accent)" }}
-              onMouseEnter={e => e.currentTarget.style.background = "var(--kipu-accent-h)"}
-              onMouseLeave={e => e.currentTarget.style.background = "var(--kipu-accent)"}
-            >
-              Ver documentos
-            </button>
-          </div>
-        </div>
-      </div>
+      <PantallaResultado tipo="NDB" resultado={resultado} onNueva={reset} />
     );
   }
 
