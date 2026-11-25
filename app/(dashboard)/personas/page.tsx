@@ -19,7 +19,7 @@ import {
   Search, Plus, Users,
   ChevronDown, Save, AlertCircle, Check, Loader2
 } from "lucide-react";
-import { lookupIdentificacion } from "@/lib/identificacion-lookup";
+import { lookupIdentificacion, useBuscaNombres, textoNombreAMano } from "@/lib/identificacion-lookup";
 import { tecladoIdentificacion } from "@/lib/teclado";
 
 interface Persona {
@@ -139,7 +139,10 @@ function PersonasContenido() {
     form.razon_social.trim().length > 0 &&
     !saving;
 
+  // Buscar nombres de terceros es de las cuentas que pagan (lib/identificacion-lookup.ts)
+  const buscaNombres = useBuscaNombres();
   const puedeBuscar =
+    buscaNombres &&
     ["04", "05"].includes(form.tipo_identificacion_sri) &&
     valId.ok &&
     !lookupLoading;
@@ -359,13 +362,13 @@ function PersonasContenido() {
                           if (!valId.error) e.currentTarget.style.borderColor = "var(--kipu-border)";
                         }}
                       />
-                      {valId.ok && form.identificacion && !["04", "05"].includes(form.tipo_identificacion_sri) && (
+                      {valId.ok && form.identificacion && (!buscaNombres || !["04", "05"].includes(form.tipo_identificacion_sri)) && (
                         <Check size={12} className="absolute right-2.5 top-1/2 -translate-y-1/2" style={{ color: "var(--kipu-success)" }} />
                       )}
                     </div>
 
-                    {/* Botón buscar */}
-                    {["04", "05"].includes(form.tipo_identificacion_sri) && (
+                    {/* Botón buscar (solo cuentas que pagan) */}
+                    {buscaNombres && ["04", "05"].includes(form.tipo_identificacion_sri) && (
                       <button
                         type="button"
                         onClick={handleLookup}
@@ -415,6 +418,10 @@ function PersonasContenido() {
                     >
                       {lookupMsg}
                     </p>
+                  )}
+                  {/* Sin buscador: el nombre se escribe a mano */}
+                  {!buscaNombres && ["04", "05"].includes(form.tipo_identificacion_sri) && valId.ok && (
+                    <p className="mt-1 text-xs text-sutil">{textoNombreAMano()}</p>
                   )}
                 </div>
               </div>
