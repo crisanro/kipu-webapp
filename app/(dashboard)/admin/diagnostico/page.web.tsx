@@ -186,11 +186,15 @@ export default function AdminDiagnosticoPage() {
               <Fila label="Dominio alineado">
                 <span className="inline-flex items-center gap-1">
                   <Estado ok={config.alineado} />
-                  {config.alineado === null
-                    ? "—"
-                    : config.alineado
-                      ? config.dominio_from
-                      : `${config.dominio_from} ≠ ${config.dominio_user}`}
+                  {config.alineacion?.proveedor === "oracle"
+                    // Oracle: el usuario SMTP es un OCID; se mide por SPF y DKIM del remitente
+                    ? `Oracle · SPF ${config.alineacion.spf ? "✓" : "✗"} · DKIM ${
+                        config.alineacion.dkim === null ? "indica el selector" : config.alineacion.dkim ? "✓" : "✗"}`
+                    : config.alineado === null
+                      ? "—"
+                      : config.alineado
+                        ? config.dominio_from
+                        : `${config.dominio_from} ≠ ${config.dominio_user}`}
                 </span>
               </Fila>
               {/* Cupo diario del proveedor (CORREO_CUPO_DIARIO): aviso desde el 70 % */}
@@ -216,8 +220,18 @@ export default function AdminDiagnosticoPage() {
                   color: "var(--kipu-text)",
                 }}
               >
-                El remitente es de un dominio distinto a la cuenta SMTP. Gmail y Outlook suelen
-                mandar estos correos a spam si el SPF/DKIM del dominio remitente no autoriza a ese servidor.
+                {config.alineacion?.proveedor === "oracle" ? (
+                  <>
+                    Al DNS de {config.dominio_from} le falta autorizar a Oracle Email Delivery:{" "}
+                    {config.alineacion.falta.join(" y ")}. Sin eso, Gmail y Outlook suelen mandar
+                    estos correos a spam.
+                  </>
+                ) : (
+                  <>
+                    El remitente es de un dominio distinto a la cuenta SMTP. Gmail y Outlook suelen
+                    mandar estos correos a spam si el SPF/DKIM del dominio remitente no autoriza a ese servidor.
+                  </>
+                )}
               </p>
             )}
 
@@ -232,13 +246,17 @@ export default function AdminDiagnosticoPage() {
                 <DnsFila
                   nombre="DKIM"
                   info={config.dns.dkim}
-                  ayuda={config.dns.dkim ? "firma criptográfica del correo" : "indica el selector abajo para revisarlo"}
+                  ayuda={config.dns.dkim
+                    ? `firma criptográfica del correo · selector ${config.dkim_selector}`
+                    : "indica el selector abajo para revisarlo"}
                 />
                 <div className="flex gap-2 mt-2">
                   <input
                     value={selector}
                     onChange={(e) => setSelector(e.target.value)}
-                    placeholder="Selector DKIM (ej. default, google, zmail)"
+                    placeholder={config.dkim_selector_configurado
+                      ? `Probar otro selector (configurado: ${config.dkim_selector_configurado})`
+                      : "Selector DKIM (ej. default, google, zmail)"}
                     className="flex-1 px-3 py-2 rounded-lg text-xs focus:outline-none"
                     style={inputStyle}
                   />
