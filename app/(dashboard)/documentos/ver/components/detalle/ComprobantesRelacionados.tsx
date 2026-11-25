@@ -1,15 +1,25 @@
 "use client";
 import { useRouter } from "next/navigation";
 import {
-  Copy, Info,
+  Copy, Info, Lock,
 } from "lucide-react";
 import { type FacturaBase, normalizarTarifa } from "./utils";
+import { useAuthStore } from "@/store/auth.store";
+import { rutaFueraDelPlan } from "@/lib/plataforma";
+import { aplicaALaEmpresa, bloqueadoPorPlan } from "@/components/dashboard/DashboardNav";
+
+// Retención: misma regla que el menú (DashboardNav). Sin retenciones activadas no
+// aparece; sin Kipu Pro / Al Día va con candado y lleva a planes (en la app no aparece).
+const RET = { href: "/documentos/emitir/ret", requierePro: true, requiereRetenciones: true };
 
 // Acciones para emitir NC, ND o RET a partir de este comprobante, o duplicarlo.
 export default function ComprobantesRelacionados({
   factura, consumidorFinal,
 }: { factura: FacturaBase; consumidorFinal: boolean }) {
-  const router = useRouter();
+  const router  = useRouter();
+  const empresa = useAuthStore((s) => s.empresa);
+  const verRet  = aplicaALaEmpresa(RET, empresa) && !rutaFueraDelPlan(RET.href, empresa);
+  const retSinPlan = bloqueadoPorPlan(RET, empresa);
 
   return (
     <>
@@ -59,9 +69,10 @@ export default function ComprobantesRelacionados({
                 </button>
               </>
             )}
-            {factura.tipo_doc === "LIQ" && (
+            {factura.tipo_doc === "LIQ" && verRet && (
               <button
-                onClick={() => router.push(`/documentos/emitir/ret?doc_origen_emitido_id=${factura.id}`)}
+                onClick={() => router.push(retSinPlan ? "/planes" : `/documentos/emitir/ret?doc_origen_emitido_id=${factura.id}`)}
+                title={retSinPlan ? "Disponible en Kipu Pro" : undefined}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs transition-colors"
                 style={{
                   background: "color-mix(in srgb, var(--kipu-info) 10%, transparent)",
@@ -71,6 +82,7 @@ export default function ComprobantesRelacionados({
                 onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-info) 20%, transparent)"}
                 onMouseLeave={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-info) 10%, transparent)"}
               >
+                {retSinPlan && <Lock size={12} aria-hidden />}
                 RET · Retención al proveedor
               </button>
             )}
