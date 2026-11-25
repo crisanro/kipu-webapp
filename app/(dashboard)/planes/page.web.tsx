@@ -713,8 +713,9 @@ export default function PlanesPage() {
               </div>
               )}
 
-              {/* Plan gratis: la tercera opción (lo que se tiene sin pagar) */}
-              {planGratis && <TarjetaGratis actual={esFree} />}
+              {/* Plan gratis: solo para quien está en él. Planes muestra el actual y los
+                  de arriba, nunca uno inferior (al Pro o Al Día no se le ofrece bajar) */}
+              {planGratis && esFree && <TarjetaGratis actual />}
             </div>
           )}
 
