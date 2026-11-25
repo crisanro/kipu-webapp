@@ -8,7 +8,8 @@ import {
   totalEsperadoConIva, tarifaPct,
 } from "@/lib/precios";
 import api from "@/lib/api";
-import { Search, Plus, Trash2, Camera } from "lucide-react";
+import { Search, Plus, Trash2, Camera, ChevronRight } from "lucide-react";
+import HojaItem, { InputDecimal } from "./HojaItem";
 
 const BarcodeScanner = lazy(() => import("@/components/BarcodeScanner"));
 
@@ -77,63 +78,6 @@ export const EMPTY_ITEM: Omit<Item, "_id"> = {
   unidad:         "UNIDAD",
 };
 
-// ── Subcomponente de Input Decimal ─────────────────────────────────────────────
-function InputDecimal({
-  value,
-  onChange,
-  placeholder = "0",
-  className = "",
-  style = {},
-  defaultValueOnBlur = 0,
-}: {
-  value: number;
-  onChange: (val: number) => void;
-  placeholder?: string;
-  className?: string;
-  style?: React.CSSProperties;
-  defaultValueOnBlur?: number;
-}) {
-  const [valStr, setValStr] = useState<string>(value === 0 ? "" : String(value));
-
-  useEffect(() => {
-    setValStr(value === 0 ? "" : String(value));
-  }, [value]);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let raw = e.target.value;
-    raw = raw.replace(/[^0-9.,]/g, "");
-    const parts = raw.split(/[.,]/);
-    if (parts.length > 2) return;
-    setValStr(raw);
-    const num = parseFloat(raw.replace(",", "."));
-    onChange(isNaN(num) ? 0 : num);
-  };
-
-  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-    if (!valStr.trim()) {
-      onChange(defaultValueOnBlur);
-      setValStr(defaultValueOnBlur === 0 ? "" : String(defaultValueOnBlur));
-    }
-    e.currentTarget.style.borderColor = "var(--kipu-border)";
-  };
-
-  return (
-    <input
-      type="text"
-      inputMode="decimal"
-      value={valStr}
-      onChange={handleChange}
-      onFocus={(e) => {
-        e.currentTarget.style.borderColor = "var(--kipu-accent)";
-      }}
-      onBlur={handleBlur}
-      placeholder={placeholder}
-      className={className}
-      style={style}
-    />
-  );
-}
-
 // ── Componente Principal ───────────────────────────────────────────────────────
 export default function ItemsEditor({ items, onChange }: Props) {
   const [productoQuery,     setProductoQuery]     = useState("");
@@ -151,6 +95,9 @@ export default function ItemsEditor({ items, onChange }: Props) {
 
   const timer       = useRef<ReturnType<typeof setTimeout> | null>(null);
   const productoRef = useRef<HTMLDivElement>(null);
+  const listaRef    = useRef<HTMLDivElement>(null);
+  // Celular: el ítem que se está editando en la hoja (HojaItem)
+  const [editando, setEditando] = useState<string | null>(null);
 
   // Ítems nuevos o que llegan de fuera (proforma, factura original, catálogo) toman el
   // modo por defecto; mostrarlos con IVA incluido no cambia lo que se envía.
@@ -317,8 +264,19 @@ export default function ItemsEditor({ items, onChange }: Props) {
   };
 
   const addItem = () => {
-    emitir([...items, { _id: genId(), ...EMPTY_ITEM }]);
+    const nuevo = { _id: genId(), ...EMPTY_ITEM };
+    emitir([...items, nuevo]);
+    if (window.matchMedia("(max-width: 767.98px)").matches) setEditando(nuevo._id);
+    else setTimeout(() => listaRef.current?.querySelector<HTMLInputElement>(`[data-descripcion="${nuevo._id}"]`)?.focus(), 50);
   };
+
+  // Celular: quitar el ítem que está abierto en la hoja
+  const quitarEditando = () => {
+    if (!editando) return;
+    removeItem(editando);
+    setEditando(null);
+  };
+  const itemEditando = items.find(i => i._id === editando) ?? null;
 
   // ── Render ───────────────────────────────────────────────────────────────────
   return (
@@ -388,7 +346,7 @@ export default function ItemsEditor({ items, onChange }: Props) {
 
         {showProductos && productoResults.length > 0 && (
           <div
-            className="absolute z-10 w-full mt-1 rounded-lg shadow-xl overflow-hidden max-h-48 overflow-y-auto"
+            className="mt-1 max-h-64 overflow-y-auto rounded-lg md:absolute md:z-10 md:w-full md:shadow-xl"
             style={{
               background: "var(--kipu-surface)",
               border: "1px solid var(--kipu-border)",
@@ -399,7 +357,7 @@ export default function ItemsEditor({ items, onChange }: Props) {
                 type="button"
                 key={p.id}
                 onClick={() => seleccionarProducto(p)}
-                className="w-full flex items-center justify-between gap-3 px-4 py-2.5 text-left transition-colors"
+                className="w-full flex min-h-12 items-center justify-between gap-3 px-4 py-2.5 text-left transition-colors"
                 style={{
                   borderBottom: "1px solid var(--kipu-border)",
                 }}
@@ -426,8 +384,39 @@ export default function ItemsEditor({ items, onChange }: Props) {
         )}
       </div>
 
-      {/* Lista de ítems */}
-      <div className="space-y-3">
+      {/* Celular: cada ítem en una fila; tocarla abre su hoja (HojaItem) */}
+      <ul className="-mx-1 divide-y divide-borde md:hidden">
+        {items.map((item) => {
+          const c = calcItem(item);
+          const conIva = item.precio_iva !== undefined;
+          const precio = conIva ? item.precio_iva ?? 0 : item.precio;
+          return (
+            <li key={item._id}>
+              <button
+                type="button"
+                onClick={() => setEditando(item._id)}
+                className="flex min-h-14 w-full items-center gap-3 rounded-lg px-1 py-2.5 text-left transition-colors active:bg-presionado"
+              >
+                <span className="min-w-0 flex-1">
+                  <span className={`block truncate text-sm ${item.descripcion.trim() ? "text-texto" : "italic text-sutil"}`}>
+                    {item.cantidad !== 1 && <b className="font-semibold">{item.cantidad} × </b>}
+                    {item.descripcion.trim() || "Toca para escribir el ítem"}
+                  </span>
+                  <span className="block text-xs text-sutil">
+                    ${fmt(precio)}{conIva ? " c/IVA" : ""} · IVA {etiquetaIva(item.tipo_iva)}
+                    {c.descuento > 0 && <> · desc. ${fmt(c.descuento)}</>}
+                  </span>
+                </span>
+                <span className="shrink-0 text-sm font-semibold tabular-nums text-texto">${fmt(c.total)}</span>
+                <ChevronRight size={16} className="shrink-0 text-sutil" aria-hidden />
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+
+      {/* Compu: las tarjetas editables (Enter en la descripción del último ítem agrega otro) */}
+      <div className="hidden space-y-3 md:block" ref={listaRef}>
         {items.map((item, index) => {
           const c = calcItem(item);
           const esCodigoDuplicado = codigosExistentes.has(item.codigo.toUpperCase());
@@ -474,7 +463,14 @@ export default function ItemsEditor({ items, onChange }: Props) {
 
                 <input
                   value={item.descripcion}
+                  data-descripcion={item._id}
                   onChange={(e) => editItem(item._id, "descripcion", e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && index === items.length - 1 && item.descripcion.trim()) {
+                      e.preventDefault();
+                      addItem();
+                    }
+                  }}
                   placeholder="Descripción del producto o servicio"
                   className="flex-1 px-3 py-2 rounded-lg text-sm font-medium min-w-0 transition-colors focus:outline-none"
                   style={{
@@ -771,6 +767,20 @@ export default function ItemsEditor({ items, onChange }: Props) {
         <Plus size={16} />
         Agregar ítem manualmente
       </button>
+
+      {/* Celular: editar el ítem en una hoja */}
+      <HojaItem
+        item={itemEditando}
+        abierta={!!itemEditando}
+        onCerrar={() => setEditando(null)}
+        onCampo={(campo, valor) => itemEditando && editItem(itemEditando._id, campo, valor)}
+        onModoIva={(incluido) => itemEditando && cambiarModoItem(itemEditando._id, incluido)}
+        onEliminar={quitarEditando}
+        puedeEliminar={items.length > 1}
+        codigoDuplicado={!!itemEditando && codigosExistentes.has(itemEditando.codigo.toUpperCase())}
+        onVerificarCodigo={() => itemEditando && verificarCodigo(itemEditando.codigo)}
+        onEscanearCodigo={() => { if (itemEditando) { setScanForItemId(itemEditando._id); setShowScanner(true); } }}
+      />
 
       {/* Modal Barcode Scanner */}
       {showScanner && (
