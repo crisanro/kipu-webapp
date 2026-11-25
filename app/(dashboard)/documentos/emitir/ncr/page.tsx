@@ -1,14 +1,16 @@
 "use client";
-import SoloWeb from "@/components/SoloWeb";
+// Nota de crédito: la factura que se modifica, el motivo y los ítems que se
+// devuelven o rebajan. Con ?doc_id=… llega con la factura y sus ítems cargados.
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { r2 } from "@/lib/dinero";
 import { useSearchParams } from "next/navigation";
-import { v4 as uuidv4 } from "uuid";
-import { anotarEnvio, claveParaEnviar, mensajeErrorEmision } from "@/lib/emision";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
-import { AlertTriangle } from "lucide-react";
+import { useBorrador } from "@/lib/borradores";
+import { AlertTriangle, MessageSquareText } from "lucide-react";
+import ChipsFiltro from "@/components/ui/ChipsFiltro";
+import { Entrada } from "@/components/ui/Campo";
 import PuntoEmision from "../components/PuntoEmision";
 import PantallaResultado from "../components/PantallaResultado";
 import { usePuntoEmision } from "../components/usePuntoEmision";
@@ -16,10 +18,10 @@ import CamposAdicionales, { CampoAdicional } from "../components/CamposAdicional
 import ItemsEditor, { Item, calcItem, genId, EMPTY_ITEM } from "../components/ItemsEditor";
 import ResumenTotales from "../components/ResumenTotales";
 import DocOrigenSelector, { DocOrigen } from "../components/DocOrigenSelector";
+import EmisionLayout from "../components/EmisionLayout";
+import { useEmision } from "../components/useEmision";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
-const fmt = (n: number) => r2(n).toFixed(2);
-
 function calcTotales(items: Item[]) {
   const base = items.reduce(
     (acc, item) => {
@@ -42,20 +44,23 @@ function calcTotales(items: Item[]) {
 }
 
 const MOTIVOS = [
-  "DEVOLUCION DE BIEN",
-  "ANULACION DE COMPROBANTE",
-  "REBAJA DE PRECIO",
-  "DESCUENTO COMERCIAL",
-  "OTROS",
+  { valor: "DEVOLUCION DE BIEN",       etiqueta: "Devolución" },
+  { valor: "ANULACION DE COMPROBANTE", etiqueta: "Anulación" },
+  { valor: "REBAJA DE PRECIO",         etiqueta: "Rebaja de precio" },
+  { valor: "DESCUENTO COMERCIAL",      etiqueta: "Descuento comercial" },
+  { valor: "OTROS",                    etiqueta: "Otro motivo" },
 ];
+
+const ITEMS_VACIOS = (): Item[] => [{ _id: genId(), ...EMPTY_ITEM }];
 
 // ── Página ────────────────────────────────────────────────────────────────────
 export default function NuevaNcrPage() {
   const searchParams = useSearchParams();
   const empresa      = useAuthStore((s) => s.empresa);
 
-  // ── Idempotencia ────────────────────────────────────────────────────────────
-  const idempotencyKey = useRef(uuidv4());
+  // Envío: clave anti-duplicados, error, uso justo y resultado
+  const em = useEmision();
+  const { enviando: submitting, error, setError, resultado } = em;
 
   // Doc origen
   const [docOrigen, setDocOrigen] = useState<DocOrigen>(null);
@@ -68,25 +73,39 @@ export default function NuevaNcrPage() {
     : false;
 
   // Formulario
-  const [motivo,              setMotivo]              = useState(MOTIVOS[0]);
+  const [motivo,              setMotivo]              = useState(MOTIVOS[0].valor);
   const [motivoPersonalizado, setMotivoPersonalizado] = useState("");
-  const [items,               setItems]               = useState<Item[]>([{ _id: genId(), ...EMPTY_ITEM }]);
+  const [items,               setItems]               = useState<Item[]>(ITEMS_VACIOS);
   const [camposAdicionales,   setCamposAdicionales]   = useState<CampoAdicional[]>([]);
 
   // Establecimiento y punto de emisión
   const pe = usePuntoEmision(docOrigen?.tipo === "kipu" ? docOrigen.data.numero_doc : docOrigen?.tipo === "manual" ? docOrigen.data.numero : null);
   const { estabSelected, ptoSelected } = pe;
 
-  // UI
-  const [submitting, setSubmitting] = useState(false);
-  const [resultado,  setResultado]  = useState<any>(null);
-  const [error,      setError]      = useState("");
-
   const totales = calcTotales(items);
 
   const motivoFinal = motivo === "OTROS" && motivoPersonalizado.trim()
     ? motivoPersonalizado.trim().toUpperCase()
     : motivo;
+
+  // ── Borrador (con ?doc_id la pantalla llega cargada: no se ofrece el viejo) ──
+  const desdeFactura = !!searchParams.get("doc_id");
+  const datosBorrador = useMemo(() => ({ docOrigen, motivo, motivoPersonalizado, items, camposAdicionales }),
+    [docOrigen, motivo, motivoPersonalizado, items, camposAdicionales]);
+  const borrador = useBorrador("NCR", datosBorrador, {
+    vacio: !docOrigen && !motivoPersonalizado.trim() && camposAdicionales.length === 0
+      && items.every(i => !i.descripcion?.trim() && !i.codigo?.trim() && !i.precio),
+    desactivado: desdeFactura,
+  });
+  const seguirBorrador = () => {
+    const d = borrador.recuperar();
+    if (!d) return;
+    setDocOrigen(d.docOrigen ?? null);
+    setMotivo(d.motivo || MOTIVOS[0].valor);
+    setMotivoPersonalizado(d.motivoPersonalizado ?? "");
+    if (Array.isArray(d.items) && d.items.length) setItems(d.items);
+    setCamposAdicionales(Array.isArray(d.camposAdicionales) ? d.camposAdicionales : []);
+  };
 
   // Pre-cargar doc desde query param ?doc_id=xxx
   useEffect(() => {
@@ -97,7 +116,7 @@ export default function NuevaNcrPage() {
         const res = await api.get(`/api/v1/app/documentos/${docId}`);
         const d   = res.data.data;
         const info = d.datos?.infoFactura || d.datos?.infoLiquidacionCompra || {};
-        
+
         setDocOrigen({
           tipo: "kipu",
           data: {
@@ -136,15 +155,15 @@ export default function NuevaNcrPage() {
 
   const reset = () => {
     pe.reiniciar();
-    idempotencyKey.current = uuidv4();
-    setResultado(null);
+    em.reiniciar();
     setDocOrigen(null);
-    setMotivo(MOTIVOS[0]);
+    setMotivo(MOTIVOS[0].valor);
     setMotivoPersonalizado("");
-    setItems([{ _id: genId(), ...EMPTY_ITEM }]);
+    setItems(ITEMS_VACIOS());
     setCamposAdicionales([]);
-    setError("");
   };
+
+  const puedeEmitir = !!empresa && (empresa.suscripcion_activa || empresa.balance_api > 0 || !!empresa.emision_gratis);
 
   const emitir = async () => {
     setError("");
@@ -154,239 +173,141 @@ export default function NuevaNcrPage() {
       return;
     }
     if (!docOrigen) { setError("Selecciona el documento a modificar."); return; }
-    if (!motivoFinal.trim()) { setError("Ingresa el motivo."); return; }
+    if (motivo === "OTROS" && !motivoPersonalizado.trim()) { setError("Escribe el motivo."); return; }
     if (!estabSelected || !ptoSelected) { setError("Elige el establecimiento y el punto de emisión."); return; }
     if (items.some(i => !i.descripcion?.trim())) { setError("Todos los ítems deben tener descripción."); return; }
     if (totales.total <= 0) { setError("El valor de modificación debe ser mayor a $0."); return; }
-
-    const puedeEmitir = empresa?.suscripcion_activa || (empresa?.balance_api ?? 0) > 0 || !!empresa?.emision_gratis;
     if (!puedeEmitir) { setError("Se requiere suscripción activa o créditos API."); return; }
 
-    setSubmitting(true);
-    try {
-      const payload: any = {
-        establecimiento: estabSelected,
-        punto_emision:   ptoSelected,
-        motivo:          motivoFinal,
-        items: items.map(i => {
-          const c = calcItem(i);
-          return {
-            codigo:          i.codigo || undefined,
-            descripcion:     i.descripcion,
-            cantidad:        i.cantidad,
-            precio_unitario: i.precio,
-            descuento:       c.descuento,
-            tipo_iva:        i.tipo_iva,
-            unidad_medida:   i.unidad,
-          };
-        }),
-        campos_adicionales: camposAdicionales.filter(c => c.nombre && c.valor),
-      };
+    const payload: any = {
+      establecimiento: estabSelected,
+      punto_emision:   ptoSelected,
+      motivo:          motivoFinal,
+      items: items.map(i => {
+        const c = calcItem(i);
+        return {
+          codigo:          i.codigo || undefined,
+          descripcion:     i.descripcion,
+          cantidad:        i.cantidad,
+          precio_unitario: i.precio,
+          descuento:       c.descuento,
+          tipo_iva:        i.tipo_iva,
+          unidad_medida:   i.unidad,
+        };
+      }),
+      campos_adicionales: camposAdicionales.filter(c => c.nombre && c.valor),
+    };
 
-      if (docOrigen?.tipo === "kipu") {
-        payload.doc_origen_id = docOrigen.data.id;
-      } else if (docOrigen?.tipo === "manual") {
-        payload.doc_origen_numero  = docOrigen.data.numero;
-        payload.doc_origen_fecha   = docOrigen.data.fecha;
-        payload.doc_origen_cod_doc = docOrigen.data.cod_doc;
-        payload.cliente_origen     = docOrigen.data.cliente;
-      }
-
-      const res = await api.post(
-        "/api/v1/app/documentos/emit/NCR",
-        payload,
-        {
-          headers: {
-            "X-Idempotency-Key": claveParaEnviar(idempotencyKey, "NCR", payload),
-          },
-        }
-      );
-      anotarEnvio(idempotencyKey, "NCR");
-      setResultado(res.data);
-    } catch (err: any) {
-      // Solo con un rechazo definitivo se usa otra clave; ante timeout, red,
-      // 5xx o 409 se reintenta con la misma (aunque la app se recargue)
-      anotarEnvio(idempotencyKey, "NCR", err);
-      setError(mensajeErrorEmision(err, "Error al emitir la nota de crédito."));
-    } finally {
-      setSubmitting(false);
+    if (docOrigen.tipo === "kipu") {
+      payload.doc_origen_id = docOrigen.data.id;
+    } else {
+      payload.doc_origen_numero  = docOrigen.data.numero;
+      payload.doc_origen_fecha   = docOrigen.data.fecha;
+      payload.doc_origen_cod_doc = docOrigen.data.cod_doc;
+      payload.cliente_origen     = docOrigen.data.cliente;
     }
+
+    const r = await em.enviar("/api/v1/app/documentos/emit/NCR", payload,
+                              { tipo: "NCR", porDefecto: "Error al emitir la nota de crédito." });
+    if (r) { borrador.borrar(); em.setResultado(r); }
   };
 
   // Pantalla resultado
   if (resultado) {
-    return (
-      <PantallaResultado tipo="NCR" resultado={resultado} onNueva={reset} />
-    );
+    return <PantallaResultado tipo="NCR" resultado={resultado} onNueva={reset} />;
   }
 
   return (
-    <div className="p-4 md:p-6 max-w-4xl mx-auto space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-xl font-bold" style={{ color: "var(--kipu-text)" }}>
-          Nueva Nota de Crédito{" "}
-          <span className="text-base font-normal" style={{ color: "var(--kipu-subtle)" }}>
-            NCR
-          </span>
-        </h1>
-        <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>
-          {empresa?.razon_social} · {empresa?.ambiente === 2 ? "Producción" : "Pruebas"}
-        </p>
+    <EmisionLayout
+      titulo="Nueva nota de crédito"
+      subtitulo={<>{empresa?.razon_social} · {empresa?.ambiente === 2 ? "Producción" : "Pruebas"}</>}
+      tiposEmision={["NCR"]}
+      borrador={borrador.pendiente && {
+        hace: borrador.pendiente.hace, que: "una nota de crédito",
+        onSeguir: seguirBorrador, onDescartar: borrador.descartar,
+      }}
+      lateral={<>
+        <div className="hidden lg:block">
+          <PuntoEmision {...pe} />
+        </div>
+        <ResumenTotales
+          serie={pe.serie}
+          totales={totales}
+          submitting={submitting}
+          error={error}
+          suscripcionActiva={empresa?.suscripcion_activa ?? false}
+          balanceApi={empresa?.balance_api ?? 0}
+          emisionGratis={!!empresa?.emision_gratis}
+          usoJusto={em.esUsoJusto}
+          onEmitir={emitir}
+          conBarraFija
+        />
+      </>}
+      barra={{
+        total:         totales.total,
+        texto:         `Emitir${pe.serie ? ` desde ${pe.serie}` : ""}`,
+        onEmitir:      emitir,
+        enviando:      submitting,
+        deshabilitado: !puedeEmitir || esConsumidorFinal,
+        error,
+      }}
+    >
+      {/* Punto emisión — solo celular */}
+      <div className="lg:hidden">
+        <PuntoEmision {...pe} />
       </div>
 
-      {empresa && !empresa.suscripcion_activa && empresa.balance_api === 0 && !empresa.emision_gratis && (
-        <div
-          className="flex items-center gap-2 rounded-lg px-4 py-3"
-          style={{
-            background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
-            border: "1px solid color-mix(in srgb, var(--kipu-danger) 20%, transparent)",
-          }}
-        >
-          <AlertTriangle size={16} className="shrink-0" style={{ color: "var(--kipu-danger)" }} />
-          <p className="text-sm" style={{ color: "var(--kipu-danger)" }}>
-            Sin acceso para emitir.{" "}
-            <SoloWeb><a href="/planes" className="underline">Ver opciones</a></SoloWeb>
-          </p>
+      <DocOrigenSelector
+        tiposDoc="FAC"
+        tabla="emitidos"
+        value={docOrigen}
+        onChange={setDocOrigen}
+        label="Factura a modificar"
+      />
+
+      {esConsumidorFinal && (
+        <div className="flex items-start gap-3 rounded-xl border border-peligro/20 bg-peligro-suave px-4 py-3" role="alert">
+          <AlertTriangle size={16} className="mt-0.5 shrink-0 text-peligro" aria-hidden />
+          <div>
+            <p className="text-sm font-medium text-peligro-texto">No disponible para Consumidor Final</p>
+            <p className="mt-1 text-xs text-tenue">
+              Por normativa del SRI, los comprobantes emitidos a Consumidor Final no se modifican con notas de crédito ni de débito.
+            </p>
+          </div>
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-
-          {/* Punto emisión móvil */}
-          <div className="lg:hidden">
-            <PuntoEmision {...pe} />
+      {/* Motivo */}
+      <section className="space-y-3 rounded-xl border border-borde bg-superficie p-4">
+        <h2 className="flex items-center gap-2 text-sm font-semibold text-texto">
+          <MessageSquareText size={16} className="text-acento" aria-hidden /> Motivo
+        </h2>
+        <ChipsFiltro
+          etiqueta="Motivo"
+          opciones={MOTIVOS}
+          valor={motivo}
+          onCambio={(m) => { setMotivo(m); setMotivoPersonalizado(""); }}
+        />
+        {motivo === "OTROS" && (
+          <div>
+            <Entrada
+              value={motivoPersonalizado}
+              onChange={e => setMotivoPersonalizado(e.target.value.toUpperCase())}
+              placeholder="Describe el motivo…"
+              aria-label="Motivo"
+              maxLength={300}
+              autoFocus
+            />
+            <p className="mt-1 text-right text-[11px] text-sutil">{motivoPersonalizado.length}/300</p>
           </div>
+        )}
+      </section>
 
-          {/* Selector Documento Origen */}
-          <DocOrigenSelector
-            tiposDoc="FAC"
-            tabla="emitidos"
-            value={docOrigen}
-            onChange={setDocOrigen}
-            label="Factura a modificar"
-          />
+      {/* Ítems a devolver/rebajar */}
+      <ItemsEditor items={items} onChange={setItems} />
 
-          {/* Banner Consumidor Final */}
-          {esConsumidorFinal && (
-            <div
-              className="flex items-start gap-3 rounded-xl px-4 py-3"
-              style={{
-                background: "color-mix(in srgb, var(--kipu-danger) 8%, transparent)",
-                border: "1px solid color-mix(in srgb, var(--kipu-danger) 20%, transparent)",
-              }}
-            >
-              <AlertTriangle size={15} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-danger)" }} />
-              <div>
-                <p className="text-xs font-medium" style={{ color: "var(--kipu-danger)" }}>
-                  No disponible para Consumidor Final
-                </p>
-                <p className="text-xs mt-1" style={{ color: "var(--kipu-muted)" }}>
-                  Por normativa del SRI, los comprobantes emitidos a Consumidor Final no pueden ser modificados mediante notas de crédito ni notas de débito.
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Motivo */}
-          <div
-            className="rounded-xl p-4"
-            style={{
-              background: "var(--kipu-surface)",
-              border: "1px solid var(--kipu-border)",
-            }}
-          >
-            <h2 className="text-sm font-semibold mb-3" style={{ color: "var(--kipu-text)" }}>
-              Motivo
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {MOTIVOS.map(m => {
-                const isSelected = motivo === m;
-                return (
-                  <button
-                    key={m}
-                    type="button"
-                    onClick={() => { setMotivo(m); setMotivoPersonalizado(""); }}
-                    className="px-3 py-2.5 rounded-lg text-xs font-medium text-left transition-colors"
-                    style={{
-                      background: isSelected
-                        ? "color-mix(in srgb, var(--kipu-accent) 10%, transparent)"
-                        : "var(--kipu-surface)",
-                      border: isSelected
-                        ? "1px solid var(--kipu-accent)"
-                        : "1px solid var(--kipu-border)",
-                      color: isSelected ? "var(--kipu-accent)" : "var(--kipu-muted)",
-                    }}
-                    onMouseEnter={e => {
-                      if (!isSelected) {
-                        e.currentTarget.style.color = "var(--kipu-text)";
-                        e.currentTarget.style.borderColor = "color-mix(in srgb, var(--kipu-text) 20%, transparent)";
-                      }
-                    }}
-                    onMouseLeave={e => {
-                      if (!isSelected) {
-                        e.currentTarget.style.color = "var(--kipu-muted)";
-                        e.currentTarget.style.borderColor = "var(--kipu-border)";
-                      }
-                    }}
-                  >
-                    {m}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Input para OTROS */}
-            {motivo === "OTROS" && (
-              <div className="mt-3">
-                <input
-                  value={motivoPersonalizado}
-                  onChange={e => setMotivoPersonalizado(e.target.value.toUpperCase())}
-                  placeholder="Describe el motivo..."
-                  maxLength={300}
-                  className="w-full px-3 py-2.5 rounded-lg text-sm transition-colors focus:outline-none"
-                  style={{
-                    background: "var(--kipu-surface)",
-                    border: "1px solid color-mix(in srgb, var(--kipu-accent) 50%, transparent)",
-                    color: "var(--kipu-text)",
-                  }}
-                  onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                  onBlur={e => e.currentTarget.style.borderColor = "color-mix(in srgb, var(--kipu-accent) 50%, transparent)"}
-                  autoFocus
-                />
-                <p className="text-[10px] mt-1 text-right" style={{ color: "var(--kipu-subtle)" }}>
-                  {motivoPersonalizado.length}/300
-                </p>
-              </div>
-            )}
-          </div>
-
-          {/* Ítems a devolver/rebajar */}
-          <ItemsEditor items={items} onChange={setItems} />
-
-          {/* Campos adicionales */}
-          <CamposAdicionales campos={camposAdicionales} onChange={setCamposAdicionales} />
-        </div>
-
-        {/* Panel lateral */}
-        <div className="space-y-4">
-          <div className="hidden lg:block">
-            <PuntoEmision {...pe} />
-          </div>
-          <ResumenTotales
-            serie={pe.serie}
-            totales={totales}
-            submitting={submitting}
-            error={error}
-            suscripcionActiva={empresa?.suscripcion_activa ?? false}
-            balanceApi={empresa?.balance_api ?? 0}
-            emisionGratis={!!empresa?.emision_gratis}
-            onEmitir={emitir}
-          />
-        </div>
-      </div>
-    </div>
+      <CamposAdicionales campos={camposAdicionales} onChange={setCamposAdicionales} />
+    </EmisionLayout>
   );
 }
 

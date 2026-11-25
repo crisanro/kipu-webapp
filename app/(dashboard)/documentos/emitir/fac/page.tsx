@@ -1,13 +1,10 @@
 "use client";
-import SoloWeb from "@/components/SoloWeb";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { errorIdentificacion } from "@/lib/identificacion";
 import { TIPOS_IVA } from "@/lib/iva";
 import { r2 } from "@/lib/dinero";
 import { useRouter } from "next/navigation";
-import { v4 as uuidv4 } from "uuid";
-import { anotarEnvio, claveParaEnviar, esUsoJusto, mensajeErrorEmision } from "@/lib/emision";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
 import { CheckCircle2, AlertTriangle, CreditCard, Copy, MessageCircle } from "lucide-react";
@@ -22,6 +19,9 @@ import PagosMixtos, { PagoItem, PAGO_INICIAL } from "../components/PagosMixtos";
 import EstadoCobro, { DatosCobro, cobroInicial, PasarelaEstado, MomentoFactura } from "../components/EstadoCobro";
 import CamposAdicionales, { CampoAdicional } from "../components/CamposAdicionales";
 import ResumenTotales from "../components/ResumenTotales";
+import EmisionLayout from "../components/EmisionLayout";
+import { useEmision } from "../components/useEmision";
+import { useBorrador } from "@/lib/borradores";
 
 // ── Tipos ──────────────────────────────────────────────────────────────────────
 interface Cliente {
@@ -103,8 +103,9 @@ export default function NuevaFacturaPage() {
   const router  = useRouter();
   const empresa = useAuthStore((s) => s.empresa);
 
-  // ── Idempotencia ────────────────────────────────────────────────────────────
-  const idempotencyKey = useRef(uuidv4());
+  // ── Envío: clave anti-duplicados, error, uso justo y resultado (useEmision) ──
+  const em = useEmision();
+  const { enviando: submitting, error, setError, resultado, setResultado } = em;
 
   // ── Estado cliente ──────────────────────────────────────────────────────────
   const [clienteSelected,   setClienteSelected]   = useState<Cliente | null>(null);
@@ -153,11 +154,31 @@ export default function NuevaFacturaPage() {
   // ── Estado Proforma ─────────────────────────────────────────────────────────
   const [proformaId, setProformaId] = useState<string | null>(null);
 
-  // ── Estado UI ───────────────────────────────────────────────────────────────
-  const [submitting, setSubmitting] = useState(false);
-  const [resultado,  setResultado]  = useState<any>(null);
-  const [error,      setError]      = useState("");
-  const [usoJusto,   setUsoJusto]   = useState("");   // mensaje del uso justo (para ofrecer Pro o créditos)
+  // ── Borrador: lo escrito sobrevive a salir de la pantalla o al cierre de la app ──
+  // Con datos de fuera (duplicar, desde proforma) no se ofrece el borrador viejo
+  const [conPrefill] = useState(() =>
+    typeof window !== "undefined" && !!sessionStorage.getItem("kipu:prefill"));
+  const datosBorrador = useMemo(() => ({
+    clienteSelected, esConsumidorFinal, clienteNuevo, items, pagos, propina, cobro, camposAdicionales, proformaId,
+  }), [clienteSelected, esConsumidorFinal, clienteNuevo, items, pagos, propina, cobro, camposAdicionales, proformaId]);
+  const formularioVacio = !clienteSelected && !esConsumidorFinal && !clienteNuevo
+    && camposAdicionales.length === 0
+    && items.every(i => !i.descripcion?.trim() && !i.codigo?.trim() && !i.precio);
+  const borrador = useBorrador("FAC", datosBorrador, { vacio: formularioVacio, desactivado: conPrefill });
+
+  const seguirBorrador = () => {
+    const d = borrador.recuperar();
+    if (!d) return;
+    setClienteSelected(d.clienteSelected ?? null);
+    setEsConsumidorFinal(!!d.esConsumidorFinal);
+    setClienteNuevo(d.clienteNuevo ?? null);
+    if (Array.isArray(d.items) && d.items.length) setItems(d.items);
+    if (Array.isArray(d.pagos) && d.pagos.length) setPagos(d.pagos);
+    setPropina(!!d.propina);
+    if (d.cobro) setCobro(d.cobro);
+    setCamposAdicionales(Array.isArray(d.camposAdicionales) ? d.camposAdicionales : []);
+    setProformaId(d.proformaId ?? null);
+  };
 
   // ── Totales ─────────────────────────────────────────────────────────────────
   const totales = calcTotales(items, propina);
@@ -225,8 +246,7 @@ export default function NuevaFacturaPage() {
   // ── Reset ────────────────────────────────────────────────────────────────────
   const reset = () => {
     pe.reiniciar();
-    idempotencyKey.current = uuidv4();
-    setResultado(null);
+    em.reiniciar();
     setClienteSelected(null);
     setEsConsumidorFinal(false);
     setClienteNuevo(null);
@@ -240,7 +260,6 @@ export default function NuevaFacturaPage() {
     setCobroCreado(null);
     setCamposAdicionales([]);
     setProformaId(null);
-    setError("");
   };
 
   // ── Emitir ───────────────────────────────────────────────────────────────────
@@ -316,8 +335,6 @@ export default function NuevaFacturaPage() {
       return;
     }
 
-    setSubmitting(true);
-
     // Derivar forma_pago_cobro del primer pago
     const formaPagoPrincipal = pagos[0]?.forma_pago ?? "01";
     const formaPagoCobro = FORMA_PAGO_COBRO_MAP[formaPagoPrincipal] ?? "OTRO";
@@ -379,46 +396,16 @@ export default function NuevaFacturaPage() {
       const factura = { ...payload };
       for (const campo of ["estado_cobro", "forma_pago_cobro", "fecha_pago", "numero_comprobante_pago",
                            "link_pago", "proforma_id"]) delete factura[campo];
-      try {
-        const clave = claveParaEnviar(idempotencyKey, "FAC-COBRO", factura);
-        const res = await api.post("/api/v1/app/cobros-en-linea/cobros", factura,
-                                   { headers: { "X-Idempotency-Key": clave } });
-        anotarEnvio(idempotencyKey, "FAC-COBRO");
-        setCobroCreado(res.data.data);
-      } catch (err: unknown) {
-        anotarEnvio(idempotencyKey, "FAC-COBRO", err);
-        // Sin plan, el link cuenta en el uso justo: agotado, mismo aviso con ampliación y Kipu Pro
-        const mensaje = mensajeErrorEmision(err, "No se pudo crear el link de cobro.");
-        setError(mensaje);
-        setUsoJusto(esUsoJusto(err) ? mensaje : "");
-      } finally {
-        setSubmitting(false);
-      }
+      // Sin plan, el link cuenta en el uso justo: agotado, mismo aviso con ampliación
+      const r = await em.enviar<{ data: CobroCreado }>("/api/v1/app/cobros-en-linea/cobros", factura,
+                                                       { tipo: "FAC-COBRO", porDefecto: "No se pudo crear el link de cobro." });
+      if (r) { borrador.borrar(); setCobroCreado(r.data); }
       return;
     }
 
-    try {
-      const res = await api.post(
-        "/api/v1/app/documentos/emit/FAC",
-        payload,
-        {
-          headers: {
-            "X-Idempotency-Key": claveParaEnviar(idempotencyKey, "FAC", payload),
-          },
-        }
-      );
-      anotarEnvio(idempotencyKey, "FAC");
-      setResultado(res.data);
-    } catch (err: any) {
-      // Solo con un rechazo definitivo se usa otra clave; ante timeout, red,
-      // 5xx o 409 se reintenta con la misma (aunque la app se recargue)
-      anotarEnvio(idempotencyKey, "FAC", err);
-      const mensaje = mensajeErrorEmision(err, "Error al emitir la factura.");
-      setError(mensaje);
-      setUsoJusto(esUsoJusto(err) ? mensaje : "");
-    } finally {
-      setSubmitting(false);
-    }
+    const r = await em.enviar("/api/v1/app/documentos/emit/FAC", payload,
+                              { tipo: "FAC", porDefecto: "Error al emitir la factura." });
+    if (r) { borrador.borrar(); setResultado(r); }
   };
 
   // ── Link de cobro creado (la factura se emite cuando pague) ──────────────────
@@ -529,136 +516,117 @@ export default function NuevaFacturaPage() {
   }
 
   // ── Formulario ───────────────────────────────────────────────────────────────
+  // "Emitir cuando pague": el botón crea el link de cobro en vez de la factura
+  const soloLink = cobro.estado === "PENDIENTE" && linkPago && !!pasarela?.conectada && momento === "al_pagar";
+  const puedeEmitir = !!empresa && (empresa.suscripcion_activa || empresa.balance_api > 0 || !!empresa.emision_gratis);
+
   return (
-    <div className="p-4 md:p-6 max-w-4xl mx-auto space-y-6">
+    <EmisionLayout
+      titulo="Nueva factura"
+      subtitulo={<>{empresa?.razon_social} · {empresa?.ambiente === 2 ? "Producción" : "Pruebas"}</>}
+      tiposEmision={["FAC", "FAC-COBRO"]}
+      borrador={borrador.pendiente && {
+        hace: borrador.pendiente.hace, que: "una factura",
+        onSeguir: seguirBorrador, onDescartar: borrador.descartar,
+      }}
+      lateral={<>
+        {/* Punto de emisión — compu (en el celular va arriba del formulario) */}
+        <div className="hidden lg:block">
+          <PuntoEmision {...pe} />
+        </div>
 
-      {/* Header */}
-      <div>
-        <h1 className="text-xl font-bold" style={{ color: "var(--kipu-text)" }}>Nueva Factura</h1>
-        <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>
-          {empresa?.razon_social} · {empresa?.ambiente === 2 ? "Producción" : "Pruebas"}
-        </p>
+        {/* Totales + botón emitir (en el celular el botón está en la barra fija) */}
+        <ResumenTotales
+          serie={pe.serie}
+          totales={totales}
+          submitting={submitting}
+          error={error}
+          aviso={avisoConsumidorFinal}
+          suscripcionActiva={empresa?.suscripcion_activa ?? false}
+          balanceApi={empresa?.balance_api ?? 0}
+          emisionGratis={!!empresa?.emision_gratis && !soloLink}
+          usoJusto={em.esUsoJusto}
+          onEmitir={emitir}
+          textoBoton={soloLink ? "Crear link de cobro" : undefined}
+          conBarraFija
+        />
+      </>}
+      barra={{
+        total:         totales.total,
+        texto:         soloLink ? "Crear link de cobro" : `Emitir${pe.serie ? ` desde ${pe.serie}` : ""}`,
+        onEmitir:      emitir,
+        enviando:      submitting,
+        deshabilitado: !puedeEmitir,
+        error,
+      }}
+    >
+      {/* Punto de emisión — solo celular */}
+      <div className="lg:hidden">
+        <PuntoEmision {...pe} />
       </div>
 
-      {/* Alerta sin suscripción activa ni créditos API (con el plan gratis sí puede emitir) */}
-      {empresa && !empresa.suscripcion_activa && empresa.balance_api === 0 && !empresa.emision_gratis && (
-        <div
-          className="flex items-center gap-2 rounded-lg px-4 py-3"
-          style={{
-            background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
-            border: "1px solid color-mix(in srgb, var(--kipu-danger) 20%, transparent)",
-          }}
-        >
-          <AlertTriangle size={16} className="shrink-0" style={{ color: "var(--kipu-danger)" }} />
-          <p className="text-sm" style={{ color: "var(--kipu-danger)" }}>
-            Sin acceso para emitir.{" "}
-            <SoloWeb><a href="/planes" className="underline">Ver opciones</a></SoloWeb>
-          </p>
-        </div>
-      )}
+      {/* Cliente */}
+      <ClienteSelector
+        clienteSelected={clienteSelected}
+        esConsumidorFinal={esConsumidorFinal}
+        clienteNuevo={clienteNuevo}
+        onSelectCliente={(c) => {
+          setClienteSelected(c);
+          setEsConsumidorFinal(false);
+          setClienteNuevo(null);
+        }}
+        onSelectConsumidorFinal={() => {
+          setClienteSelected(null);
+          setEsConsumidorFinal(true);
+          setClienteNuevo(null);
+        }}
+        onClienteNuevo={(c) => {
+          setClienteNuevo(c);
+          if (c) {
+            setClienteSelected(null);
+            setEsConsumidorFinal(false);
+          }
+        }}
+        onClear={() => {
+          setClienteSelected(null);
+          setEsConsumidorFinal(false);
+        }}
+      />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Items */}
+      <ItemsEditor
+        items={items}
+        onChange={setItems}
+      />
 
-        {/* ── Columna principal ── */}
-        <div className="lg:col-span-2 space-y-6">
+      {/* Pagos mixtos */}
+      <PagosMixtos
+        pagos={pagos}
+        totalFactura={totales.total}
+        propina={propina}
+        onChange={setPagos}
+        onPropinaChange={setPropina}
+      />
 
-          {/* Punto de emisión — solo móvil */}
-          <div className="lg:hidden">
-            <PuntoEmision {...pe} />
-          </div>
+      {/* Estado de cobro */}
+      <EstadoCobro
+        cobro={cobro}
+        onChange={setCobro}
+        linkPago={{
+          pasarela,
+          activo:   linkPago,
+          onChange: setLinkPago,
+          aviso:    avisoLinkPago(pasarela, esConsumidorFinal, clienteSelected?.email || clienteNuevo?.email || ""),
+          momento,
+          onMomento: setMomento,
+        }}
+      />
 
-          {/* Cliente */}
-          <ClienteSelector
-            clienteSelected={clienteSelected}
-            esConsumidorFinal={esConsumidorFinal}
-            clienteNuevo={clienteNuevo}
-            onSelectCliente={(c) => {
-              setClienteSelected(c);
-              setEsConsumidorFinal(false);
-              setClienteNuevo(null);
-            }}
-            onSelectConsumidorFinal={() => {
-              setClienteSelected(null);
-              setEsConsumidorFinal(true);
-              setClienteNuevo(null);
-            }}
-            onClienteNuevo={(c) => {
-              setClienteNuevo(c);
-              if (c) {
-                setClienteSelected(null);
-                setEsConsumidorFinal(false);
-              }
-            }}
-            onClear={() => {
-              setClienteSelected(null);
-              setEsConsumidorFinal(false);
-            }}
-          />
-
-          {/* Items */}
-          <ItemsEditor
-            items={items}
-            onChange={setItems}
-          />
-
-          {/* Pagos mixtos */}
-          <PagosMixtos
-            pagos={pagos}
-            totalFactura={totales.total}
-            propina={propina}
-            onChange={setPagos}
-            onPropinaChange={setPropina}
-          />
-
-          {/* Estado de cobro */}
-          <EstadoCobro
-            cobro={cobro}
-            onChange={setCobro}
-            linkPago={{
-              pasarela,
-              activo:   linkPago,
-              onChange: setLinkPago,
-              aviso:    avisoLinkPago(pasarela, esConsumidorFinal, clienteSelected?.email || clienteNuevo?.email || ""),
-              momento,
-              onMomento: setMomento,
-            }}
-          />
-
-          {/* Campos adicionales */}
-          <CamposAdicionales
-            campos={camposAdicionales}
-            onChange={setCamposAdicionales}
-          />
-
-        </div>
-
-        {/* ── Panel lateral ── */}
-        <div className="space-y-4">
-
-          {/* Punto de emisión — desktop */}
-          <div className="hidden lg:block">
-            <PuntoEmision {...pe} />
-          </div>
-
-          {/* Totales + botón emitir */}
-          <ResumenTotales
-            serie={pe.serie}
-            totales={totales}
-            submitting={submitting}
-            error={error}
-            aviso={avisoConsumidorFinal}
-            suscripcionActiva={empresa?.suscripcion_activa ?? false}
-            balanceApi={empresa?.balance_api ?? 0}
-            emisionGratis={!!empresa?.emision_gratis
-              && !(cobro.estado === "PENDIENTE" && linkPago && pasarela?.conectada && momento === "al_pagar")}
-            usoJusto={!!usoJusto && usoJusto === error}
-            onEmitir={emitir}
-            textoBoton={cobro.estado === "PENDIENTE" && linkPago && pasarela?.conectada && momento === "al_pagar"
-              ? "Crear link de cobro" : undefined}
-          />
-
-        </div>
-      </div>
-    </div>
+      {/* Campos adicionales */}
+      <CamposAdicionales
+        campos={camposAdicionales}
+        onChange={setCamposAdicionales}
+      />
+    </EmisionLayout>
   );
 }

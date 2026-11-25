@@ -73,6 +73,15 @@ function borrarPendiente(tipo: string) {
 }
 
 /**
+ * true si de alguno de estos tipos quedó un envío sin respuesta segura (timeout,
+ * red, app cerrada): la pantalla avisa que revise Documentos antes de enviar otro.
+ * Reenviar el MISMO comprobante es seguro (misma clave); uno distinto, no se sabe.
+ */
+export function hayEmisionSinConfirmar(tipos: string[]): boolean {
+  return tipos.some((t) => leerPendiente(t) !== null);
+}
+
+/**
  * Clave a enviar en X-Idempotency-Key. Si quedó sin confirmar un envío con el mismo
  * contenido (aunque la app se haya recargado), devuelve esa clave para no duplicarlo.
  * `tipo` distingue endpoints: "FAC", "FAC-COBRO", "NCR", "NDB", "LIQ", "RET".

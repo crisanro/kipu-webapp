@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { r2 } from "@/lib/dinero";
-import { Plus, Trash2, AlertTriangle, Info } from "lucide-react";
+import { Plus, Trash2, AlertTriangle, Info, Wallet } from "lucide-react";
+import Seccion from "@/components/ui/Seccion";
 import Hoja from "@/components/ui/Hoja";
 import Boton from "@/components/ui/Boton";
 
@@ -40,6 +41,12 @@ const COD_EFECTIVO: FormaPagoCode = "01";
 const COD_DEFAULT_FINANCIERO: FormaPagoCode = "20"; // fallback cuando se bloquea efectivo
 
 const fmt = (n: number) => r2(n).toFixed(2);
+
+// Nombre corto para el resumen de la sección plegada
+const NOMBRE_CORTO: Record<FormaPagoCode, string> = {
+  "01": "Efectivo", "15": "Compensación", "16": "Débito", "17": "Dinero electrónico",
+  "18": "Prepago", "19": "Crédito", "20": "Transferencia", "21": "Endoso",
+};
 const genId = () => Math.random().toString(36).slice(2);
 
 export const PAGO_INICIAL: PagoItem = {
@@ -120,15 +127,14 @@ export default function PagosMixtos({
 
   const esSaldoValido = saldoRestante >= 0;
 
+  // Plegada se ve la forma (o cuántas); se abre sola si hay algo que revisar
+  const resumen = !esSaldoValido ? "Revisa los montos"
+    : (pagos.length === 1 ? NOMBRE_CORTO[pagos[0].forma_pago] : `${pagos.length} formas`)
+      + (propina ? " · con propina" : "");
+
   return (
-    <div
-      className="rounded-xl p-4 space-y-4"
-      style={{
-        background: "var(--kipu-surface)",
-        border: "1px solid var(--kipu-border)",
-      }}
-    >
-      <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>Forma de pago</h2>
+    <Seccion titulo="Forma de pago" icono={Wallet} resumen={resumen} abierta={efectivoBloqueado || !esSaldoValido}>
+    <div className="space-y-4">
 
       {/* Alerta $500 */}
       {efectivoBloqueado && (
@@ -415,5 +421,6 @@ export default function PagosMixtos({
         </p>
       </Hoja>
     </div>
+    </Seccion>
   );
 }

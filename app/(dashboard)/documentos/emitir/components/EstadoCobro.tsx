@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { CheckCircle2, Clock, CreditCard, AlertTriangle } from "lucide-react";
+import { CheckCircle2, Clock, CreditCard, AlertTriangle, HandCoins } from "lucide-react";
+import Seccion from "@/components/ui/Seccion";
+import { Campo, Entrada } from "@/components/ui/Campo";
 import { hoyEC } from "@/lib/fecha";
 
 // ── Tipos ──────────────────────────────────────────────────────────────────────
@@ -60,17 +62,15 @@ export default function EstadoCobro({ cobro, onChange, linkPago }: Props) {
     });
   };
 
+  // Plegada se ve cómo queda; por cobrar se abre sola (hay que decidir el link)
+  const conLink = !esPagado && !!linkPago?.activo && !!linkPago.pasarela?.conectada;
+  const resumen = esPagado ? "Cobrada"
+    : conLink ? (linkPago?.momento === "al_pagar" ? "Por cobrar · factura al pagar" : "Por cobrar · con link")
+    : "Por cobrar";
+
   return (
-    <div
-      className="rounded-xl p-4 space-y-3"
-      style={{
-        background: "var(--kipu-surface)",
-        border: "1px solid var(--kipu-border)",
-      }}
-    >
-      <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>
-        Estado de cobro
-      </h2>
+    <Seccion titulo="Cobro" icono={HandCoins} resumen={resumen} abierta={!esPagado}>
+    <div className="space-y-3">
 
       {/* Toggle Cobrada / Pendiente */}
       <div
@@ -110,49 +110,15 @@ export default function EstadoCobro({ cobro, onChange, linkPago }: Props) {
 
       {/* Campos de pago — solo cuando está cobrada */}
       {esPagado && (
-        <div className="flex gap-3">
-          {/* Fecha de pago */}
-          <div className="flex-1">
-            <label className="block text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>
-              Fecha de pago
-            </label>
-            <input
-              type="date"
-              value={cobro.fecha_pago}
-              onChange={(e) => onChange({ ...cobro, fecha_pago: e.target.value })}
-              className="w-full px-2.5 py-2 rounded-lg text-sm transition-colors focus:outline-none"
-              style={{
-                background: "var(--kipu-surface)",
-                border: "1px solid var(--kipu-border)",
-                color: "var(--kipu-text)",
-              }}
-              onFocus={(e) => (e.currentTarget.style.borderColor = "var(--kipu-accent)")}
-              onBlur={(e) => (e.currentTarget.style.borderColor = "var(--kipu-border)")}
-            />
-          </div>
-
-          {/* Referencia / comprobante */}
-          <div className="flex-1">
-            <label className="block text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>
-              Referencia <span style={{ color: "var(--kipu-subtle)" }}>(opcional)</span>
-            </label>
-            <input
-              type="text"
-              value={cobro.referencia}
-              inputMode="numeric"
-              onChange={(e) => onChange({ ...cobro, referencia: e.target.value })}
-              placeholder="N° transferencia, recibo..."
-              maxLength={100}
-              className="w-full px-2.5 py-2 rounded-lg text-sm transition-colors focus:outline-none"
-              style={{
-                background: "var(--kipu-surface)",
-                border: "1px solid var(--kipu-border)",
-                color: "var(--kipu-text)",
-              }}
-              onFocus={(e) => (e.currentTarget.style.borderColor = "var(--kipu-accent)")}
-              onBlur={(e) => (e.currentTarget.style.borderColor = "var(--kipu-border)")}
-            />
-          </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Campo etiqueta="Fecha de pago">
+            <Entrada type="date" value={cobro.fecha_pago}
+                     onChange={(e) => onChange({ ...cobro, fecha_pago: e.target.value })} />
+          </Campo>
+          <Campo etiqueta="Referencia" opcional>
+            <Entrada value={cobro.referencia} maxLength={100} placeholder="N° transferencia, recibo…"
+                     onChange={(e) => onChange({ ...cobro, referencia: e.target.value })} />
+          </Campo>
         </div>
       )}
 
@@ -224,5 +190,6 @@ export default function EstadoCobro({ cobro, onChange, linkPago }: Props) {
         </p>
       )}
     </div>
+    </Seccion>
   );
 }
