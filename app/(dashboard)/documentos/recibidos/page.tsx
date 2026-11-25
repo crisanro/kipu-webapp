@@ -1,9 +1,9 @@
 "use client";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { rutas } from "@/lib/rutas";
 import Link from "next/link";
-import api from "@/lib/api";
+import { useLista, useFiltrosUrl } from "@/lib/useLista";
 import { SegmentosDocumentos } from "@/components/shell/BarraPestanas";
 import { hoyEC, inicioMesEC } from "@/lib/fecha";
 import { usePermiso } from "@/hooks/usePermiso";
@@ -312,22 +312,18 @@ export default function FacturasRecibidasPage() {
   const [fechaInicio, setFechaInicio] = useState<string>(tempFechaInicio);
   const [fechaFin, setFechaFin]       = useState<string>(tempFechaFin);
 
-  // Búsqueda remota con debounce
-  const [query, setQuery]             = useState("");
-  const [queryActivo, setQueryActivo] = useState("");
+  // Búsqueda y página en la URL: al volver de un comprobante la lista queda igual
+  const [filtros, cambiarFiltros] = useFiltrosUrl({ q: "", page: "1" });
+  const queryActivo = filtros.q;
+  const page        = Math.max(1, Number(filtros.page) || 1);
+  const irAPagina   = (n: number) => cambiarFiltros({ page: String(n) });
+  const [query, setQuery]             = useState(filtros.q);   // lo que se escribe (se busca 400 ms después)
   const debounceRef                   = useRef<NodeJS.Timeout | null>(null);
 
   // Con Plan Pro, o con el plan gratis encendido (importar recibidas es para todos)
   const tieneSub = useAuthStore((s) => !!(s.empresa?.suscripcion_activa || s.empresa?.emision_gratis));
-  const [docs, setDocs]               = useState<DocRecibido[]>([]);
-  const [resumen, setResumen]         = useState<Resumen | null>(null);
-  const [loading, setLoading]         = useState(true);
   const [expandido, setExpandido]     = useState<string | null>(null);
   const [resumenOpen, setResumenOpen] = useState(false);
-
-  // Paginación
-  const [page, setPage]               = useState(1);
-  const [pagination, setPagination]   = useState<PaginationInfo | null>(null);
 
   const diasRango = fechaInicio && fechaFin
     ? Math.ceil((new Date(fechaFin).getTime() - new Date(fechaInicio).getTime()) / (1000 * 60 * 60 * 24))
@@ -336,40 +332,27 @@ export default function FacturasRecibidasPage() {
   const handleQueryChange = (val: string) => {
     setQuery(val);
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      setPage(1);
-      setQueryActivo(val.trim());
-    }, 400);
+    debounceRef.current = setTimeout(() => cambiarFiltros({ q: val.trim(), page: "1" }), 400);
   };
+  useEffect(() => () => { if (debounceRef.current) clearTimeout(debounceRef.current); }, []);
 
-  const cargar = useCallback(async () => {
-    if (diasRango > 365) return;
-    setLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (fechaInicio) params.append("fecha_inicio", fechaInicio);
-      if (fechaFin)    params.append("fecha_fin",    fechaFin);
-      if (queryActivo) params.append("q",            queryActivo);
-      params.append("page", String(page));
-      params.append("limit", "25");
-
-      const res = await api.get(`/api/v1/app/recibidos?${params}`);
-      setDocs(res.data.data ?? []);
-      setResumen(res.data.resumen ?? null);
-      setPagination(res.data.pagination ?? null);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  }, [fechaInicio, fechaFin, diasRango, page, queryActivo]);
-
-  useEffect(() => {
-    cargar();
-  }, [cargar]);
+  // Lista paginada (25) con su resumen: con caché, al volver aparece al instante
+  // y se actualiza por detrás (lib/useLista.ts)
+  const params = new URLSearchParams();
+  if (fechaInicio) params.append("fecha_inicio", fechaInicio);
+  if (fechaFin)    params.append("fecha_fin",    fechaFin);
+  if (queryActivo) params.append("q",            queryActivo);
+  params.append("page", String(page));
+  params.append("limit", "25");
+  const lista = useLista<{ data?: DocRecibido[]; resumen?: Resumen | null; pagination?: PaginationInfo | null }>(
+    diasRango <= 365 ? `/api/v1/app/recibidos?${params}` : null);
+  const docs       = lista.datos?.data ?? [];
+  const resumen    = lista.datos?.resumen ?? null;
+  const pagination = lista.datos?.pagination ?? null;
+  const loading    = lista.cargando;
 
   const handleBuscar = () => {
-    setPage(1); // Reset a primera página
+    irAPagina(1); // Reset a primera página
     guardarFecha(SS_KEY_INICIO, tempFechaInicio);
     guardarFecha(SS_KEY_FIN, tempFechaFin);
     setFechaInicio(tempFechaInicio);
@@ -397,7 +380,7 @@ export default function FacturasRecibidasPage() {
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={cargar}
+            onClick={() => void lista.recargar()}
             disabled={diasRango > 365}
             className="p-2 rounded-lg transition-colors disabled:opacity-40"
             style={{
@@ -406,7 +389,8 @@ export default function FacturasRecibidasPage() {
               color: "var(--kipu-muted)",
             }}
           >
-            <RefreshCw size={16} />
+            {/* Gira mientras se actualiza por detrás (la lista guardada sigue a la vista) */}
+            <RefreshCw size={16} className={lista.actualizando ? "animate-spin" : undefined} />
           </button>
           <button
             onClick={() => router.push("/documentos/recibidos/nueva")}
@@ -753,7 +737,7 @@ export default function FacturasRecibidasPage() {
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => setPage(p => Math.max(p - 1, 1))}
+              onClick={() => irAPagina(Math.max(page - 1, 1))}
               disabled={!pagination.has_prev || loading}
               className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors disabled:opacity-40"
               style={{
@@ -769,7 +753,7 @@ export default function FacturasRecibidasPage() {
             </span>
             <button
               type="button"
-              onClick={() => setPage(p => Math.min(p + 1, pagination.total_pages))}
+              onClick={() => irAPagina(Math.min(page + 1, pagination.total_pages))}
               disabled={!pagination.has_next || loading}
               className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors disabled:opacity-40"
               style={{

@@ -1,12 +1,12 @@
 "use client";
 import { rutas } from "@/lib/rutas";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSandboxStore } from "@/store/sandbox.store";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { usePermiso } from "@/hooks/usePermiso";
 import SinAcceso from "@/components/SinAcceso";
-import api from "@/lib/api";
+import { useLista, useFiltrosUrl } from "@/lib/useLista";
 import { SegmentosDocumentos } from "@/components/shell/BarraPestanas";
 import { hoyEC, inicioMesEC } from "@/lib/fecha";
 import {
@@ -157,20 +157,17 @@ export default function HistorialPage() {
   const puedeVer = usePermiso("descargar");
   const searchParams = useSearchParams();
 
-  const [documentos,   setDocumentos]   = useState<Documento[]>([]);
-  const [resumen,      setResumen]      = useState<any>(null);
-  const [loading,      setLoading]      = useState(true);
   const [resumenOpen,  setResumenOpen]  = useState(false);
-  // Búsqueda y filtros en el servidor (antes solo filtraban los 25 de la página)
-  const [query,        setQuery]        = useState("");
-  const [queryActivo,  setQueryActivo]  = useState("");
+  // Búsqueda, filtros y página en la URL: al volver de un comprobante la lista
+  // queda igual (lib/useLista.ts). Se buscan en el servidor, en todo el rango.
+  const [filtros, cambiarFiltros] = useFiltrosUrl({ q: "", estado: "TODOS", tipo: "TODOS", page: "1" });
+  const queryActivo  = filtros.q;
+  const filtroEstado = filtros.estado;
+  const filtroTipo   = filtros.tipo;
+  const page         = Math.max(1, Number(filtros.page) || 1);
+  const irAPagina    = (n: number) => cambiarFiltros({ page: String(n) });
+  const [query,        setQuery]        = useState(filtros.q);   // lo que se escribe (se busca 400 ms después)
   const debounceRef                     = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [filtroEstado, setFiltroEstado] = useState("TODOS");
-  const [filtroTipo,   setFiltroTipo]   = useState("TODOS");
-
-  // Paginación
-  const [page, setPage]             = useState(1);
-  const [pagination, setPagination] = useState<PaginationInfo | null>(null);
 
   const { activo: sandboxGlobal } = useSandboxStore();
   const [sandbox, setSandbox]     = useState(sandboxGlobal);
@@ -195,58 +192,41 @@ export default function HistorialPage() {
     ? Math.ceil((new Date(fechaFin).getTime() - new Date(fechaInicio).getTime()) / (1000 * 60 * 60 * 24))
     : 0;
 
-  // Cargar lista paginada (25 elementos por página)
-  const cargar = useCallback(async () => {
-    if (diasRango > 365) return;
-    setLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (fechaInicio) params.append("fecha_inicio", fechaInicio);
-      if (fechaFin)    params.append("fecha_fin",    fechaFin);
-      if (sandbox)     params.append("sandbox",      "true");
-      if (queryActivo) params.append("q",            queryActivo);
-      if (filtroEstado !== "TODOS") params.append("estado_sri", filtroEstado);
-      if (filtroTipo   !== "TODOS") params.append("tipo_doc",   filtroTipo);
-      params.append("page", String(page));
-      params.append("limit", "25");
+  // Lista paginada (25 por página) y resumen fiscal del rango: con caché, al
+  // volver aparecen al instante y se actualizan por detrás (lib/useLista.ts)
+  const paramsFechas = new URLSearchParams();
+  if (fechaInicio) paramsFechas.append("fecha_inicio", fechaInicio);
+  if (fechaFin)    paramsFechas.append("fecha_fin",    fechaFin);
+  const paramsLista = new URLSearchParams(paramsFechas);
+  if (sandbox)     paramsLista.append("sandbox", "true");
+  if (queryActivo) paramsLista.append("q",       queryActivo);
+  if (filtroEstado !== "TODOS") paramsLista.append("estado_sri", filtroEstado);
+  if (filtroTipo   !== "TODOS") paramsLista.append("tipo_doc",   filtroTipo);
+  paramsLista.append("page",  String(page));
+  paramsLista.append("limit", "25");
 
-      const res = await api.get(`/api/v1/app/documentos?${params.toString()}`);
-      setDocumentos(res.data.data ?? []);
-      setPagination(res.data.pagination ?? null);
-    } catch (e) { console.error(e); }
-    finally { setLoading(false); }
-  }, [fechaInicio, fechaFin, diasRango, sandbox, page, queryActivo, filtroEstado, filtroTipo]);
+  const rangoValido = diasRango <= 365;
+  const lista = useLista<{ data?: Documento[]; pagination?: PaginationInfo | null }>(
+    rangoValido ? `/api/v1/app/documentos?${paramsLista.toString()}` : null);
+  const resumenLista = useLista<{ data?: any }>(
+    rangoValido ? `/api/v1/app/documentos/resumen?${paramsFechas.toString()}` : null);
+
+  const documentos = lista.datos?.data ?? [];
+  const pagination = lista.datos?.pagination ?? null;
+  const loading    = lista.cargando;
+  const resumen    = resumenLista.datos?.data ?? null;
+  const recargarTodo = () => { void lista.recargar(); void resumenLista.recargar(); };
 
   const cambiarQuery = (val: string) => {
     setQuery(val);
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      setPage(1);
-      setQueryActivo(val.trim());
-    }, 400);
+    debounceRef.current = setTimeout(() => cambiarFiltros({ q: val.trim(), page: "1" }), 400);
   };
   useEffect(() => () => { if (debounceRef.current) clearTimeout(debounceRef.current); }, []);
 
-  // Cargar resumen fiscal global del rango completo
-  const cargarResumen = useCallback(async () => {
-    if (diasRango > 365) return;
-    try {
-      const params = new URLSearchParams();
-      if (fechaInicio) params.append("fecha_inicio", fechaInicio);
-      if (fechaFin)    params.append("fecha_fin",    fechaFin);
-      const res = await api.get(`/api/v1/app/documentos/resumen?${params.toString()}`);
-      setResumen(res.data.data);
-    } catch (e) { console.error(e); }
-  }, [fechaInicio, fechaFin, diasRango]);
-
-  useEffect(() => {
-    cargar();
-    cargarResumen();
-  }, [cargar, cargarResumen]);
-
   // Manejador del botón "Buscar"
   const handleBuscar = () => {
-    setPage(1); // Reiniciar a la primera página al cambiar fechas
+    irAPagina(1); // Reiniciar a la primera página al cambiar fechas
     guardarFecha(SS_KEY_INICIO, tempFechaInicio);
     guardarFecha(SS_KEY_FIN, tempFechaFin);
     setFechaInicio(tempFechaInicio);
@@ -273,7 +253,7 @@ export default function HistorialPage() {
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => { setPage(1); setSandbox(!sandbox); }}
+            onClick={() => { irAPagina(1); setSandbox(!sandbox); }}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
             style={{
               background: sandbox
@@ -289,7 +269,7 @@ export default function HistorialPage() {
             {sandbox ? "Sandbox" : "Producción"}
           </button>
           <button
-            onClick={() => { cargar(); cargarResumen(); }}
+            onClick={recargarTodo}
             disabled={diasRango > 365}
             className="p-2 rounded-lg transition-colors disabled:opacity-40"
             style={{
@@ -298,7 +278,8 @@ export default function HistorialPage() {
               color: "var(--kipu-muted)",
             }}
           >
-            <RefreshCw size={16} />
+            {/* Gira mientras se actualiza por detrás (la lista guardada sigue a la vista) */}
+            <RefreshCw size={16} className={lista.actualizando || resumenLista.actualizando ? "animate-spin" : undefined} />
           </button>
           <Link
             href="/documentos/emitir/fac"
@@ -484,7 +465,7 @@ export default function HistorialPage() {
             return (
               <button
                 key={estado}
-                onClick={() => { setPage(1); setFiltroEstado(estado); }}
+                onClick={() => cambiarFiltros({ estado, page: "1" })}
                 className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
                 style={{
                   background: isSelected ? "var(--kipu-accent)" : "var(--kipu-surface)",
@@ -503,7 +484,7 @@ export default function HistorialPage() {
             return (
               <button
                 key={tipo}
-                onClick={() => { setPage(1); setFiltroTipo(tipo); }}
+                onClick={() => cambiarFiltros({ tipo, page: "1" })}
                 className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
                 style={{
                   background: isSelected ? "var(--kipu-accent)" : "var(--kipu-surface)",
@@ -693,7 +674,7 @@ export default function HistorialPage() {
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => setPage(p => Math.max(p - 1, 1))}
+              onClick={() => irAPagina(Math.max(page - 1, 1))}
               disabled={!pagination.has_prev || loading}
               className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors disabled:opacity-40"
               style={{
@@ -709,7 +690,7 @@ export default function HistorialPage() {
             </span>
             <button
               type="button"
-              onClick={() => setPage(p => Math.min(p + 1, pagination.total_pages))}
+              onClick={() => irAPagina(Math.min(page + 1, pagination.total_pages))}
               disabled={!pagination.has_next || loading}
               className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors disabled:opacity-40"
               style={{
