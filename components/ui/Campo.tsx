@@ -13,8 +13,8 @@
 
 "use client";
 
-import { createContext, useContext, useId, type ComponentProps, type ReactNode } from "react";
-import { ChevronDown } from "lucide-react";
+import { createContext, useContext, useId, useState, type ComponentProps, type ReactNode } from "react";
+import { ChevronDown, Eye, EyeOff } from "lucide-react";
 import { tecladoIdentificacion } from "@/lib/teclado";
 import { cn } from "./cn";
 
@@ -131,6 +131,35 @@ export function Entrada({
       {input}
       {sufijo && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sutil inline-flex">{sufijo}</span>}
     </div>
+  );
+}
+
+// ── Contraseña ───────────────────────────────────────────────────────────────
+
+/**
+ * Contraseña con el ojo para mostrarla u ocultarla. Pasar `autoComplete`:
+ * "current-password" al ingresar y "new-password" al crearla (así el llavero de
+ * iOS y el gestor de Google la llenan o sugieren una segura).
+ */
+export function EntradaClave(props: Omit<EntradaProps, "teclado" | "sufijo" | "type">) {
+  const [visible, setVisible] = useState(false);
+  return (
+    <Entrada
+      {...props}
+      teclado="clave"
+      type={visible ? "text" : "password"}
+      sufijo={
+        <button
+          type="button"
+          onClick={() => setVisible(v => !v)}
+          aria-label={visible ? "Ocultar la contraseña" : "Mostrar la contraseña"}
+          aria-pressed={visible}
+          className="-mr-2 inline-flex size-8 items-center justify-center rounded-md text-sutil transition-colors hover:text-texto"
+        >
+          {visible ? <EyeOff size={16} aria-hidden /> : <Eye size={16} aria-hidden />}
+        </button>
+      }
+    />
   );
 }
 
