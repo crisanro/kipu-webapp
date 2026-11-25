@@ -1,15 +1,21 @@
 "use client";
 import { rutas } from "@/lib/rutas";
-import { useState, useEffect, useCallback } from "react";
-import Link from "next/link";
+import { useState } from "react";
 import api from "@/lib/api";
 import { SegmentosPersonas } from "@/components/shell/BarraPestanas";
 import { usePermiso } from "@/hooks/usePermiso";
 import SinAcceso from "@/components/SinAcceso";
 import Hoja from "@/components/ui/Hoja";
 import Boton from "@/components/ui/Boton";
+import FilaLista, { GrupoFilas } from "@/components/ui/FilaLista";
+import { EsqueletoFilas } from "@/components/ui/Esqueleto";
+import Vacio from "@/components/ui/Vacio";
+import BotonFlotante from "@/components/ui/BotonFlotante";
+import TirarParaRefrescar from "@/components/ui/TirarParaRefrescar";
+import { Entrada } from "@/components/ui/Campo";
+import { useLista } from "@/lib/useLista";
 import {
-  Search, Plus, Users, X,
+  Search, Plus, Users,
   ChevronDown, Save, AlertCircle, Check, Loader2
 } from "lucide-react";
 import { lookupIdentificacion } from "@/lib/identificacion-lookup";
@@ -115,8 +121,6 @@ export default function PersonasPage() {
 // Separado del chequeo de permiso: los hooks se llaman siempre en el mismo orden
 // aunque el permiso cambie con la página abierta (antes React lanzaba un error).
 function PersonasContenido() {
-  const [personas,  setPersonas]  = useState<Persona[]>([]);
-  const [loading,   setLoading]   = useState(true);
   const [query,     setQuery]     = useState("");
   const [showModal, setShowModal] = useState(false);
   const [form,      setForm]      = useState(EMPTY_FORM);
@@ -139,19 +143,11 @@ function PersonasContenido() {
     valId.ok &&
     !lookupLoading;
 
-  const cargar = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await api.get("/api/v1/app/clientes");
-      setPersonas(res.data.data ?? res.data ?? []);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { cargar(); }, [cargar]);
+  // Con caché: al volver de una persona la lista aparece al instante (lib/useLista.ts)
+  const lista    = useLista<{ data?: Persona[] } | Persona[]>("/api/v1/app/clientes");
+  const personas: Persona[] = Array.isArray(lista.datos) ? lista.datos : lista.datos?.data ?? [];
+  const loading  = lista.cargando;
+  const cargar   = lista.recargar;
 
   const filtrados = personas.filter((c) =>
     !query ||
@@ -220,125 +216,59 @@ function PersonasContenido() {
   return (
     <div className="p-4 md:p-6">
       <SegmentosPersonas />
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6 mt-4 lg:mt-0">
+      {/* Encabezado: en el celular el título ya está en la barra superior */}
+      <div className="mb-4 mt-4 hidden items-center justify-between lg:mt-0 lg:flex">
         <div>
-          <h1 className="text-xl font-bold" style={{ color: "var(--kipu-text)" }}>Personas</h1>
-          <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>{personas.length} registradas</p>
+          <h1 className="text-xl font-bold text-texto">Personas</h1>
+          <p className="text-sm text-sutil">{personas.length} registradas</p>
         </div>
-        <button
-          type="button"
-          onClick={abrirModal}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors"
-          style={{ background: "var(--kipu-accent)" }}
-          onMouseEnter={e => e.currentTarget.style.background = "var(--kipu-accent-h)"}
-          onMouseLeave={e => e.currentTarget.style.background = "var(--kipu-accent)"}
-        >
-          <Plus size={15} />
-          Nueva persona
-        </button>
+        <Boton onClick={abrirModal} icono={<Plus size={16} />}>Nueva persona</Boton>
       </div>
 
-      {/* Buscador */}
-      <div className="relative mb-4">
-        <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--kipu-subtle)" }} />
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Buscar por nombre, RUC, cédula o email..."
-          className="w-full pl-9 pr-8 py-2.5 rounded-lg text-sm transition-colors focus:outline-none"
-          style={{
-            background: "var(--kipu-surface)",
-            border: "1px solid var(--kipu-border)",
-            color: "var(--kipu-text)",
-          }}
-          onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-          onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
-        />
-        {query && (
-          <button
-            type="button"
-            onClick={() => setQuery("")}
-            className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors"
-            style={{ color: "var(--kipu-subtle)" }}
-            onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
-            onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-subtle)"}
-          >
-            <X size={14} />
-          </button>
-        )}
-      </div>
+      <Entrada
+        teclado="buscar"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Buscar por nombre, RUC, cédula o email…"
+        aria-label="Buscar personas"
+        prefijo={<Search size={16} />}
+        className="mb-4 mt-4 lg:mt-0"
+      />
 
       {/* Lista */}
       {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <div
-            className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin"
-            style={{ borderColor: "var(--kipu-accent)", borderTopColor: "transparent" }}
-          />
-        </div>
+        <EsqueletoFilas filas={8} />
       ) : filtrados.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <Users size={40} className="mb-3" style={{ color: "var(--kipu-subtle)" }} />
-          <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>
-            {query ? "No hay personas que coincidan." : "Aún no tienes personas registradas."}
-          </p>
-          {!query && (
-            <button
-              type="button"
-              onClick={abrirModal}
-              className="mt-4 px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors"
-              style={{ background: "var(--kipu-accent)" }}
-              onMouseEnter={e => e.currentTarget.style.background = "var(--kipu-accent-h)"}
-              onMouseLeave={e => e.currentTarget.style.background = "var(--kipu-accent)"}
-            >
-              Agregar primera persona
-            </button>
-          )}
-        </div>
+        query ? (
+          <Vacio icono={Search} titulo="Nadie coincide con la búsqueda" descripcion="Prueba con otro nombre o número." />
+        ) : (
+          <Vacio icono={Users} titulo="Aún no tienes personas registradas"
+                 descripcion="Tus clientes y proveedores aparecen aquí al facturarles o al agregarlos."
+                 accion={<Boton onClick={abrirModal} icono={<Plus size={16} />}>Agregar persona</Boton>} />
+        )
       ) : (
-        <div
-          className="rounded-xl overflow-hidden"
-          style={{
-            background: "var(--kipu-surface)",
-            border: "1px solid var(--kipu-border)",
-          }}
-        >
-          <div>
-            {filtrados.map((c, idx) => (
-              <Link
+        <TirarParaRefrescar alRefrescar={cargar}>
+          <GrupoFilas>
+            {filtrados.map((c) => (
+              <FilaLista
                 key={c.uid}
                 href={rutas.persona(c.uid)}
-                className="flex items-center gap-3 px-4 py-3 transition-colors"
-                style={{
-                  borderTop: idx > 0 ? "1px solid var(--kipu-border)" : "none",
-                }}
-                onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 4%, transparent)"}
-                onMouseLeave={e => e.currentTarget.style.background = "transparent"}
-              >
-                <div
-                  className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
-                  style={{ background: "color-mix(in srgb, var(--kipu-accent) 20%, transparent)" }}
-                >
-                  <span className="text-sm font-bold" style={{ color: "var(--kipu-accent)" }}>
+                inicio={
+                  <span className="inline-flex size-10 items-center justify-center rounded-full bg-acento-suave text-sm font-bold text-acento">
                     {c.razon_social?.[0] ?? "?"}
                   </span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate" style={{ color: "var(--kipu-text)" }}>{c.razon_social}</p>
-                  <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
-                    {TIPO_ID.find(t => t.value === c.tipo_identificacion_sri)?.label ?? "ID"}: {c.identificacion}
-                    {c.email && ` · ${c.email}`}
-                  </p>
-                </div>
-                {c.telefono && (
-                  <span className="text-xs hidden md:block" style={{ color: "var(--kipu-subtle)" }}>{c.telefono}</span>
-                )}
-              </Link>
+                }
+                titulo={c.razon_social}
+                subtitulo={`${TIPO_ID.find(t => t.value === c.tipo_identificacion_sri)?.label ?? "ID"}: ${c.identificacion}`}
+                detalle={c.email || c.telefono || undefined}
+              />
             ))}
-          </div>
-        </div>
+          </GrupoFilas>
+        </TirarParaRefrescar>
       )}
+
+      {/* Celular: agregar una persona */}
+      <BotonFlotante onClick={abrirModal} etiqueta="Nueva persona" />
 
       {/* Nueva persona: Hoja (en el celular sube desde abajo, con los botones fijos abajo) */}
       <Hoja

@@ -3,17 +3,26 @@ import { rutas } from "@/lib/rutas";
 import { useState, useEffect, useRef } from "react";
 import { useSandboxStore } from "@/store/sandbox.store";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { usePermiso } from "@/hooks/usePermiso";
 import SinAcceso from "@/components/SinAcceso";
 import { useLista, useFiltrosUrl } from "@/lib/useLista";
 import { SegmentosDocumentos } from "@/components/shell/BarraPestanas";
 import { hoyEC, inicioMesEC } from "@/lib/fecha";
 import {
-  Search, Plus, FileText, CheckCircle2, Clock,
-  XCircle, AlertTriangle, RefreshCw, ChevronDown, ChevronUp,
-  TrendingUp, FlaskConical, Ban, ChevronLeft, ChevronRight
+  Search, Plus, FileText, RefreshCw, ChevronDown, ChevronUp,
+  TrendingUp, FlaskConical, ChevronLeft, ChevronRight
 } from "lucide-react";
+import FilaLista, { GrupoFilas } from "@/components/ui/FilaLista";
+import { InsigniaSri, InsigniaCobro } from "@/components/ui/InsigniaEstado";
+import { EsqueletoFilas } from "@/components/ui/Esqueleto";
+import Vacio from "@/components/ui/Vacio";
+import ChipsFiltro from "@/components/ui/ChipsFiltro";
+import PeriodoFechas, { etiquetaPeriodo } from "@/components/ui/PeriodoFechas";
+import TirarParaRefrescar from "@/components/ui/TirarParaRefrescar";
+import { Entrada } from "@/components/ui/Campo";
+import { clasesBoton } from "@/components/ui/Boton";
+import { ESTADOS_SRI, TIPOS_COMPROBANTE, tipoComprobante } from "@/lib/estados";
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 interface Documento {
@@ -39,35 +48,14 @@ interface PaginationInfo {
   has_prev:    boolean;
 }
 
-// ── Configs ───────────────────────────────────────────────────────────────────
-const ESTADO_CONFIG: Record<string, { label: string; color: string; bg: string; icon: any }> = {
-  AUTORIZADO: { label: "Autorizado", color: "var(--kipu-success)", bg: "color-mix(in srgb, var(--kipu-success) 10%, transparent)", icon: CheckCircle2 },
-  RECIBIDA:   { label: "En proceso", color: "var(--kipu-info)", bg: "color-mix(in srgb, var(--kipu-info) 10%, transparent)", icon: Clock },
-  EN_REVISION:{ label: "En revisión", color: "var(--kipu-info)", bg: "color-mix(in srgb, var(--kipu-info) 10%, transparent)", icon: Clock },
-  POR_FIRMAR: { label: "Firmando",   color: "var(--kipu-info)", bg: "color-mix(in srgb, var(--kipu-info) 10%, transparent)", icon: Clock },
-  FIRMADO:    { label: "En cola",    color: "var(--kipu-info)", bg: "color-mix(in srgb, var(--kipu-info) 10%, transparent)", icon: Clock },
-  ERROR_FIRMA:{ label: "Error de firma", color: "var(--kipu-danger)", bg: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)", icon: AlertTriangle },
-  DEVUELTA:   { label: "Devuelto",   color: "var(--kipu-warning)", bg: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)", icon: AlertTriangle },
-  RECHAZADO:  { label: "Rechazado",  color: "var(--kipu-danger)", bg: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)", icon: XCircle },
-  ANULADO:    { label: "Anulado",    color: "var(--kipu-muted)", bg: "color-mix(in srgb, var(--kipu-muted) 10%, transparent)", icon: Ban },
-  PENDIENTE:  { label: "Pendiente",  color: "var(--kipu-subtle)", bg: "color-mix(in srgb, var(--kipu-subtle) 10%, transparent)", icon: Clock },
-  SANDBOX:    { label: "Prueba",     color: "#22d3ee", bg: "color-mix(in srgb, #22d3ee 10%, transparent)", icon: FlaskConical },
-};
+// Chips de filtro (las etiquetas salen de lib/estados.ts)
+const ESTADOS_FILTRO = ["TODOS", "AUTORIZADO", "RECIBIDA", "DEVUELTA", "RECHAZADO", "ANULADO"]
+  .map(v => ({ valor: v, etiqueta: v === "TODOS" ? "Todos" : ESTADOS_SRI[v]?.etiqueta ?? v }));
+const TIPOS_FILTRO = ["TODOS", "FAC", "NCR", "NDB", "RET", "LIQ"]
+  .map(v => ({ valor: v, etiqueta: v === "TODOS" ? "Todos los tipos" : TIPOS_COMPROBANTE[v]?.etiqueta ?? v }));
 
-const TIPO_COMPROBANTE: Record<string, { label: string; color: string; bg: string }> = {
-  FAC: { label: "Factura",          color: "var(--kipu-muted)", bg: "color-mix(in srgb, var(--kipu-muted) 10%, transparent)" },
-  NCR: { label: "Nota de Crédito",  color: "var(--kipu-muted)", bg: "color-mix(in srgb, var(--kipu-muted) 10%, transparent)" },
-  NDB: { label: "Nota de Débito",   color: "#fb923c", bg: "color-mix(in srgb, #fb923c 10%, transparent)" },
-  RET: { label: "Retención",        color: "#facc15", bg: "color-mix(in srgb, #facc15 10%, transparent)" },
-  LIQ: { label: "Liquidación",      color: "#22d3ee", bg: "color-mix(in srgb, #22d3ee 10%, transparent)" },
-};
-
-const COBRO_CONFIG: Record<string, { label: string; color: string }> = {
-  PENDIENTE: { label: "Por cobrar", color: "var(--kipu-warning)" },
-  PAGADO:    { label: "Cobrado",    color: "var(--kipu-success)" },
-  PARCIAL:   { label: "Parcial",    color: "var(--kipu-info)" },
-  ANULADO:   { label: "Anulado",    color: "var(--kipu-danger)" },
-};
+// Estos tipos llevan estado de cobro
+const CON_COBRO = ["FAC", "LIQ", "NDB"];
 
 const fmt = (n: any) => parseFloat(n ?? 0).toFixed(2);
 
@@ -155,6 +143,7 @@ function ResumenTipoCard({ tipo, label, color, data }: {
 // ── Página ─────────────────────────────────────────────────────────────────────
 export default function HistorialPage() {
   const puedeVer = usePermiso("descargar");
+  const router = useRouter();
   const searchParams = useSearchParams();
 
   const [resumenOpen,  setResumenOpen]  = useState(false);
@@ -172,19 +161,11 @@ export default function HistorialPage() {
   const { activo: sandboxGlobal } = useSandboxStore();
   const [sandbox, setSandbox]     = useState(sandboxGlobal);
 
-  // Estados temporales de inputs de fecha
-  const [tempFechaInicio, setTempFechaInicio] = useState<string>(() => {
-    const fromUrl = searchParams.get("fecha_inicio");
-    return fromUrl || leerFecha(SS_KEY_INICIO, inicioMesEC());
-  });
-  const [tempFechaFin, setTempFechaFin] = useState<string>(() => {
-    const fromUrl = searchParams.get("fecha_fin");
-    return fromUrl || leerFecha(SS_KEY_FIN, hoyEC());
-  });
-
-  // Fechas activas para peticiones HTTP
-  const [fechaInicio, setFechaInicio] = useState<string>(tempFechaInicio);
-  const [fechaFin, setFechaFin]       = useState<string>(tempFechaFin);
+  // Período: el de la URL (?fecha_inicio=), el de la sesión o el mes en curso
+  const [fechaInicio, setFechaInicio] = useState<string>(() =>
+    searchParams.get("fecha_inicio") || leerFecha(SS_KEY_INICIO, inicioMesEC()));
+  const [fechaFin, setFechaFin] = useState<string>(() =>
+    searchParams.get("fecha_fin") || leerFecha(SS_KEY_FIN, hoyEC()));
 
   useEffect(() => { setSandbox(sandboxGlobal); }, [sandboxGlobal]);
 
@@ -215,7 +196,7 @@ export default function HistorialPage() {
   const pagination = lista.datos?.pagination ?? null;
   const loading    = lista.cargando;
   const resumen    = resumenLista.datos?.data ?? null;
-  const recargarTodo = () => { void lista.recargar(); void resumenLista.recargar(); };
+  const recargarTodo = () => Promise.all([lista.recargar(), resumenLista.recargar()]);
 
   const cambiarQuery = (val: string) => {
     setQuery(val);
@@ -224,13 +205,13 @@ export default function HistorialPage() {
   };
   useEffect(() => () => { if (debounceRef.current) clearTimeout(debounceRef.current); }, []);
 
-  // Manejador del botón "Buscar"
-  const handleBuscar = () => {
-    irAPagina(1); // Reiniciar a la primera página al cambiar fechas
-    guardarFecha(SS_KEY_INICIO, tempFechaInicio);
-    guardarFecha(SS_KEY_FIN, tempFechaFin);
-    setFechaInicio(tempFechaInicio);
-    setFechaFin(tempFechaFin);
+  // Nuevo período (PeriodoFechas): se recuerda en la sesión y vuelve a la página 1
+  const cambiarPeriodo = (inicio: string, fin: string) => {
+    guardarFecha(SS_KEY_INICIO, inicio);
+    guardarFecha(SS_KEY_FIN, fin);
+    setFechaInicio(inicio);
+    setFechaFin(fin);
+    irAPagina(1);
   };
 
   if (!puedeVer) return <SinAcceso />;
@@ -243,109 +224,50 @@ export default function HistorialPage() {
   return (
     <div className="p-4 md:p-6 space-y-4">
       <SegmentosDocumentos />
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold" style={{ color: "var(--kipu-text)" }}>Comprobantes Emitidos</h1>
-          <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>
+      {/* Encabezado: en el celular el título ya está en la barra superior */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="mr-auto hidden lg:block">
+          <h1 className="text-xl font-bold text-texto">Comprobantes emitidos</h1>
+          <p className="text-sm text-sutil">
             {pagination ? `${pagination.total_items} comprobantes encontrados` : `${documentos.length} comprobantes`}
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => { irAPagina(1); setSandbox(!sandbox); }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
-            style={{
-              background: sandbox
-                ? "color-mix(in srgb, #22d3ee 20%, transparent)"
-                : "var(--kipu-surface)",
-              color: sandbox ? "#22d3ee" : "var(--kipu-muted)",
-              border: sandbox
-                ? "1px solid color-mix(in srgb, #22d3ee 30%, transparent)"
-                : "1px solid var(--kipu-border)",
-            }}
-          >
-            <FlaskConical size={14} />
-            {sandbox ? "Sandbox" : "Producción"}
-          </button>
-          <button
-            onClick={recargarTodo}
-            disabled={diasRango > 365}
-            className="p-2 rounded-lg transition-colors disabled:opacity-40"
-            style={{
-              background: "var(--kipu-surface)",
-              border: "1px solid var(--kipu-border)",
-              color: "var(--kipu-muted)",
-            }}
-          >
-            {/* Gira mientras se actualiza por detrás (la lista guardada sigue a la vista) */}
-            <RefreshCw size={16} className={lista.actualizando || resumenLista.actualizando ? "animate-spin" : undefined} />
-          </button>
-          <Link
-            href="/documentos/emitir/fac"
-            className="flex items-center gap-2 px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors"
-            style={{ background: "var(--kipu-accent)" }}
-          >
-            <Plus size={15} /> Nueva
-          </Link>
-        </div>
+        <PeriodoFechas inicio={fechaInicio} fin={fechaFin} onCambio={cambiarPeriodo} className="mr-auto lg:mr-0" />
+        <button
+          onClick={() => { irAPagina(1); setSandbox(!sandbox); }}
+          aria-pressed={sandbox}
+          className={`inline-flex h-9 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors tactil:h-10 ${
+            sandbox ? "border-sandbox/30 bg-sandbox-suave text-sandbox" : "border-borde bg-superficie text-tenue"}`}
+        >
+          <FlaskConical size={14} aria-hidden />
+          {sandbox ? "Sandbox" : "Producción"}
+        </button>
+        <button
+          onClick={() => void recargarTodo()}
+          disabled={diasRango > 365}
+          aria-label="Actualizar"
+          title="Actualizar"
+          className="inline-flex size-9 items-center justify-center rounded-full border border-borde bg-superficie text-tenue transition-colors hover:text-texto disabled:opacity-40 tactil:size-10"
+        >
+          {/* Gira mientras se actualiza por detrás (la lista guardada sigue a la vista) */}
+          <RefreshCw size={16} className={lista.actualizando || resumenLista.actualizando ? "animate-spin" : undefined} />
+        </button>
+        <Link href="/documentos/emitir/fac" className={`${clasesBoton("principal", "md")} hidden lg:inline-flex`}>
+          <Plus size={16} aria-hidden /> Nueva
+        </Link>
       </div>
 
-      {/* Búsqueda y Rango de Fechas con Botón Buscar */}
-      <div className="flex flex-col md:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--kipu-subtle)" }} />
-          <input
-            type="search"
-            enterKeyHint="search"
-            value={query}
-            onChange={e => cambiarQuery(e.target.value)}
-            placeholder="Buscar por cliente, RUC o número..."
-            className="w-full pl-9 pr-4 py-2.5 rounded-lg text-sm transition-colors focus:outline-none"
-            style={{
-              background: "var(--kipu-surface)",
-              border: "1px solid var(--kipu-border)",
-              color: "var(--kipu-text)",
-            }}
-          />
-        </div>
-        <div className="flex gap-2 items-center shrink-0">
-          <input
-            type="date"
-            value={tempFechaInicio}
-            onChange={e => setTempFechaInicio(e.target.value)}
-            className="px-3 py-2 rounded-lg text-sm focus:outline-none transition-colors"
-            style={{
-              background: "var(--kipu-surface)",
-              border: "1px solid var(--kipu-border)",
-              color: "var(--kipu-text)",
-            }}
-          />
-          <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>—</span>
-          <input
-            type="date"
-            value={tempFechaFin}
-            onChange={e => setTempFechaFin(e.target.value)}
-            className="px-3 py-2 rounded-lg text-sm focus:outline-none transition-colors"
-            style={{
-              background: "var(--kipu-surface)",
-              border: "1px solid var(--kipu-border)",
-              color: "var(--kipu-text)",
-            }}
-          />
-          <button
-            type="button"
-            onClick={handleBuscar}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold text-white transition-colors"
-            style={{ background: "var(--kipu-accent)" }}
-          >
-            <Search size={13} /> Buscar
-          </button>
-        </div>
-      </div>
+      <Entrada
+        teclado="buscar"
+        value={query}
+        onChange={e => cambiarQuery(e.target.value)}
+        placeholder="Buscar por cliente, RUC o número…"
+        aria-label="Buscar comprobantes"
+        prefijo={<Search size={16} />}
+      />
 
       {diasRango > 365 && (
-        <p className="text-xs font-medium" style={{ color: "var(--kipu-warning)" }}>
+        <p className="text-xs font-medium text-alerta-texto">
           El rango máximo de consulta es de 365 días (1 año).
         </p>
       )}
@@ -457,205 +379,97 @@ export default function HistorialPage() {
         </div>
       )}
 
-      {/* Filtros por estado y tipo */}
+      {/* Filtros: una fila por filtro, que se desliza de lado en el celular */}
       <div className="space-y-2">
-        <div className="flex gap-2 flex-wrap">
-          {["TODOS", "AUTORIZADO", "RECIBIDA", "DEVUELTA", "RECHAZADO", "ANULADO"].map(estado => {
-            const isSelected = filtroEstado === estado;
-            return (
-              <button
-                key={estado}
-                onClick={() => cambiarFiltros({ estado, page: "1" })}
-                className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
-                style={{
-                  background: isSelected ? "var(--kipu-accent)" : "var(--kipu-surface)",
-                  color: isSelected ? "#FFFFFF" : "var(--kipu-muted)",
-                  border: isSelected ? "1px solid var(--kipu-accent)" : "1px solid var(--kipu-border)",
-                }}
-              >
-                {estado === "TODOS" ? "Todos" : ESTADO_CONFIG[estado]?.label ?? estado}
-              </button>
-            );
-          })}
-        </div>
-        <div className="flex gap-2 flex-wrap">
-          {["TODOS", "FAC", "NCR", "NDB", "RET", "LIQ"].map(tipo => {
-            const isSelected = filtroTipo === tipo;
-            return (
-              <button
-                key={tipo}
-                onClick={() => cambiarFiltros({ tipo, page: "1" })}
-                className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
-                style={{
-                  background: isSelected ? "var(--kipu-accent)" : "var(--kipu-surface)",
-                  color: isSelected ? "#FFFFFF" : "var(--kipu-muted)",
-                  border: isSelected ? "1px solid var(--kipu-accent)" : "1px solid var(--kipu-border)",
-                }}
-              >
-                {tipo === "TODOS" ? "Todos los tipos" : TIPO_COMPROBANTE[tipo]?.label ?? tipo}
-              </button>
-            );
-          })}
-        </div>
+        <ChipsFiltro etiqueta="Estado" opciones={ESTADOS_FILTRO} valor={filtroEstado}
+                     onCambio={estado => cambiarFiltros({ estado, page: "1" })} />
+        <ChipsFiltro etiqueta="Tipo de comprobante" opciones={TIPOS_FILTRO} valor={filtroTipo}
+                     onCambio={tipo => cambiarFiltros({ tipo, page: "1" })} />
       </div>
 
       {/* Lista */}
       {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <div
-            className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin"
-            style={{ borderColor: "var(--kipu-accent)", borderTopColor: "transparent" }}
-          />
-        </div>
+        <EsqueletoFilas filas={8} />
       ) : documentos.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <FileText size={40} className="mb-3" style={{ color: "var(--kipu-subtle)" }} />
-          <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>
-            {queryActivo || filtroEstado !== "TODOS" || filtroTipo !== "TODOS"
-              ? "No hay comprobantes que coincidan con la búsqueda en este rango de fechas."
-              : `Sin comprobantes de ${sandbox ? "prueba (Sandbox)" : "producción"} en este rango.`}
-          </p>
-        </div>
+        queryActivo || filtroEstado !== "TODOS" || filtroTipo !== "TODOS" ? (
+          <Vacio icono={Search} titulo="Nada coincide con la búsqueda"
+                 descripcion="Prueba con otro texto, otro filtro u otro período." />
+        ) : (
+          <Vacio icono={FileText}
+                 titulo={`Sin comprobantes de ${sandbox ? "prueba" : "producción"} en este período`}
+                 descripcion="Prueba con otro período o emite tu primera factura."
+                 accion={<Link href="/documentos/emitir/fac" className={clasesBoton()}><Plus size={16} aria-hidden /> Emitir factura</Link>} />
+        )
       ) : (
-        <div
-          className="rounded-xl overflow-hidden space-y-0"
-          style={{
-            background: "var(--kipu-surface)",
-            border: "1px solid var(--kipu-border)",
-          }}
-        >
-          {/* Vista Escritorio */}
-          <div className="hidden md:block overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr
-                  className="text-xs"
-                  style={{
-                    color: "var(--kipu-subtle)",
-                    borderBottom: "2px solid var(--kipu-border)",
-                  }}
-                >
-                  <th className="text-left px-4 py-3 font-medium">Número</th>
-                  <th className="text-left px-4 py-3 font-medium">Tipo</th>
-                  <th className="text-left px-4 py-3 font-medium">Cliente</th>
-                  <th className="text-left px-4 py-3 font-medium">Fecha</th>
-                  <th className="text-left px-4 py-3 font-medium">Estado</th>
-                  <th className="text-left px-4 py-3 font-medium">Cobro</th>
-                  <th className="text-right px-4 py-3 font-medium">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {documentos.map((d, index) => {
-                  const estado = ESTADO_CONFIG[d.estado_sri] ?? ESTADO_CONFIG.PENDIENTE;
-                  const tipo   = TIPO_COMPROBANTE[d.tipo_doc] ?? TIPO_COMPROBANTE.FAC;
-                  const cobro  = d.estado_cobro ? COBRO_CONFIG[d.estado_cobro] : null;
-                  const Icon   = estado.icon;
-                  return (
+        <>
+          {/* Escritorio: tabla; se abre tocando cualquier parte de la fila */}
+          <div className="hidden overflow-hidden rounded-xl border border-borde bg-superficie md:block">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b-2 border-borde text-xs text-sutil">
+                    <th className="px-4 py-3 text-left font-medium">Número</th>
+                    <th className="px-4 py-3 text-left font-medium">Tipo</th>
+                    <th className="px-4 py-3 text-left font-medium">Cliente</th>
+                    <th className="px-4 py-3 text-left font-medium">Fecha</th>
+                    <th className="px-4 py-3 text-left font-medium">Estado</th>
+                    <th className="px-4 py-3 text-left font-medium">Cobro</th>
+                    <th className="px-4 py-3 text-right font-medium">Total</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-borde">
+                  {documentos.map(d => (
                     <tr
                       key={d.id}
-                      className="transition-colors"
-                      style={{
-                        borderTop: index > 0 ? "1px solid var(--kipu-border)" : "none",
-                      }}
-                      onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 4%, transparent)"}
-                      onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                      onClick={() => router.push(rutas.documento(d.id))}
+                      className={`cursor-pointer transition-colors hover:bg-presionado ${d.estado_sri === "ANULADO" ? "opacity-60" : ""}`}
                     >
                       <td className="px-4 py-3">
-                        <Link
-                          href={rutas.documento(d.id)}
-                          className="font-mono text-xs transition-colors hover:underline underline-offset-2"
-                          style={{ color: "var(--kipu-accent)" }}
-                        >
+                        <Link href={rutas.documento(d.id)} onClick={e => e.stopPropagation()}
+                              className="font-mono text-xs text-acento underline-offset-2 hover:underline">
                           {d.numero_doc ?? "—"}
                         </Link>
                       </td>
+                      <td className="px-4 py-3 text-xs text-tenue">{tipoComprobante(d.tipo_doc).etiqueta}</td>
                       <td className="px-4 py-3">
-                        <span
-                          className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
-                          style={{ color: tipo.color, background: tipo.bg }}
-                        >
-                          {tipo.label}
-                        </span>
+                        <p className="max-w-[220px] truncate font-medium text-texto">{d.razon_social}</p>
+                        <p className="text-xs text-sutil">{d.identificacion}</p>
                       </td>
+                      <td className="px-4 py-3 text-xs text-tenue">{d.fecha_emision}</td>
+                      <td className="px-4 py-3"><InsigniaSri estado={d.estado_sri} /></td>
                       <td className="px-4 py-3">
-                        <p className="font-medium truncate max-w-[160px]" style={{ color: "var(--kipu-text)" }}>{d.razon_social}</p>
-                        <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>{d.identificacion}</p>
+                        {CON_COBRO.includes(d.tipo_doc) && <InsigniaCobro estado={d.estado_cobro} />}
                       </td>
-                      <td className="px-4 py-3 text-xs" style={{ color: "var(--kipu-muted)" }}>{d.fecha_emision}</td>
-                      <td className="px-4 py-3">
-                        <span
-                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium"
-                          style={{ color: estado.color, background: estado.bg }}
-                        >
-                          <Icon size={11} />
-                          {estado.label}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        {cobro && ["FAC", "LIQ", "NDB"].includes(d.tipo_doc) && (
-                          <span className="text-xs font-medium" style={{ color: cobro.color }}>
-                            {cobro.label}
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-right font-semibold" style={{ color: "var(--kipu-text)" }}>
-                        ${fmt(d.importe_total)}
-                      </td>
+                      <td className="px-4 py-3 text-right font-semibold tabular-nums text-texto">${fmt(d.importe_total)}</td>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
 
-          {/* Vista Móvil */}
-          <div className="md:hidden">
-            {documentos.map((d, index) => {
-              const estado = ESTADO_CONFIG[d.estado_sri] ?? ESTADO_CONFIG.PENDIENTE;
-              const tipo   = TIPO_COMPROBANTE[d.tipo_doc] ?? TIPO_COMPROBANTE.FAC;
-              const Icon   = estado.icon;
-              return (
-                <div
+          {/* Celular: filas que se tocan enteras; deslizar hacia abajo actualiza */}
+          <TirarParaRefrescar alRefrescar={recargarTodo} className="md:hidden">
+            <GrupoFilas>
+              {documentos.map(d => (
+                <FilaLista
                   key={d.id}
-                  className="px-4 py-3 space-y-1.5"
-                  style={{
-                    borderTop: index > 0 ? "1px solid var(--kipu-border)" : "none",
-                  }}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <Link
-                      href={rutas.documento(d.id)}
-                      className="font-mono text-xs transition-colors"
-                      style={{ color: "var(--kipu-accent)" }}
-                    >
-                      {d.numero_doc ?? "—"}
-                    </Link>
-                    <div className="flex items-center gap-1.5">
-                      <span
-                        className="px-1.5 py-0.5 rounded text-[10px] font-medium"
-                        style={{ color: tipo.color, background: tipo.bg }}
-                      >
-                        {tipo.label}
-                      </span>
-                      <span
-                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium"
-                        style={{ color: estado.color, background: estado.bg }}
-                      >
-                        <Icon size={10} />
-                        {estado.label}
-                      </span>
-                    </div>
-                  </div>
-                  <p className="text-sm font-medium" style={{ color: "var(--kipu-text)" }}>{d.razon_social}</p>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>{d.fecha_emision}</span>
-                    <span className="text-sm font-bold" style={{ color: "var(--kipu-text)" }}>${fmt(d.importe_total)}</span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+                  href={rutas.documento(d.id)}
+                  titulo={d.razon_social || "Consumidor final"}
+                  subtitulo={`${tipoComprobante(d.tipo_doc).corta} ${d.numero_doc ?? ""} · ${etiquetaPeriodo(d.fecha_emision, d.fecha_emision)}`}
+                  fin={`$${fmt(d.importe_total)}`}
+                  finAbajo={
+                    <span className="flex flex-wrap justify-end gap-1">
+                      {CON_COBRO.includes(d.tipo_doc) && <InsigniaCobro estado={d.estado_cobro} />}
+                      <InsigniaSri estado={d.estado_sri} />
+                    </span>
+                  }
+                  apagada={d.estado_sri === "ANULADO"}
+                />
+              ))}
+            </GrupoFilas>
+          </TirarParaRefrescar>
+        </>
       )}
 
       {/* Barra de Controles de Paginación */}

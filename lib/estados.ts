@@ -46,6 +46,7 @@ export const TIPOS_COMPROBANTE: Record<string, { etiqueta: string; corta: string
   NDB: { etiqueta: "Nota de débito",        corta: "N. débito" },
   LIQ: { etiqueta: "Liquidación de compra", corta: "Liquidación" },
   RET: { etiqueta: "Retención",             corta: "Retención" },
+  NVE: { etiqueta: "Nota de venta",         corta: "N. venta" },   // solo en recibidos
 };
 
 export const tipoComprobante = (codigo: string | null | undefined) =>
@@ -56,4 +57,12 @@ export const ESTADOS_COBRO: Record<string, { etiqueta: string; tono: TonoEstado 
   PAGADO:    { etiqueta: "Cobrado",    tono: "exito" },
   PARCIAL:   { etiqueta: "Parcial",    tono: "info" },
   ANULADO:   { etiqueta: "Anulado",    tono: "neutro" },
+};
+
+/** Compras recibidas: lo mismo visto desde quien paga. */
+export const ESTADOS_PAGO: Record<string, { etiqueta: string; tono: TonoEstado }> = {
+  PENDIENTE: { etiqueta: "Por pagar", tono: "alerta" },
+  PAGADO:    { etiqueta: "Pagado",    tono: "exito" },
+  PARCIAL:   { etiqueta: "Parcial",   tono: "info" },
+  ANULADO:   { etiqueta: "Anulado",   tono: "neutro" },
 };
