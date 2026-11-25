@@ -27,9 +27,11 @@ interface Props {
   factura:    FacturaBase;
   onRecargar: () => Promise<unknown> | void;
   children:   React.ReactNode;
+  /** En el panel de la derecha de Documentos (compu): sin flecha atrás y márgenes de panel. */
+  enPanel?:   boolean;
 }
 
-export default function DetalleShared({ factura, onRecargar, children }: Props) {
+export default function DetalleShared({ factura, onRecargar, children, enPanel = false }: Props) {
   const consumidorFinal = esConsumidorFinal(factura.datos);
   const recargar = () => { void onRecargar(); };
 
@@ -43,8 +45,8 @@ export default function DetalleShared({ factura, onRecargar, children }: Props) 
 
   return (
     <TirarParaRefrescar alRefrescar={onRecargar}>
-      <div className="mx-auto max-w-3xl space-y-4 p-4 md:p-6">
-        <EstadoDocumento factura={factura} onRecargar={recargar} consumidorFinal={consumidorFinal} />
+      <div className={enPanel ? "space-y-4 p-4" : "mx-auto max-w-3xl space-y-4 p-4 md:p-6"}>
+        <EstadoDocumento factura={factura} onRecargar={recargar} consumidorFinal={consumidorFinal} enPanel={enPanel} />
         <ErroresSRI mensajesSri={factura.mensajes_sri} />
         <SeccionCobro factura={factura} onRecargar={recargar} />
         {/* La key reinicia el panel cuando cambia el estado (no quedan mensajes viejos) */}

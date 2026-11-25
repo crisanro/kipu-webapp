@@ -22,6 +22,10 @@ import PeriodoFechas, { etiquetaPeriodo } from "@/components/ui/PeriodoFechas";
 import TirarParaRefrescar from "@/components/ui/TirarParaRefrescar";
 import { Entrada } from "@/components/ui/Campo";
 import { clasesBoton } from "@/components/ui/Boton";
+import PanelDetalle from "@/components/ui/PanelDetalle";
+import { cn } from "@/components/ui/cn";
+import { useAtajos } from "@/lib/useAtajos";
+import DetalleDocumento from "./ver/components/DetalleDocumento";
 import { ESTADOS_SRI, TIPOS_COMPROBANTE, tipoComprobante } from "@/lib/estados";
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
@@ -58,6 +62,9 @@ const TIPOS_FILTRO = ["TODOS", "FAC", "NCR", "NDB", "RET", "LIQ"]
 const CON_COBRO = ["FAC", "LIQ", "NDB"];
 
 const fmt = (n: any) => parseFloat(n ?? 0).toFixed(2);
+
+// Lista y detalle lado a lado desde este ancho (components/ui/PanelDetalle.tsx)
+const ANCHO_PANEL = "(min-width: 1280px)";
 
 // ── Storage helpers ────────────────────────────────────────────────────────────
 const SS_KEY_INICIO = "kipu_emitidos_fecha_inicio";
@@ -149,7 +156,8 @@ export default function HistorialPage() {
   const [resumenOpen,  setResumenOpen]  = useState(false);
   // Búsqueda, filtros y página en la URL: al volver de un comprobante la lista
   // queda igual (lib/useLista.ts). Se buscan en el servidor, en todo el rango.
-  const [filtros, cambiarFiltros] = useFiltrosUrl({ q: "", estado: "TODOS", tipo: "TODOS", page: "1" });
+  // sel: el comprobante abierto en el panel de la derecha (compu, 1280 px o más)
+  const [filtros, cambiarFiltros] = useFiltrosUrl({ q: "", estado: "TODOS", tipo: "TODOS", page: "1", sel: "" });
   const queryActivo  = filtros.q;
   const filtroEstado = filtros.estado;
   const filtroTipo   = filtros.tipo;
@@ -205,6 +213,36 @@ export default function HistorialPage() {
   };
   useEffect(() => () => { if (debounceRef.current) clearTimeout(debounceRef.current); }, []);
 
+  // ── Compu: panel de detalle y atajos de teclado ──────────────────────────────
+  const sel = filtros.sel;
+  const buscadorRef = useRef<HTMLInputElement>(null);
+  const filasRef    = useRef<Map<string, HTMLTableRowElement>>(new Map());
+  const [marcada, setMarcada] = useState(-1);   // fila marcada con j/k (-1: ninguna)
+
+  // Desde 1280 px se abre en el panel; más angosto, la pantalla del detalle
+  const abrir = (id: string) => {
+    if (window.matchMedia(ANCHO_PANEL).matches) cambiarFiltros({ sel: id });
+    else router.push(rutas.documento(id));
+  };
+  const mover = (paso: number) => {
+    if (documentos.length === 0) return;
+    const actual = marcada >= 0 ? marcada : documentos.findIndex(d => d.id === sel);
+    const nueva  = Math.min(documentos.length - 1, Math.max(0, actual + paso));
+    setMarcada(nueva);
+    const doc = documentos[nueva];
+    filasRef.current.get(doc.id)?.scrollIntoView({ block: "nearest" });
+    // Con el panel abierto, el detalle sigue a la fila marcada
+    if (sel && window.matchMedia(ANCHO_PANEL).matches) cambiarFiltros({ sel: doc.id });
+  };
+  useAtajos({
+    "/":         () => buscadorRef.current?.focus(),
+    "n":         () => router.push("/documentos/emitir/fac"),
+    "j":         () => mover(1),  "ArrowDown": () => mover(1),
+    "k":         () => mover(-1), "ArrowUp":   () => mover(-1),
+    "Enter":     () => { const d = documentos[marcada]; if (d) abrir(d.id); },
+    "Escape":    () => { if (sel) cambiarFiltros({ sel: "" }); else setMarcada(-1); },
+  });
+
   // Nuevo período (PeriodoFechas): se recuerda en la sesión y vuelve a la página 1
   const cambiarPeriodo = (inicio: string, fin: string) => {
     guardarFecha(SS_KEY_INICIO, inicio);
@@ -221,8 +259,11 @@ export default function HistorialPage() {
     (resumen.retenciones?.num_docs ?? 0) > 0
   );
 
+  const docSel = documentos.find(d => d.id === sel);
+
   return (
-    <div className="p-4 md:p-6 space-y-4">
+    <div className={cn(sel && "xl:flex xl:items-start")}>
+    <div className="min-w-0 flex-1 space-y-4 p-4 md:p-6">
       <SegmentosDocumentos />
       {/* Encabezado: en el celular el título ya está en la barra superior */}
       <div className="flex flex-wrap items-center gap-2">
@@ -264,6 +305,7 @@ export default function HistorialPage() {
         placeholder="Buscar por cliente, RUC o número…"
         aria-label="Buscar comprobantes"
         prefijo={<Search size={16} />}
+        ref={buscadorRef}
       />
 
       {diasRango > 365 && (
@@ -409,35 +451,42 @@ export default function HistorialPage() {
                 <thead>
                   <tr className="border-b-2 border-borde text-xs text-sutil">
                     <th className="px-4 py-3 text-left font-medium">Número</th>
-                    <th className="px-4 py-3 text-left font-medium">Tipo</th>
+                    <th className={`px-4 py-3 text-left font-medium ${sel ? "xl:hidden" : ""}`}>Tipo</th>
                     <th className="px-4 py-3 text-left font-medium">Cliente</th>
-                    <th className="px-4 py-3 text-left font-medium">Fecha</th>
+                    <th className={`px-4 py-3 text-left font-medium ${sel ? "xl:hidden 2xl:table-cell" : ""}`}>Fecha</th>
                     <th className="px-4 py-3 text-left font-medium">Estado</th>
-                    <th className="px-4 py-3 text-left font-medium">Cobro</th>
+                    <th className={`px-4 py-3 text-left font-medium ${sel ? "xl:hidden" : ""}`}>Cobro</th>
                     <th className="px-4 py-3 text-right font-medium">Total</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-borde">
-                  {documentos.map(d => (
+                  {documentos.map((d, i) => (
                     <tr
                       key={d.id}
-                      onClick={() => router.push(rutas.documento(d.id))}
-                      className={`cursor-pointer transition-colors hover:bg-presionado ${d.estado_sri === "ANULADO" ? "opacity-60" : ""}`}
+                      ref={el => { if (el) filasRef.current.set(d.id, el); else filasRef.current.delete(d.id); }}
+                      onClick={() => { setMarcada(i); abrir(d.id); }}
+                      aria-selected={d.id === sel || undefined}
+                      className={cn(
+                        "cursor-pointer transition-colors hover:bg-presionado",
+                        d.estado_sri === "ANULADO" && "opacity-60",
+                        d.id === sel && "bg-acento-suave hover:bg-acento-suave",
+                        i === marcada && "outline-2 -outline-offset-2 outline-acento/50",
+                      )}
                     >
                       <td className="px-4 py-3">
                         <Link href={rutas.documento(d.id)} onClick={e => e.stopPropagation()}
-                              className="font-mono text-xs text-acento underline-offset-2 hover:underline">
+                              className="whitespace-nowrap font-mono text-xs text-acento underline-offset-2 hover:underline">
                           {d.numero_doc ?? "—"}
                         </Link>
                       </td>
-                      <td className="px-4 py-3 text-xs text-tenue">{tipoComprobante(d.tipo_doc).etiqueta}</td>
+                      <td className={`px-4 py-3 text-xs text-tenue ${sel ? "xl:hidden" : ""}`}>{tipoComprobante(d.tipo_doc).etiqueta}</td>
                       <td className="px-4 py-3">
-                        <p className="max-w-[220px] truncate font-medium text-texto">{d.razon_social}</p>
+                        <p className={`max-w-[220px] truncate font-medium text-texto ${sel ? "xl:max-w-[150px] 2xl:max-w-[220px]" : ""}`}>{d.razon_social}</p>
                         <p className="text-xs text-sutil">{d.identificacion}</p>
                       </td>
-                      <td className="px-4 py-3 text-xs text-tenue">{d.fecha_emision}</td>
+                      <td className={`whitespace-nowrap px-4 py-3 text-xs text-tenue ${sel ? "xl:hidden 2xl:table-cell" : ""}`}>{d.fecha_emision}</td>
                       <td className="px-4 py-3"><InsigniaSri estado={d.estado_sri} /></td>
-                      <td className="px-4 py-3">
+                      <td className={`px-4 py-3 ${sel ? "xl:hidden" : ""}`}>
                         {CON_COBRO.includes(d.tipo_doc) && <InsigniaCobro estado={d.estado_cobro} />}
                       </td>
                       <td className="px-4 py-3 text-right font-semibold tabular-nums text-texto">${fmt(d.importe_total)}</td>
@@ -518,6 +567,25 @@ export default function HistorialPage() {
           </div>
         </div>
       )}
+
+      {/* Compu con mouse: los atajos, a la vista */}
+      <p className="hidden text-center text-[11px] text-sutil raton:lg:block">
+        Atajos: <kbd className="font-mono">/</kbd> buscar · <kbd className="font-mono">n</kbd> nueva factura ·{" "}
+        <kbd className="font-mono">j</kbd> <kbd className="font-mono">k</kbd> moverse · <kbd className="font-mono">Enter</kbd> abrir ·{" "}
+        <kbd className="font-mono">Esc</kbd> cerrar
+      </p>
+    </div>
+
+    {/* Compu (1280 px o más): el comprobante elegido, a la derecha */}
+    {sel && (
+      <PanelDetalle
+        titulo={docSel ? `${tipoComprobante(docSel.tipo_doc).etiqueta} ${docSel.numero_doc ?? ""}` : "Comprobante"}
+        hrefCompleto={rutas.documento(sel)}
+        onCerrar={() => cambiarFiltros({ sel: "" })}
+      >
+        <DetalleDocumento key={sel} id={sel} enPanel />
+      </PanelDetalle>
+    )}
     </div>
   );
 }

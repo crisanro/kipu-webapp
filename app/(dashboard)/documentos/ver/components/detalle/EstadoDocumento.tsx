@@ -61,8 +61,8 @@ type Menu = "pdf" | "compartir" | "mas" | null;
  * y el estado en el SRI. Debajo, lo que más se hace (Compartir, PDF, o Consultar
  * y Reintentar si está en proceso) y el resto en el menú ⋮.
  */
-export default function EstadoDocumento({ factura, onRecargar, consumidorFinal }: {
-  factura: FacturaBase; onRecargar: () => void; consumidorFinal: boolean;
+export default function EstadoDocumento({ factura, onRecargar, consumidorFinal, enPanel = false }: {
+  factura: FacturaBase; onRecargar: () => void; consumidorFinal: boolean; enPanel?: boolean;
 }) {
   const router = useRouter();
   const avisos = useAvisos();
@@ -140,9 +140,11 @@ export default function EstadoDocumento({ factura, onRecargar, consumidorFinal }
     <section className="rounded-2xl border border-borde bg-superficie p-4 sm:p-5">
       {/* Tipo, número y con quién; el estado arriba a la derecha */}
       <div className="flex items-start gap-2">
-        {/* En el celular la flecha atrás ya está en la barra superior */}
-        <BotonIcono etiqueta="Volver" icono={<ArrowLeft size={18} />} onClick={() => router.back()}
-                    className="-ml-2 -mt-1 hidden lg:inline-flex" />
+        {/* En el celular la flecha atrás ya está en la barra superior; en el panel, la X del panel */}
+        {!enPanel && (
+          <BotonIcono etiqueta="Volver" icono={<ArrowLeft size={18} />} onClick={() => router.back()}
+                      className="-ml-2 -mt-1 hidden lg:inline-flex" />
+        )}
         <div className="min-w-0 flex-1">
           <p className="text-xs text-sutil">
             {TIPO_LABEL[factura.tipo_doc] ?? factura.tipo_doc} · {fechaEmision(factura)}
