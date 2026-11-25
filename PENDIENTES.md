@@ -10,6 +10,7 @@
 - Nueva RET: limpiar las ramas de "créditos" y "plan gratis" del recuadro del resumen; desde que la retención exige Kipu Pro o Al Día ya no se pueden ver (commit aparte).
 - kipu-core1 dashboard_service.py:278: health.suscripcion_activa usa sub_estado in ("ACTIVO","TRIAL") sin fechas, distinto de suscripcion_vigente. Hoy no lo lee el front; unificarlo para que no se use por error.
 - nueva-empresa/page.tsx:122 pone suscripcion_activa: true al crear la empresa hasta que se vuelve a leer. Debe tomar el valor real de la respuesta del backend.
+- cargar() de Configuración hace updateEmpresa({...empresa, firma_ok}) con la empresa capturada antes del cambio; puede pisar en el store campos actualizados por otras tarjetas. Debe refrescar desde el backend o hacer un merge con el estado actual del store.
 - Formulario 103: calcular casilleros desde las RET emitidas (usar `casillero_103` del catálogo). Depende de las consultas al contador sobre el periodo del 103 y el casillero del 501.
 
 ## Consultas al contador
