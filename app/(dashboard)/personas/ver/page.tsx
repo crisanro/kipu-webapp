@@ -39,6 +39,66 @@ function validarEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
+// ── Campo editable inline ─────────────────────────────────────────────────────
+// Fuera de DetallePersona: definido adentro, cada tecla creaba un componente
+// nuevo, React desmontaba el input y se perdía el foco.
+function CampoEditable({
+  icon: Icon, label, value, editando, valorEditado, onCambio,
+  type = "text", placeholder = "", transform, validate, validError,
+}: {
+  icon: any; label: string; value: string;
+  editando: boolean; valorEditado: string; onCambio: (v: string) => void;
+  type?: string; placeholder?: string;
+  transform?: (v: string) => string;
+  validate?: (v: string) => boolean;
+  validError?: string;
+}) {
+  const isInvalid = editando && validate && valorEditado && !validate(valorEditado);
+  return (
+    <div className="flex justify-between items-center text-sm gap-4">
+      <span className="flex items-center gap-2 shrink-0" style={{ color: "var(--kipu-subtle)" }}>
+        <Icon size={13} /> {label}
+      </span>
+      {editando ? (
+        <div className="flex-1 flex flex-col items-end gap-1">
+          <div className="relative w-full max-w-[220px]">
+            <input
+              type={type}
+              value={valorEditado}
+              onChange={(e) => onCambio(transform ? transform(e.target.value) : e.target.value)}
+              placeholder={placeholder}
+              className="w-full px-2 py-1 rounded-lg text-xs text-right pr-6 transition-colors focus:outline-none"
+              style={{
+                background: "var(--kipu-surface)",
+                border: isInvalid
+                  ? "1px solid color-mix(in srgb, var(--kipu-danger) 70%, transparent)"
+                  : "1px solid var(--kipu-border)",
+                color: "var(--kipu-text)",
+              }}
+              onFocus={e => {
+                if (!isInvalid) e.currentTarget.style.borderColor = "var(--kipu-accent)";
+              }}
+              onBlur={e => {
+                if (!isInvalid) e.currentTarget.style.borderColor = "var(--kipu-border)";
+              }}
+            />
+            {validate && valorEditado && !isInvalid && (
+              <Check size={10} className="absolute right-2 top-1/2 -translate-y-1/2" style={{ color: "var(--kipu-success)" }} />
+            )}
+          </div>
+          {isInvalid && validError && (
+            <p className="flex items-center gap-1 text-xs" style={{ color: "var(--kipu-danger)" }}>
+              <AlertCircle size={10} /> {validError}
+            </p>
+          )}
+        </div>
+      ) : (
+        <span className="text-right max-w-[60%] truncate" style={{ color: "var(--kipu-text)" }}>{value || "—"}</span>
+      )}
+    </div>
+  );
+}
+
 // ── Componente ────────────────────────────────────────────────────────────────
 // /personas/ver?id=… (antes /personas/[id]; ver lib/rutas.ts)
 export default function DetallePersonaPage() {
@@ -228,66 +288,6 @@ function DetallePersona({ id }: { id: string }) {
   const { cliente, resumen } = data;
   const hayMas = nextCursor !== null;
 
-  // ── Campo editable inline ─────────────────────────────────────────────────
-  const CampoEditable = ({
-    icon: Icon, label, value, field, type = "text", placeholder = "",
-    transform, validate, validError,
-  }: {
-    icon: any; label: string; value: string; field: string;
-    type?: string; placeholder?: string;
-    transform?: (v: string) => string;
-    validate?: (v: string) => boolean;
-    validError?: string;
-  }) => {
-    const isInvalid = editing && validate && form[field as keyof typeof form] && !validate(form[field as keyof typeof form]);
-    return (
-      <div className="flex justify-between items-center text-sm gap-4">
-        <span className="flex items-center gap-2 shrink-0" style={{ color: "var(--kipu-subtle)" }}>
-          <Icon size={13} /> {label}
-        </span>
-        {editing ? (
-          <div className="flex-1 flex flex-col items-end gap-1">
-            <div className="relative w-full max-w-[220px]">
-              <input
-                type={type}
-                value={form[field as keyof typeof form]}
-                onChange={(e) => {
-                  const val = transform ? transform(e.target.value) : e.target.value;
-                  setForm({ ...form, [field]: val });
-                }}
-                placeholder={placeholder}
-                className="w-full px-2 py-1 rounded-lg text-xs text-right pr-6 transition-colors focus:outline-none"
-                style={{
-                  background: "var(--kipu-surface)",
-                  border: isInvalid
-                    ? "1px solid color-mix(in srgb, var(--kipu-danger) 70%, transparent)"
-                    : "1px solid var(--kipu-border)",
-                  color: "var(--kipu-text)",
-                }}
-                onFocus={e => {
-                  if (!isInvalid) e.currentTarget.style.borderColor = "var(--kipu-accent)";
-                }}
-                onBlur={e => {
-                  if (!isInvalid) e.currentTarget.style.borderColor = "var(--kipu-border)";
-                }}
-              />
-              {validate && form[field as keyof typeof form] && !isInvalid && (
-                <Check size={10} className="absolute right-2 top-1/2 -translate-y-1/2" style={{ color: "var(--kipu-success)" }} />
-              )}
-            </div>
-            {isInvalid && validError && (
-              <p className="flex items-center gap-1 text-xs" style={{ color: "var(--kipu-danger)" }}>
-                <AlertCircle size={10} /> {validError}
-              </p>
-            )}
-          </div>
-        ) : (
-          <span className="text-right max-w-[60%] truncate" style={{ color: "var(--kipu-text)" }}>{value || "—"}</span>
-        )}
-      </div>
-    );
-  };
-
   return (
     <div className="p-4 md:p-6 max-w-3xl mx-auto space-y-4">
       {/* Header */}
@@ -462,13 +462,15 @@ function DetallePersona({ id }: { id: string }) {
 
           {/* Campos editables */}
           <CampoEditable
-            icon={User} label="Nombre" field="razon_social"
+            icon={User} label="Nombre" editando={editing} valorEditado={form.razon_social}
+            onCambio={(v) => setForm(f => ({ ...f, razon_social: v }))}
             value={cliente.razon_social}
             placeholder="APELLIDOS NOMBRES"
             transform={(v) => v.toUpperCase()}
           />
           <CampoEditable
-            icon={Mail} label="Email" field="email"
+            icon={Mail} label="Email" editando={editing} valorEditado={form.email}
+            onCambio={(v) => setForm(f => ({ ...f, email: v }))}
             value={cliente.email} type="email"
             placeholder="persona@email.com"
             transform={(v) => v.toLowerCase()}
@@ -476,13 +478,15 @@ function DetallePersona({ id }: { id: string }) {
             validError="Email inválido."
           />
           <CampoEditable
-            icon={Phone} label="Teléfono" field="telefono" type="tel"
+            icon={Phone} label="Teléfono" editando={editing} valorEditado={form.telefono} type="tel"
+            onCambio={(v) => setForm(f => ({ ...f, telefono: v }))}
             value={cliente.telefono}
             placeholder="0999999999"
             transform={(v) => v.replace(/\D/g, "")}
           />
           <CampoEditable
-            icon={MapPin} label="Dirección" field="direccion"
+            icon={MapPin} label="Dirección" editando={editing} valorEditado={form.direccion}
+            onCambio={(v) => setForm(f => ({ ...f, direccion: v }))}
             value={cliente.direccion}
             placeholder="AV. PRINCIPAL 123"
             transform={(v) => v.toUpperCase()}
