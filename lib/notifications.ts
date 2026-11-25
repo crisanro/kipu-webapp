@@ -16,18 +16,41 @@ const FLAG_SESION = "kipu-fcm-ok";
 export const EVENTO_NOTIF = "kipu:notificacion";
 
 // ── Generar o recuperar device_id único por dispositivo ───────────────────────
+// Web: un número al azar guardado en el navegador (cambia con otro navegador,
+// una ventana privada o al borrar los datos; el backend conserva solo los 5
+// dispositivos más recientes del usuario). App: ver idDispositivo().
+const CLAVE_DEVICE_ID = "kipu-device-id";
 const getDeviceId = (): string => {
   try {
-    let deviceId = localStorage.getItem("kipu-device-id");
+    let deviceId = localStorage.getItem(CLAVE_DEVICE_ID);
     if (!deviceId) {
       deviceId = crypto.randomUUID();
-      localStorage.setItem("kipu-device-id", deviceId);
+      localStorage.setItem(CLAVE_DEVICE_ID, deviceId);
     }
     return deviceId;
   } catch {
     return "default";
   }
 };
+
+/**
+ * El device_id con el que se registra este dispositivo.
+ * App: el identificador del teléfono (@capacitor/device), que en Android se
+ * mantiene aunque se reinstale la app: así el token nuevo REEMPLAZA al viejo en
+ * vez de sumarse (antes el aviso llegaba repetido). Web: el del navegador.
+ */
+async function idDispositivo(): Promise<string> {
+  if (ES_APP_NATIVA) {
+    try {
+      const { Device } = await import("@capacitor/device");
+      const { identifier } = await Device.getId();
+      if (identifier) return `app-${identifier}`.slice(0, 100);
+    } catch (e) {
+      console.warn("[FCM] ⚠️ Sin identificador del teléfono:", e);
+    }
+  }
+  return getDeviceId();
+}
 
 // ── Estado del permiso ────────────────────────────────────────────────────────
 export type PermisoNotificaciones = NotificationPermission | "no-soportado";
@@ -101,7 +124,7 @@ export async function desregistrarNotificaciones(): Promise<void> {
   // 1. Backend: quitar el token de este dispositivo para este usuario
   try {
     await api.post("/api/v1/app/notificaciones/fcm-token/baja", {
-      device_id: getDeviceId(),
+      device_id: await idDispositivo(),
     });
   } catch (e) {
     console.warn("[FCM] ⚠️ No se pudo dar de baja en el backend:", e);
@@ -216,9 +239,19 @@ export function mostrarNotificacionLocal(titulo: string, cuerpo: string, url?: s
 const moduloNativo = () => import("@capacitor-firebase/messaging");
 
 async function enviarTokenNativo(token: string): Promise<void> {
+  const deviceId = await idDispositivo();
+  // Una sola vez: la app venía registrada con el número al azar del navegador;
+  // se da de baja ese registro para que no quede un segundo token vivo.
+  try {
+    const viejo = localStorage.getItem(CLAVE_DEVICE_ID);
+    if (viejo && viejo !== deviceId) {
+      await api.post("/api/v1/app/notificaciones/fcm-token/baja", { device_id: viejo }).catch(() => {});
+      localStorage.removeItem(CLAVE_DEVICE_ID);
+    }
+  } catch {}
   await api.post("/api/v1/app/notificaciones/fcm-token", {
     token,
-    device_id: getDeviceId(),
+    device_id: deviceId,
   });
 }
 

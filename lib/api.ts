@@ -5,6 +5,7 @@ import { useSandboxStore } from "@/store/sandbox.store";
 import { useAuthStore } from "@/store/auth.store";
 import { API_BASE_URL } from "./config";
 import { avisarAlRecargar } from "@/components/ui/Avisos";
+import { neutralizarRespuesta } from "./plataforma";
 
 const api = axios.create({
   baseURL:         API_BASE_URL,
@@ -48,8 +49,10 @@ let redirigiendo = false;   // varias peticiones pueden fallar a la vez: un solo
 
 // Interceptor — manejo global de errores
 api.interceptors.response.use(
-  (response) => response,
+  // En la app, los mensajes del backend sin nombrar planes (lib/plataforma.ts)
+  (response) => { neutralizarRespuesta(response.data); return response; },
   (error) => {
+    neutralizarRespuesta(error.response?.data);
     if (error.response?.status === 401) {
       // Import dinámico: notifications.ts importa este mismo módulo
       import("./notifications")

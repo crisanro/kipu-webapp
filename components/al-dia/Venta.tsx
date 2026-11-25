@@ -257,7 +257,8 @@ const PASOS: { icono: ReactNode; titulo: string; texto: string }[] = [
   { icono: <KeyRound size={16} />,      titulo: "Contratas y guardas tu clave del SRI",
     texto: "Queda cifrada y solo se usa para tus declaraciones. Ves cada vez que alguien la usa." },
   { icono: <Receipt size={16} />,       titulo: "Tú facturas como siempre",
-    texto: "Con Kipu, sin límite. Tus compras las tomamos de los comprobantes que el SRI tiene a tu nombre." },
+    // En la app sin "sin límite": sería prometer una función digital (reglas de las tiendas)
+    texto: `Con Kipu, ${ES_APP_NATIVA ? "como siempre" : "sin límite"}. Tus compras las tomamos de los comprobantes que el SRI tiene a tu nombre.` },
   { icono: <MessageCircle size={16} />, titulo: "Te mandamos el resumen por WhatsApp",
     texto: "Lo que vendiste, lo que compraste y cuánto pagar. Tienes 24 horas para revisarlo." },
   { icono: <FileCheck2 size={16} />,    titulo: "Presentamos y te llega el comprobante",
@@ -315,7 +316,8 @@ const EXTRAS_COTIZADOS: [string, string][] = [
 export function QueIncluye({ precioRenta = null }: { precioRenta?: number | null }) {
   const extras: [string, string][] = [
     ["Renta anual si estuviste menos de 6 meses en el plan",
-     precioRenta !== null ? `$${precioRenta.toFixed(2)}` : "Precio de Kipu Renta"],
+     // En la app no se nombra Kipu Renta: es un producto que la app no vende
+     precioRenta !== null ? `$${precioRenta.toFixed(2)}` : ES_APP_NATIVA ? "Se cotiza" : "Precio de Kipu Renta"],
     ...EXTRAS_COTIZADOS,
   ];
   return (
@@ -331,16 +333,23 @@ export function QueIncluye({ precioRenta = null }: { precioRenta?: number | null
             </li>
           ))}
         </ul>
-        <p className="text-xs font-semibold pt-1" style={{ color: "var(--kipu-accent)" }}>
-          {ES_APP_NATIVA ? "Para que tu contador trabaje con todos tus datos, mientras dure el servicio tienes:" : "Y además, todo Kipu Pro:"}
-        </p>
-        <ul className="space-y-1.5">
-          {SISTEMA.map((t) => (
-            <li key={t} className="flex gap-2 text-xs" style={{ color: "var(--kipu-muted)" }}>
-              <CheckCircle2 size={13} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-accent)" }} /> {t}
-            </li>
-          ))}
-        </ul>
+        {/* En la app Al Día se vende solo como el servicio del contador (Apple
+            3.1.3(e)): sin la lista de funciones digitales que trae, que un
+            revisor leería como una compra de funciones fuera de la tienda */}
+        {!ES_APP_NATIVA && (
+          <>
+            <p className="text-xs font-semibold pt-1" style={{ color: "var(--kipu-accent)" }}>
+              Y además, todo Kipu Pro:
+            </p>
+            <ul className="space-y-1.5">
+              {SISTEMA.map((t) => (
+                <li key={t} className="flex gap-2 text-xs" style={{ color: "var(--kipu-muted)" }}>
+                  <CheckCircle2 size={13} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-accent)" }} /> {t}
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
       </div>
       <div className="rounded-xl p-5 space-y-3" style={caja}>
         <h2 className="text-base font-bold" style={{ color: "var(--kipu-text)" }}>Aparte, solo si lo pides</h2>

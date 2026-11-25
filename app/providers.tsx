@@ -18,7 +18,9 @@ import { ES_APP_NATIVA } from "@/lib/plataforma";
 
 // Todo lo demás requiere sesión. Lista de públicas (y no de protegidas) para
 // que una pantalla nueva quede protegida por defecto.
-const RUTAS_PUBLICAS = ["/", "/login", "/register", "/reset", "/ayuda", "/blog"];
+// /volver-a-la-app: donde vuelve Stripe cuando el pago se abrió desde la app
+// (el navegador interno no tiene la sesión).
+const RUTAS_PUBLICAS = ["/", "/login", "/register", "/reset", "/ayuda", "/blog", "/volver-a-la-app"];
 
 const esRutaPublica = (path: string) =>
   RUTAS_PUBLICAS.some((r) => path === r || (r !== "/" && path.startsWith(r + "/")));
@@ -26,7 +28,7 @@ const esRutaPublica = (path: string) =>
 // Contenido (Centro de Ayuda y /blog): se muestra al instante, sin esperar a Firebase,
 // para que se vea sin sesión y lo lean los buscadores. La sesión carga detrás
 // (el bloque de soporte de cada artículo depende del plan).
-const RUTAS_CONTENIDO = ["/ayuda", "/blog"];
+const RUTAS_CONTENIDO = ["/ayuda", "/blog", "/volver-a-la-app"];
 const esRutaContenido = (path: string | null) =>
   !!path && RUTAS_CONTENIDO.some((r) => path === r || path.startsWith(r + "/"));
 

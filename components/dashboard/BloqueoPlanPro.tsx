@@ -20,9 +20,16 @@ interface Props {
   accion?:  { href: string; label: string } | null;
 }
 
+// En la app no se nombra el plan: las tiendas no permiten invitar a comprar fuera
+// de ellas (el mensaje del backend ya llega sin el plan: lib/plataforma.ts)
+const TITULO_POR_DEFECTO  = ES_APP_NATIVA ? "No incluido en tu plan actual" : "Disponible en Kipu Pro";
+const MENSAJE_POR_DEFECTO = ES_APP_NATIVA
+  ? "Las liquidaciones de compra y las retenciones no están incluidas en tu plan actual."
+  : MENSAJE_PLAN_LIQ_RET;
+
 export default function BloqueoPlanPro({
-  titulo  = "Disponible en Kipu Pro",
-  mensaje = MENSAJE_PLAN_LIQ_RET,
+  titulo  = TITULO_POR_DEFECTO,
+  mensaje = MENSAJE_POR_DEFECTO,
   accion,
 }: Props) {
   const salida = accion !== undefined ? accion : ES_APP_NATIVA ? null : { href: "/planes", label: "Ver planes" };

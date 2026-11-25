@@ -183,7 +183,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const adminDelPlan  = empresa?.rol === "admin";      // solo el administrador gestiona el pago
   const actualizarTarjeta = async () => {
     try {
-      const r = await api.post(`/api/v1/app/suscripcion/portal?volver=${subEsAlDia ? "al-dia" : "planes"}`);
+      // Desde la app, al salir del portal Stripe vuelve a /volver-a-la-app (neutra)
+      const r = await api.post(`/api/v1/app/suscripcion/portal?volver=${subEsAlDia ? "al-dia" : "planes"}${ES_APP_NATIVA ? "&desde_app=true" : ""}`);
       // Web: el portal en esta pestaña; app: navegador dentro de la app (lib/nativo.ts)
       await abrirExterno(r.data.portal_url, { mismaPestana: true });
     } catch (err) {

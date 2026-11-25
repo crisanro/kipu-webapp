@@ -41,7 +41,7 @@ export default function BloqueSoporte() {
       <Caja titulo="¿Necesitas más ayuda?">
         <p>
           {ES_APP_NATIVA
-            ? "Inicia sesión para escribirnos por WhatsApp si tu plan incluye soporte."
+            ? "Inicia sesión para ver cómo escribirnos."
             : "Si tienes Kipu Pro o Kipu Al Día, inicia sesión y escríbenos por WhatsApp desde aquí."}
         </p>
         <Link
@@ -77,8 +77,11 @@ export default function BloqueSoporte() {
   return (
     <Caja titulo="¿Necesitas más ayuda? Escríbenos">
       <p>
-        Te atiende el equipo de Kipu por WhatsApp. El soporte está incluido en tu plan{" "}
-        <strong style={{ color: "var(--kipu-text)" }}>{NOMBRE_PLAN[plan]}</strong>
+        Te atiende el equipo de Kipu por WhatsApp. El soporte está incluido en tu plan
+        {/* En la app no se nombra el Pro (reglas de las tiendas); Al Día sí */}
+        {(!ES_APP_NATIVA || plan === "AL_DIA") && (
+          <>{" "}<strong style={{ color: "var(--kipu-text)" }}>{NOMBRE_PLAN[plan]}</strong></>
+        )}
         {empresa?.razon_social && <> de {empresa.razon_social}</>}.
       </p>
       <a
