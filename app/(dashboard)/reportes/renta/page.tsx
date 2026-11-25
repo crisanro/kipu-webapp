@@ -112,6 +112,18 @@ function ReporteRenta({ anio }: { anio: string }) {
               <span>Total Gastos Deducibles</span>
               <span className="text-sky-400">${fmt(data?.total_gastos_deducibles)}</span>
             </div>
+            {/* Activos fijos: fuera del total, se deducen por depreciación */}
+            {(data?.activos_fijos_comprados ?? 0) > 0 && (
+              <div className="pt-2 space-y-0.5" style={{ borderTop: "1px solid var(--kipu-border)" }}>
+                <div className="flex justify-between">
+                  <span style={{ color: "var(--kipu-subtle)" }}>Activos fijos comprados en el año</span>
+                  <span className="font-mono font-medium">${fmt(data?.activos_fijos_comprados)}</span>
+                </div>
+                <p className="text-[10px]" style={{ color: "var(--kipu-subtle)" }}>
+                  Se deducen por depreciación, no completos.
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>
