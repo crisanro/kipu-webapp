@@ -3,6 +3,7 @@ import { useConfirmar } from "@/components/ui/Confirmar";
 import { rutas } from "@/lib/rutas";
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { useAtajos } from "@/lib/useAtajos";
 import api from "@/lib/api";
 import { usePermiso } from "@/hooks/usePermiso";
 import SinAcceso from "@/components/SinAcceso";
@@ -108,6 +109,9 @@ function CobrosContenido() {
   }, [filtro]);
 
   useEffect(() => { cargar(); }, [cargar]);
+
+  // Compu: "n" crea un link de cobro (lib/useAtajos.ts)
+  useAtajos({ "n": () => router.push(NUEVO_LINK) });
 
   const reemplazar = (c: Cobro) => setCobros(prev => prev.map(x => x.id === c.id ? c : x));
 

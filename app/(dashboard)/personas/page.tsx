@@ -1,6 +1,7 @@
 "use client";
 import { rutas } from "@/lib/rutas";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { useAtajos } from "@/lib/useAtajos";
 import api from "@/lib/api";
 import { SegmentosPersonas } from "@/components/shell/BarraPestanas";
 import { usePermiso } from "@/hooks/usePermiso";
@@ -206,6 +207,13 @@ function PersonasContenido() {
     }
   };
 
+  // Compu: "/" busca y "n" agrega una persona (lib/useAtajos.ts)
+  const buscadorRef = useRef<HTMLInputElement>(null);
+  useAtajos({
+    "/": () => buscadorRef.current?.focus(),
+    "n": () => abrirModal(),
+  });
+
   const abrirModal = () => {
     setShowModal(true);
     setForm(EMPTY_FORM);
@@ -232,6 +240,7 @@ function PersonasContenido() {
         placeholder="Buscar por nombre, RUC, cédula o email…"
         aria-label="Buscar personas"
         prefijo={<Search size={16} />}
+        ref={buscadorRef}
         className="mb-4 mt-4 lg:mt-0"
       />
 

@@ -1,6 +1,7 @@
 "use client";
 import { rutas } from "@/lib/rutas";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { useAtajos } from "@/lib/useAtajos";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { usePermiso } from "@/hooks/usePermiso";
@@ -82,6 +83,13 @@ function ProformasContenido() {
 
   const nueva = () => router.push("/proformas/nueva");
 
+  // Compu: "/" busca y "n" crea una proforma si el plan lo permite (lib/useAtajos.ts)
+  const buscadorRef = useRef<HTMLInputElement>(null);
+  useAtajos({
+    "/": () => buscadorRef.current?.focus(),
+    "n": () => { if (tieneSub) nueva(); },
+  });
+
   return (
     <div className="p-4 md:p-6">
       {/* Encabezado: en el celular el título ya está en la barra superior */}
@@ -136,6 +144,7 @@ function ProformasContenido() {
         placeholder="Buscar por número o cliente…"
         aria-label="Buscar proformas"
         prefijo={<Search size={16} />}
+        ref={buscadorRef}
         className="mb-4"
       />
 

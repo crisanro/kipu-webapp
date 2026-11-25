@@ -1,6 +1,7 @@
 "use client";
 import { rutas } from "@/lib/rutas";
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
+import { useAtajos } from "@/lib/useAtajos";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import api from "@/lib/api";
@@ -207,6 +208,13 @@ function CuentasContent() {
   };
 
   const nueva = () => { if (!tieneSub) return; resetModal(); setShowModal(true); };
+
+  // Compu: "/" busca y "n" registra una cuenta (lib/useAtajos.ts)
+  const buscadorRef = useRef<HTMLInputElement>(null);
+  useAtajos({
+    "/": () => buscadorRef.current?.focus(),
+    "n": nueva,
+  });
   const hoy   = hoyEC();
   // Las tarjetas del resumen filtran por tipo; tocar la elegida quita el filtro
   const alternarTipo = (t: "COBRAR" | "PAGAR") => setFiltroTipo(filtroTipo === t ? "" : t);
@@ -300,6 +308,7 @@ function CuentasContent() {
         placeholder="Buscar por persona o concepto…"
         aria-label="Buscar cuentas"
         prefijo={<Search size={16} />}
+        ref={buscadorRef}
         className="mb-3"
       />
       <ChipsFiltro opciones={FILTROS_ESTADO} valor={filtroEst} onCambio={setFiltroEst} etiqueta="Estado de la cuenta" className="mb-4" />

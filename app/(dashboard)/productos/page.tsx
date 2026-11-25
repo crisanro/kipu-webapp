@@ -13,6 +13,7 @@ import HojaAcciones from "@/components/ui/HojaAcciones";
 import BotonIcono from "@/components/ui/BotonIcono";
 import { Entrada } from "@/components/ui/Campo";
 import { useState, useEffect, useCallback, useRef, lazy, Suspense } from "react";
+import { useAtajos } from "@/lib/useAtajos";
 import { etiquetaIva, opcionesIva } from "@/lib/iva";
 import { baseDesdeTotal, tarifaPct } from "@/lib/precios";
 import { r2 } from "@/lib/dinero";
@@ -132,6 +133,13 @@ export default function ProductosPage() {
     debounceRef.current = setTimeout(() => setQueryActivo(val.trim()), 400);
   };
   useEffect(() => () => { if (debounceRef.current) clearTimeout(debounceRef.current); }, []);
+
+  // Compu: "/" busca y "n" crea un producto (lib/useAtajos.ts); sin permiso, nada
+  const buscadorRef = useRef<HTMLInputElement>(null);
+  useAtajos({
+    "/": () => buscadorRef.current?.focus(),
+    "n": () => abrirCrear(),
+  }, puedeVer);
 
   if (!puedeVer) return <SinAcceso />;
 
@@ -285,6 +293,7 @@ export default function ProductosPage() {
           placeholder="Buscar por descripción o código…"
           aria-label="Buscar productos"
           prefijo={<Search size={16} />}
+          ref={buscadorRef}
           sufijo={<BotonIcono etiqueta="Escanear código de barras para buscar" icono={<Camera size={18} />}
                               tamano="sm" onClick={abrirScannerBuscar} className="-mr-2" />}
           className="flex-1"
