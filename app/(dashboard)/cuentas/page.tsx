@@ -1,6 +1,6 @@
 "use client";
 import { rutas } from "@/lib/rutas";
-import { useState, useEffect, useCallback, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import api from "@/lib/api";
@@ -14,10 +14,22 @@ import SoloWeb from "@/components/SoloWeb";
 import { ES_APP_NATIVA } from "@/lib/plataforma";
 import Hoja from "@/components/ui/Hoja";
 import Boton from "@/components/ui/Boton";
+import { useLista } from "@/lib/useLista";
+import type { TonoEstado } from "@/lib/estados";
+import FilaLista, { GrupoFilas } from "@/components/ui/FilaLista";
+import { InsigniaEstado } from "@/components/ui/InsigniaEstado";
+import { EsqueletoFilas } from "@/components/ui/Esqueleto";
+import Vacio from "@/components/ui/Vacio";
+import BotonFlotante from "@/components/ui/BotonFlotante";
+import TirarParaRefrescar from "@/components/ui/TirarParaRefrescar";
+import ChipsFiltro from "@/components/ui/ChipsFiltro";
+import { Entrada } from "@/components/ui/Campo";
+import { etiquetaPeriodo } from "@/components/ui/PeriodoFechas";
+import { cn } from "@/components/ui/cn";
 import {
-  Wallet, Plus, X, ChevronDown, Save,
+  Wallet, Plus, X, Save,
   TrendingUp, TrendingDown, Scale, Search,
-  AlertTriangle, CheckCircle2, Clock, Ban,
+  AlertTriangle,
 } from "lucide-react";
 
 // ── Tipos ──────────────────────────────────────────────────────────────────────
@@ -46,12 +58,20 @@ interface Resumen {
 // ── Helpers ────────────────────────────────────────────────────────────────────
 const fmt = (n: number) => `$${n.toFixed(2)}`;
 
-const ESTADO_CONFIG = {
-  PENDIENTE: { label: "Pendiente", color: "var(--kipu-warning)", bg: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)", icon: Clock },
-  PARCIAL:   { label: "Parcial",   color: "var(--kipu-info)",           bg: "color-mix(in srgb, var(--kipu-info) 10%, transparent)",           icon: AlertTriangle },
-  PAGADO:    { label: "Pagado",    color: "var(--kipu-success)", bg: "color-mix(in srgb, var(--kipu-success) 10%, transparent)", icon: CheckCircle2 },
-  ANULADO:   { label: "Anulado",   color: "var(--kipu-subtle)",  bg: "color-mix(in srgb, var(--kipu-subtle) 10%, transparent)",  icon: Ban },
+const ESTADOS: Record<Cuenta["estado"], { etiqueta: string; tono: TonoEstado }> = {
+  PENDIENTE: { etiqueta: "Pendiente", tono: "alerta" },
+  PARCIAL:   { etiqueta: "Parcial",   tono: "info" },
+  PAGADO:    { etiqueta: "Pagado",    tono: "exito" },
+  ANULADO:   { etiqueta: "Anulado",   tono: "neutro" },
 };
+
+const FILTROS_ESTADO = [
+  { valor: "",          etiqueta: "Todos" },
+  { valor: "PENDIENTE", etiqueta: "Pendientes" },
+  { valor: "PARCIAL",   etiqueta: "Parciales" },
+  { valor: "PAGADO",    etiqueta: "Pagadas" },
+  { valor: "ANULADO",   etiqueta: "Anuladas" },
+];
 
 const EMPTY_FORM = {
   cliente_id:        "",
@@ -67,9 +87,6 @@ const EMPTY_FORM = {
 function CuentasContent() {
   const searchParams = useSearchParams();
 
-  const [cuentas,    setCuentas]    = useState<Cuenta[]>([]);
-  const [resumen,    setResumen]    = useState<Resumen>({ por_cobrar: 0, por_pagar: 0, balance: 0 });
-  const [loading,    setLoading]    = useState(true);
   const [query,      setQuery]      = useState("");
   const [filtroTipo, setFiltroTipo] = useState<"" | "COBRAR" | "PAGAR">("");
   const [filtroEst,  setFiltroEst]  = useState("");
@@ -89,23 +106,15 @@ function CuentasContent() {
   const [buscandoCliente, setBuscandoCliente] = useState(false);
   const [clienteSelec,    setClienteSelec]    = useState<any>(null);
 
-  const cargar = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params: any = {};
-      if (filtroTipo) params.tipo   = filtroTipo;
-      if (filtroEst)  params.estado = filtroEst;
-      const res = await api.get("/api/v1/app/cuentas", { params });
-      setCuentas(res.data.data    ?? []);
-      setResumen(res.data.resumen ?? { por_cobrar: 0, por_pagar: 0, balance: 0 });
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  }, [filtroTipo, filtroEst]);
-
-  useEffect(() => { cargar(); }, [cargar]);
+  // Con caché: al volver de una cuenta la lista aparece al instante (lib/useLista.ts)
+  const qs = new URLSearchParams();
+  if (filtroTipo) qs.set("tipo", filtroTipo);
+  if (filtroEst)  qs.set("estado", filtroEst);
+  const datos   = useLista<{ data?: Cuenta[]; resumen?: Resumen }>(`/api/v1/app/cuentas${qs.size ? `?${qs}` : ""}`);
+  const cuentas = datos.datos?.data ?? [];
+  const resumen = datos.datos?.resumen ?? { por_cobrar: 0, por_pagar: 0, balance: 0 };
+  const loading = datos.cargando;
+  const cargar  = datos.recargar;
 
   // Manejo de query param para preseleccionar cliente
   useEffect(() => {
@@ -197,35 +206,28 @@ function CuentasContent() {
     setError("");
   };
 
+  const nueva = () => { if (!tieneSub) return; resetModal(); setShowModal(true); };
+  const hoy   = hoyEC();
+  // Las tarjetas del resumen filtran por tipo; tocar la elegida quita el filtro
+  const alternarTipo = (t: "COBRAR" | "PAGAR") => setFiltroTipo(filtroTipo === t ? "" : t);
+  const tarjeta = "rounded-xl border bg-superficie p-3 text-left transition-colors sm:p-4";
+
   return (
     <div className="p-4 md:p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      {/* Encabezado: en el celular el título ya está en la barra superior */}
+      <div className="mb-6 hidden items-center justify-between lg:flex">
         <div>
-          <h1 className="text-xl font-bold" style={{ color: "var(--kipu-text)" }}>Cuentas</h1>
-          <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>{cuentas.length} registradas</p>
+          <h1 className="text-xl font-bold text-texto">Cuentas</h1>
+          <p className="text-sm text-sutil">{cuentas.length} registradas</p>
         </div>
-        <button
-          type="button"
-          onClick={() => { if (!tieneSub) return; setShowModal(true); resetModal(); }}
+        <Boton
+          onClick={nueva}
           disabled={!tieneSub}
           title={!tieneSub ? (ES_APP_NATIVA ? "No incluido en tu plan actual" : "Disponible en el Plan Pro") : undefined}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:cursor-not-allowed"
-          style={{
-            background: tieneSub ? "var(--kipu-accent)" : "var(--kipu-surface)",
-            color: tieneSub ? "#FFFFFF" : "var(--kipu-subtle)",
-            border: tieneSub ? "none" : "1px solid var(--kipu-border)",
-          }}
-          onMouseEnter={e => {
-            if (tieneSub) e.currentTarget.style.background = "var(--kipu-accent-h)";
-          }}
-          onMouseLeave={e => {
-            if (tieneSub) e.currentTarget.style.background = "var(--kipu-accent)";
-          }}
+          icono={<Plus size={16} />}
         >
-          <Plus size={15} />
           Nueva cuenta
-        </button>
+        </Boton>
       </div>
 
       {esDemo && (
@@ -236,278 +238,131 @@ function CuentasContent() {
       )}
 
       {!tieneSub && !esDemo && (
-        <div
-          className="flex items-center gap-3 rounded-xl px-4 py-3 mb-4"
-          style={{
-            background: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)",
-            border: "1px solid color-mix(in srgb, var(--kipu-warning) 20%, transparent)",
-          }}
-        >
-          <AlertTriangle size={15} className="shrink-0" style={{ color: "var(--kipu-warning)" }} />
+        <div className="mb-4 flex items-center gap-3 rounded-xl border border-alerta/20 bg-alerta-suave px-4 py-3">
+          <AlertTriangle size={15} className="shrink-0 text-alerta" />
           <div className="flex-1">
-            <p className="text-sm font-medium" style={{ color: "var(--kipu-warning)" }}>
+            <p className="text-sm font-medium text-alerta-texto">
               {ES_APP_NATIVA ? "No incluido en tu plan actual" : "Función del Plan Pro"}
             </p>
-            <p className="text-xs" style={{ color: "color-mix(in srgb, var(--kipu-warning) 80%, transparent)" }}>
+            <p className="text-xs text-tenue">
               {ES_APP_NATIVA
                 ? "Las cuentas por cobrar y pagar no están incluidas en tu plan actual. Las que ya registraste las sigues viendo."
                 : "Las cuentas por cobrar y pagar son del Plan Pro. Las que ya registraste las sigues viendo."}
             </p>
           </div>
           <SoloWeb>
-            <Link
-              href="/planes"
-              className="text-xs underline underline-offset-2 shrink-0 transition-colors"
-              style={{ color: "var(--kipu-warning)" }}
-            >
+            <Link href="/planes" className="shrink-0 text-xs text-alerta-texto underline underline-offset-2">
               Ver planes
             </Link>
           </SoloWeb>
         </div>
       )}
 
-      {/* Resumen */}
-      <div className="grid grid-cols-3 gap-3 mb-6">
-        <div
-          className="rounded-xl p-4"
-          style={{
-            background: "var(--kipu-surface)",
-            border: "1px solid var(--kipu-border)",
-          }}
+      {/* Resumen: tocar Por cobrar / Por pagar filtra la lista */}
+      <div className="mb-4 grid grid-cols-3 gap-2 sm:gap-3">
+        <button
+          type="button"
+          onClick={() => alternarTipo("COBRAR")}
+          aria-pressed={filtroTipo === "COBRAR"}
+          className={cn(tarjeta, filtroTipo === "COBRAR" ? "border-exito ring-1 ring-exito" : "border-borde hover:border-exito/50")}
         >
-          <div className="flex items-center gap-2 mb-1">
-            <TrendingUp size={14} style={{ color: "var(--kipu-success)" }} />
-            <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Por cobrar</p>
-          </div>
-          <p className="text-xl font-bold" style={{ color: "var(--kipu-success)" }}>{fmt(totales.por_cobrar)}</p>
-        </div>
-        <div
-          className="rounded-xl p-4"
-          style={{
-            background: "var(--kipu-surface)",
-            border: "1px solid var(--kipu-border)",
-          }}
+          <span className="mb-1 flex items-center gap-1.5 text-xs text-sutil">
+            <TrendingUp size={14} className="text-exito" aria-hidden /> Por cobrar
+          </span>
+          <span className="block truncate text-base font-bold tabular-nums text-exito-texto sm:text-xl">{fmt(totales.por_cobrar)}</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => alternarTipo("PAGAR")}
+          aria-pressed={filtroTipo === "PAGAR"}
+          className={cn(tarjeta, filtroTipo === "PAGAR" ? "border-peligro ring-1 ring-peligro" : "border-borde hover:border-peligro/50")}
         >
-          <div className="flex items-center gap-2 mb-1">
-            <TrendingDown size={14} style={{ color: "var(--kipu-danger)" }} />
-            <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Por pagar</p>
-          </div>
-          <p className="text-xl font-bold" style={{ color: "var(--kipu-danger)" }}>{fmt(totales.por_pagar)}</p>
-        </div>
-        <div
-          className="rounded-xl p-4"
-          style={{
-            background: "var(--kipu-surface)",
-            border: "1px solid var(--kipu-border)",
-          }}
-        >
-          <div className="flex items-center gap-2 mb-1">
-            <Scale
-              size={14}
-              style={{ color: totales.balance >= 0 ? "var(--kipu-accent)" : "var(--kipu-warning)" }}
-            />
-            <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Balance</p>
-          </div>
-          <p
-            className="text-xl font-bold"
-            style={{ color: totales.balance >= 0 ? "var(--kipu-accent)" : "var(--kipu-warning)" }}
-          >
+          <span className="mb-1 flex items-center gap-1.5 text-xs text-sutil">
+            <TrendingDown size={14} className="text-peligro" aria-hidden /> Por pagar
+          </span>
+          <span className="block truncate text-base font-bold tabular-nums text-peligro-texto sm:text-xl">{fmt(totales.por_pagar)}</span>
+        </button>
+        <div className={cn(tarjeta, "border-borde")}>
+          <span className="mb-1 flex items-center gap-1.5 text-xs text-sutil">
+            <Scale size={14} className={totales.balance >= 0 ? "text-acento" : "text-alerta"} aria-hidden /> Balance
+          </span>
+          <span className={cn("block truncate text-base font-bold tabular-nums sm:text-xl",
+                              totales.balance >= 0 ? "text-acento" : "text-alerta-texto")}>
             {fmt(totales.balance)}
-          </p>
+          </span>
         </div>
       </div>
 
-      {/* Filtros */}
-      <div className="flex gap-2 mb-4 flex-wrap">
-        <div className="relative flex-1 min-w-48">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--kipu-subtle)" }} />
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Buscar por persona o concepto..."
-            className="w-full pl-9 pr-4 py-2.5 rounded-lg text-sm transition-colors focus:outline-none"
-            style={{
-              background: "var(--kipu-surface)",
-              border: "1px solid var(--kipu-border)",
-              color: "var(--kipu-text)",
-            }}
-            onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-            onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
-          />
-        </div>
-        <div className="relative">
-          <select
-            value={filtroTipo}
-            onChange={(e) => setFiltroTipo(e.target.value as any)}
-            className="pl-3 pr-8 py-2.5 rounded-lg text-sm appearance-none transition-colors focus:outline-none"
-            style={{
-              background: "var(--kipu-surface)",
-              border: "1px solid var(--kipu-border)",
-              color: "var(--kipu-text)",
-            }}
-            onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-            onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
-          >
-            <option value="">Todos</option>
-            <option value="COBRAR">Por cobrar</option>
-            <option value="PAGAR">Por pagar</option>
-          </select>
-          <ChevronDown
-            size={13}
-            className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none"
-            style={{ color: "var(--kipu-subtle)" }}
-          />
-        </div>
-        <div className="relative">
-          <select
-            value={filtroEst}
-            onChange={(e) => setFiltroEst(e.target.value)}
-            className="pl-3 pr-8 py-2.5 rounded-lg text-sm appearance-none transition-colors focus:outline-none"
-            style={{
-              background: "var(--kipu-surface)",
-              border: "1px solid var(--kipu-border)",
-              color: "var(--kipu-text)",
-            }}
-            onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-            onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
-          >
-            <option value="">Todos los estados</option>
-            <option value="PENDIENTE">Pendiente</option>
-            <option value="PARCIAL">Parcial</option>
-            <option value="PAGADO">Pagado</option>
-            <option value="ANULADO">Anulado</option>
-          </select>
-          <ChevronDown
-            size={13}
-            className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none"
-            style={{ color: "var(--kipu-subtle)" }}
-          />
-        </div>
-      </div>
+      <Entrada
+        teclado="buscar"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Buscar por persona o concepto…"
+        aria-label="Buscar cuentas"
+        prefijo={<Search size={16} />}
+        className="mb-3"
+      />
+      <ChipsFiltro opciones={FILTROS_ESTADO} valor={filtroEst} onCambio={setFiltroEst} etiqueta="Estado de la cuenta" className="mb-4" />
 
       {/* Lista */}
       {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <div
-            className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin"
-            style={{ borderColor: "var(--kipu-accent)", borderTopColor: "transparent" }}
-          />
-        </div>
+        <EsqueletoFilas filas={6} />
       ) : filtradas.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <Wallet size={40} className="mb-3" style={{ color: "var(--kipu-subtle)" }} />
-          <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>
-            {query || filtroTipo || filtroEst
-              ? "No hay cuentas que coincidan con los filtros."
-              : "Aún no tienes cuentas registradas."}
-          </p>
-          {!query && !filtroTipo && !filtroEst && (
-            tieneSub ? (
-              <button
-                type="button"
-                onClick={() => { setShowModal(true); resetModal(); }}
-                className="mt-4 px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors"
-                style={{ background: "var(--kipu-accent)" }}
-                onMouseEnter={e => e.currentTarget.style.background = "var(--kipu-accent-h)"}
-                onMouseLeave={e => e.currentTarget.style.background = "var(--kipu-accent)"}
-              >
-                Registrar primera cuenta
-              </button>
-            ) : (
-              <SoloWeb>
-                <Link
-                  href="/planes"
-                  className="mt-4 px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors inline-block"
-                  style={{ background: "var(--kipu-warning)" }}
-                >
-                  Ver planes
-                </Link>
-              </SoloWeb>
-            )
-          )}
-        </div>
+        query || filtroTipo || filtroEst ? (
+          <Vacio icono={Search} titulo="Ninguna cuenta coincide" descripcion="Prueba con otra búsqueda o quita los filtros." />
+        ) : (
+          <Vacio
+            icono={Wallet}
+            titulo="Aún no tienes cuentas registradas"
+            descripcion="Lleva lo que te deben y lo que debes, con sus abonos y vencimientos."
+            accion={tieneSub
+              ? <Boton onClick={nueva} icono={<Plus size={16} />}>Registrar cuenta</Boton>
+              : <SoloWeb><Link href="/planes" className="text-sm font-medium text-acento underline underline-offset-2">Ver planes</Link></SoloWeb>}
+          />
+        )
       ) : (
-        <div
-          className="rounded-xl overflow-hidden"
-          style={{
-            background: "var(--kipu-surface)",
-            border: "1px solid var(--kipu-border)",
-          }}
-        >
-          <div>
-            {filtradas.map((c, idx) => {
-              const est  = ESTADO_CONFIG[c.estado] ?? ESTADO_CONFIG.PENDIENTE;
-              const Icon = est.icon;
-              const vencida = c.fecha_vencimiento &&
-                c.fecha_vencimiento < hoyEC() &&
-                c.estado !== "PAGADO" && c.estado !== "ANULADO";
-
+        <TirarParaRefrescar alRefrescar={cargar}>
+          <GrupoFilas>
+            {filtradas.map((c) => {
+              const est     = ESTADOS[c.estado] ?? ESTADOS.PENDIENTE;
+              const abierta = c.estado !== "PAGADO" && c.estado !== "ANULADO";
+              const vencida = abierta && !!c.fecha_vencimiento && c.fecha_vencimiento < hoy;
+              const vence   = c.fecha_vencimiento ? etiquetaPeriodo(c.fecha_vencimiento, c.fecha_vencimiento, hoy).toLowerCase() : "";
               return (
-                <Link
+                <FilaLista
                   key={c.id}
                   href={esDemo ? (ES_APP_NATIVA ? "/cuentas" : "/planes") : rutas.cuenta(c.id)}
-                  className="flex items-center gap-3 px-4 py-3 transition-colors"
-                  style={{
-                    borderTop: idx > 0 ? "1px solid var(--kipu-border)" : "none",
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 4%, transparent)"}
-                  onMouseLeave={e => e.currentTarget.style.background = "transparent"}
-                >
-                  {/* Tipo badge */}
-                  <div
-                    className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-xs font-bold"
-                    style={{
-                      background: c.tipo === "COBRAR"
-                        ? "color-mix(in srgb, var(--kipu-success) 10%, transparent)"
-                        : "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
-                      color: c.tipo === "COBRAR" ? "var(--kipu-success)" : "var(--kipu-danger)",
-                    }}
-                  >
-                    {c.tipo === "COBRAR" ? "C" : "P"}
-                  </div>
-
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium flex items-center gap-2 min-w-0" style={{ color: "var(--kipu-text)" }}>
-                      <span className="truncate">{c.concepto}</span>{esDemo && <EtiquetaEjemplo />}
-                    </p>
-                    <p className="text-xs truncate" style={{ color: "var(--kipu-subtle)" }}>
-                      {c.razon_social}
-                      {c.fecha_vencimiento && (
-                        <span
-                          className="ml-2"
-                          style={{ color: vencida ? "var(--kipu-danger)" : "var(--kipu-subtle)" }}
-                        >
-                          · Vence {c.fecha_vencimiento}
-                          {vencida && " ⚠️"}
-                        </span>
-                      )}
-                    </p>
-                  </div>
-
-                  {/* Montos */}
-                  <div className="text-right shrink-0">
-                    <p className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>{fmt(c.saldo_pendiente)}</p>
-                    <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>de {fmt(c.monto_total)}</p>
-                  </div>
-
-                  {/* Estado */}
-                  <div
-                    className="items-center gap-1 px-2 py-1 rounded-full text-xs shrink-0 hidden sm:flex font-medium"
-                    style={{
-                      color: est.color,
-                      background: est.bg,
-                    }}
-                  >
-                    <Icon size={11} />
-                    {est.label}
-                  </div>
-                </Link>
+                  apagada={c.estado === "ANULADO"}
+                  inicio={
+                    <span
+                      className={cn("inline-flex size-10 items-center justify-center rounded-full text-xs font-bold",
+                        c.tipo === "COBRAR" ? "bg-exito-suave text-exito-texto" : "bg-peligro-suave text-peligro-texto")}
+                      title={c.tipo === "COBRAR" ? "Por cobrar" : "Por pagar"}
+                    >
+                      {c.tipo === "COBRAR" ? "C" : "P"}
+                    </span>
+                  }
+                  titulo={<span className="flex items-center gap-2">{c.concepto}{esDemo && <EtiquetaEjemplo />}</span>}
+                  subtitulo={c.razon_social}
+                  detalle={
+                    <>
+                      {`de ${fmt(c.monto_total)}`}
+                      {vence && <span className={vencida ? "text-peligro-texto" : undefined}>{` · ${vencida ? "venció" : "vence"} ${vence}`}</span>}
+                    </>
+                  }
+                  fin={fmt(c.saldo_pendiente)}
+                  finAbajo={vencida
+                    ? <InsigniaEstado tono="peligro" icono={AlertTriangle}>Vencida</InsigniaEstado>
+                    : <InsigniaEstado tono={est.tono}>{est.etiqueta}</InsigniaEstado>}
+                />
               );
             })}
-          </div>
-        </div>
+          </GrupoFilas>
+        </TirarParaRefrescar>
       )}
+
+      {/* Celular: nueva cuenta (solo si el plan lo permite) */}
+      {tieneSub && <BotonFlotante onClick={nueva} etiqueta="Nueva cuenta" />}
 
       {/* Nueva cuenta: Hoja (en el celular sube desde abajo, con los botones fijos abajo) */}
       <Hoja
@@ -757,14 +612,7 @@ export default function CuentasPage() {
   const puedeVer = usePermiso("clientes");   // como la API de cuentas
   if (!puedeVer) return <SinAcceso />;
   return (
-    <Suspense fallback={
-      <div className="flex items-center justify-center py-20">
-        <div
-          className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin"
-          style={{ borderColor: "var(--kipu-accent)", borderTopColor: "transparent" }}
-        />
-      </div>
-    }>
+    <Suspense fallback={<div className="p-4 md:p-6"><EsqueletoFilas filas={6} /></div>}>
       <CuentasContent />
     </Suspense>
   );
