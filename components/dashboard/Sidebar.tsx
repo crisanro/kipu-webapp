@@ -15,9 +15,10 @@ import {
   Bell,
   LogOut,
   HelpCircle,
+  Lock,
 } from "lucide-react";
 import { clsx } from "clsx";
-import { NAV_GROUPS, tienePermiso } from "./DashboardNav";
+import { NAV_GROUPS, aplicaALaEmpresa, bloqueadoPorPlan, tienePermiso } from "./DashboardNav";
 import { ThemeToggle } from "./ThemeToggle";
 import { useAuthStore } from "@/store/auth.store";
 import { ES_APP_NATIVA, rutaFueraDelPlan } from "@/lib/plataforma";
@@ -244,10 +245,14 @@ export function Sidebar({
                       style={{ borderLeft: "2px solid var(--kipu-border)" }}
                     >
                       {group.children
-                        .filter((child) => tienePermiso(empresa, (child as any).permiso ?? null) && !rutaFueraDelPlan(child.href, empresa))
+                        .filter((child) => tienePermiso(empresa, (child as any).permiso ?? null)
+                                           && !rutaFueraDelPlan(child.href, empresa)
+                                           && aplicaALaEmpresa(child, empresa))
                         .map((child) => {
                           const active = isActive(child.href);
                           const Icon = child.icon;
+                          // Solo en la web: en la app ya no está en el menú (rutaFueraDelPlan)
+                          const bloqueado = bloqueadoPorPlan(child, empresa);
                           return (
                             <Link
                               key={child.href}
@@ -270,6 +275,11 @@ export function Sidebar({
                             >
                               <Icon size={14} />
                               {child.label}
+                              {bloqueado && (
+                                <span className="ml-auto flex" title="Disponible en Kipu Pro" aria-label="Disponible en Kipu Pro">
+                                  <Lock size={12} aria-hidden />
+                                </span>
+                              )}
                             </Link>
                           );
                         })}

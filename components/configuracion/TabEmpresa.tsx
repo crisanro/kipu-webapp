@@ -3,10 +3,13 @@ import { useState } from "react";
 import {
   Pencil, X, Check, Loader2,
   Building2, FileText, Calendar,
-  ShieldCheck, HelpCircle,
+  ShieldCheck, HelpCircle, Receipt,
 } from "lucide-react";
 import api from "@/lib/api";
 import Checklist, { HealthData } from "@/components/Checklist";
+import { refrescarEmpresaActual } from "@/lib/empresa";
+import { ES_APP_NATIVA } from "@/lib/plataforma";
+import { useAuthStore } from "@/store/auth.store";
 
 interface Props {
   legal:        any;
@@ -56,6 +59,12 @@ export default function TabEmpresa({ legal, health, onActualizar }: Props) {
   const [regimenRimpe,      setRegimenRimpe]      = useState(legal?.regimen_rimpe ?? "");
   const [granContribuyente, setGranContribuyente]  = useState(legal?.gran_contribuyente_resolucion ?? "");
 
+  // Interruptor de retenciones: se guarda al tocarlo (PATCH /emisor/config)
+  const [emiteRetenciones,  setEmiteRetenciones]  = useState<boolean>(!!legal?.emite_retenciones);
+  const [guardandoRet,      setGuardandoRet]      = useState(false);
+  const [msgRet,            setMsgRet]            = useState("");
+  const conPlan = useAuthStore((s) => !!s.empresa?.suscripcion_activa);
+
   if (!legal) return null;
 
   const esObligado         = legal.obligado_contabilidad === "SI";
@@ -97,6 +106,24 @@ export default function TabEmpresa({ legal, health, onActualizar }: Props) {
       setLeyendaMsg("❌ Error al guardar las leyendas.");
     } finally {
       setGuardandoLeyenda(false);
+    }
+  };
+
+  const cambiarRetenciones = async () => {
+    const nuevo = !emiteRetenciones;
+    setEmiteRetenciones(nuevo);
+    setGuardandoRet(true);
+    setMsgRet("");
+    try {
+      await api.patch("/api/v1/app/emisor/config", { emite_retenciones: nuevo });
+      // El menú y Nueva RET ven el cambio enseguida. Sin onActualizar(): el cargar()
+      // de Configuración guarda en el store la empresa de antes y lo pisaría.
+      await refrescarEmpresaActual();
+    } catch {
+      setEmiteRetenciones(!nuevo);
+      setMsgRet("❌ No se pudo guardar. Intenta de nuevo.");
+    } finally {
+      setGuardandoRet(false);
     }
   };
 
@@ -398,6 +425,56 @@ export default function TabEmpresa({ legal, health, onActualizar }: Props) {
             )}
           </div>
         </div>
+      </section>
+
+      {/* ══ Card: Comprobantes de retención (enlace /configuracion#retenciones) ══ */}
+      <section
+        id="retenciones"
+        className="rounded-2xl p-5 md:p-6 scroll-mt-4"
+        style={{
+          background: "var(--kipu-surface)",
+          border: "1px solid var(--kipu-border)",
+        }}
+      >
+        <div className="flex items-start gap-2.5">
+          <div className="p-2 rounded-lg" style={{ background: "color-mix(in srgb, var(--kipu-info) 12%, transparent)", color: "var(--kipu-info)" }}>
+            <Receipt size={18} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h2 className="text-sm font-bold" style={{ color: "var(--kipu-text)" }}>
+              Emito comprobantes de retención
+            </h2>
+            <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+              Muestra «Retención» en Emitir y en el detalle de tus compras. Actívalo si retienes a tus proveedores.
+            </p>
+            {!conPlan && !ES_APP_NATIVA && (
+              <p className="text-xs mt-1" style={{ color: "var(--kipu-muted)" }}>
+                Emitir retenciones requiere Kipu Pro o Kipu Al Día.
+              </p>
+            )}
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={emiteRetenciones}
+            aria-label="Emito comprobantes de retención"
+            onClick={cambiarRetenciones}
+            disabled={guardandoRet}
+            className="w-10 h-5 rounded-full transition-colors relative shrink-0 mt-1"
+            style={{
+              background: emiteRetenciones ? "var(--kipu-accent)" : "var(--kipu-border)",
+              opacity: guardandoRet ? 0.6 : 1,
+            }}
+          >
+            <span
+              className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all"
+              style={{ left: emiteRetenciones ? "22px" : "2px" }}
+            />
+          </button>
+        </div>
+        {msgRet && (
+          <p className="text-xs mt-2" style={{ color: "var(--kipu-subtle)" }}>{msgRet}</p>
+        )}
       </section>
 
       {/* ══ Card 3: Período de IVA ═════════════════════════════════ */}

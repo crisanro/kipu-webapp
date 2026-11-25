@@ -1,14 +1,15 @@
 "use client";
-import SoloWeb from "@/components/SoloWeb";
-
 import { useState, useEffect, useRef } from "react";
 import { r2 } from "@/lib/dinero";
 import { useRouter, useSearchParams } from "next/navigation";
 import AccionesUsoJusto from "../components/AccionesUsoJusto";
 import { v4 as uuidv4 } from "uuid";
-import { debeRenovarClave, esUsoJusto, mensajeErrorEmision } from "@/lib/emision";
+import { debeRenovarClave, esPlanRequerido, esUsoJusto, mensajeErrorEmision } from "@/lib/emision";
+import { refrescarEmpresaActual } from "@/lib/empresa";
 import api from "@/lib/api";
 import AvisoColchon from "@/components/uso-justo/AvisoColchon";
+import BloqueoPlanPro from "@/components/dashboard/BloqueoPlanPro";
+import { usePermiso } from "@/hooks/usePermiso";
 import { useAuthStore } from "@/store/auth.store";
 import { useSandboxStore } from "@/store/sandbox.store";
 import { CheckCircle2, AlertTriangle, Plus, Trash2, Calendar } from "lucide-react";
@@ -371,6 +372,8 @@ export default function NuevaRetPage() {
   // Con el sandbox activo el backend emite en pruebas aunque la empresa esté en producción
   const sandboxActivo = useSandboxStore((s) => s.activo);
   const enProduccion  = empresa?.ambiente === 2 && !sandboxActivo;
+  // Activar las retenciones es de quien configura la empresa (mismo permiso que Configuración)
+  const puedeConfigurar = usePermiso("configuracion");
   // Con plan gratis no se gastan créditos (mismo criterio que ResumenTotales)
   const usaCreditos  = !empresa?.suscripcion_activa && !empresa?.emision_gratis && (empresa?.balance_api ?? 0) > 0;
 
@@ -447,6 +450,8 @@ export default function NuevaRetPage() {
   const [resultado,  setResultado]  = useState<any>(null);
   const [error,      setError]      = useState("");
   const [usoJusto,   setUsoJusto]   = useState("");   // mensaje del uso justo (para ofrecer Pro o créditos)
+  // 402 PLAN_REQUERIDO del backend (p. ej. el plan venció con la página abierta): su mensaje
+  const [planRequerido, setPlanRequerido] = useState("");
   // En producción, una retención genera la obligación del 103 (y del 104 si
   // retiene IVA): se pide confirmar antes de emitir para evitar "pruebas" reales.
   const [confirmarProduccion, setConfirmarProduccion] = useState(false);
@@ -634,9 +639,6 @@ export default function NuevaRetPage() {
     if (impuestos.some(i => i.baseImponible <= 0)) { setError("La base imponible debe ser mayor a $0."); return; }
     if (esExterior && !paisEfecPago)    { setError("Selecciona el país del pago al exterior."); return; }
 
-    const puedeEmitir = empresa?.suscripcion_activa || (empresa?.balance_api ?? 0) > 0 || !!empresa?.emision_gratis;
-    if (!puedeEmitir) { setError("Se requiere suscripción activa o créditos API."); return; }
-
     if (enProduccion && !confirmado) { setConfirmarProduccion(true); return; }
     setConfirmarProduccion(false);
 
@@ -706,10 +708,45 @@ export default function NuevaRetPage() {
       const mensaje = mensajeErrorEmision(err, "Error al emitir la retención.");
       setError(mensaje);
       setUsoJusto(esUsoJusto(err) ? mensaje : "");
+      if (esPlanRequerido(err)) {
+        setPlanRequerido(mensaje);
+        refrescarEmpresaActual();   // el menú y las demás pantallas ven el plan actual
+      }
     } finally  {
       setSubmitting(false);
     }
   };
+
+  // Primero el plan: a una empresa Gratis no le sirve activar las retenciones
+  // (el backend responde 402 PLAN_REQUERIDO)
+  if ((empresa && !empresa.suscripcion_activa) || planRequerido) {
+    return (
+      <div className="p-4 md:p-6">
+        <BloqueoPlanPro mensaje={planRequerido || undefined} />
+      </div>
+    );
+  }
+
+  // Después, el interruptor de la empresa (Configuración)
+  if (empresa && !empresa.emite_retenciones) {
+    return (
+      <div className="p-4 md:p-6">
+        {puedeConfigurar ? (
+          <BloqueoPlanPro
+            titulo="Retenciones desactivadas"
+            mensaje="Actívalas en Configuración, con «Emito comprobantes de retención»."
+            accion={{ href: "/configuracion#retenciones", label: "Ir a Configuración" }}
+          />
+        ) : (
+          <BloqueoPlanPro
+            titulo="Retenciones desactivadas"
+            mensaje="Pídele al administrador de la empresa que active las retenciones en Configuración."
+            accion={null}
+          />
+        )}
+      </div>
+    );
+  }
 
   if (resultado) {
     return (
@@ -784,22 +821,6 @@ export default function NuevaRetPage() {
           {empresa?.razon_social} · {empresa?.ambiente === 2 ? "Producción" : "Pruebas"}
         </p>
       </div>
-
-      {empresa && !empresa.suscripcion_activa && empresa.balance_api === 0 && !empresa.emision_gratis && (
-        <div
-          className="flex items-center gap-2 rounded-lg px-4 py-3"
-          style={{
-            background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
-            border: "1px solid color-mix(in srgb, var(--kipu-danger) 20%, transparent)",
-          }}
-        >
-          <AlertTriangle size={16} className="shrink-0" style={{ color: "var(--kipu-danger)" }} />
-          <p className="text-sm" style={{ color: "var(--kipu-danger)" }}>
-            Sin acceso para emitir.{" "}
-            <SoloWeb><a href="/planes" className="underline">Ver opciones</a></SoloWeb>
-          </p>
-        </div>
-      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">

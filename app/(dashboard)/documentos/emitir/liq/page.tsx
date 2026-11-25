@@ -1,16 +1,16 @@
 "use client";
-import SoloWeb from "@/components/SoloWeb";
-
 import { useState, useEffect, useRef } from "react";
 import { errorIdentificacion } from "@/lib/identificacion";
 import { r2 } from "@/lib/dinero";
 import { useRouter } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
-import { debeRenovarClave, esUsoJusto, mensajeErrorEmision } from "@/lib/emision";
+import { debeRenovarClave, esPlanRequerido, esUsoJusto, mensajeErrorEmision } from "@/lib/emision";
+import { refrescarEmpresaActual } from "@/lib/empresa";
 import api from "@/lib/api";
 import AvisoColchon from "@/components/uso-justo/AvisoColchon";
+import BloqueoPlanPro from "@/components/dashboard/BloqueoPlanPro";
 import { useAuthStore } from "@/store/auth.store";
-import { CheckCircle2, AlertTriangle, User, Search, X } from "lucide-react";
+import { CheckCircle2, User, Search, X } from "lucide-react";
 import PuntoEmision from "../components/PuntoEmision";
 import { usePuntoEmision } from "../components/usePuntoEmision";
 import ItemsEditor, { Item, calcItem, genId, EMPTY_ITEM } from "../components/ItemsEditor";
@@ -95,6 +95,8 @@ export default function NuevaLiqPage() {
   const [resultado,  setResultado]  = useState<any>(null);
   const [error,      setError]      = useState("");
   const [usoJusto,   setUsoJusto]   = useState("");   // mensaje del uso justo (para ofrecer Pro o créditos)
+  // 402 PLAN_REQUERIDO del backend (p. ej. el plan venció con la página abierta): su mensaje
+  const [planRequerido, setPlanRequerido] = useState("");
 
   const totales = calcTotales(items);
 
@@ -167,9 +169,6 @@ export default function NuevaLiqPage() {
       setError("Todos los ítems deben tener descripción."); return;
     }
 
-    const puedeEmitir = empresa?.suscripcion_activa || (empresa?.balance_api ?? 0) > 0 || !!empresa?.emision_gratis;
-    if (!puedeEmitir) { setError("Se requiere suscripción activa o créditos API."); return; }
-
     const totalCubierto = pagos.reduce((s, p) => s + (p.total ?? 0), 0);
     if (totalCubierto > totales.total) {
       setError(`Los pagos ($${fmt(totalCubierto)}) superan el total ($${fmt(totales.total)}).`); return;
@@ -222,10 +221,23 @@ export default function NuevaLiqPage() {
       const mensaje = mensajeErrorEmision(err, "Error al emitir la liquidación.");
       setError(mensaje);
       setUsoJusto(esUsoJusto(err) ? mensaje : "");
+      if (esPlanRequerido(err)) {
+        setPlanRequerido(mensaje);
+        refrescarEmpresaActual();   // el menú y las demás pantallas ven el plan actual
+      }
     } finally {
       setSubmitting(false);
     }
   };
+
+  // Liquidación de compra: solo con Kipu Pro o Al Día (el backend responde 402 PLAN_REQUERIDO)
+  if ((empresa && !empresa.suscripcion_activa) || planRequerido) {
+    return (
+      <div className="p-4 md:p-6">
+        <BloqueoPlanPro mensaje={planRequerido || undefined} />
+      </div>
+    );
+  }
 
   // Pantalla resultado
   if (resultado) {
@@ -298,22 +310,6 @@ export default function NuevaLiqPage() {
           {empresa?.razon_social} · {empresa?.ambiente === 2 ? "Producción" : "Pruebas"}
         </p>
       </div>
-
-      {empresa && !empresa.suscripcion_activa && empresa.balance_api === 0 && !empresa.emision_gratis && (
-        <div
-          className="flex items-center gap-2 rounded-lg px-4 py-3"
-          style={{
-            background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
-            border: "1px solid color-mix(in srgb, var(--kipu-danger) 20%, transparent)",
-          }}
-        >
-          <AlertTriangle size={16} className="shrink-0" style={{ color: "var(--kipu-danger)" }} />
-          <p className="text-sm" style={{ color: "var(--kipu-danger)" }}>
-            Sin acceso para emitir.{" "}
-            <SoloWeb><a href="/planes" className="underline">Ver opciones</a></SoloWeb>
-          </p>
-        </div>
-      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">

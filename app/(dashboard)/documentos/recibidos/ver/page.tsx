@@ -5,10 +5,17 @@ import { notFound, useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowLeft, FileText, Download, Pencil,
   CheckCircle2, X, Save,
-  Link2, Shield, Receipt
+  Link2, Shield, Receipt, Lock
 } from "lucide-react";
 import api from "@/lib/api";
 import { API_BASE_URL } from "@/lib/config";
+import { useAuthStore } from "@/store/auth.store";
+import { rutaFueraDelPlan } from "@/lib/plataforma";
+import { aplicaALaEmpresa, bloqueadoPorPlan } from "@/components/dashboard/DashboardNav";
+
+// "Emitir retención": misma regla que el menú (DashboardNav). Sin retenciones activadas no
+// aparece; sin Kipu Pro / Al Día va con candado y lleva a planes (en la app no aparece).
+const RET = { href: "/documentos/emitir/ret", requierePro: true, requiereRetenciones: true };
 
 const fmt = (n: any) => parseFloat(String(n ?? 0)).toFixed(2);
 
@@ -306,6 +313,9 @@ export default function DetalleRecibidoPage() {
 
 function DetalleRecibido({ id }: { id: string }) {
   const router  = useRouter();
+  const empresa = useAuthStore((s) => s.empresa);
+  const verRet  = aplicaALaEmpresa(RET, empresa) && !rutaFueraDelPlan(RET.href, empresa);
+  const retSinPlan = bloqueadoPorPlan(RET, empresa);
 
   const [doc,      setDoc]      = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -725,9 +735,10 @@ function DetalleRecibido({ id }: { id: string }) {
           </a>
         )}
         {/* Emitir RET — solo FAC/LIQ sin retención */}
-        {["FAC", "LIQ"].includes(doc.tipo_doc) && !doc.retencion_emitida && (
+        {["FAC", "LIQ"].includes(doc.tipo_doc) && !doc.retencion_emitida && verRet && (
           <button
-            onClick={() => router.push(`/documentos/emitir/ret?doc_origen_recibido_id=${doc.id}`)}
+            onClick={() => router.push(retSinPlan ? "/planes" : `/documentos/emitir/ret?doc_origen_recibido_id=${doc.id}`)}
+            title={retSinPlan ? "Disponible en Kipu Pro" : undefined}
             className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs transition-colors"
             style={{
               background: "color-mix(in srgb, var(--kipu-info) 10%, transparent)",
@@ -737,6 +748,7 @@ function DetalleRecibido({ id }: { id: string }) {
             onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-info) 20%, transparent)"}
             onMouseLeave={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-info) 10%, transparent)"}
           >
+            {retSinPlan && <Lock size={12} aria-hidden />}
             RET · Emitir retención
           </button>
         )}

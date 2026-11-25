@@ -21,6 +21,9 @@ import { ES_APP_NATIVA, esRutaSoloWeb } from "@/lib/plataforma";
 // permiso: string       → usuario necesita ESE permiso
 // permiso: string[]     → usuario necesita AL MENOS UNO (OR)
 // permiso: null          → visible para todos
+// requierePro           → solo con Kipu Pro / Al Día: en la web va con candado; en la
+//                         app no se muestra (RUTAS_CON_SUSCRIPCION en lib/plataforma.ts)
+// requiereRetenciones   → solo si la empresa emite retenciones (Configuración)
 
 const GRUPOS = [
   {
@@ -41,10 +44,10 @@ const GRUPOS = [
     permiso: "emitir",
     children: [
       { href: "/documentos/emitir/fac", label: "Factura", icon: FileText },
-      { href: "/documentos/emitir/liq", label: "Liquidación", icon: FileText },
+      { href: "/documentos/emitir/liq", label: "Liquidación", icon: FileText, requierePro: true },
       { href: "/documentos/emitir/ncr", label: "Nota de crédito", icon: FileText },
       { href: "/documentos/emitir/ndb", label: "Nota de débito", icon: FileText },
-      { href: "/documentos/emitir/ret", label: "Retención", icon: FileText },
+      { href: "/documentos/emitir/ret", label: "Retención", icon: FileText, requierePro: true, requiereRetenciones: true },
     ],
   },
   {
@@ -86,6 +89,18 @@ export const NAV_GROUPS = ES_APP_NATIVA
   : GRUPOS;
 
 type EmpresaConPermisos = { rol?: string | null; permisos?: Record<string, boolean> | null } | null | undefined;
+
+type EmpresaPlanNav = { suscripcion_activa?: boolean | null; emite_retenciones?: boolean | null } | null | undefined;
+
+/** Con candado: el plan no lo incluye (el backend responde 402 PLAN_REQUERIDO). */
+export function bloqueadoPorPlan(item: { href: string; requierePro?: boolean }, empresa: EmpresaPlanNav): boolean {
+  return !!item.requierePro && !empresa?.suscripcion_activa;
+}
+
+/** La retención se muestra solo a las empresas que la emiten. */
+export function aplicaALaEmpresa(item: { href: string; requiereRetenciones?: boolean }, empresa: EmpresaPlanNav): boolean {
+  return !item.requiereRetenciones || !!empresa?.emite_retenciones;
+}
 
 export function tienePermiso(empresa: EmpresaConPermisos, permiso: string | string[] | null): boolean {
   if (!permiso) return true;

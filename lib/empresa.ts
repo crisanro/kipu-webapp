@@ -23,6 +23,7 @@ export function aEmpresa(e: any): Empresa {
     suscripcion:           e.suscripcion,
     balance_api:           e.balance_api,
     emision_gratis:        e.emision_gratis ?? false,
+    emite_retenciones:     e.emite_retenciones ?? false,
     obligado_contabilidad: e.obligado_contabilidad ?? null,
     periodo_iva:           e.periodo_iva ?? null,
   };
