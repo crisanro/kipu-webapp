@@ -118,8 +118,10 @@ export default function KipuAlDiaPage() {
           version: terminos.version, hash: terminos.hash, acepta_terminos: true, autoriza_clave_sri: true,
         });
       }
-      // Siempre con el periodo explícito (sin cuerpo el backend asume mensual)
-      const r = await api.post("/api/v1/app/al-dia/checkout", { periodo });
+      // Siempre con el periodo explícito (sin cuerpo el backend asume mensual).
+      // Desde la app, Stripe vuelve a /volver-a-la-app: el navegador interno
+      // muestra la web, y las páginas web ofrecen planes (reglas de las tiendas)
+      const r = await api.post("/api/v1/app/al-dia/checkout", { periodo, desde_app: ES_APP_NATIVA });
       // Web: el pago en esta pestaña (Stripe vuelve aquí). App: navegador dentro de
       // la app; al cerrarlo se vuelve a consultar si el pago entró
       await abrirExterno(r.data.checkout_url, { mismaPestana: true, alCerrar: () => void cargar() });
@@ -133,7 +135,7 @@ export default function KipuAlDiaPage() {
 
   const gestionarPago = async () => {
     try {
-      const r = await api.post("/api/v1/app/suscripcion/portal?volver=al-dia");
+      const r = await api.post(`/api/v1/app/suscripcion/portal?volver=al-dia${ES_APP_NATIVA ? "&desde_app=true" : ""}`);
       await abrirExterno(r.data.portal_url, { mismaPestana: true, alCerrar: () => void cargar() });
     } catch (err: unknown) {
       setError(detalle(err, "No pudimos abrir la gestión del pago."));

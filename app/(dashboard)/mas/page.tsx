@@ -94,8 +94,11 @@ export default function MasPage() {
     !(ES_APP_NATIVA && esRutaSoloWeb(i.href));
 
   const planGratis = !empresa.suscripcion_activa && !!empresa.emision_gratis;
-  const plan = !empresa.suscripcion_activa ? "Gratis"
-    : empresa.suscripcion?.plan === "AL_DIA" ? "Kipu Al Día" : "Kipu Pro";
+  // En la app no se nombra el Pro ni se marca "Gratis" (las tiendas no permiten
+  // invitar a comprar fuera de ellas). Al Día sí: es el servicio de un contador.
+  const plan = !empresa.suscripcion_activa ? (ES_APP_NATIVA ? null : "Gratis")
+    : empresa.suscripcion?.plan === "AL_DIA" ? "Kipu Al Día"
+    : ES_APP_NATIVA ? "Plan activo" : "Kipu Pro";
   const firmaOk = empresa.firma_ok ?? false;
   const puedeProduccion = firmaOk && empresa.ambiente === 2;
 
@@ -113,7 +116,7 @@ export default function MasPage() {
         <span className="min-w-0 flex-1">
           <span className="block truncate font-semibold text-texto">{empresa.nombre_comercial || empresa.razon_social}</span>
           <span className="block text-xs text-sutil">
-            RUC {empresa.ruc} · {plan}{planGratis ? " (facturas gratis)" : ""} · {empresa.ambiente === 2 ? "Producción" : "Pruebas"}
+            RUC {empresa.ruc}{plan && <> · {plan}{planGratis ? " (facturas gratis)" : ""}</>} · {empresa.ambiente === 2 ? "Producción" : "Pruebas"}
           </span>
         </span>
         <span className="shrink-0 text-xs font-medium text-acento">Cambiar</span>
