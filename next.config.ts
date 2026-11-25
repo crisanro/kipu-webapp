@@ -65,7 +65,15 @@ const configWeb: NextConfig = {
   output: "standalone",
   pageExtensions: [...EXTENSIONES.map((e) => `web.${e}`), ...EXTENSIONES],
   async headers() {
-    return [{ source: "/:path*", headers: securityHeaders }];
+    return [
+      { source: "/:path*", headers: securityHeaders },
+      // Enlaces que abren la app (public/.well-known/): iOS lee este archivo sin
+      // extensión y lo espera como JSON
+      {
+        source: "/.well-known/apple-app-site-association",
+        headers: [{ key: "Content-Type", value: "application/json" }],
+      },
+    ];
   },
   // La documentación para integradores vive en el backend (se genera del código)
   // y se sirve en app.kipu.ec/dev sin redirigir: Next la pide por detrás. El

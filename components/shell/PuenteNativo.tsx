@@ -7,6 +7,7 @@
 //   - Splash: se quita cuando la app está lista (o a los 8 s, por las dudas).
 //   - Barras del sistema: íconos claros u oscuros según el tema.
 //   - Teclado: el campo enfocado queda a la vista.
+//   - Enlaces de app.kipu.ec (correos, WhatsApp): abren esa pantalla en la app.
 
 "use client";
 
@@ -16,7 +17,8 @@ import { useTheme } from "next-themes";
 import { useSWRConfig } from "swr";
 import { Capacitor, SystemBars, SystemBarsStyle, type PluginListenerHandle } from "@capacitor/core";
 import { cerrarCapaSuperior } from "@/lib/botonAtras";
-import { ocultarSplash } from "@/lib/nativo";
+import { abrirExterno, ocultarSplash } from "@/lib/nativo";
+import { esRutaSoloWeb } from "@/lib/plataforma";
 
 const INICIO = "/dashboard";
 // Desde aquí, atrás sale de la app (la minimiza, como cualquier app de Android)
@@ -26,6 +28,32 @@ const PESTANAS = ["/documentos", "/personas", "/mas"];
 
 const SPLASH_MAXIMO_MS = 8000;
 
+// Dominio de los enlaces que abren la app (public/.well-known/ en la web)
+const DOMINIOS_APP = ["app.kipu.ec"];
+// El enlace con que se abrió la app se atiende una sola vez (el efecto puede repetirse)
+let enlaceInicialVisto = false;
+let ultimoEnlace = { url: "", en: 0 };
+
+/**
+ * Un enlace de app.kipu.ec (correo, WhatsApp…) abre esa pantalla en la app.
+ * Lo que solo existe en la web (planes, renta…) sigue en el navegador: las
+ * tiendas no permiten vender dentro de la app. Sin sesión, la pantalla protegida
+ * manda al login y vuelve ahí después (lib/volver.ts).
+ */
+function abrirEnlace(url: string, router: ReturnType<typeof useRouter>) {
+  // Al abrir la app por un enlace, Android puede avisarlo dos veces (evento + getLaunchUrl)
+  const ahora = Date.now();
+  if (url === ultimoEnlace.url && ahora - ultimoEnlace.en < 3000) return;
+  ultimoEnlace = { url, en: ahora };
+
+  let u: URL;
+  try { u = new URL(url); } catch { return; }
+  if (!DOMINIOS_APP.includes(u.hostname)) return;
+  const ruta = u.pathname.replace(/\/+$/, "") || "/";
+  if (esRutaSoloWeb(ruta)) { void abrirExterno(url); return; }
+  router.push(`${ruta}${u.search}${u.hash}`);
+}
+
 /** /documentos/ (export estático con trailingSlash) → /documentos */
 const rutaActual = () => window.location.pathname.replace(/\/+$/, "") || "/";
 
@@ -34,7 +62,7 @@ export default function PuenteNativo({ listo }: { listo: boolean }) {
   const { resolvedTheme } = useTheme();
   const { mutate } = useSWRConfig();
 
-  // Botón atrás, volver a la app y teclado
+  // Botón atrás, volver a la app, enlaces y teclado
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
     let cancelado = false;
@@ -55,6 +83,15 @@ export default function PuenteNativo({ listo }: { listo: boolean }) {
 
       // De vuelta a la app: lo que esté en caché se vuelve a pedir
       escuchas.push(await App.addListener("resume", () => { void mutate(() => true); }));
+
+      // Enlaces de app.kipu.ec que abren la app (App Links / Universal Links):
+      // con la app abierta llega "appUrlOpen"; si la abrió el enlace, getLaunchUrl
+      escuchas.push(await App.addListener("appUrlOpen", ({ url }) => abrirEnlace(url, router)));
+      if (!enlaceInicialVisto) {
+        enlaceInicialVisto = true;
+        const inicial = await App.getLaunchUrl().catch(() => undefined);
+        if (inicial?.url && !cancelado) abrirEnlace(inicial.url, router);
+      }
 
       const { Keyboard } = await import("@capacitor/keyboard");
       if (cancelado) return;
