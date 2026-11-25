@@ -6,6 +6,8 @@ import { useState } from "react";
 import Link from "next/link";
 import api from "@/lib/api";
 import { CheckCircle2, AlertTriangle, Clock, XCircle, ExternalLink } from "lucide-react";
+import Hoja from "@/components/ui/Hoja";
+import Boton from "@/components/ui/Boton";
 
 export interface DeclaracionData {
   periodo:         string;
@@ -34,84 +36,26 @@ function ModalConfirmar({ onConfirm, onCancel, loading }: {
   onCancel:  () => void;
   loading:   boolean;
 }) {
+  // Se monta solo al confirmar (por eso abierta fija)
   return (
-    <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-      <div
-        className="rounded-xl p-5 max-w-sm w-full space-y-4"
-        style={{
-          background: "var(--kipu-surface)",
-          border: "1px solid var(--kipu-border)",
-        }}
-      >
-        <div className="flex items-start gap-3">
-          <div
-            className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
-            style={{
-              background: "color-mix(in srgb, var(--kipu-success) 20%, transparent)",
-            }}
-          >
-            <CheckCircle2 size={16} style={{ color: "var(--kipu-success)" }} />
-          </div>
-          <div>
-            <p className="font-semibold text-sm" style={{ color: "var(--kipu-text)" }}>
-              ¿Ya realizaste tu declaración?
-            </p>
-            <p className="text-xs mt-1" style={{ color: "var(--kipu-subtle)" }}>
-              Al confirmar no recibirás más recordatorios sobre esta declaración
-              hasta el próximo mes.
-            </p>
-          </div>
-        </div>
-        <div
-          className="rounded-lg px-3 py-2.5 text-xs"
-          style={{
-            background: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)",
-            border: "1px solid color-mix(in srgb, var(--kipu-warning) 20%, transparent)",
-            color: "var(--kipu-warning)",
-          }}
-        >
-          ⚠️ Asegúrate de haber declarado en el portal del SRI antes de confirmar.
-          Esta acción solo registra que ya lo hiciste en Kipu.
-        </div>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={onCancel}
-            disabled={loading}
-            className="flex-1 py-2 rounded-lg text-sm transition-colors disabled:opacity-40"
-            style={{
-              border: "1px solid var(--kipu-border)",
-              color: "var(--kipu-muted)",
-            }}
-            onMouseEnter={e => {
-              if (!loading) e.currentTarget.style.color = "var(--kipu-text)";
-            }}
-            onMouseLeave={e => {
-              if (!loading) e.currentTarget.style.color = "var(--kipu-muted)";
-            }}
-          >
-            Cancelar
-          </button>
-          <button
-            type="button"
-            onClick={onConfirm}
-            disabled={loading}
-            className="flex-1 py-2 rounded-lg text-white text-sm font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-            style={{ background: "var(--kipu-success)" }}
-          >
-            {loading ? (
-              <div
-                className="w-3.5 h-3.5 border-2 border-t-transparent rounded-full animate-spin"
-                style={{ borderColor: "#FFFFFF", borderTopColor: "transparent" }}
-              />
-            ) : (
-              <CheckCircle2 size={14} />
-            )}
-            Sí, ya declaré
-          </button>
-        </div>
-      </div>
-    </div>
+    <Hoja
+      abierta
+      onCerrar={onCancel}
+      titulo="¿Ya realizaste tu declaración?"
+      descripcion="Al confirmar no recibirás más recordatorios sobre esta declaración hasta el próximo mes."
+      tamano="sm"
+      cerrable={!loading}
+      pie={<>
+        <Boton variante="secundario" onClick={onCancel} disabled={loading}>Cancelar</Boton>
+        <Boton onClick={onConfirm} cargando={loading} icono={<CheckCircle2 size={16} />}>Sí, ya declaré</Boton>
+      </>}
+    >
+      <p className="flex items-start gap-2 rounded-lg px-3 py-2.5 text-xs text-texto bg-alerta-suave border border-alerta/30">
+        <AlertTriangle size={14} className="mt-0.5 shrink-0 text-alerta" aria-hidden />
+        Asegúrate de haber declarado en el portal del SRI antes de confirmar.
+        Esta acción solo registra que ya lo hiciste en Kipu.
+      </p>
+    </Hoja>
   );
 }
 

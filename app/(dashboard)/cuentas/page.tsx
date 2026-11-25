@@ -12,6 +12,8 @@ import { demoCuentas, resumenCuentas } from "@/lib/demos";
 import { BannerEjemplo, EtiquetaEjemplo } from "@/components/EjemploPro";
 import SoloWeb from "@/components/SoloWeb";
 import { ES_APP_NATIVA } from "@/lib/plataforma";
+import Hoja from "@/components/ui/Hoja";
+import Boton from "@/components/ui/Boton";
 import {
   Wallet, Plus, X, ChevronDown, Save,
   TrendingUp, TrendingDown, Scale, Search,
@@ -507,34 +509,20 @@ function CuentasContent() {
         </div>
       )}
 
-      {/* Modal nueva cuenta */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-          <div
-            className="rounded-xl w-full max-w-md"
-            style={{
-              background: "var(--kipu-surface)",
-              border: "1px solid var(--kipu-border)",
-            }}
-          >
-            <div
-              className="flex items-center justify-between px-5 py-4"
-              style={{ borderBottom: "1px solid var(--kipu-border)" }}
-            >
-              <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>Nueva cuenta</h2>
-              <button
-                type="button"
-                onClick={() => { setShowModal(false); resetModal(); }}
-                className="transition-colors"
-                style={{ color: "var(--kipu-subtle)" }}
-                onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
-                onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-subtle)"}
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="p-5 space-y-3">
+      {/* Nueva cuenta: Hoja (en el celular sube desde abajo, con los botones fijos abajo) */}
+      <Hoja
+        abierta={showModal}
+        onCerrar={() => { setShowModal(false); resetModal(); }}
+        titulo="Nueva cuenta"
+        cerrable={!saving}
+        pie={<>
+          <Boton variante="secundario" onClick={() => { setShowModal(false); resetModal(); }} disabled={saving}>
+            Cancelar
+          </Boton>
+          <Boton onClick={handleGuardar} cargando={saving} icono={<Save size={16} />}>Guardar</Boton>
+        </>}
+      >
+            <div className="space-y-3">
               {/* Tipo */}
               <div className="grid grid-cols-2 gap-2">
                 {(["COBRAR", "PAGAR"] as const).map((t) => {
@@ -758,49 +746,8 @@ function CuentasContent() {
                   {error}
                 </p>
               )}
-
-              <div className="flex gap-3 pt-1">
-                <button
-                  type="button"
-                  onClick={() => { setShowModal(false); resetModal(); }}
-                  className="flex-1 py-2.5 rounded-lg text-sm transition-colors"
-                  style={{
-                    border: "1px solid var(--kipu-border)",
-                    color: "var(--kipu-muted)",
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
-                  onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-muted)"}
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  onClick={handleGuardar}
-                  disabled={saving}
-                  className="flex-1 py-2.5 rounded-lg text-white text-sm font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-                  style={{ background: "var(--kipu-accent)" }}
-                  onMouseEnter={e => {
-                    if (!saving) e.currentTarget.style.background = "var(--kipu-accent-h)";
-                  }}
-                  onMouseLeave={e => {
-                    if (!saving) e.currentTarget.style.background = "var(--kipu-accent)";
-                  }}
-                >
-                  {saving ? (
-                    <div
-                      className="w-3.5 h-3.5 border-2 border-t-transparent rounded-full animate-spin"
-                      style={{ borderColor: "#FFFFFF", borderTopColor: "transparent" }}
-                    />
-                  ) : (
-                    <Save size={14} />
-                  )}
-                  Guardar
-                </button>
-              </div>
             </div>
-          </div>
-        </div>
-      )}
+      </Hoja>
     </div>
   );
 }

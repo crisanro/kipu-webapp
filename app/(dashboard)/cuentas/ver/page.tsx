@@ -8,11 +8,13 @@ import { useAuthStore } from "@/store/auth.store";
 import { hoyEC } from "@/lib/fecha";
 import SoloWeb from "@/components/SoloWeb";
 import { ES_APP_NATIVA } from "@/lib/plataforma";
+import Hoja from "@/components/ui/Hoja";
+import Boton from "@/components/ui/Boton";
 import {
   ArrowLeft, Save, Ban,
   CheckCircle2, Clock,
   AlertTriangle, Wallet, User, Calendar, FileText,
-  ArrowUpCircle, ArrowDownCircle, X
+  ArrowUpCircle, ArrowDownCircle
 } from "lucide-react";
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -481,35 +483,19 @@ function DetalleCuenta({ id }: { id: string }) {
         )}
       </div>
 
-      {/* ── Modal abono ────────────────────────────────────────────────────────── */}
-      {showAbono && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-          <div
-            className="rounded-xl w-full max-w-sm"
-            style={{
-              background: "var(--kipu-surface)",
-              border: "1px solid var(--kipu-border)",
-            }}
-          >
-            <div
-              className="flex items-center justify-between px-5 py-4"
-              style={{ borderBottom: "1px solid var(--kipu-border)" }}
-            >
-              <div className="flex items-center gap-2">
-                <ArrowDownCircle size={15} style={{ color: "var(--kipu-success)" }} />
-                <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>Registrar abono</h2>
-              </div>
-              <button
-                onClick={() => setShowAbono(false)}
-                className="transition-colors"
-                style={{ color: "var(--kipu-subtle)" }}
-                onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
-                onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-subtle)"}
-              >
-                <X size={18} />
-              </button>
-            </div>
-            <div className="p-5 space-y-3">
+      {/* ── Abono (Hoja) ───────────────────────────────────────────────────────── */}
+      <Hoja
+        abierta={showAbono}
+        onCerrar={() => { setShowAbono(false); setError(""); }}
+        titulo={<span className="inline-flex items-center gap-2"><ArrowDownCircle size={16} className="text-exito" /> Registrar abono</span>}
+        tamano="sm"
+        cerrable={!savingAbono}
+        pie={<>
+          <Boton variante="secundario" onClick={() => { setShowAbono(false); setError(""); }} disabled={savingAbono}>Cancelar</Boton>
+          <Boton onClick={handleAbono} cargando={savingAbono} icono={<Save size={16} />}>Guardar</Boton>
+        </>}
+      >
+            <div className="space-y-3">
               <div
                 className="rounded-lg px-3 py-2 text-xs"
                 style={{
@@ -602,78 +588,22 @@ function DetalleCuenta({ id }: { id: string }) {
                   {error}
                 </p>
               )}
-              <div className="flex gap-3 pt-1">
-                <button
-                  type="button"
-                  onClick={() => { setShowAbono(false); setError(""); }}
-                  className="flex-1 py-2.5 rounded-lg text-sm transition-colors"
-                  style={{
-                    border: "1px solid var(--kipu-border)",
-                    color: "var(--kipu-muted)",
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
-                  onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-muted)"}
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  onClick={handleAbono}
-                  disabled={savingAbono}
-                  className="flex-1 py-2.5 rounded-lg text-white text-sm font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-                  style={{ background: "var(--kipu-accent)" }}
-                  onMouseEnter={e => {
-                    if (!savingAbono) e.currentTarget.style.background = "var(--kipu-accent-h)";
-                  }}
-                  onMouseLeave={e => {
-                    if (!savingAbono) e.currentTarget.style.background = "var(--kipu-accent)";
-                  }}
-                >
-                  {savingAbono ? (
-                    <div
-                      className="w-3.5 h-3.5 border-2 border-t-transparent rounded-full animate-spin"
-                      style={{ borderColor: "#FFFFFF", borderTopColor: "transparent" }}
-                    />
-                  ) : (
-                    <Save size={14} />
-                  )}
-                  Guardar
-                </button>
-              </div>
             </div>
-          </div>
-        </div>
-      )}
+      </Hoja>
 
-      {/* ── Modal ajuste ───────────────────────────────────────────────────────── */}
-      {showAjuste && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-          <div
-            className="rounded-xl w-full max-w-sm"
-            style={{
-              background: "var(--kipu-surface)",
-              border: "1px solid var(--kipu-border)",
-            }}
-          >
-            <div
-              className="flex items-center justify-between px-5 py-4"
-              style={{ borderBottom: "1px solid var(--kipu-border)" }}
-            >
-              <div className="flex items-center gap-2">
-                <ArrowUpCircle size={15} style={{ color: "var(--kipu-warning)" }} />
-                <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>Ajustar monto</h2>
-              </div>
-              <button
-                onClick={() => setShowAjuste(false)}
-                className="transition-colors"
-                style={{ color: "var(--kipu-subtle)" }}
-                onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
-                onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-subtle)"}
-              >
-                <X size={18} />
-              </button>
-            </div>
-            <div className="p-5 space-y-3">
+      {/* ── Ajuste (Hoja) ──────────────────────────────────────────────────────── */}
+      <Hoja
+        abierta={showAjuste}
+        onCerrar={() => { setShowAjuste(false); setError(""); }}
+        titulo={<span className="inline-flex items-center gap-2"><ArrowUpCircle size={16} className="text-alerta" /> Ajustar monto</span>}
+        tamano="sm"
+        cerrable={!savingAjuste}
+        pie={<>
+          <Boton variante="secundario" onClick={() => { setShowAjuste(false); setError(""); }} disabled={savingAjuste}>Cancelar</Boton>
+          <Boton onClick={handleAjuste} cargando={savingAjuste} icono={<ArrowUpCircle size={16} />}>Aplicar ajuste</Boton>
+        </>}
+      >
+            <div className="space-y-3">
               <div
                 className="rounded-lg px-3 py-2.5 text-xs"
                 style={{
@@ -761,115 +691,24 @@ function DetalleCuenta({ id }: { id: string }) {
                   {error}
                 </p>
               )}
-              <div className="flex gap-3 pt-1">
-                <button
-                  type="button"
-                  onClick={() => { setShowAjuste(false); setError(""); }}
-                  className="flex-1 py-2.5 rounded-lg text-sm transition-colors"
-                  style={{
-                    border: "1px solid var(--kipu-border)",
-                    color: "var(--kipu-muted)",
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
-                  onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-muted)"}
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  onClick={handleAjuste}
-                  disabled={savingAjuste}
-                  className="flex-1 py-2.5 rounded-lg text-white text-sm font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-                  style={{ background: "var(--kipu-warning)" }}
-                >
-                  {savingAjuste ? (
-                    <div
-                      className="w-3.5 h-3.5 border-2 border-t-transparent rounded-full animate-spin"
-                      style={{ borderColor: "#FFFFFF", borderTopColor: "transparent" }}
-                    />
-                  ) : (
-                    <ArrowUpCircle size={14} />
-                  )}
-                  Aplicar ajuste
-                </button>
-              </div>
             </div>
-          </div>
-        </div>
-      )}
+      </Hoja>
 
-      {/* ── Modal anular ───────────────────────────────────────────────────────── */}
-      {showAnular && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-          <div
-            className="rounded-xl w-full max-w-sm p-5 space-y-4"
-            style={{
-              background: "var(--kipu-surface)",
-              border: "1px solid var(--kipu-border)",
-            }}
-          >
-            <div className="flex items-start gap-3">
-              <div
-                className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
-                style={{
-                  background: "color-mix(in srgb, var(--kipu-danger) 20%, transparent)",
-                }}
-              >
-                <Ban size={16} style={{ color: "var(--kipu-danger)" }} />
-              </div>
-              <div>
-                <p className="font-semibold text-sm" style={{ color: "var(--kipu-text)" }}>¿Anular esta cuenta?</p>
-                <p className="text-xs mt-1" style={{ color: "var(--kipu-subtle)" }}>
-                  Esta acción no se puede deshacer. La cuenta quedará marcada como anulada.
-                </p>
-              </div>
-            </div>
-            {error && (
-              <p
-                className="text-xs px-3 py-2 rounded-lg"
-                style={{
-                  color: "var(--kipu-danger)",
-                  background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
-                }}
-              >
-                {error}
-              </p>
-            )}
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setShowAnular(false)}
-                className="flex-1 py-2 rounded-lg text-sm transition-colors"
-                style={{
-                  border: "1px solid var(--kipu-border)",
-                  color: "var(--kipu-muted)",
-                }}
-                onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
-                onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-muted)"}
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={handleAnular}
-                disabled={savingAnular}
-                className="flex-1 py-2 rounded-lg text-white text-sm font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-                style={{ background: "var(--kipu-danger)" }}
-              >
-                {savingAnular ? (
-                  <div
-                    className="w-3.5 h-3.5 border-2 border-t-transparent rounded-full animate-spin"
-                    style={{ borderColor: "#FFFFFF", borderTopColor: "transparent" }}
-                  />
-                ) : (
-                  <Ban size={14} />
-                )}
-                Anular
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* ── Anular (Hoja de confirmación: botón rojo, el foco empieza en Cancelar) ── */}
+      <Hoja
+        abierta={showAnular}
+        onCerrar={() => setShowAnular(false)}
+        titulo="¿Anular esta cuenta?"
+        descripcion="Esta acción no se puede deshacer. La cuenta quedará marcada como anulada."
+        tamano="sm"
+        cerrable={!savingAnular}
+        pie={<>
+          <Boton variante="secundario" onClick={() => setShowAnular(false)} disabled={savingAnular} data-autofocus>Cancelar</Boton>
+          <Boton variante="peligro" onClick={handleAnular} cargando={savingAnular} icono={<Ban size={16} />}>Anular</Boton>
+        </>}
+      >
+        {error && <p className="text-xs px-3 py-2 rounded-lg text-peligro bg-peligro-suave">{error}</p>}
+      </Hoja>
     </div>
   );
 }

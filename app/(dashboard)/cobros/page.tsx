@@ -1,4 +1,5 @@
 "use client";
+import { useConfirmar } from "@/components/ui/Confirmar";
 import { rutas } from "@/lib/rutas";
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
@@ -55,6 +56,7 @@ export default function CobrosPage() {
 }
 
 function CobrosContenido() {
+  const confirmar = useConfirmar();
   const [cobros,   setCobros]   = useState<Cobro[]>([]);
   const [total,    setTotal]    = useState(0);
   const [filtro,   setFiltro]   = useState("");
@@ -84,7 +86,11 @@ function CobrosContenido() {
   const reemplazar = (c: Cobro) => setCobros(prev => prev.map(x => x.id === c.id ? c : x));
 
   const accion = async (c: Cobro, ruta: "verificar" | "anular" | "facturar") => {
-    if (ruta === "anular" && !confirm("¿Anular este link de cobro? Si tu cliente igual paga, te avisaremos para que decidas si emites la factura.")) return;
+    if (ruta === "anular" && !(await confirmar({
+      titulo: "¿Anular este link de cobro?",
+      mensaje: "Si tu cliente igual paga, te avisaremos para que decidas si emites la factura.",
+      textoConfirmar: "Anular link", peligro: true,
+    }))) return;
     setOcupado(c.id);
     setMensaje(null);
     try {

@@ -1,9 +1,11 @@
 "use client";
 
+import { useAvisos } from "@/components/ui/Avisos";
+import Hoja from "@/components/ui/Hoja";
 import { useState } from "react";
 import api from "@/lib/api";
 import {
-  Plus, X, Save, Power, Pencil, AlertTriangle
+  Plus, Save, Power, Pencil, AlertTriangle
 } from "lucide-react";
 
 interface Props {
@@ -12,37 +14,14 @@ interface Props {
 }
 
 // ── Modal genérico ─────────────────────────────────────────────────────────────
+// Hoja: en el celular sube desde abajo; en la compu, diálogo centrado
 function Modal({ title, onClose, children }: {
   title: string; onClose: () => void; children: React.ReactNode
 }) {
   return (
-    <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-      <div
-        className="rounded-xl w-full max-w-sm"
-        style={{
-          background: "var(--kipu-surface)",
-          border: "1px solid var(--kipu-border)",
-        }}
-      >
-        <div
-          className="flex items-center justify-between px-5 py-4"
-          style={{ borderBottom: "1px solid var(--kipu-border)" }}
-        >
-          <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>{title}</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="transition-colors"
-            style={{ color: "var(--kipu-subtle)" }}
-            onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
-            onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-subtle)"}
-          >
-            <X size={18} />
-          </button>
-        </div>
-        <div className="p-5 space-y-3">{children}</div>
-      </div>
-    </div>
+    <Hoja abierta onCerrar={onClose} titulo={title} tamano="sm">
+      <div className="space-y-3">{children}</div>
+    </Hoja>
   );
 }
 
@@ -69,6 +48,7 @@ const inputDisStyle = {
 };
 
 export default function TabEstructura({ estructura, onActualizar }: Props) {
+  const avisos    = useAvisos();
 
   // ── Helper: invalida caché local + refresca datos ────────────────────────────
   const invalidarEstructuraLocal = () => {
@@ -151,7 +131,7 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
       await api.put(`/api/v1/app/estructura/establecimientos/${estabId}`, { is_active: !activo });
       invalidarEstructuraLocal();
     } catch (e: any) {
-      alert(e?.response?.data?.detail ?? "Error.");
+      avisos.error(e?.response?.data?.detail ?? "No se pudo cambiar el establecimiento.");
     } finally { setToggling(null); }
   };
 
@@ -161,7 +141,7 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
       await api.put(`/api/v1/app/estructura/puntos-emision/${puntoId}`, { is_active: !activo });
       invalidarEstructuraLocal();
     } catch (e: any) {
-      alert(e?.response?.data?.detail ?? "Error.");
+      avisos.error(e?.response?.data?.detail ?? "No se pudo cambiar el punto de emisión.");
     } finally { setToggling(null); }
   };
 

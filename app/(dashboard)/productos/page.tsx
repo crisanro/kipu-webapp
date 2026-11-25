@@ -1,5 +1,8 @@
 "use client";
 
+import { useConfirmar } from "@/components/ui/Confirmar";
+import Hoja from "@/components/ui/Hoja";
+import Boton from "@/components/ui/Boton";
 import { useState, useEffect, useCallback, useRef, lazy, Suspense } from "react";
 import { etiquetaIva, opcionesIva } from "@/lib/iva";
 import { baseDesdeTotal, tarifaPct } from "@/lib/precios";
@@ -8,7 +11,7 @@ import api from "@/lib/api";
 import { usePermiso } from "@/hooks/usePermiso";
 import SinAcceso from "@/components/SinAcceso";
 import {
-  Search, Plus, Package, X,
+  Search, Plus, Package,
   Save, Pencil, PowerOff, Power, Camera
 } from "lucide-react";
 
@@ -60,6 +63,7 @@ function desglose(precio: number, incluyeIva: boolean, tipoIva: string) {
 type ScanMode = "buscar" | "codigo";
 
 export default function ProductosPage() {
+  const confirmar = useConfirmar();
   const puedeVer = usePermiso("productos");
 
   const [productos,    setProductos]    = useState<Producto[]>([]);
@@ -221,7 +225,11 @@ export default function ProductosPage() {
   };
 
   const desactivar = async (id: string) => {
-    if (!confirm("¿Desactivar este producto?")) return;
+    if (!(await confirmar({
+      titulo: "¿Desactivar este producto?",
+      mensaje: "Ya no aparecerá al facturar. Puedes reactivarlo cuando quieras.",
+      textoConfirmar: "Desactivar", peligro: true,
+    }))) return;
     try {
       await api.delete(`/api/v1/app/productos/${id}`);
       await cargar();
@@ -231,7 +239,11 @@ export default function ProductosPage() {
   };
 
   const reactivar = async (id: string) => {
-    if (!confirm("¿Reactivar este producto?")) return;
+    if (!(await confirmar({
+      titulo: "¿Reactivar este producto?",
+      mensaje: "Volverá a aparecer al facturar.",
+      textoConfirmar: "Reactivar",
+    }))) return;
     try {
       await api.patch(`/api/v1/app/productos/${id}`, { activo: true });
       await cargar();
@@ -520,38 +532,20 @@ export default function ProductosPage() {
         </>
       )}
 
-      {/* Modal crear/editar */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-          <div
-            className="rounded-xl w-full max-w-md max-h-[90vh] overflow-y-auto"
-            style={{
-              background: "var(--kipu-surface)",
-              border: "1px solid var(--kipu-border)",
-            }}
-          >
-            <div
-              className="flex items-center justify-between px-5 py-4 sticky top-0"
-              style={{
-                borderBottom: "1px solid var(--kipu-border)",
-                background: "var(--kipu-surface)",
-              }}
-            >
-              <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>
-                {editando ? "Editar producto" : "Nuevo producto"}
-              </h2>
-              <button
-                type="button"
-                onClick={() => setShowModal(false)}
-                className="transition-colors"
-                style={{ color: "var(--kipu-subtle)" }}
-                onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
-                onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-subtle)"}
-              >
-                <X size={18} />
-              </button>
-            </div>
-            <div className="p-5 space-y-3">
+      {/* Crear/editar: Hoja (en el celular sube desde abajo, con los botones fijos abajo) */}
+      <Hoja
+        abierta={showModal}
+        onCerrar={() => setShowModal(false)}
+        titulo={editando ? "Editar producto" : "Nuevo producto"}
+        cerrable={!saving}
+        pie={<>
+          <Boton variante="secundario" onClick={() => setShowModal(false)} disabled={saving}>Cancelar</Boton>
+          <Boton onClick={handleSave} cargando={saving} icono={<Save size={16} />}>
+            {editando ? "Actualizar" : "Guardar"}
+          </Boton>
+        </>}
+      >
+            <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 {/* Código */}
                 <div>
@@ -786,48 +780,8 @@ export default function ProductosPage() {
                   {error}
                 </p>
               )}
-              <div className="flex gap-3 pt-1">
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="flex-1 py-2.5 rounded-lg text-sm transition-colors"
-                  style={{
-                    border: "1px solid var(--kipu-border)",
-                    color: "var(--kipu-muted)",
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
-                  onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-muted)"}
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSave}
-                  disabled={saving}
-                  className="flex-1 py-2.5 rounded-lg text-white text-sm font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-                  style={{ background: "var(--kipu-accent)" }}
-                  onMouseEnter={e => {
-                    if (!saving) e.currentTarget.style.background = "var(--kipu-accent-h)";
-                  }}
-                  onMouseLeave={e => {
-                    if (!saving) e.currentTarget.style.background = "var(--kipu-accent)";
-                  }}
-                >
-                  {saving ? (
-                    <div
-                      className="w-3.5 h-3.5 border-2 border-t-transparent rounded-full animate-spin"
-                      style={{ borderColor: "#FFFFFF", borderTopColor: "transparent" }}
-                    />
-                  ) : (
-                    <Save size={14} />
-                  )}
-                  {editando ? "Actualizar" : "Guardar"}
-                </button>
-              </div>
             </div>
-          </div>
-        </div>
-      )}
+      </Hoja>
 
       {/* Modal Barcode Scanner — compartido entre búsqueda y código */}
       {showScanner && (

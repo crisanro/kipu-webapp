@@ -1,4 +1,6 @@
 "use client";
+import { useConfirmar } from "@/components/ui/Confirmar";
+import { useAvisos } from "@/components/ui/Avisos";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import api from "@/lib/api";
@@ -49,6 +51,8 @@ function validarEmail(email: string): boolean {
 }
 
 export default function TabUsuarios({ empresaId }: Props) {
+  const confirmar = useConfirmar();
+  const avisos    = useAvisos();
   const [usuarios,          setUsuarios]          = useState<any[]>([]);
   const [cargado,           setCargado]           = useState(false);
   const [invEmail,          setInvEmail]          = useState("");
@@ -112,13 +116,17 @@ export default function TabUsuarios({ empresaId }: Props) {
   };
 
   const remover = async (profileId: string, nombre: string) => {
-    if (!confirm(`¿Remover a ${nombre} de la empresa?`)) return;
+    if (!(await confirmar({
+      titulo: `¿Remover a ${nombre} de la empresa?`,
+      mensaje: "Ya no podrá entrar a esta empresa.",
+      textoConfirmar: "Remover", peligro: true,
+    }))) return;
     setRemoviendo(profileId);
     try {
       await api.delete(`/api/v1/app/usuarios/empresas/${empresaId}/usuarios/${profileId}`);
       setUsuarios(prev => prev.filter(u => u.profile_id !== profileId));
     } catch (err: any) {
-      alert(err?.response?.data?.detail ?? "Error al remover usuario.");
+      avisos.error(err?.response?.data?.detail ?? "No se pudo remover al usuario.");
     } finally {
       setRemoviendo(null);
     }
@@ -156,7 +164,7 @@ export default function TabUsuarios({ empresaId }: Props) {
         return next;
       });
     } catch (err: any) {
-      alert(err?.response?.data?.detail ?? "Error al guardar permisos.");
+      avisos.error(err?.response?.data?.detail ?? "No se pudieron guardar los permisos.");
     } finally {
       setGuardandoPermisos(null);
     }

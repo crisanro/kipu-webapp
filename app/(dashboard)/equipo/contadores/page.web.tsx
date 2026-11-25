@@ -1,5 +1,6 @@
 "use client";
 
+import { useConfirmar } from "@/components/ui/Confirmar";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -15,6 +16,7 @@ interface Contador {
 const VACIO = { email: "", nombre: "", identificacion: "", telefono: "" };
 
 export default function ContadoresPage() {
+  const confirmar = useConfirmar();
   const router = useRouter();
   const [lista,    setLista]    = useState<Contador[] | null>(null);
   const [form,     setForm]     = useState(VACIO);
@@ -60,7 +62,11 @@ export default function ContadoresPage() {
   };
 
   const baja = async (c: Contador) => {
-    if (!confirm(`¿Dar de baja a ${c.nombre}? Sus ${c.clientes} clientes quedarán sin contador y deberás reasignarlos. Su historial se conserva.`)) return;
+    if (!(await confirmar({
+      titulo: `¿Dar de baja a ${c.nombre}?`,
+      mensaje: `Sus ${c.clientes} clientes quedarán sin contador y deberás reasignarlos. Su historial se conserva.`,
+      textoConfirmar: "Dar de baja", peligro: true,
+    }))) return;
     setError("");
     try {
       const r = await api.post(`/api/v1/admin/al-dia/contadores/${c.id}/desactivar`);

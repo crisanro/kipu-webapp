@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { r2 } from "@/lib/dinero";
 import { Plus, Trash2, AlertTriangle, Info } from "lucide-react";
+import Hoja from "@/components/ui/Hoja";
+import Boton from "@/components/ui/Boton";
 
 // ── Tipos ──────────────────────────────────────────────────────────────────────
 export type FormaPagoCode = "01" | "15" | "16" | "17" | "18" | "19" | "20" | "21";
@@ -395,57 +397,23 @@ export default function PagosMixtos({
         </button>
       </div>
 
-      {/* Modal advertencia propina */}
-      {showPropinaWarning && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <div
-            className="rounded-xl p-5 max-w-sm w-full space-y-4 shadow-2xl"
-            style={{
-              background: "var(--kipu-surface)",
-              border: "1px solid var(--kipu-border)",
-            }}
-          >
-            <div className="flex items-start gap-3">
-              <AlertTriangle size={20} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-warning)" }} />
-              <div>
-                <p className="font-semibold text-sm" style={{ color: "var(--kipu-text)" }}>
-                  Autorización requerida
-                </p>
-                <p className="text-xs mt-1 leading-relaxed" style={{ color: "var(--kipu-muted)" }}>
-                  La propina del 10% requiere autorización previa del SRI.
-                  Solo aplica para establecimientos de alimentos y bebidas autorizados.
-                  ¿Confirmas que tienes esta autorización?
-                </p>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setShowPropinaWarning(false)}
-                className="flex-1 py-2 rounded-lg text-sm transition-colors"
-                style={{
-                  border: "1px solid var(--kipu-border)",
-                  color: "var(--kipu-muted)",
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = "var(--kipu-text)")}
-                onMouseLeave={(e) => (e.currentTarget.style.color = "var(--kipu-muted)")}
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={() => { onPropinaChange(true); setShowPropinaWarning(false); }}
-                className="flex-1 py-2 rounded-lg text-white text-sm font-medium transition-colors"
-                style={{ background: "var(--kipu-accent)" }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = "var(--kipu-accent-h)")}
-                onMouseLeave={(e) => (e.currentTarget.style.background = "var(--kipu-accent)")}
-              >
-                Sí, tengo autorización
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Advertencia de propina (Hoja) */}
+      <Hoja
+        abierta={showPropinaWarning}
+        onCerrar={() => setShowPropinaWarning(false)}
+        titulo={<span className="inline-flex items-center gap-2"><AlertTriangle size={18} className="text-alerta" /> Autorización requerida</span>}
+        tamano="sm"
+        pie={<>
+          <Boton variante="secundario" onClick={() => setShowPropinaWarning(false)}>Cancelar</Boton>
+          <Boton onClick={() => { onPropinaChange(true); setShowPropinaWarning(false); }}>Sí, tengo autorización</Boton>
+        </>}
+      >
+        <p className="text-sm leading-relaxed text-tenue">
+          La propina del 10% requiere autorización previa del SRI.
+          Solo aplica para establecimientos de alimentos y bebidas autorizados.
+          ¿Confirmas que tienes esta autorización?
+        </p>
+      </Hoja>
     </div>
   );
 }
