@@ -277,6 +277,7 @@ export default function OnboardingPage() {
     direccion_matriz:       "",
     obligado_contabilidad:  "NO",
     contribuyente_especial: "",
+    descripcion_negocio:    "",   // opcional: contexto para clasificar las compras
   });
 
   // Sin correo verificado el backend rechaza el registro: verificar primero
@@ -613,6 +614,28 @@ export default function OnboardingPage() {
               </div>
             </div>
 
+            <div>
+              <label className="block text-sm font-medium mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Describe tu negocio en una línea</label>
+              <input
+                name="descripcion_negocio"
+                value={form.descripcion_negocio}
+                maxLength={120}
+                onChange={(e) => { setForm({ ...form, descripcion_negocio: e.target.value }); setError(""); }}
+                placeholder="Ej.: consultorio odontológico, venta de repuestos de motos"
+                className="w-full px-4 py-2.5 rounded-lg text-sm focus:outline-none transition-colors"
+                style={{
+                  background: "var(--kipu-surface)",
+                  border: "1px solid var(--kipu-border)",
+                  color: "var(--kipu-text)",
+                }}
+                onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+              />
+              <p className="text-xs mt-1" style={{ color: "var(--kipu-subtle)" }}>
+                Opcional. Ayuda a Kipu a saber qué compras son de tu negocio.
+              </p>
+            </div>
+
             {error && <ErrorBox error={error} ruc={form.ruc} />}
 
             <button
@@ -648,6 +671,8 @@ export default function OnboardingPage() {
                 { label: "Nombre Comercial",     value: form.nombre_comercial || "—" },
                 { label: "Dirección",            value: form.direccion_matriz },
                 { label: "Oblig. Contabilidad",  value: form.obligado_contabilidad },
+                ...(form.descripcion_negocio.trim()
+                  ? [{ label: "Tu negocio", value: form.descripcion_negocio.trim() }] : []),
               ].map(({ label, value }) => (
                 <div key={label} className="flex justify-between text-sm">
                   <span style={{ color: "var(--kipu-subtle)" }}>{label}</span>
