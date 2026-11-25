@@ -21,6 +21,9 @@ export interface Empresa {
   suscripcion:            Suscripcion;
   balance_api:            number;
   emision_gratis?:        boolean;  // plan gratis encendido: el panel emite sin plan ni créditos (uso justo)
+  // Emite comprobantes de retención (Configuración): muestra el módulo. Emitirlas además
+  // requiere Kipu Pro o Al Día. Sin el campo (backend anterior o caché vieja) = apagado.
+  emite_retenciones?:     boolean;
   permisos:               Record<string, boolean>;
   obligado_contabilidad:  string | null;  // "SI" | "NO" | null
   periodo_iva:            string | null;  // "MENSUAL" | "SEMESTRAL" | null  ← agregar

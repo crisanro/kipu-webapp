@@ -107,6 +107,7 @@ export function SelectorEmpresa({ onClose }: { onClose: () => void }) {
         suscripcion: data.suscripcion,
         balance_api: data.balance_api,
         emision_gratis: data.emision_gratis ?? false,
+        emite_retenciones: data.emite_retenciones ?? false,
         obligado_contabilidad: data.obligado_contabilidad ?? e.obligado_contabilidad ?? null,
         periodo_iva: data.periodo_iva ?? e.periodo_iva ?? null,
       });
