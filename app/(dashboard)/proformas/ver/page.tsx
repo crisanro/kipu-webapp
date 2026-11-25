@@ -1,19 +1,30 @@
 "use client";
 import { useAvisos } from "@/components/ui/Avisos";
-import Hoja from "@/components/ui/Hoja";
+import { useConfirmar } from "@/components/ui/Confirmar";
 import Boton from "@/components/ui/Boton";
+import BotonIcono from "@/components/ui/BotonIcono";
+import HojaAcciones, { type Accion } from "@/components/ui/HojaAcciones";
+import Seccion from "@/components/ui/Seccion";
+import Vacio from "@/components/ui/Vacio";
+import TirarParaRefrescar from "@/components/ui/TirarParaRefrescar";
+import { Esqueleto, EsqueletoFilas } from "@/components/ui/Esqueleto";
+import { InsigniaEstado } from "@/components/ui/InsigniaEstado";
+import { etiquetaPeriodo } from "@/components/ui/PeriodoFechas";
 import { rutas } from "@/lib/rutas";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useLista } from "@/lib/useLista";
+import { ES_APP_NATIVA } from "@/lib/plataforma";
+import { compartir } from "@/lib/nativo";
+import { useRef, useState } from "react";
 import { notFound, useRouter, useSearchParams } from "next/navigation";
 import api from "@/lib/api";
 import {
-  ArrowLeft, FileText, CheckCircle2,
-  AlertTriangle, Clock, Printer, Zap, Trash2,
-  User, Calendar, Hash, StickyNote,
+  ArrowLeft, FileText, CheckCircle2, AlertTriangle, Clock, Printer, Zap, Trash2,
+  User, StickyNote, MoreVertical, Share2, ListChecks,
 } from "lucide-react";
 
 const fmt  = (n: number) => `$${n.toFixed(2)}`;
 const fmt2 = (n: number) => n.toFixed(2);
+const fecha = (f?: string | null) => (f && /^\d{4}-\d{2}-\d{2}$/.test(f) ? etiquetaPeriodo(f, f) : f || "");
 
 const TIPO_ID: Record<string, string> = {
   "04": "RUC",
@@ -32,37 +43,51 @@ export default function DetalleProformaPage() {
 
 function DetalleProforma({ id }: { id: string }) {
   const avisos    = useAvisos();
-  const router = useRouter();
+  const confirmar = useConfirmar();
+  const router    = useRouter();
 
-  const [data,         setData]         = useState<any>(null);
-  const [loading,      setLoading]      = useState(true);
-  const [eliminando,   setEliminando]   = useState(false);
-  const [showEliminar, setShowEliminar] = useState(false);
+  // Con caché: al volver de la factura la proforma aparece al instante (lib/useLista.ts)
+  const res  = useLista<{ proforma?: any }>(`/api/v1/app/proformas/${id}`);
+  const data = res.datos?.proforma;
+  const [menu, setMenu] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
 
-  const cargar = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await api.get(`/api/v1/app/proformas/${id}`);
-      setData(res.data.proforma);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  }, [id]);
-
-  useEffect(() => { cargar(); }, [cargar]);
-
   const handleEliminar = async () => {
-    setEliminando(true);
+    const ok = await confirmar({
+      titulo: "¿Eliminar proforma?",
+      mensaje: `Se eliminará ${data?.numero ?? "la proforma"} permanentemente.`,
+      textoConfirmar: "Eliminar", peligro: true,
+    });
+    if (!ok) return;
     try {
       await api.delete(`/api/v1/app/proformas/${id}`);
+      avisos.info("Proforma eliminada");
       router.push("/proformas");
     } catch (err: any) {
-      avisos.error(err?.response?.data?.detail ?? "No se pudo eliminar la proforma.");
-    } finally {
-      setEliminando(false);
+      const detalle = err?.response?.data?.detail;
+      avisos.error(typeof detalle === "string" ? detalle : "No se pudo eliminar la proforma.");
+    }
+  };
+
+  // Resumen en texto para WhatsApp, correo… (en la app no se puede imprimir)
+  const compartirResumen = async () => {
+    if (!data) return;
+    const lineas = [
+      `Proforma ${data.numero}${data.emisor ? ` · ${data.emisor.nombre_comercial || data.emisor.razon_social}` : ""}`,
+      ...(data.cliente ? [`Cliente: ${data.cliente.razon_social}`] : []),
+      "",
+      ...data.items.map((it: any) => `• ${it.cantidad} × ${it.descripcion}: ${fmt(it.total)}`),
+      "",
+      `Subtotal: ${fmt(data.subtotal)}`,
+      `IVA: ${fmt(data.total_iva)}`,
+      `TOTAL: ${fmt(data.total)}`,
+      ...(data.fecha_validez ? [`Válida hasta: ${data.fecha_validez}`] : []),
+    ];
+    const texto = lineas.join("\n");
+    const ok = await compartir({ titulo: `Proforma ${data.numero}`, texto });
+    if (!ok) {
+      try { await navigator.clipboard.writeText(texto); avisos.exito("Resumen copiado"); }
+      catch { avisos.error("No se pudo compartir."); }
     }
   };
 
@@ -138,330 +163,163 @@ function DetalleProforma({ id }: { id: string }) {
     setTimeout(() => { ventana.print(); }, 400);
   };
 
-  if (loading) return (
-    <div className="flex items-center justify-center h-64">
-      <div
-        className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin"
-        style={{ borderColor: "var(--kipu-accent)", borderTopColor: "transparent" }}
-      />
+  if (res.cargando) return (
+    <div className="mx-auto max-w-3xl space-y-4 p-4 md:p-6" aria-busy="true">
+      <Esqueleto className="h-48 rounded-2xl" />
+      <EsqueletoFilas filas={4} />
     </div>
   );
 
-  if (!data) return (
-    <div className="p-6 text-center">
-      <FileText size={40} className="mx-auto mb-3" style={{ color: "var(--kipu-subtle)" }} />
-      <p style={{ color: "var(--kipu-muted)" }}>Proforma no encontrada.</p>
-      <button
-        onClick={() => router.back()}
-        className="mt-4 text-sm transition-colors"
-        style={{ color: "var(--kipu-accent)" }}
-        onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent-h)"}
-        onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-accent)"}
-      >
-        Volver
-      </button>
-    </div>
-  );
+  if (!data) {
+    const estado = (res.error as { response?: { status?: number } } | undefined)?.response?.status;
+    const deRed  = !!res.error && estado !== 404 && estado !== 403;
+    return (
+      <Vacio
+        icono={FileText}
+        titulo={deRed ? "No pudimos cargar la proforma" : "Proforma no encontrada"}
+        descripcion={deRed ? "Revisa tu conexión e intenta de nuevo." : "Puede que sea de otra empresa o que ya no exista."}
+        accion={deRed
+          ? <Boton onClick={() => void res.recargar()}>Reintentar</Boton>
+          : <Boton variante="secundario" onClick={() => router.push("/proformas")}>Ir a Proformas</Boton>}
+        className="py-20"
+      />
+    );
+  }
 
   const vencida   = data.vencida && data.estado === "VIGENTE";
   const facturada = data.estado === "FACTURADA";
   const activa    = !facturada;
 
+  const acciones: Accion[] = [
+    { etiqueta: "Compartir resumen", descripcion: "Ítems y total por WhatsApp, correo…", icono: Share2, onClick: () => void compartirResumen() },
+    ...(activa ? [{ etiqueta: "Eliminar proforma", descripcion: "No se puede deshacer", icono: Trash2, peligro: true,
+                    onClick: () => void handleEliminar() }] : []),
+  ];
+
   return (
-    <div className="p-4 md:p-6 max-w-3xl mx-auto space-y-4">
+    <TirarParaRefrescar alRefrescar={res.recargar}>
+    <div className="mx-auto max-w-3xl space-y-4 p-4 md:p-6">
 
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <button
-          onClick={() => router.back()}
-          className="hidden p-2 rounded-lg transition-colors lg:inline-flex"
-          style={{ color: "var(--kipu-muted)" }}
-          onMouseEnter={e => {
-            e.currentTarget.style.color = "var(--kipu-text)";
-            e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 5%, transparent)";
-          }}
-          onMouseLeave={e => {
-            e.currentTarget.style.color = "var(--kipu-muted)";
-            e.currentTarget.style.background = "transparent";
-          }}
-        >
-          <ArrowLeft size={18} />
-        </button>
-        <div className="flex-1">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span
-              className="text-xs px-2 py-0.5 rounded-full font-bold"
-              style={{
-                color: "var(--kipu-accent)",
-                background: "color-mix(in srgb, var(--kipu-accent) 10%, transparent)",
-              }}
-            >
-              PRO
-            </span>
-            <h1 className="text-xl font-bold font-mono" style={{ color: "var(--kipu-text)" }}>{data.numero}</h1>
+      {/* Arriba: número, cliente, el total en grande y lo que se hace */}
+      <section className="rounded-2xl border border-borde bg-superficie p-4 sm:p-5">
+        <div className="flex items-start gap-2">
+          {/* En el celular la flecha atrás ya está en la barra superior */}
+          <BotonIcono etiqueta="Volver" icono={<ArrowLeft size={18} />} onClick={() => router.back()}
+                      className="-ml-2 -mt-1 hidden lg:inline-flex" />
+          <div className="min-w-0 flex-1">
+            <p className="text-xs text-sutil">Proforma · {fecha(data.fecha_emision)}</p>
+            <h1 className="font-mono text-base font-semibold text-texto sm:text-lg">{data.numero}</h1>
+            <p className="truncate text-sm text-tenue">{data.cliente?.razon_social ?? "Sin cliente"}</p>
           </div>
-          <div className="flex items-center gap-2 mt-1 flex-wrap">
-            {facturada && (
-              <span
-                className="text-xs px-2 py-0.5 rounded-full flex items-center gap-1"
-                style={{
-                  color: "var(--kipu-success)",
-                  background: "color-mix(in srgb, var(--kipu-success) 10%, transparent)",
-                }}
-              >
-                <CheckCircle2 size={10} /> Facturada
-              </span>
-            )}
-            {!facturada && !vencida && (
-              <span
-                className="text-xs px-2 py-0.5 rounded-full flex items-center gap-1"
-                style={{
-                  color: "var(--kipu-info)",
-                  background: "color-mix(in srgb, var(--kipu-info) 10%, transparent)",
-                }}
-              >
-                <Clock size={10} /> Vigente
-              </span>
-            )}
-            {vencida && (
-              <span
-                className="text-xs px-2 py-0.5 rounded-full flex items-center gap-1"
-                style={{
-                  color: "var(--kipu-danger)",
-                  background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
-                }}
-              >
-                <AlertTriangle size={10} /> Vencida
-              </span>
-            )}
-            <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>
-              {data.cliente?.razon_social ?? "Sin cliente"}
-            </p>
-          </div>
+          {facturada ? <InsigniaEstado tono="exito" icono={CheckCircle2} className="shrink-0">Facturada</InsigniaEstado>
+            : vencida ? <InsigniaEstado tono="peligro" icono={AlertTriangle} className="shrink-0">Vencida</InsigniaEstado>
+            : <InsigniaEstado tono="info" icono={Clock} className="shrink-0">Vigente</InsigniaEstado>}
         </div>
-        <div className="text-right shrink-0">
-          <p className="text-xl font-bold" style={{ color: "var(--kipu-text)" }}>{fmt(data.total)}</p>
-          <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>{data.fecha_emision}</p>
+
+        <p className="mt-4 text-3xl font-bold tabular-nums text-texto">{fmt(data.total)}</p>
+        <p className={`mt-1 text-xs ${vencida ? "text-peligro-texto" : "text-tenue"}`}>
+          {data.fecha_validez
+            ? `${vencida ? "Venció" : "Válida hasta"} ${fecha(data.fecha_validez).toLowerCase()}`
+            : "Sin fecha de vencimiento"}
+        </p>
+
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          {activa && (
+            <Boton onClick={handleFacturar} icono={<Zap size={16} />} className="flex-1 sm:flex-none">
+              Convertir en factura
+            </Boton>
+          )}
+          {/* En la app no hay ventana de impresión: se comparte el resumen */}
+          {ES_APP_NATIVA ? (
+            <Boton variante="secundario" onClick={() => void compartirResumen()} icono={<Share2 size={16} />} className="flex-1 sm:flex-none">
+              Compartir
+            </Boton>
+          ) : (
+            <Boton variante="secundario" onClick={handleImprimir} icono={<Printer size={16} />} className="flex-1 sm:flex-none">
+              Imprimir / PDF
+            </Boton>
+          )}
+          <BotonIcono etiqueta="Más acciones" icono={<MoreVertical size={20} />} variante="secundario" onClick={() => setMenu(true)} />
         </div>
-      </div>
+      </section>
 
-      {/* Acciones */}
-      <div className="flex gap-2 flex-wrap">
-        <button
-          onClick={handleImprimir}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs transition-colors"
-          style={{
-            background: "var(--kipu-surface)",
-            color: "var(--kipu-text)",
-            border: "1px solid var(--kipu-border)",
-          }}
-          onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 5%, transparent)"}
-          onMouseLeave={e => e.currentTarget.style.background = "var(--kipu-surface)"}
-        >
-          <Printer size={13} /> Imprimir / PDF
-        </button>
-        {activa && (
-          <>
-            <button
-              onClick={handleFacturar}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-white text-xs font-medium transition-colors"
-              style={{ background: "var(--kipu-accent)" }}
-              onMouseEnter={e => e.currentTarget.style.background = "var(--kipu-accent-h)"}
-              onMouseLeave={e => e.currentTarget.style.background = "var(--kipu-accent)"}
-            >
-              <Zap size={13} /> Convertir en factura
-            </button>
-            <button
-              onClick={() => setShowEliminar(true)}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs transition-colors"
-              style={{
-                background: "var(--kipu-surface)",
-                color: "var(--kipu-muted)",
-                border: "1px solid var(--kipu-border)",
-              }}
-              onMouseEnter={e => {
-                e.currentTarget.style.color = "var(--kipu-danger)";
-                e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-danger) 10%, transparent)";
-                e.currentTarget.style.borderColor = "color-mix(in srgb, var(--kipu-danger) 30%, transparent)";
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.color = "var(--kipu-muted)";
-                e.currentTarget.style.background = "var(--kipu-surface)";
-                e.currentTarget.style.borderColor = "var(--kipu-border)";
-              }}
-            >
-              <Trash2 size={13} /> Eliminar
-            </button>
-          </>
-        )}
-      </div>
-
-      {/* Cliente */}
-      {data.cliente && (
-        <div
-          className="rounded-xl p-4"
-          style={{
-            background: "var(--kipu-surface)",
-            border: "1px solid var(--kipu-border)",
-          }}
-        >
-          <div className="flex items-center gap-2 mb-3">
-            <User size={14} style={{ color: "var(--kipu-accent)" }} />
-            <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--kipu-subtle)" }}>Cliente</h2>
-          </div>
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            {[
-              { label: "Nombre",         value: data.cliente.razon_social },
-              { label: "Identificación", value: `${TIPO_ID[data.cliente.tipo_identificacion_sri] ?? "ID"}: ${data.cliente.identificacion}` },
-              ...(data.cliente.email    ? [{ label: "Email",     value: data.cliente.email    }] : []),
-              ...(data.cliente.telefono ? [{ label: "Teléfono",  value: data.cliente.telefono }] : []),
-              ...(data.cliente.direccion && data.cliente.direccion !== "S/N"
-                ? [{ label: "Dirección", value: data.cliente.direccion }]
-                : []),
-            ].map(({ label, value }) => (
-              <div key={label}>
-                <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>{label}</p>
-                <p className="font-medium truncate" style={{ color: "var(--kipu-text)" }}>{value}</p>
-              </div>
-            ))}
-          </div>
+      {/* Facturada: ir a la factura */}
+      {facturada && data.documento_emitido_id && (
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-exito/20 bg-exito-suave px-4 py-3">
+          <p className="flex items-center gap-2 text-sm font-medium text-exito-texto">
+            <CheckCircle2 size={16} aria-hidden /> Esta proforma fue facturada
+          </p>
+          <Boton variante="secundario" tamano="sm" onClick={() => router.push(rutas.documento(data.documento_emitido_id))}>
+            Ver factura
+          </Boton>
         </div>
       )}
 
-      {/* Fechas */}
-      <div
-        className="rounded-xl p-4"
-        style={{
-          background: "var(--kipu-surface)",
-          border: "1px solid var(--kipu-border)",
-        }}
-      >
-        <div className="flex items-center gap-2 mb-3">
-          <Calendar size={14} style={{ color: "var(--kipu-accent)" }} />
-          <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--kipu-subtle)" }}>Fechas</h2>
-        </div>
-        <div className="grid grid-cols-2 gap-3 text-sm">
-          <div>
-            <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Emisión</p>
-            <p className="font-medium" style={{ color: "var(--kipu-text)" }}>{data.fecha_emision}</p>
-          </div>
-          <div>
-            <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Válida hasta</p>
-            <p
-              className="font-medium"
-              style={{ color: vencida ? "var(--kipu-danger)" : "var(--kipu-text)" }}
-            >
-              {data.fecha_validez ?? "Sin vencimiento"}
-              {vencida && " ⚠️"}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Ítems */}
-      <div
-        className="rounded-xl overflow-hidden"
-        style={{
-          background: "var(--kipu-surface)",
-          border: "1px solid var(--kipu-border)",
-        }}
-      >
-        <div
-          className="px-4 py-3 flex items-center gap-2"
-          style={{ borderBottom: "2px solid var(--kipu-border)" }}
-        >
-          <Hash size={14} style={{ color: "var(--kipu-accent)" }} />
-          <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--kipu-subtle)" }}>
-            Ítems ({data.items.length})
-          </h2>
-        </div>
-        <div>
+      {/* Ítems y totales */}
+      <section className="overflow-hidden rounded-xl border border-borde bg-superficie">
+        <h2 className="flex items-center gap-2 border-b border-borde px-4 py-3 text-sm font-semibold text-texto">
+          <ListChecks size={16} className="text-sutil" aria-hidden />
+          {data.items.length === 1 ? "1 ítem" : `${data.items.length} ítems`}
+        </h2>
+        <div className="divide-y divide-borde">
           {data.items.map((it: any, i: number) => (
-            <div
-              key={i}
-              className="flex items-center gap-3 px-4 py-3"
-              style={{
-                borderTop: i > 0 ? "1px solid var(--kipu-border)" : "none",
-              }}
-            >
-              <div className="flex-1 min-w-0">
-                <p className="text-sm" style={{ color: "var(--kipu-text)" }}>{it.descripcion}</p>
-                <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
-                  {it.cantidad} × {fmt(it.precio_unitario)} · IVA {it.tipo_iva}%
-                </p>
+            <div key={i} className="flex items-start justify-between gap-3 px-4 py-3">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm text-texto">{it.descripcion}</p>
+                <p className="text-xs text-sutil">{it.cantidad} × {fmt(it.precio_unitario)} · IVA {it.tipo_iva}%</p>
               </div>
-              <div className="text-right shrink-0">
-                <p className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>{fmt(it.total)}</p>
-                {it.valor_iva > 0 && (
-                  <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>IVA {fmt(it.valor_iva)}</p>
-                )}
+              <div className="shrink-0 text-right tabular-nums">
+                <p className="text-sm font-semibold text-texto">{fmt(it.total)}</p>
+                {it.valor_iva > 0 && <p className="text-xs text-sutil">IVA {fmt(it.valor_iva)}</p>}
               </div>
             </div>
           ))}
         </div>
-
-        {/* Totales */}
-        <div
-          className="px-4 py-3 space-y-1.5"
-          style={{ borderTop: "2px solid var(--kipu-border)" }}
-        >
-          <div className="flex justify-between text-sm" style={{ color: "var(--kipu-muted)" }}>
-            <span>Subtotal</span><span>{fmt(data.subtotal)}</span>
-          </div>
-          <div className="flex justify-between text-sm" style={{ color: "var(--kipu-muted)" }}>
-            <span>IVA</span><span>{fmt(data.total_iva)}</span>
-          </div>
-          <div
-            className="flex justify-between text-base font-bold pt-1.5"
-            style={{ borderTop: "1px solid var(--kipu-border)" }}
-          >
-            <span style={{ color: "var(--kipu-text)" }}>Total</span>
-            <span style={{ color: "var(--kipu-accent)" }}>{fmt(data.total)}</span>
+        <div className="space-y-1.5 border-t border-borde px-4 py-3 text-sm tabular-nums">
+          <div className="flex justify-between text-tenue"><span>Subtotal</span><span>{fmt(data.subtotal)}</span></div>
+          <div className="flex justify-between text-tenue"><span>IVA</span><span>{fmt(data.total_iva)}</span></div>
+          <div className="flex justify-between border-t border-borde pt-1.5 text-base font-bold text-texto">
+            <span>Total</span><span>{fmt(data.total)}</span>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Notas */}
+      {/* Observaciones */}
       {data.notas && (
-        <div
-          className="rounded-xl p-4"
-          style={{
-            background: "var(--kipu-surface)",
-            border: "1px solid var(--kipu-border)",
-          }}
-        >
-          <div className="flex items-center gap-2 mb-2">
-            <StickyNote size={14} style={{ color: "var(--kipu-warning)" }} />
-            <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--kipu-subtle)" }}>Observaciones</h2>
-          </div>
-          <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>{data.notas}</p>
-        </div>
+        <section className="rounded-xl border border-borde bg-superficie p-4">
+          <h2 className="mb-1 flex items-center gap-2 text-sm font-semibold text-texto">
+            <StickyNote size={16} className="text-alerta" aria-hidden /> Observaciones
+          </h2>
+          <p className="text-sm text-tenue">{data.notas}</p>
+        </section>
       )}
 
-      {/* Facturada — link al documento */}
-      {facturada && data.documento_emitido_id && (
-        <div
-          className="rounded-xl p-4 flex items-center justify-between"
-          style={{
-            background: "color-mix(in srgb, var(--kipu-success) 5%, transparent)",
-            border: "1px solid color-mix(in srgb, var(--kipu-success) 20%, transparent)",
-          }}
-        >
-          <div className="flex items-center gap-2">
-            <CheckCircle2 size={14} style={{ color: "var(--kipu-success)" }} />
-            <p className="text-sm font-medium" style={{ color: "var(--kipu-success)" }}>Esta proforma fue facturada</p>
-          </div>
-          <button
-            onClick={() => router.push(rutas.documento(data.documento_emitido_id))}
-            className="text-xs transition-colors"
-            style={{ color: "var(--kipu-accent)" }}
-            onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent-h)"}
-            onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-accent)"}
-          >
-            Ver factura →
-          </button>
-        </div>
+      {/* Cliente */}
+      {data.cliente && (
+        <Seccion titulo="Cliente" icono={User} resumen={data.cliente.identificacion}>
+          {[
+            { label: "Nombre",         value: data.cliente.razon_social },
+            { label: "Identificación", value: `${TIPO_ID[data.cliente.tipo_identificacion_sri] ?? "ID"}: ${data.cliente.identificacion}` },
+            ...(data.cliente.email    ? [{ label: "Email",    value: data.cliente.email    }] : []),
+            ...(data.cliente.telefono ? [{ label: "Teléfono", value: data.cliente.telefono }] : []),
+            ...(data.cliente.direccion && data.cliente.direccion !== "S/N"
+              ? [{ label: "Dirección", value: data.cliente.direccion }]
+              : []),
+          ].map(({ label, value }) => (
+            <div key={label} className="flex justify-between gap-4 py-1 text-sm">
+              <span className="shrink-0 text-tenue">{label}</span>
+              <span className="min-w-0 break-words text-right text-texto">{value}</span>
+            </div>
+          ))}
+        </Seccion>
       )}
+
+      <HojaAcciones
+        abierta={menu}
+        onCerrar={() => setMenu(false)}
+        titulo={`Proforma ${data.numero}`}
+        acciones={acciones}
+      />
 
       {/* DIV oculto para imprimir */}
       <div className="hidden">
@@ -564,19 +422,7 @@ function DetalleProforma({ id }: { id: string }) {
         </div>
       </div>
 
-      {/* Eliminar (Hoja de confirmación: botón rojo, el foco empieza en Cancelar) */}
-      <Hoja
-        abierta={showEliminar}
-        onCerrar={() => setShowEliminar(false)}
-        titulo="¿Eliminar proforma?"
-        descripcion={<>Se eliminará <span className="font-mono text-texto">{data.numero}</span> permanentemente.</>}
-        tamano="sm"
-        cerrable={!eliminando}
-        pie={<>
-          <Boton variante="secundario" onClick={() => setShowEliminar(false)} disabled={eliminando} data-autofocus>Cancelar</Boton>
-          <Boton variante="peligro" onClick={handleEliminar} cargando={eliminando} icono={<Trash2 size={16} />}>Eliminar</Boton>
-        </>}
-      />
     </div>
+    </TirarParaRefrescar>
   );
 }
