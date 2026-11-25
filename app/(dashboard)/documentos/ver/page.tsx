@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
 import { notFound, useRouter, useSearchParams } from "next/navigation";
 import { FileText } from "lucide-react";
-import api from "@/lib/api";
+import { useLista } from "@/lib/useLista";
+import { Esqueleto, EsqueletoFilas } from "@/components/ui/Esqueleto";
+import Vacio from "@/components/ui/Vacio";
+import Boton from "@/components/ui/Boton";
 import DetalleShared, { type FacturaBase } from "./components/DetalleShared";
 import DetalleFactura from "./components/DetalleFactura";
 import DetalleNC      from "./components/DetalleNC";
@@ -19,52 +21,35 @@ export default function DetalleDocumentoPage() {
 }
 
 function DetalleDocumento({ id }: { id: string }) {
-  const router  = useRouter();
-  const [documento, setDocumento] = useState<any>(null);
-  const [loading,   setLoading]   = useState(true);
+  const router = useRouter();
+  // Con caché: al volver de una NC o de la lista, el comprobante aparece al instante
+  // y se actualiza por detrás (lib/useLista.ts)
+  const res       = useLista<{ data?: any }>(`/api/v1/app/documentos/${id}`);
+  const documento = res.datos?.data;
 
-  const cargar = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await api.get(`/api/v1/app/documentos/${id}`);
-      setDocumento(res.data.data);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  }, [id]);
-
-  useEffect(() => { cargar(); }, [cargar]);
-
-  if (loading) {
+  if (res.cargando) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div
-          className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin"
-          style={{ borderColor: "var(--kipu-accent)", borderTopColor: "transparent" }}
-        />
+      <div className="mx-auto max-w-3xl space-y-4 p-4 md:p-6" aria-busy="true">
+        <Esqueleto className="h-52 rounded-2xl" />
+        <EsqueletoFilas filas={4} />
       </div>
     );
   }
 
   if (!documento) {
+    // 404/403: no existe o es de otra empresa. Otro error: la conexión, se puede reintentar.
+    const estado   = (res.error as { response?: { status?: number } } | undefined)?.response?.status;
+    const deRed    = !!res.error && estado !== 404 && estado !== 403;
     return (
-      <div className="p-6 text-center">
-        <FileText size={40} className="mx-auto mb-3" style={{ color: "var(--kipu-subtle)" }} />
-        <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>
-          Comprobante no encontrado.
-        </p>
-        <button
-          onClick={() => router.back()}
-          className="mt-4 text-sm transition-colors"
-          style={{ color: "var(--kipu-accent)" }}
-          onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent-h)"}
-          onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-accent)"}
-        >
-          Volver
-        </button>
-      </div>
+      <Vacio
+        icono={FileText}
+        titulo={deRed ? "No pudimos cargar el comprobante" : "Comprobante no encontrado"}
+        descripcion={deRed ? "Revisa tu conexión e intenta de nuevo." : "Puede que sea de otra empresa o que ya no exista."}
+        accion={deRed
+          ? <Boton onClick={() => void res.recargar()}>Reintentar</Boton>
+          : <Boton variante="secundario" onClick={() => router.push("/documentos")}>Ir a Documentos</Boton>}
+        className="py-20"
+      />
     );
   }
 
@@ -96,6 +81,8 @@ function DetalleDocumento({ id }: { id: string }) {
     email_comprador:         documento.email_comprador ?? null,
     es_sandbox:              documento.es_sandbox ?? false,
     anulacion:               documento.anulacion ?? null,
+    ultimo_error_tecnico:    documento.ultimo_error_tecnico ?? null,
+    sri_verificado_at:       documento.sri_verificado_at ?? null,
   };
 
   const renderContenido = () => {
@@ -110,7 +97,7 @@ function DetalleDocumento({ id }: { id: string }) {
   };
 
   return (
-    <DetalleShared factura={docBase} onRecargar={cargar}>
+    <DetalleShared factura={docBase} onRecargar={res.recargar}>
       {renderContenido()}
     </DetalleShared>
   );

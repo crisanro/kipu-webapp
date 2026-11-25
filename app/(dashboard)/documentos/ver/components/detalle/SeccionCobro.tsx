@@ -7,6 +7,8 @@ import api from "@/lib/api";
 import { hoyEC } from "@/lib/fecha";
 import { type FacturaBase, COBRO_CONFIG } from "./utils";
 import LinkPago from "@/components/cobros/LinkPago";
+import Seccion from "@/components/ui/Seccion";
+import Boton from "@/components/ui/Boton";
 
 const FORMAS_PAGO_COBRO = [
   { value: "EFECTIVO",      label: "Efectivo" },
@@ -61,33 +63,25 @@ export default function SeccionCobro({ factura, onRecargar }: { factura: Factura
     <>
       {/* Estado de cobro */}
       {["FAC", "LIQ", "NDB"].includes(factura.tipo_doc) && factura.estado_sri === "AUTORIZADO" && (
-        <div
-          className="rounded-xl p-4"
-          style={{
-            background: "var(--kipu-surface)",
-            border: "1px solid var(--kipu-border)",
-          }}
+        // Abierta mientras falta cobrar (es lo próximo que se hace); cobrada, plegada
+        <Seccion
+          titulo="Cobro"
+          icono={DollarSign}
+          resumen={cobro?.label}
+          abierta={factura.estado_cobro !== "PAGADO"}
         >
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <DollarSign size={15} style={{ color: "var(--kipu-subtle)" }} />
-              <h2 className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--kipu-subtle)" }}>
-                Estado de Cobro
-              </h2>
-            </div>
-            {!editandoCobro && (
-              <button
+          {!editandoCobro && (
+            <div className="mb-3 flex justify-end">
+              <Boton
+                variante={factura.estado_cobro === "PAGADO" ? "fantasma" : "principal"}
+                tamano="sm"
                 onClick={abrirEdicionCobro}
-                className="flex items-center gap-1 text-xs transition-colors"
-                style={{ color: "var(--kipu-subtle)" }}
-                onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent)"}
-                onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-subtle)"}
+                icono={<Pencil size={14} />}
               >
-                <Pencil size={11} />
                 {factura.estado_cobro === "PAGADO" ? "Editar" : "Registrar cobro"}
-              </button>
-            )}
-          </div>
+              </Boton>
+            </div>
+          )}
 
           {editandoCobro ? (
             /* ── Modo edición ── */
@@ -297,7 +291,7 @@ export default function SeccionCobro({ factura, onRecargar }: { factura: Factura
               )}
             </>
           )}
-        </div>
+        </Seccion>
       )}
     </>
   );

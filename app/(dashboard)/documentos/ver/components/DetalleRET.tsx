@@ -7,6 +7,10 @@ import { rutaFueraDelPlan } from "@/lib/plataforma";
 import {
   fechaCatalogo, obtenerCatalogoRetenciones, type CatalogoRetenciones,
 } from "@/lib/catalogos/retenciones";
+import { Building2, Info, UserRound } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import Seccion from "@/components/ui/Seccion";
+import Boton from "@/components/ui/Boton";
 import { fmt, FORMA_PAGO, TIPO_ID, type FacturaBase } from "./DetalleShared";
 
 interface Props { factura: FacturaBase; }
@@ -90,27 +94,20 @@ function descRetencion(cat: CatalogoRetenciones | null, codigo: string, codRet: 
 
 const conDesc = (codigo: string, desc?: string | null) => (desc ? `${codigo} · ${desc}` : codigo);
 
-function Tarjeta({ titulo, children }: { titulo: string; children: ReactNode }) {
-  return (
-    <div
-      className="rounded-xl p-4"
-      style={{ background: "var(--kipu-surface)", border: "1px solid var(--kipu-border)" }}
-    >
-      <h2 className="text-xs font-semibold mb-3 uppercase tracking-wide" style={{ color: "var(--kipu-subtle)" }}>
-        {titulo}
-      </h2>
-      {children}
-    </div>
-  );
+// Sección plegable (Sujeto retenido, Emisor, Información adicional)
+function Tarjeta({ titulo, icono, resumen, children }: {
+  titulo: string; icono: LucideIcon; resumen?: ReactNode; children: ReactNode;
+}) {
+  return <Seccion titulo={titulo} icono={icono} resumen={resumen}>{children}</Seccion>;
 }
 
 function Filas({ filas }: { filas: { label: string; value: ReactNode }[] }) {
   return (
-    <div className="space-y-2 text-sm">
+    <div className="space-y-1 text-sm">
       {filas.filter(f => f.value != null && f.value !== "").map(({ label, value }) => (
-        <div key={label} className="flex justify-between gap-4">
-          <span style={{ color: "var(--kipu-muted)" }}>{label}</span>
-          <span className="text-right max-w-[60%]" style={{ color: "var(--kipu-text)" }}>{value}</span>
+        <div key={label} className="flex justify-between gap-4 py-0.5">
+          <span className="shrink-0 text-tenue">{label}</span>
+          <span className="min-w-0 break-words text-right text-texto">{value}</span>
         </div>
       ))}
     </div>
@@ -148,97 +145,89 @@ export default function DetalleRET({ factura }: Props) {
   const nombreRegimen  = (cod: string) =>
     cat?.regimen_fiscal_exterior.find(r => r.codigo === cod)?.descripcion ?? REGIMEN[cod];
 
+  const origen = factura.doc_origen_emitido ?? factura.doc_origen_recibido;
+
   return (
     <>
-      {/* Total retenido */}
+      {/* Impuestos retenidos (el total ya está arriba, en grande) */}
       {retenciones.length > 0 && (
-        <div
-          className="rounded-xl p-4 flex items-center justify-between gap-4"
-          style={{
-            background: "color-mix(in srgb, var(--kipu-info) 5%, transparent)",
-            border: "1px solid color-mix(in srgb, var(--kipu-info) 20%, transparent)",
-          }}
-        >
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--kipu-info)" }}>
-              Total retenido
-            </p>
-            <p className="text-xs mt-1" style={{ color: "var(--kipu-subtle)" }}>
-              {porTipo.map(t => `${TIPO_IMPUESTO[t.cod]} $${fmt(t.total)}`).join(" · ")}
-            </p>
+        <section className="overflow-hidden rounded-xl border border-borde bg-superficie">
+          <div className="border-b border-borde px-4 py-3">
+            <h2 className="text-sm font-semibold text-texto">Impuestos retenidos</h2>
+            {porTipo.length > 1 && (
+              <p className="mt-0.5 text-xs text-sutil">
+                {porTipo.map(t => `${TIPO_IMPUESTO[t.cod]} $${fmt(t.total)}`).join(" · ")}
+              </p>
+            )}
           </div>
-          <span className="text-2xl font-bold" style={{ color: "var(--kipu-info)" }}>${fmt(totalRetenido)}</span>
-        </div>
+          <div className="divide-y divide-borde">
+            {retenciones.map((imp, i) => {
+              const codRet = String(imp.codigoRetencion || imp.codigoPorcentaje || "");
+              const desc   = descRetencion(cat, String(imp.codigo), codRet);
+              return (
+                <div key={i} className="space-y-1 px-4 py-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 items-start gap-2">
+                      <span className="shrink-0 rounded-full bg-info-suave px-2 py-0.5 text-xs font-medium text-info">
+                        {TIPO_IMPUESTO[imp.codigo ?? ""] ?? imp.codigo}
+                      </span>
+                      <span className="line-clamp-2 min-w-0 text-sm text-texto" title={desc ?? undefined}>
+                        <span className="font-mono">{codRet}</span>
+                        {desc && <span className="text-tenue"> · {desc}</span>}
+                      </span>
+                    </div>
+                    <span className="shrink-0 text-sm font-semibold tabular-nums text-texto">
+                      ${fmt(valor(imp))}
+                    </span>
+                  </div>
+                  <p className="pl-1 text-xs text-sutil">
+                    Base ${fmt(imp.baseImponible)} × {imp.porcentajeRetener || imp.tarifa}%
+                  </p>
+                  {/* RET v1.0: cada impuesto traía su documento sustento */}
+                  {imp.numDocSustento && (
+                    <p className="pl-1 text-xs text-tenue">
+                      Doc: {DOCS_SUSTENTO[imp.codDocSustento ?? ""] ?? imp.codDocSustento} · {imp.numDocSustento}
+                      {imp.fechaEmisionDocSustento && ` · ${imp.fechaEmisionDocSustento}`}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          <div className="flex justify-between border-t border-borde px-4 py-3 font-bold tabular-nums text-texto">
+            <span className="text-sm">Total retenido</span>
+            <span>${fmt(totalRetenido)}</span>
+          </div>
+        </section>
       )}
 
-      {/* Emisor */}
-      <Tarjeta titulo="Emisor">
-        <Filas filas={[
-          { label: "Razón Social",    value: trib.razonSocial },
-          { label: "RUC",             value: trib.ruc },
-          { label: "Dirección",       value: trib.dirMatriz },
-          { label: "Establecimiento", value: `${trib.estab}-${trib.ptoEmi}` },
-          { label: "Ambiente",        value: trib.ambiente == 2 ? "🟢 Producción" : "🟡 Pruebas" },
-        ]} />
-      </Tarjeta>
-
-      {/* Sujeto retenido */}
-      <Tarjeta titulo="Sujeto Retenido">
-        <Filas filas={[
-          { label: "Razón Social",       value: infoRET.razonSocialSujetoRetenido },
-          { label: "Tipo ID",            value: TIPO_ID[infoRET.tipoIdentificacionSujetoRetenido] ?? infoRET.tipoIdentificacionSujetoRetenido },
-          { label: "Identificación",     value: infoRET.identificacionSujetoRetenido },
-          { label: "Tipo de sujeto",     value: infoRET.tipoSujetoRetenido && (TIPO_SUJETO[infoRET.tipoSujetoRetenido] ?? infoRET.tipoSujetoRetenido) },
-          { label: "Parte relacionada",  value: infoRET.parteRel },
-          { label: "Período Fiscal",     value: infoRET.periodoFiscal },
-        ]} />
-      </Tarjeta>
-
       {/* Documento sustento */}
-      {(sustentos.length > 0 || factura.doc_origen_emitido || factura.doc_origen_recibido) && (
-        <div
-          className="rounded-xl p-4 space-y-4"
-          style={{
-            background: "color-mix(in srgb, var(--kipu-info) 5%, transparent)",
-            border: "1px solid color-mix(in srgb, var(--kipu-info) 20%, transparent)",
-          }}
-        >
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h2 className="text-xs font-semibold mb-2 uppercase tracking-wide" style={{ color: "var(--kipu-info)" }}>
-                Documento Sustento
-              </h2>
-              {(factura.doc_origen_emitido || factura.doc_origen_recibido) && (
-                <>
-                  <p className="text-sm font-mono font-medium" style={{ color: "var(--kipu-text)" }}>
-                    {(factura.doc_origen_emitido ?? factura.doc_origen_recibido).numero_doc}
-                  </p>
-                  <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+      {(sustentos.length > 0 || origen) && (
+        <section className="space-y-3 rounded-xl border border-borde bg-superficie p-4">
+          <div>
+            <h2 className="text-sm font-semibold text-texto">Documento sustento</h2>
+            {origen && (
+              <div className="mt-1 flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <p className="font-mono text-sm font-medium text-texto">{origen.numero_doc}</p>
+                  <p className="text-xs text-sutil">
                     {factura.doc_origen_emitido ? "Liquidación de Compra" : factura.doc_origen_recibido.razon_social_proveedor}
-                    {" · "}${fmt((factura.doc_origen_emitido ?? factura.doc_origen_recibido).importe_total)}
+                    {" · "}${fmt(origen.importe_total)}
                   </p>
-                </>
-              )}
-            </div>
-            {factura.doc_origen_emitido ? (
-              <button
-                type="button"
-                onClick={() => router.push(rutas.documento(factura.doc_origen_emitido.id))}
-                className="text-xs transition-colors shrink-0"
-                style={{ color: "var(--kipu-info)" }}
-              >
-                Ver →
-              </button>
-            ) : factura.doc_origen_recibido && !sinRecibidos ? (
-              <button
-                type="button"
-                onClick={() => router.push(rutas.recibido(factura.doc_origen_recibido_id ?? ""))}
-                className="text-xs transition-colors shrink-0"
-                style={{ color: "var(--kipu-info)" }}
-              >
-                Ver factura recibida →
-              </button>
-            ) : null}
+                </div>
+                {factura.doc_origen_emitido ? (
+                  <Boton variante="secundario" tamano="sm"
+                         onClick={() => router.push(rutas.documento(factura.doc_origen_emitido.id))}>
+                    Ver liquidación
+                  </Boton>
+                ) : factura.doc_origen_recibido && !sinRecibidos ? (
+                  <Boton variante="secundario" tamano="sm"
+                         onClick={() => router.push(rutas.recibido(factura.doc_origen_recibido_id ?? ""))}>
+                    Ver factura recibida
+                  </Boton>
+                ) : null}
+              </div>
+            )}
           </div>
 
           {sustentos.map((s, n) => {
@@ -246,11 +235,7 @@ export default function DetalleRET({ factura }: Props) {
             const iva = lista(s.impuestosDocSustento?.impuestoDocSustento)
               .reduce((t, i) => t + num(i.valorImpuesto), 0);
             return (
-              <div
-                key={n}
-                className="pt-3"
-                style={{ borderTop: "1px solid color-mix(in srgb, var(--kipu-info) 20%, transparent)" }}
-              >
+              <div key={n} className="border-t border-borde pt-3">
                 <Filas filas={[
                   { label: "Documento",       value: `${DOCS_SUSTENTO[s.codDocSustento ?? ""] ?? s.codDocSustento} · ${s.fechaEmisionDocSustento}` },
                   { label: "Código sustento", value: s.codSustento && conDesc(s.codSustento, nombreSustento(s.codSustento)) },
@@ -270,89 +255,42 @@ export default function DetalleRET({ factura }: Props) {
               </div>
             );
           })}
-        </div>
+        </section>
       )}
 
-      {/* Impuestos retenidos */}
-      {retenciones.length > 0 && (
-        <div
-          className="rounded-xl overflow-hidden"
-          style={{ background: "var(--kipu-surface)", border: "1px solid var(--kipu-border)" }}
-        >
-          <div className="px-4 py-3" style={{ borderBottom: "2px solid var(--kipu-border)" }}>
-            <h2 className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--kipu-subtle)" }}>
-              Impuestos Retenidos
-            </h2>
-          </div>
-          <div>
-            {retenciones.map((imp, i) => {
-              const codRet = String(imp.codigoRetencion || imp.codigoPorcentaje || "");
-              const desc   = descRetencion(cat, String(imp.codigo), codRet);
-              return (
-                <div
-                  key={i}
-                  className="px-4 py-3 space-y-1"
-                  style={{ borderTop: i > 0 ? "1px solid var(--kipu-border)" : "none" }}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-start gap-2 min-w-0">
-                      <span
-                        className="text-xs px-2 py-0.5 rounded-full font-medium shrink-0"
-                        style={{
-                          background: "color-mix(in srgb, var(--kipu-info) 20%, transparent)",
-                          color: "var(--kipu-info)",
-                        }}
-                      >
-                        {TIPO_IMPUESTO[imp.codigo ?? ""] ?? imp.codigo}
-                      </span>
-                      <span className="text-sm min-w-0 line-clamp-2" style={{ color: "var(--kipu-text)" }} title={desc ?? undefined}>
-                        <span className="font-mono">{codRet}</span>
-                        {desc && <span style={{ color: "var(--kipu-muted)" }}> · {desc}</span>}
-                      </span>
-                    </div>
-                    <span className="text-sm font-bold shrink-0" style={{ color: "var(--kipu-info)" }}>
-                      ${fmt(valor(imp))}
-                    </span>
-                  </div>
-                  <p className="text-xs pl-1" style={{ color: "var(--kipu-subtle)" }}>
-                    Base ${fmt(imp.baseImponible)} × {imp.porcentajeRetener || imp.tarifa}%
-                  </p>
-                  {/* RET v1.0: cada impuesto traía su documento sustento */}
-                  {imp.numDocSustento && (
-                    <p className="text-xs pl-1" style={{ color: "var(--kipu-muted)" }}>
-                      Doc: {DOCS_SUSTENTO[imp.codDocSustento ?? ""] ?? imp.codDocSustento} · {imp.numDocSustento}
-                      {imp.fechaEmisionDocSustento && ` · ${imp.fechaEmisionDocSustento}`}
-                    </p>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-          <div
-            className="px-4 py-3 flex justify-between font-bold"
-            style={{ borderTop: "2px solid var(--kipu-border)" }}
-          >
-            <span className="text-sm" style={{ color: "var(--kipu-muted)" }}>Total retenido</span>
-            <span style={{ color: "var(--kipu-info)" }}>${fmt(totalRetenido)}</span>
-          </div>
-        </div>
-      )}
+      {/* Sujeto retenido */}
+      <Tarjeta titulo="Sujeto retenido" icono={UserRound} resumen={infoRET.identificacionSujetoRetenido}>
+        <Filas filas={[
+          { label: "Razón social",       value: infoRET.razonSocialSujetoRetenido },
+          { label: "Tipo ID",            value: TIPO_ID[infoRET.tipoIdentificacionSujetoRetenido] ?? infoRET.tipoIdentificacionSujetoRetenido },
+          { label: "Identificación",     value: infoRET.identificacionSujetoRetenido },
+          { label: "Tipo de sujeto",     value: infoRET.tipoSujetoRetenido && (TIPO_SUJETO[infoRET.tipoSujetoRetenido] ?? infoRET.tipoSujetoRetenido) },
+          { label: "Parte relacionada",  value: infoRET.parteRel },
+          { label: "Período fiscal",     value: infoRET.periodoFiscal },
+        ]} />
+      </Tarjeta>
 
       {/* Info adicional */}
       {adicionales.length > 0 && (
-        <Tarjeta titulo="Información Adicional">
-          <div className="space-y-2">
-            {adicionales.map((campo, i) => (
-              <div key={i} className="flex justify-between gap-4 text-sm">
-                <span style={{ color: "var(--kipu-subtle)" }}>
-                  {ETIQUETA_ADICIONAL[campo["@nombre"] ?? ""] ?? campo["@nombre"]}
-                </span>
-                <span className="text-right" style={{ color: "var(--kipu-text)" }}>{campo["#text"]}</span>
-              </div>
-            ))}
-          </div>
+        <Tarjeta titulo="Información adicional" icono={Info}
+                 resumen={adicionales.length === 1 ? "1 campo" : `${adicionales.length} campos`}>
+          <Filas filas={adicionales.map(campo => ({
+            label: ETIQUETA_ADICIONAL[campo["@nombre"] ?? ""] ?? campo["@nombre"] ?? "",
+            value: campo["#text"],
+          }))} />
         </Tarjeta>
       )}
+
+      {/* Emisor */}
+      <Tarjeta titulo="Emisor" icono={Building2} resumen={trib.ruc}>
+        <Filas filas={[
+          { label: "Razón social",    value: trib.razonSocial },
+          { label: "RUC",             value: trib.ruc },
+          { label: "Dirección",       value: trib.dirMatriz },
+          { label: "Establecimiento", value: `${trib.estab}-${trib.ptoEmi}` },
+          { label: "Ambiente",        value: trib.ambiente == 2 ? "Producción" : "Pruebas" },
+        ]} />
+      </Tarjeta>
     </>
   );
 }

@@ -374,7 +374,7 @@ function DetalleRecibido({ id }: { id: string }) {
       <div className="flex items-center gap-3">
         <button
           onClick={() => router.back()}
-          className="p-2 rounded-lg transition-colors"
+          className="hidden p-2 rounded-lg transition-colors lg:inline-flex"
           style={{ color: "var(--kipu-muted)" }}
           onMouseEnter={e => {
             e.currentTarget.style.color = "var(--kipu-text)";

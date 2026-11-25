@@ -45,7 +45,7 @@ function ReporteRenta({ anio }: { anio: string }) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <button onClick={() => router.push("/reportes")} className="p-2 rounded-lg border border-[var(--kipu-border)]">
+          <button onClick={() => router.push("/reportes")} aria-label="Volver a reportes" className="hidden p-2 rounded-lg border border-[var(--kipu-border)] lg:inline-flex">
             <ArrowLeft size={16} />
           </button>
           <div>

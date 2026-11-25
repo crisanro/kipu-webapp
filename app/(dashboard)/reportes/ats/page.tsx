@@ -327,7 +327,7 @@ function ReporteATS({ periodo }: { periodo: string }) {
           <button
             type="button"
             onClick={() => router.push("/reportes")}
-            className="p-2 rounded-lg transition-colors mt-0.5"
+            className="hidden p-2 rounded-lg transition-colors mt-0.5 lg:inline-flex"
             style={{
               border: "1px solid var(--kipu-border)",
               color: "var(--kipu-subtle)",
