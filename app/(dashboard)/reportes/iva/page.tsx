@@ -166,6 +166,7 @@ function ReporteIVA({ periodo }: { periodo: string }) {
         periodoVistoFmt={nombrePeriodo(periodo, data?.data?.periodo?.tipo)}
         totalVisto={data.total ?? null}
         alertasVisto={data.alertas_cantidad ?? 0}
+        avisoVisto={data.aviso ?? null}
         onElegido={(p) => (p === periodo ? cargar() : router.push(rutas.reporteIva(p)))}
         onVolver={() => router.push("/reportes")}
       />
@@ -180,6 +181,7 @@ function ReporteIVA({ periodo }: { periodo: string }) {
         enCurso={data.en_curso ?? false}
         total={data.total}
         alertasCantidad={data.alertas_cantidad ?? 0}
+        aviso={data.aviso ?? null}
         onVolver={() => router.push("/reportes")}
       />
     );

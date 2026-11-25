@@ -82,8 +82,8 @@ function useVentasMesPasado(enProduccion: boolean): Ventas | null {
 }
 
 // ── Encabezado ────────────────────────────────────────────────────────────────
-export function HeroAlDia({ precio, periodo = "MENSUAL", onContratar }: {
-  precio: number | null; periodo?: "MENSUAL" | "ANUAL"; onContratar: () => void;
+export function HeroAlDia({ precio, base = null, periodo = "MENSUAL", onContratar }: {
+  precio: number | null; base?: number | null; periodo?: "MENSUAL" | "ANUAL"; onContratar: () => void;
 }) {
   return (
     <div className="rounded-2xl p-6 md:p-8 space-y-4"
@@ -127,6 +127,10 @@ export function HeroAlDia({ precio, periodo = "MENSUAL", onContratar }: {
             <span className="text-sm ml-1.5" style={{ color: "var(--kipu-muted)" }}>
               {periodo === "ANUAL" ? "al año" : "al mes"}, IVA incluido
             </span>
+            {/* La base sin IVA, como en /planes */}
+            {base !== null && (
+              <p className="text-xs mt-0.5" style={{ color: "var(--kipu-subtle)" }}>${base.toFixed(2)} + IVA</p>
+            )}
           </div>
         ) : (
           <span className="text-sm" style={{ color: "var(--kipu-subtle)" }}>

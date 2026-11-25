@@ -12,8 +12,9 @@ interface Props {
 
 // ID del video tutorial en YouTube. Mientras sea null, la sección del video no se muestra.
 const VIDEO_ID: string | null = null;
-const CHROME_EXT_URL  = "https://chromewebstore.google.com/detail/kipu-%E2%80%94-importador-sri/fpaeflibkbihlpdkfbpniminocmplplo";
-const FIREFOX_EXT_URL = "https://addons.mozilla.org/es-ES/firefox/addon/kipu-importador-sri/";
+// También los usa /declarar-mes-anterior
+export const CHROME_EXT_URL  = "https://chromewebstore.google.com/detail/kipu-%E2%80%94-importador-sri/fpaeflibkbihlpdkfbpniminocmplplo";
+export const FIREFOX_EXT_URL = "https://addons.mozilla.org/es-ES/firefox/addon/kipu-importador-sri/";
 
 function ContenidoSRI({ empresa, onDone }: Props) {
   return (

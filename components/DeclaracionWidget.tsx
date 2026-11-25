@@ -23,6 +23,7 @@ export interface DeclaracionData {
   saldo_a_favor?:       number;
   formulario_completo?: boolean;   // false: el 104 casillero por casillero es de pago
   periodo_key?:         string;    // "2026-10": la página del 104 de ese periodo
+  solo_kipu?:           boolean;   // sin declarar y quizá facturó con otro sistema: guía del mes anterior
 }
 
 interface Props {
@@ -30,8 +31,8 @@ interface Props {
   onDeclarado: () => void; 
 }
 
-// ── Modal de confirmación ──────────────────────────────────────────────────────
-function ModalConfirmar({ onConfirm, onCancel, loading }: {
+// ── Modal de confirmación (también en /declarar-mes-anterior) ──────────────────
+export function ModalConfirmar({ onConfirm, onCancel, loading }: {
   onConfirm: () => void;
   onCancel:  () => void;
   loading:   boolean;
@@ -205,6 +206,17 @@ export default function DeclaracionWidget({ data, onDeclarado }: Props) {
                   </Link>
                 )}
               </div>
+            )}
+
+            {/* Empresa nueva o mes sin ventas en Kipu: la guía para declararlo */}
+            {data.solo_kipu && (
+              <Link
+                href="/declarar-mes-anterior"
+                className="mt-2 inline-block text-xs font-medium underline underline-offset-2 hover:no-underline"
+                style={{ color: "var(--kipu-accent)" }}
+              >
+                ¿Facturabas con otro sistema? Te guiamos para declarar {data.periodo} →
+              </Link>
             )}
 
             {error && (

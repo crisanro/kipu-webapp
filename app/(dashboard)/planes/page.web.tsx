@@ -62,7 +62,8 @@ const FEATURES_AL_DIA = [
 ];
 const SISTEMA_AL_DIA = [
   "Facturas sin límite",
-  "Compras y reportes de IVA, renta y ATS",
+  "Tus compras del SRI importadas con un clic",
+  "Reportes de IVA, renta y ATS",
   "Cuentas por cobrar y pagar, y proformas",
   "Hasta 5 usuarios",
 ];
@@ -86,7 +87,8 @@ const ESTADO_COLOR: Record<string, { color: string; bg: string; border: string }
 
 const FEATURES: { texto: string; destacado?: boolean }[] = [
   { texto: "Facturas, liquidaciones, notas y retenciones sin límite" },
-  { texto: "Registro de compras y reportes de IVA (104), renta y ATS" },
+  { texto: "Tus compras del SRI importadas con un clic (extensión para Chrome y Firefox)" },
+  { texto: "Reportes de IVA (104), renta y ATS" },
   { texto: "Cuentas por cobrar y pagar, y proformas en PDF" },
   { texto: "Alertas de errores antes de declarar y facturas sin la marca de Kipu" },
   { texto: "API: 300 comprobantes al mes incluidos" },
@@ -711,8 +713,9 @@ export default function PlanesPage() {
               </div>
               )}
 
-              {/* Plan gratis: la tercera opción (lo que se tiene sin pagar) */}
-              {planGratis && <TarjetaGratis actual={esFree} />}
+              {/* Plan gratis: solo para quien está en él. Planes muestra el actual y los
+                  de arriba, nunca uno inferior (al Pro o Al Día no se le ofrece bajar) */}
+              {planGratis && esFree && <TarjetaGratis actual />}
             </div>
           )}
 
@@ -957,6 +960,7 @@ function TarjetaAlDia({ estado, precios, periodo: pedido, enProduccion, esAdmin,
   // El mismo Mensual / Anual de arriba; si Al Día no se ofrece en ese, el otro
   const periodo = periodoDisponible(precios, pedido);
   const total = precios?.[periodo]?.total ?? null;   // sin Stripe no se inventa un monto
+  const base  = precios?.[periodo]?.base  ?? null;   // sin IVA (el backend lo saca con IVA_RATE del .env)
   const unidad = periodo === "ANUAL" ? "año" : "mes";
 
   // Por qué no se puede contratar todavía (la producción primero, como en Pro)
@@ -1000,9 +1004,11 @@ function TarjetaAlDia({ estado, precios, periodo: pedido, enProduccion, esAdmin,
             {periodo === "ANUAL" ? "Anual" : "Mensual"} · el precio lo ves al pagar
           </p>
         )}
-        {total !== null && periodo === "ANUAL" && (
+        {/* Como en Pro: la base sin IVA, para que los dos se lean igual */}
+        {total !== null && base !== null && (
           <p className="text-xs mt-1" style={{ color: "var(--kipu-subtle)" }}>
-            equivale a ${(total / 12).toFixed(2)}/mes
+            ${base.toFixed(2)} + IVA
+            {periodo === "ANUAL" && ` · equivale a $${(total / 12).toFixed(2)}/mes`}
           </p>
         )}
         {periodo === "ANUAL" && <AhorroAnual precios={precios} />}
