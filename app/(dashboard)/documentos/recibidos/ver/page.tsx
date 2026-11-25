@@ -4,13 +4,15 @@ import { useState, useEffect, useCallback } from "react";
 import { notFound, useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowLeft, FileText, Download, Pencil,
-  CheckCircle2, X, Save,
+  CheckCircle2, Save,
   Link2, Shield, Receipt, Lock, Loader2
 } from "lucide-react";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
 import { rutaFueraDelPlan } from "@/lib/plataforma";
 import { aplicaALaEmpresa, bloqueadoPorPlan } from "@/components/dashboard/DashboardNav";
+import Hoja from "@/components/ui/Hoja";
+import Boton from "@/components/ui/Boton";
 
 // "Emitir retención": misma regla que el menú (DashboardNav). Sin retenciones activadas no
 // aparece; sin Kipu Pro / Al Día va con candado y lleva a planes (en la app no aparece).
@@ -80,37 +82,18 @@ function ModalClasificacion({ doc, onClose, onSaved }: {
   const totalCredito   = items.filter(i => i.credito_tributario_iva).reduce((s, i) => s + i.valor_iva, 0);
 
   return (
-    <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-      <div
-        className="rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
-        style={{
-          background: "var(--kipu-surface)",
-          border: "1px solid var(--kipu-border)",
-        }}
-      >
-        {/* Header */}
-        <div
-          className="flex items-center justify-between px-5 py-4 sticky top-0"
-          style={{
-            background: "var(--kipu-surface)",
-            borderBottom: "1px solid var(--kipu-border)",
-          }}
-        >
-          <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>
-            Clasificación fiscal
-          </h2>
-          <button
-            onClick={onClose}
-            className="transition-colors"
-            style={{ color: "var(--kipu-subtle)" }}
-            onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
-            onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-subtle)"}
-          >
-            <X size={18} />
-          </button>
-        </div>
-
-        <div className="p-5 space-y-4">
+    <Hoja
+      abierta
+      onCerrar={onClose}
+      titulo="Clasificación fiscal"
+      tamano="lg"
+      cerrable={!saving}
+      pie={<>
+        <Boton variante="secundario" onClick={onClose} disabled={saving}>Cancelar</Boton>
+        <Boton onClick={guardar} cargando={saving} icono={<Save size={16} />}>Guardar</Boton>
+      </>}
+    >
+        <div className="space-y-4">
           {/* Ítems — misma estructura que ReviewXML */}
           {items.length > 0 ? (
             <div
@@ -258,47 +241,8 @@ function ModalClasificacion({ doc, onClose, onSaved }: {
               {error}
             </p>
           )}
-
-          {/* Botones */}
-          <div className="flex gap-3">
-            <button
-              onClick={onClose}
-              className="flex-1 py-2.5 rounded-lg text-sm transition-colors"
-              style={{
-                border: "1px solid var(--kipu-border)",
-                color: "var(--kipu-muted)",
-              }}
-              onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
-              onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-muted)"}
-            >
-              Cancelar
-            </button>
-            <button
-              onClick={guardar}
-              disabled={saving}
-              className="flex-1 py-2.5 rounded-lg text-white text-sm font-medium flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
-              style={{ background: "var(--kipu-accent)" }}
-              onMouseEnter={e => {
-                if (!saving) e.currentTarget.style.background = "var(--kipu-accent-h)";
-              }}
-              onMouseLeave={e => {
-                if (!saving) e.currentTarget.style.background = "var(--kipu-accent)";
-              }}
-            >
-              {saving ? (
-                <div
-                  className="w-3.5 h-3.5 border-2 border-t-transparent rounded-full animate-spin"
-                  style={{ borderColor: "#FFFFFF", borderTopColor: "transparent" }}
-                />
-              ) : (
-                <Save size={14} />
-              )}
-              Guardar
-            </button>
-          </div>
         </div>
-      </div>
-    </div>
+    </Hoja>
   );
 }
 

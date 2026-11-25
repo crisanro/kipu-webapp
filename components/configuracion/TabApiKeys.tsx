@@ -1,10 +1,11 @@
 "use client";
 import { useConfirmar } from "@/components/ui/Confirmar";
 import { useAvisos } from "@/components/ui/Avisos";
+import Hoja from "@/components/ui/Hoja";
 import { useState, useEffect } from "react";
 import api from "@/lib/api";
 import {
-  Plus, Copy, Trash2, Key, CheckCircle2, X,
+  Plus, Copy, Trash2, Key, CheckCircle2, AlertTriangle,
   FlaskConical, RefreshCw, Eye, EyeOff
 } from "lucide-react";
 import PinInput from "@/components/PinInput";
@@ -425,32 +426,9 @@ export default function TabApiKeys() {
         )}
       </div>
 
-      {/* Modal crear key */}
-      {showForm && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-          <div
-            className="rounded-xl w-full max-w-sm p-5 space-y-4"
-            style={{
-              background: "var(--kipu-surface)",
-              border: "1px solid var(--kipu-border)",
-            }}
-          >
-            <div
-              className="flex items-center justify-between pb-2"
-              style={{ borderBottom: "1px solid var(--kipu-border)" }}
-            >
-              <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>Nueva API Key Live</h2>
-              <button
-                type="button"
-                onClick={() => setShowForm(false)}
-                className="transition-colors"
-                style={{ color: "var(--kipu-subtle)" }}
-                onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
-                onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-subtle)"}
-              >
-                <X size={18} />
-              </button>
-            </div>
+      {/* Crear key (Hoja; las acciones las trae el PinInput) */}
+      <Hoja abierta={showForm} onCerrar={() => setShowForm(false)} titulo="Nueva API Key Live" tamano="sm">
+          <div className="space-y-4">
             <div>
               <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Nombre de la integración</label>
               <input
@@ -477,29 +455,14 @@ export default function TabApiKeys() {
               />
             )}
           </div>
-        </div>
-      )}
+      </Hoja>
 
-      {/* Modal revocar key */}
-      {keyToRevoke && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-          <div
-            className="rounded-xl w-full max-w-sm p-5"
-            style={{
-              background: "var(--kipu-surface)",
-              border: "1px solid var(--kipu-border)",
-            }}
-          >
-            <div
-              className="rounded-lg p-3 mb-4 text-xs"
-              style={{
-                background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
-                border: "1px solid color-mix(in srgb, var(--kipu-danger) 20%, transparent)",
-                color: "var(--kipu-danger)",
-              }}
-            >
-              ⚠️ Revocar una API Key deshabilitará inmediatamente cualquier integración vinculada.
-            </div>
+      {/* Revocar key (Hoja; las acciones las trae el PinInput) */}
+      <Hoja abierta={!!keyToRevoke} onCerrar={() => setKeyToRevoke(null)} titulo="¿Revocar esta API Key?" tamano="sm">
+            <p className="flex items-start gap-2 rounded-lg p-3 mb-4 text-xs text-peligro bg-peligro-suave border border-peligro/30">
+              <AlertTriangle size={14} className="mt-0.5 shrink-0" aria-hidden />
+              Revocar una API Key deshabilitará inmediatamente cualquier integración vinculada.
+            </p>
             <PinInput
               tipoAccion="ELIMINAR_TOKEN"
               email={email}
@@ -507,9 +470,7 @@ export default function TabApiKeys() {
               onCancelar={() => setKeyToRevoke(null)}
               onConfirmar={revocarConPin}
             />
-          </div>
-        </div>
-      )}
+      </Hoja>
 
       {/* Info */}
       <div

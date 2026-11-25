@@ -5,6 +5,8 @@ import Link from "next/link";
 import api from "@/lib/api";
 import { usePermiso } from "@/hooks/usePermiso";
 import SinAcceso from "@/components/SinAcceso";
+import Hoja from "@/components/ui/Hoja";
+import Boton from "@/components/ui/Boton";
 import {
   Search, Plus, Users, X,
   ChevronDown, Save, AlertCircle, Check, Loader2
@@ -336,35 +338,20 @@ function PersonasContenido() {
         </div>
       )}
 
-      {/* Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-          <div
-            className="rounded-xl w-full max-w-md"
-            style={{
-              background: "var(--kipu-surface)",
-              border: "1px solid var(--kipu-border)",
-            }}
-          >
-            {/* Header modal */}
-            <div
-              className="flex items-center justify-between px-5 py-4"
-              style={{ borderBottom: "1px solid var(--kipu-border)" }}
-            >
-              <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>Nueva persona</h2>
-              <button
-                type="button"
-                onClick={() => setShowModal(false)}
-                className="transition-colors"
-                style={{ color: "var(--kipu-subtle)" }}
-                onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
-                onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-subtle)"}
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="p-5 space-y-3">
+      {/* Nueva persona: Hoja (en el celular sube desde abajo, con los botones fijos abajo) */}
+      <Hoja
+        abierta={showModal}
+        onCerrar={() => setShowModal(false)}
+        titulo="Nueva persona"
+        cerrable={!saving}
+        pie={<>
+          <Boton variante="secundario" onClick={() => setShowModal(false)} disabled={saving}>Cancelar</Boton>
+          <Boton onClick={handleSave} disabled={!puedeGuardar} cargando={saving} icono={<Save size={16} />}>
+            Guardar
+          </Boton>
+        </>}
+      >
+            <div className="space-y-3">
               {/* Tipo + Identificación + Buscar */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -590,50 +577,8 @@ function PersonasContenido() {
                   {error}
                 </div>
               )}
-
-              {/* Acciones */}
-              <div className="flex gap-3 pt-1">
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="flex-1 py-2.5 rounded-lg text-sm transition-colors"
-                  style={{
-                    border: "1px solid var(--kipu-border)",
-                    color: "var(--kipu-muted)",
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
-                  onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-muted)"}
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSave}
-                  disabled={!puedeGuardar}
-                  className="flex-1 py-2.5 rounded-lg text-white text-sm font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
-                  style={{ background: "var(--kipu-accent)" }}
-                  onMouseEnter={e => {
-                    if (puedeGuardar) e.currentTarget.style.background = "var(--kipu-accent-h)";
-                  }}
-                  onMouseLeave={e => {
-                    if (puedeGuardar) e.currentTarget.style.background = "var(--kipu-accent)";
-                  }}
-                >
-                  {saving ? (
-                    <div
-                      className="w-3.5 h-3.5 border-2 border-t-transparent rounded-full animate-spin"
-                      style={{ borderColor: "#FFFFFF", borderTopColor: "transparent" }}
-                    />
-                  ) : (
-                    <Save size={14} />
-                  )}
-                  Guardar
-                </button>
-              </div>
             </div>
-          </div>
-        </div>
-      )}
+      </Hoja>
     </div>
   );
 }

@@ -61,6 +61,7 @@
   --capa-nav:     30;
   --capa-fondo:   40;
   --capa-hoja:    50;
+  --capa-sobre-hoja: 55;   /* lo que se abre desde una hoja (p. ej. el escáner) */
   --capa-aviso:   60;
   --sombra-hoja:  0 -8px 32px rgb(0 0 0 / 0.18);
   --sombra-flotante: 0 8px 24px rgb(0 0 0 / 0.14);

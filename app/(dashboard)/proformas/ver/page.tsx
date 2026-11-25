@@ -1,5 +1,7 @@
 "use client";
 import { useAvisos } from "@/components/ui/Avisos";
+import Hoja from "@/components/ui/Hoja";
+import Boton from "@/components/ui/Boton";
 import { rutas } from "@/lib/rutas";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { notFound, useRouter, useSearchParams } from "next/navigation";
@@ -562,65 +564,19 @@ function DetalleProforma({ id }: { id: string }) {
         </div>
       </div>
 
-      {/* Modal eliminar */}
-      {showEliminar && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-          <div
-            className="rounded-xl w-full max-w-sm p-5 space-y-4"
-            style={{
-              background: "var(--kipu-surface)",
-              border: "1px solid var(--kipu-border)",
-            }}
-          >
-            <div className="flex items-start gap-3">
-              <div
-                className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
-                style={{
-                  background: "color-mix(in srgb, var(--kipu-danger) 20%, transparent)",
-                }}
-              >
-                <Trash2 size={16} style={{ color: "var(--kipu-danger)" }} />
-              </div>
-              <div>
-                <p className="font-semibold text-sm" style={{ color: "var(--kipu-text)" }}>¿Eliminar proforma?</p>
-                <p className="text-xs mt-1" style={{ color: "var(--kipu-muted)" }}>
-                  Se eliminará <span className="font-mono" style={{ color: "var(--kipu-text)" }}>{data.numero}</span> permanentemente.
-                </p>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setShowEliminar(false)}
-                className="flex-1 py-2 rounded-lg text-sm transition-colors"
-                style={{
-                  border: "1px solid var(--kipu-border)",
-                  color: "var(--kipu-muted)",
-                }}
-                onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
-                onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-muted)"}
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleEliminar}
-                disabled={eliminando}
-                className="flex-1 py-2 rounded-lg text-white text-sm font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-                style={{ background: "var(--kipu-danger)" }}
-              >
-                {eliminando ? (
-                  <div
-                    className="w-3.5 h-3.5 border-2 border-t-transparent rounded-full animate-spin"
-                    style={{ borderColor: "#FFFFFF", borderTopColor: "transparent" }}
-                  />
-                ) : (
-                  <Trash2 size={14} />
-                )}
-                Eliminar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Eliminar (Hoja de confirmación: botón rojo, el foco empieza en Cancelar) */}
+      <Hoja
+        abierta={showEliminar}
+        onCerrar={() => setShowEliminar(false)}
+        titulo="¿Eliminar proforma?"
+        descripcion={<>Se eliminará <span className="font-mono text-texto">{data.numero}</span> permanentemente.</>}
+        tamano="sm"
+        cerrable={!eliminando}
+        pie={<>
+          <Boton variante="secundario" onClick={() => setShowEliminar(false)} disabled={eliminando} data-autofocus>Cancelar</Boton>
+          <Boton variante="peligro" onClick={handleEliminar} cargando={eliminando} icono={<Trash2 size={16} />}>Eliminar</Boton>
+        </>}
+      />
     </div>
   );
 }

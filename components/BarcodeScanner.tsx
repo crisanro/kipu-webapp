@@ -149,7 +149,8 @@ export default function BarcodeScanner({ onScan, onClose }: Props) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+    // Sobre la Hoja: se abre desde formularios que ya están en una (p. ej. Nuevo producto)
+    <div className="fixed inset-0 bg-black/80 z-(--capa-sobre-hoja) flex items-center justify-center p-4">
       <div
         className="rounded-xl w-full max-w-sm overflow-hidden"
         style={{ background: "var(--kipu-surface)", border: "1px solid var(--kipu-border)" }}
