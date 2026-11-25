@@ -1,19 +1,19 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { r2 } from "@/lib/dinero";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import AccionesUsoJusto from "../components/AccionesUsoJusto";
 import { v4 as uuidv4 } from "uuid";
 import { anotarEnvio, claveParaEnviar, esPlanRequerido, esUsoJusto, mensajeErrorEmision } from "@/lib/emision";
 import { refrescarEmpresaActual } from "@/lib/empresa";
 import api from "@/lib/api";
-import AvisoColchon from "@/components/uso-justo/AvisoColchon";
 import BloqueoPlanPro from "@/components/dashboard/BloqueoPlanPro";
 import { usePermiso } from "@/hooks/usePermiso";
 import { useAuthStore } from "@/store/auth.store";
 import { useSandboxStore } from "@/store/sandbox.store";
-import { CheckCircle2, AlertTriangle, Plus, Trash2, Calendar } from "lucide-react";
+import { AlertTriangle, Plus, Trash2, Calendar } from "lucide-react";
 import PuntoEmision from "../components/PuntoEmision";
+import PantallaResultado from "../components/PantallaResultado";
 import { usePuntoEmision } from "../components/usePuntoEmision";
 import CamposAdicionales, { CampoAdicional } from "../components/CamposAdicionales";
 import DocOrigenSelector, { DocOrigen } from "../components/DocOrigenSelector";
@@ -366,7 +366,6 @@ function mesDelPeriodo(periodo: string): string {
 }
 
 export default function NuevaRetPage() {
-  const router       = useRouter();
   const searchParams = useSearchParams();
   const empresa      = useAuthStore((s) => s.empresa);
   // Con el sandbox activo el backend emite en pruebas aunque la empresa esté en producción
@@ -751,58 +750,7 @@ export default function NuevaRetPage() {
 
   if (resultado) {
     return (
-      <div
-        className="min-h-screen flex items-center justify-center p-6"
-        style={{ background: "var(--kipu-bg)" }}
-      >
-        <div className="w-full max-w-sm text-center">
-          <div
-            className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
-            style={{
-              background: "color-mix(in srgb, var(--kipu-info) 20%, transparent)",
-            }}
-          >
-            <CheckCircle2 size={32} style={{ color: "var(--kipu-info)" }} />
-          </div>
-          <h2 className="text-xl font-bold mb-1" style={{ color: "var(--kipu-text)" }}>
-            Retención emitida
-          </h2>
-          <p className="text-sm mb-2" style={{ color: "var(--kipu-subtle)" }}>{resultado.claveAcceso}</p>
-          {resultado.aviso_uso_justo && <AvisoColchon aviso={resultado.aviso_uso_justo} />}
-          <span
-            className="inline-block px-3 py-1 rounded-full text-xs font-medium mb-6"
-            style={{
-              background: "color-mix(in srgb, var(--kipu-info) 20%, transparent)",
-              color: "var(--kipu-info)",
-            }}
-          >
-            {resultado.estado}
-          </span>
-          <div className="flex gap-3">
-            <button
-              onClick={reset}
-              className="flex-1 py-2.5 rounded-lg text-sm transition-colors"
-              style={{
-                border: "1px solid var(--kipu-border)",
-                color: "var(--kipu-muted)",
-              }}
-              onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
-              onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-muted)"}
-            >
-              Nueva RET
-            </button>
-            <button
-              onClick={() => router.push("/documentos")}
-              className="flex-1 py-2.5 rounded-lg text-white text-sm font-medium transition-colors"
-              style={{ background: "var(--kipu-accent)" }}
-              onMouseEnter={e => e.currentTarget.style.background = "var(--kipu-accent-h)"}
-              onMouseLeave={e => e.currentTarget.style.background = "var(--kipu-accent)"}
-            >
-              Ver documentos
-            </button>
-          </div>
-        </div>
-      </div>
+      <PantallaResultado tipo="RET" resultado={resultado} onNueva={reset} />
     );
   }
 

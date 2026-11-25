@@ -9,12 +9,12 @@ import { useRouter } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
 import { anotarEnvio, claveParaEnviar, esUsoJusto, mensajeErrorEmision } from "@/lib/emision";
 import api from "@/lib/api";
-import AvisoColchon from "@/components/uso-justo/AvisoColchon";
 import { useAuthStore } from "@/store/auth.store";
 import { CheckCircle2, AlertTriangle, CreditCard, Copy, MessageCircle } from "lucide-react";
 
 // ── Componentes ────────────────────────────────────────────────────────────────
 import PuntoEmision from "../components/PuntoEmision";
+import PantallaResultado from "../components/PantallaResultado";
 import { usePuntoEmision } from "../components/usePuntoEmision";
 import ClienteSelector from "../components/ClienteSelector";
 import ItemsEditor, { Item, calcItem, genId, EMPTY_ITEM } from "../components/ItemsEditor";
@@ -467,107 +467,47 @@ export default function NuevaFacturaPage() {
 
   // ── Pantalla de resultado ────────────────────────────────────────────────────
   if (resultado) {
-    const isAutorizado = resultado.estado === "AUTORIZADO";
     return (
-      <div
-        className="min-h-screen flex items-center justify-center p-6"
-        style={{ background: "var(--kipu-bg)" }}
-      >
-        <div className="w-full max-w-sm text-center">
-          <div
-            className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
-            style={{
-              background: isAutorizado
-                ? "color-mix(in srgb, var(--kipu-success) 20%, transparent)"
-                : "color-mix(in srgb, var(--kipu-info) 20%, transparent)",
-            }}
-          >
-            <CheckCircle2
-              size={32}
-              style={{
-                color: isAutorizado ? "var(--kipu-success)" : "var(--kipu-info)",
-              }}
-            />
-          </div>
-          <h2 className="text-xl font-bold mb-1" style={{ color: "var(--kipu-text)" }}>
-            {isAutorizado ? "¡Factura autorizada!" : "Factura en proceso"}
-          </h2>
-          <p className="text-sm mb-2" style={{ color: "var(--kipu-subtle)" }}>{resultado.claveAcceso}</p>
-          {resultado.aviso_uso_justo && <AvisoColchon aviso={resultado.aviso_uso_justo} />}
-          {resultado.link_pago && (
-            <div className="text-left rounded-xl p-3 mb-4 space-y-2"
-                 style={{ border: "1px solid var(--kipu-border)", background: "var(--kipu-surface)" }}>
-              <p className="flex items-center gap-1.5 text-xs font-medium" style={{ color: "var(--kipu-text)" }}>
-                <CreditCard size={13} style={{ color: "var(--kipu-accent)" }} />
-                Link de pago incluido en la factura
-              </p>
-              <code className="block truncate text-[11px] px-2 py-1.5 rounded"
-                    style={{ background: "color-mix(in srgb, var(--kipu-text) 5%, transparent)", color: "var(--kipu-text)" }}>
-                {resultado.link_pago}
-              </code>
-              <div className="flex gap-2">
-                <button
-                  onClick={async () => { await navigator.clipboard.writeText(resultado.link_pago); setLinkCopiado(true); }}
-                  className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs py-1.5 rounded-lg"
-                  style={{ border: "1px solid var(--kipu-border)", color: "var(--kipu-muted)" }}
-                >
-                  {linkCopiado ? <CheckCircle2 size={12} style={{ color: "var(--kipu-success)" }} /> : <Copy size={12} />}
-                  {linkCopiado ? "Copiado" : "Copiar"}
-                </button>
-                <a
-                  href={`https://wa.me/?text=${encodeURIComponent(`Hola, te comparto el link para pagar tu factura: ${resultado.link_pago}`)}`}
-                  target="_blank" rel="noopener noreferrer"
-                  className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs py-1.5 rounded-lg"
-                  style={{ border: "1px solid var(--kipu-border)", color: "var(--kipu-muted)" }}
-                >
-                  <MessageCircle size={12} /> WhatsApp
-                </a>
-              </div>
-            </div>
-          )}
-          {resultado.aviso_link_pago && (
-            <p className="flex items-start gap-1.5 text-left text-xs rounded-lg px-3 py-2 mb-4"
-               style={{ color: "var(--kipu-warning)", background: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)" }}>
-              <AlertTriangle size={13} className="mt-0.5 shrink-0" />
-              {resultado.aviso_link_pago}
+      <PantallaResultado tipo="FAC" resultado={resultado} onNueva={reset}>
+        {resultado.link_pago && (
+          <div className="text-left rounded-xl p-3 mb-4 space-y-2"
+               style={{ border: "1px solid var(--kipu-border)", background: "var(--kipu-surface)" }}>
+            <p className="flex items-center gap-1.5 text-xs font-medium" style={{ color: "var(--kipu-text)" }}>
+              <CreditCard size={13} style={{ color: "var(--kipu-accent)" }} />
+              Link de pago incluido en la factura
             </p>
-          )}
-          <span
-            className="inline-block px-3 py-1 rounded-full text-xs font-medium mb-6"
-            style={{
-              background: isAutorizado
-                ? "color-mix(in srgb, var(--kipu-success) 20%, transparent)"
-                : "color-mix(in srgb, var(--kipu-info) 20%, transparent)",
-              color: isAutorizado ? "var(--kipu-success)" : "var(--kipu-info)",
-            }}
-          >
-            {resultado.estado}
-          </span>
-          <div className="flex gap-3">
-            <button
-              onClick={reset}
-              className="flex-1 py-2.5 rounded-lg text-sm transition-colors"
-              style={{
-                border: "1px solid var(--kipu-border)",
-                color: "var(--kipu-muted)",
-              }}
-              onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
-              onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-muted)"}
-            >
-              Nueva factura
-            </button>
-            <button
-              onClick={() => router.push("/documentos")}
-              className="flex-1 py-2.5 rounded-lg text-white text-sm font-medium transition-colors"
-              style={{ background: "var(--kipu-accent)" }}
-              onMouseEnter={e => e.currentTarget.style.background = "var(--kipu-accent-h)"}
-              onMouseLeave={e => e.currentTarget.style.background = "var(--kipu-accent)"}
-            >
-              Ver historial
-            </button>
+            <code className="block truncate text-[11px] px-2 py-1.5 rounded"
+                  style={{ background: "color-mix(in srgb, var(--kipu-text) 5%, transparent)", color: "var(--kipu-text)" }}>
+              {resultado.link_pago}
+            </code>
+            <div className="flex gap-2">
+              <button
+                onClick={async () => { await navigator.clipboard.writeText(resultado.link_pago); setLinkCopiado(true); }}
+                className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs py-1.5 rounded-lg"
+                style={{ border: "1px solid var(--kipu-border)", color: "var(--kipu-muted)" }}
+              >
+                {linkCopiado ? <CheckCircle2 size={12} style={{ color: "var(--kipu-success)" }} /> : <Copy size={12} />}
+                {linkCopiado ? "Copiado" : "Copiar"}
+              </button>
+              <a
+                href={`https://wa.me/?text=${encodeURIComponent(`Hola, te comparto el link para pagar tu factura: ${resultado.link_pago}`)}`}
+                target="_blank" rel="noopener noreferrer"
+                className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs py-1.5 rounded-lg"
+                style={{ border: "1px solid var(--kipu-border)", color: "var(--kipu-muted)" }}
+              >
+                <MessageCircle size={12} /> WhatsApp
+              </a>
+            </div>
           </div>
-        </div>
-      </div>
+        )}
+        {resultado.aviso_link_pago && (
+          <p className="flex items-start gap-1.5 text-left text-xs rounded-lg px-3 py-2 mb-4"
+             style={{ color: "var(--kipu-warning)", background: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)" }}>
+            <AlertTriangle size={13} className="mt-0.5 shrink-0" />
+            {resultado.aviso_link_pago}
+          </p>
+        )}
+      </PantallaResultado>
     );
   }
 
