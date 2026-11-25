@@ -1,6 +1,6 @@
 "use client";
 import { rutas } from "@/lib/rutas";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useSandboxStore } from "@/store/sandbox.store";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -160,7 +160,10 @@ export default function HistorialPage() {
   const [resumen,      setResumen]      = useState<any>(null);
   const [loading,      setLoading]      = useState(true);
   const [resumenOpen,  setResumenOpen]  = useState(false);
+  // Búsqueda y filtros en el servidor (antes solo filtraban los 25 de la página)
   const [query,        setQuery]        = useState("");
+  const [queryActivo,  setQueryActivo]  = useState("");
+  const debounceRef                     = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [filtroEstado, setFiltroEstado] = useState("TODOS");
   const [filtroTipo,   setFiltroTipo]   = useState("TODOS");
 
@@ -200,6 +203,9 @@ export default function HistorialPage() {
       if (fechaInicio) params.append("fecha_inicio", fechaInicio);
       if (fechaFin)    params.append("fecha_fin",    fechaFin);
       if (sandbox)     params.append("sandbox",      "true");
+      if (queryActivo) params.append("q",            queryActivo);
+      if (filtroEstado !== "TODOS") params.append("estado_sri", filtroEstado);
+      if (filtroTipo   !== "TODOS") params.append("tipo_doc",   filtroTipo);
       params.append("page", String(page));
       params.append("limit", "25");
 
@@ -208,7 +214,17 @@ export default function HistorialPage() {
       setPagination(res.data.pagination ?? null);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
-  }, [fechaInicio, fechaFin, diasRango, sandbox, page]);
+  }, [fechaInicio, fechaFin, diasRango, sandbox, page, queryActivo, filtroEstado, filtroTipo]);
+
+  const cambiarQuery = (val: string) => {
+    setQuery(val);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setPage(1);
+      setQueryActivo(val.trim());
+    }, 400);
+  };
+  useEffect(() => () => { if (debounceRef.current) clearTimeout(debounceRef.current); }, []);
 
   // Cargar resumen fiscal global del rango completo
   const cargarResumen = useCallback(async () => {
@@ -237,16 +253,6 @@ export default function HistorialPage() {
   };
 
   if (!puedeVer) return <SinAcceso />;
-
-  const filtrados = documentos.filter((d) => {
-    const matchEstado = filtroEstado === "TODOS" || d.estado_sri === filtroEstado;
-    const matchTipo   = filtroTipo   === "TODOS" || d.tipo_doc   === filtroTipo;
-    const matchQuery  = !query ||
-      d.razon_social?.toLowerCase().includes(query.toLowerCase()) ||
-      d.identificacion?.includes(query) ||
-      d.numero_doc?.includes(query);
-    return matchEstado && matchTipo && matchQuery;
-  });
 
   const tieneResumen = resumen && (
     Object.keys(resumen.por_tipo ?? {}).length > 0 ||
@@ -307,9 +313,11 @@ export default function HistorialPage() {
         <div className="relative flex-1">
           <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--kipu-subtle)" }} />
           <input
+            type="search"
+            enterKeyHint="search"
             value={query}
-            onChange={e => setQuery(e.target.value)}
-            placeholder="Buscar en esta página por cliente, RUC o número..."
+            onChange={e => cambiarQuery(e.target.value)}
+            placeholder="Buscar por cliente, RUC o número..."
             className="w-full pl-9 pr-4 py-2.5 rounded-lg text-sm transition-colors focus:outline-none"
             style={{
               background: "var(--kipu-surface)",
@@ -474,7 +482,7 @@ export default function HistorialPage() {
             return (
               <button
                 key={estado}
-                onClick={() => setFiltroEstado(estado)}
+                onClick={() => { setPage(1); setFiltroEstado(estado); }}
                 className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
                 style={{
                   background: isSelected ? "var(--kipu-accent)" : "var(--kipu-surface)",
@@ -493,7 +501,7 @@ export default function HistorialPage() {
             return (
               <button
                 key={tipo}
-                onClick={() => setFiltroTipo(tipo)}
+                onClick={() => { setPage(1); setFiltroTipo(tipo); }}
                 className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
                 style={{
                   background: isSelected ? "var(--kipu-accent)" : "var(--kipu-surface)",
@@ -516,12 +524,12 @@ export default function HistorialPage() {
             style={{ borderColor: "var(--kipu-accent)", borderTopColor: "transparent" }}
           />
         </div>
-      ) : filtrados.length === 0 ? (
+      ) : documentos.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <FileText size={40} className="mb-3" style={{ color: "var(--kipu-subtle)" }} />
           <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>
-            {query || filtroEstado !== "TODOS" || filtroTipo !== "TODOS"
-              ? "No hay comprobantes que coincidan con el filtro en esta página."
+            {queryActivo || filtroEstado !== "TODOS" || filtroTipo !== "TODOS"
+              ? "No hay comprobantes que coincidan con la búsqueda en este rango de fechas."
               : `Sin comprobantes de ${sandbox ? "prueba (Sandbox)" : "producción"} en este rango.`}
           </p>
         </div>
@@ -554,7 +562,7 @@ export default function HistorialPage() {
                 </tr>
               </thead>
               <tbody>
-                {filtrados.map((d, index) => {
+                {documentos.map((d, index) => {
                   const estado = ESTADO_CONFIG[d.estado_sri] ?? ESTADO_CONFIG.PENDIENTE;
                   const tipo   = TIPO_COMPROBANTE[d.tipo_doc] ?? TIPO_COMPROBANTE.FAC;
                   const cobro  = d.estado_cobro ? COBRO_CONFIG[d.estado_cobro] : null;
@@ -619,7 +627,7 @@ export default function HistorialPage() {
 
           {/* Vista Móvil */}
           <div className="md:hidden">
-            {filtrados.map((d, index) => {
+            {documentos.map((d, index) => {
               const estado = ESTADO_CONFIG[d.estado_sri] ?? ESTADO_CONFIG.PENDIENTE;
               const tipo   = TIPO_COMPROBANTE[d.tipo_doc] ?? TIPO_COMPROBANTE.FAC;
               const Icon   = estado.icon;
