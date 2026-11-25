@@ -893,6 +893,8 @@ export default function NuevaRetPage() {
             label={origenCfg.label}
             nota={origenCfg.nota}
             colorAccent="blue"
+            // Sin base ni IVA del documento externo el XML no sale (ver PENDIENTES.md)
+            externoNoDisponible="Próximamente: retención sobre documentos que no están en Kipu"
           />
 
           {/* Período fiscal */}

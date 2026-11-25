@@ -43,6 +43,8 @@ interface Props {
   label?:       string;
   colorAccent?: string;
   nota?:        string;           // ← mensaje informativo opcional
+  /** Si viene, no se ofrece "Externo" (documento que no está en Kipu): en su lugar, este texto. */
+  externoNoDisponible?: string;
 }
 
 const fmt = (n: number) => parseFloat(String(n || 0)).toFixed(2);
@@ -87,6 +89,7 @@ export default function DocOrigenSelector({
   label       = "Documento origen",
   colorAccent = "indigo",
   nota,
+  externoNoDisponible,
 }: Props) {
   const [modo,     setModo]     = useState<"kipu" | "manual">("kipu");
   const [query,    setQuery]    = useState("");
@@ -235,8 +238,13 @@ export default function DocOrigenSelector({
             ))}
           </div>
         </div>
-        {/* Toggle Kipu / Manual */}
-        {!value && (
+        {/* Toggle Kipu / Manual (o el aviso, si el externo no está disponible) */}
+        {!value && externoNoDisponible && (
+          <span className="text-[11px] text-right" style={{ color: "var(--kipu-subtle)" }}>
+            {externoNoDisponible}
+          </span>
+        )}
+        {!value && !externoNoDisponible && (
           <div className="flex items-center gap-2">
             <span className="text-xs" style={{ color: modo === "kipu" ? "var(--kipu-text)" : "var(--kipu-subtle)" }}>
               En Kipu
