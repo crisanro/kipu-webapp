@@ -32,13 +32,15 @@ interface Props {
   serie?:            string;   // "002-001": desde dónde sale, a la vista justo antes de emitir
   textoBoton?:       string;   // p. ej. "Crear link de cobro" (la factura se emite cuando paguen)
   aviso?:            string | null;  // problema que se ve antes de emitir (p. ej. Consumidor Final > $50)
+  /** Con EmisionLayout: en el celular el botón está en la barra fija de abajo. */
+  conBarraFija?:     boolean;
 }
 
 const fmt = (n: number) => r2(n).toFixed(2);
 
 export default function ResumenTotales({
   totales, submitting, error, suscripcionActiva, balanceApi, emisionGratis = false, usoJusto = false,
-  onEmitir, serie, textoBoton, aviso,
+  onEmitir, serie, textoBoton, aviso, conBarraFija = false,
 }: Props) {
   const gratis      = !suscripcionActiva && emisionGratis;
   const puedeEmitir = suscripcionActiva || balanceApi > 0 || gratis;
@@ -202,7 +204,7 @@ export default function ResumenTotales({
       <button
         onClick={onEmitir}
         disabled={submitting || !puedeEmitir}
-        className="mt-4 w-full py-3 rounded-lg text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+        className={`mt-4 w-full py-3 rounded-lg text-white font-semibold text-sm transition-colors items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ${conBarraFija ? "hidden lg:flex" : "flex"}`}
         style={{ background: "var(--kipu-accent)" }}
         onMouseEnter={e => {
           if (!submitting && puedeEmitir) {
