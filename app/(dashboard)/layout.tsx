@@ -15,9 +15,11 @@ import {
   escucharPrimerPlano,
   permisoNotificaciones,
 } from "@/lib/notifications";
-import { AlertTriangle, Bell, FlaskConical } from "lucide-react";
+import { AlertTriangle, Bell, CreditCard, FlaskConical } from "lucide-react";
 import { useTheme } from "next-themes";
-import { rutaFueraDelPlan } from "@/lib/plataforma";
+import { ES_APP_NATIVA, rutaFueraDelPlan } from "@/lib/plataforma";
+import api from "@/lib/api";
+import { detalleError } from "@/lib/errores";
 import {
   useNotificaciones,
   NotificacionesDrawer,
@@ -150,6 +152,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   };
 
+  // Pago fallido: Stripe reintenta y el plan sigue activo. En la web, enlace al
+  // Customer Portal para los dos planes. En la app solo Al Día lo lleva (es un
+  // servicio); el Pro no tiene enlaces de pago en la app (reglas de las tiendas).
+  const pagoFallido   = !!empresa?.suscripcion?.pago_fallido;
+  const subEsAlDia    = empresa?.suscripcion?.plan === "AL_DIA";
+  const avisoConPago  = !ES_APP_NATIVA || subEsAlDia;
+  const adminDelPlan  = empresa?.rol === "admin";      // solo el administrador gestiona el pago
+  const actualizarTarjeta = async () => {
+    try {
+      const r = await api.post(`/api/v1/app/suscripcion/portal?volver=${subEsAlDia ? "al-dia" : "planes"}`);
+      window.location.assign(r.data.portal_url);
+    } catch (err) {
+      alert(detalleError(err, "No pudimos abrir la gestión del pago. Intenta de nuevo."));
+    }
+  };
+
   if (!empresa) {
     return (
       <div className="h-screen flex items-center justify-center" style={{ background: "var(--kipu-bg)" }}>
@@ -224,6 +242,39 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <main className="flex-1 overflow-y-auto">
           {/* El SRI tiene intermitencias: los comprobantes esperan en cola */}
           <FranjaSRI sandbox={sandbox} />
+
+          {/* Pago fallido (Stripe reintentando): el plan sigue activo hasta que Stripe se rinda */}
+          {pagoFallido && (
+            <div
+              role="alert"
+              className="w-full px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 shrink-0"
+              style={{
+                background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
+                borderBottom: "1px solid color-mix(in srgb, var(--kipu-danger) 20%, transparent)",
+              }}
+            >
+              <div className="flex items-center gap-2 text-xs" style={{ color: "var(--kipu-danger)" }}>
+                <CreditCard size={14} className="shrink-0" />
+                <span>
+                  {!avisoConPago
+                    ? "Hubo un problema con tu pago. Revisa tu correo."
+                    : adminDelPlan
+                      ? "Tu pago falló, actualiza tu tarjeta."
+                      : "El pago del plan falló. Avísale al administrador de la empresa para que actualice la tarjeta."}
+                </span>
+              </div>
+              {avisoConPago && adminDelPlan && (
+                <button
+                  type="button"
+                  onClick={actualizarTarjeta}
+                  className="text-xs underline underline-offset-2 whitespace-nowrap shrink-0"
+                  style={{ color: "var(--kipu-danger)" }}
+                >
+                  Actualizar tarjeta
+                </button>
+              )}
+            </div>
+          )}
 
           {/* Banner email no verificado */}
           {!correo.cargando && !correo.verificado && (

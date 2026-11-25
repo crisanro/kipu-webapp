@@ -82,7 +82,9 @@ function useVentasMesPasado(enProduccion: boolean): Ventas | null {
 }
 
 // ── Encabezado ────────────────────────────────────────────────────────────────
-export function HeroAlDia({ precio, onContratar }: { precio: number | null; onContratar: () => void }) {
+export function HeroAlDia({ precio, periodo = "MENSUAL", onContratar }: {
+  precio: number | null; periodo?: "MENSUAL" | "ANUAL"; onContratar: () => void;
+}) {
   return (
     <div className="rounded-2xl p-6 md:p-8 space-y-4"
          style={{
@@ -121,11 +123,15 @@ export function HeroAlDia({ precio, onContratar }: { precio: number | null; onCo
       <div className="flex flex-wrap items-center gap-4 pt-1">
         {precio !== null ? (
           <div>
-            <span className="text-3xl font-extrabold" style={{ color: "var(--kipu-text)" }}>${precio.toFixed(0)}</span>
-            <span className="text-sm ml-1.5" style={{ color: "var(--kipu-muted)" }}>al mes, IVA incluido</span>
+            <span className="text-3xl font-extrabold" style={{ color: "var(--kipu-text)" }}>${precio.toFixed(2)}</span>
+            <span className="text-sm ml-1.5" style={{ color: "var(--kipu-muted)" }}>
+              {periodo === "ANUAL" ? "al año" : "al mes"}, IVA incluido
+            </span>
           </div>
         ) : (
-          <span className="text-sm" style={{ color: "var(--kipu-subtle)" }}>Mensual · el precio lo ves al pagar</span>
+          <span className="text-sm" style={{ color: "var(--kipu-subtle)" }}>
+            {periodo === "ANUAL" ? "Anual" : "Mensual"} · el precio lo ves al pagar
+          </span>
         )}
         <button type="button" onClick={onContratar}
                 className="px-5 py-2.5 rounded-xl text-white font-semibold text-sm shadow-md transition-all
@@ -137,7 +143,7 @@ export function HeroAlDia({ precio, onContratar }: { precio: number | null; onCo
         {/* En la app se vende el servicio del contador (Apple/Google: servicio
             profesional, no contenido digital). No se nombra Kipu Pro ni las funciones. */}
         {ES_APP_NATIVA
-          ? "Servicio mensual de contadores del equipo de Kipu · Tu precio no sube mientras sigas · Cancelas cuando quieras"
+          ? "Servicio de contadores del equipo de Kipu, mensual o anual · Tu precio no sube mientras sigas · Cancelas cuando quieras"
           : "Incluye todo Kipu Pro · Tu precio no sube mientras sigas suscrito · Cancelas cuando quieras"}
       </p>
     </div>
@@ -292,15 +298,22 @@ const SISTEMA = [
   "Cuentas por cobrar y pagar, y proformas",
   "Hasta 5 usuarios",
 ];
-const EXTRAS: [string, string][] = [
-  ["Renta anual si estuviste menos de 6 meses en el plan", "$50"],
+// Servicios aparte que se cotizan caso por caso (no son cobros automáticos ni
+// Prices de Stripe): sus rangos viven solo aquí.
+const EXTRAS_COTIZADOS: [string, string][] = [
   ["Declaraciones de meses anteriores a contratar", "$10 por periodo"],
   ["Sustitutivas de declaraciones que no hicimos nosotros", "$15 cada una"],
   ["Devolución de IVA o de renta", "$40 a $60"],
   ["Actualizar el RUC o ayuda con la firma electrónica", "$10 a $20"],
 ];
 
-export function QueIncluye() {
+// precioRenta: el de Kipu Renta, del Price de Stripe (GET /al-dia/estado → precio_renta)
+export function QueIncluye({ precioRenta = null }: { precioRenta?: number | null }) {
+  const extras: [string, string][] = [
+    ["Renta anual si estuviste menos de 6 meses en el plan",
+     precioRenta !== null ? `$${precioRenta.toFixed(2)}` : "Precio de Kipu Renta"],
+    ...EXTRAS_COTIZADOS,
+  ];
   return (
     <section className="grid md:grid-cols-2 gap-3">
       <div className="rounded-xl p-5 space-y-3" style={caja}>
@@ -331,7 +344,7 @@ export function QueIncluye() {
           Antes de empezar te confirmamos el precio y esperamos tu visto bueno. IVA incluido.
         </p>
         <ul className="space-y-2">
-          {EXTRAS.map(([t, p]) => (
+          {extras.map(([t, p]) => (
             <li key={t} className="flex items-start justify-between gap-3 text-sm" style={{ color: "var(--kipu-text)" }}>
               <span className="flex gap-2">
                 <XCircle size={15} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-subtle)" }} /> {t}
