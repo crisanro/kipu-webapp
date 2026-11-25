@@ -37,6 +37,18 @@ const TIPO_COLOR: Record<string, { color: string; bg: string }> = {
   RET: { color: "var(--kipu-info)", bg: "color-mix(in srgb, var(--kipu-info) 10%, transparent)" },
 };
 
+// Clasificación de la compra (backend: clasificacion_service). Las anteriores a
+// la clasificación (ANTERIOR), las retenciones y las liquidaciones recibidas
+// (para la empresa son una venta) no muestran nada.
+const TIPOS_CLASIFICABLES = ["FAC", "NDB", "NVE", "NCR"];
+const TIPOS_ACTIVO_FIJO   = ["FAC", "NDB", "NCR", "NVE"];
+const ETIQUETA_CLASIFICACION: Record<string, string> = {
+  SIN:     "Sin clasificar",
+  REGLA:   "Sugerida por Kipu",
+  IA:      "Sugerida por Kipu",
+  USUARIO: "Revisada por ti",
+};
+
 const PAGO_CONFIG: Record<string, { label: string; color: string }> = {
   PENDIENTE: { label: "Por pagar", color: "var(--kipu-warning)" },
   PAGADO:    { label: "Pagado",    color: "var(--kipu-success)" },
@@ -54,22 +66,31 @@ function ModalClasificacion({ doc, onClose, onSaved }: {
   const [notas,  setNotas]  = useState(doc.notas ?? "");
   const [saving, setSaving] = useState(false);
   const [error,  setError]  = useState("");
+  // ¿Tocó algún interruptor? Solo entonces se mandan las marcas, como suyas
+  // (marcas_del_usuario): alimentan la regla de ese proveedor
+  const [marcasTocadas, setMarcasTocadas] = useState(false);
 
   const editItem = (idx: number, field: string, val: boolean) => {
     setItems(prev => prev.map((item, i) =>
       i === idx ? { ...item, [field]: val } : item
     ));
+    setMarcasTocadas(true);
   };
 
   const guardar = async () => {
+    const payload: Record<string, unknown> = {};
+    if (marcasTocadas) {
+      payload.items_detalle          = items;
+      payload.deducible_renta        = items.some(i => i.deducible_renta);
+      payload.credito_tributario_iva = items.some(i => i.credito_tributario_iva);
+      payload.marcas_del_usuario     = true;
+    }
+    if (notas !== (doc.notas ?? "")) payload.notas = notas;
+    if (Object.keys(payload).length === 0) { onClose(); return; }   // nada que guardar
+
     setSaving(true); setError("");
     try {
-      await api.patch(`/api/v1/app/recibidos/${doc.id}`, {
-        items_detalle:          items,
-        deducible_renta:        items.some(i => i.deducible_renta),
-        credito_tributario_iva: items.some(i => i.credito_tributario_iva),
-        notas:                  notas || null,
-      });
+      await api.patch(`/api/v1/app/recibidos/${doc.id}`, payload);
       onSaved();
       onClose();
     } catch (err: any) {
@@ -321,6 +342,7 @@ function DetalleRecibido({ id }: { id: string }) {
   const [loading, setLoading] = useState(true);
   const [editando, setEditando] = useState(false);
   const [guardandoAf, setGuardandoAf] = useState(false);
+  const [confirmando, setConfirmando] = useState(false);
 
   const cargar = useCallback(async () => {
     setLoading(true);
@@ -456,6 +478,49 @@ function DetalleRecibido({ id }: { id: string }) {
           </button>
         </div>
 
+        {/* Cómo quedó clasificada y "Están bien así" */}
+        {ETIQUETA_CLASIFICACION[doc.fuente_clasificacion ?? "SIN"] && TIPOS_CLASIFICABLES.includes(doc.tipo_doc) && (
+          <div
+            className="mb-3 rounded-lg p-3 flex items-start justify-between gap-3"
+            style={{ background: "color-mix(in srgb, var(--kipu-text) 4%, transparent)" }}
+          >
+            <div className="min-w-0">
+              <p className="text-xs font-semibold" style={{ color: "var(--kipu-text)" }}>
+                {ETIQUETA_CLASIFICACION[doc.fuente_clasificacion ?? "SIN"]}
+              </p>
+              {(doc.motivo_clasificacion || !doc.fuente_clasificacion) && (
+                <p className="text-xs mt-0.5" style={{ color: "var(--kipu-subtle)" }}>
+                  {doc.fuente_clasificacion
+                    ? doc.motivo_clasificacion
+                    : "Se cuenta como deducible y con crédito si tiene IVA. Revisa las marcas: si están bien, confírmalas."}
+                </p>
+              )}
+            </div>
+            {doc.fuente_clasificacion !== "USUARIO" && (
+              <button
+                type="button"
+                disabled={confirmando}
+                onClick={async () => {
+                  setConfirmando(true);
+                  try {
+                    await api.patch(`/api/v1/app/recibidos/${doc.id}`, { marcas_del_usuario: true });
+                    await cargar();
+                  } catch (e) { console.error(e); }
+                  finally { setConfirmando(false); }
+                }}
+                className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
+                style={{
+                  background: "color-mix(in srgb, var(--kipu-success) 12%, transparent)",
+                  color: "var(--kipu-success)",
+                  border: "1px solid color-mix(in srgb, var(--kipu-success) 25%, transparent)",
+                }}
+              >
+                <CheckCircle2 size={12} /> Están bien así
+              </button>
+            )}
+          </div>
+        )}
+
         <div className="grid grid-cols-3 gap-3">
           <div
             className="rounded-lg p-3 text-center"
@@ -486,13 +551,15 @@ function DetalleRecibido({ id }: { id: string }) {
           </div>
         </div>
 
-        {/* Activo fijo: computador, vehículo, maquinaria… (104: 501/511/521) */}
-        {["FAC", "NDB", "NCR"].includes(doc.tipo_doc) && (
+        {/* Activo fijo: computador, vehículo, maquinaria… (104: 501/511/521; NV: 508) */}
+        {TIPOS_ACTIVO_FIJO.includes(doc.tipo_doc) && (
           <div className="mt-3 flex items-center justify-between gap-3">
             <div>
               <p className="text-sm" style={{ color: "var(--kipu-text)" }}>Es un activo fijo</p>
               <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
-                Equipos, vehículos o maquinaria que usarás más de un año. Se declara en el casillero 501.
+                {doc.tipo_doc === "NVE"
+                  ? "Muebles o equipos que usarás más de un año."
+                  : "Equipos, vehículos o maquinaria que usarás más de un año. Se declara en el casillero 501."}
               </p>
             </div>
             <button
@@ -502,7 +569,8 @@ function DetalleRecibido({ id }: { id: string }) {
               onClick={async () => {
                 setGuardandoAf(true);
                 try {
-                  await api.patch(`/api/v1/app/recibidos/${doc.id}`, { activo_fijo: !doc.datos?.activo_fijo });
+                  await api.patch(`/api/v1/app/recibidos/${doc.id}`,
+                                  { activo_fijo: !doc.datos?.activo_fijo, marcas_del_usuario: true });
                   await cargar();
                 } catch (e) { console.error(e); }
                 finally { setGuardandoAf(false); }

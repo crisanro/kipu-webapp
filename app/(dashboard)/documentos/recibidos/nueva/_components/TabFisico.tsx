@@ -65,6 +65,9 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
   const [deducibleRenta,        setDeducibleRenta]        = useState(true);
   const [creditoTributarioIva, setCreditoTributarioIva]  = useState(false);
   const [activoFijo,           setActivoFijo]            = useState(false);
+  // ¿El usuario tocó algún interruptor? Solo entonces las marcas son suyas
+  // (marcas_del_usuario): alimentan la regla de ese proveedor
+  const [marcasTocadas,        setMarcasTocadas]         = useState(false);
 
   // Campos FAC / NCR / NDB
   const [subtotal0,    setSubtotal0]    = useState("");
@@ -86,6 +89,9 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
 
   const [saving, setSaving] = useState(false);
   const [error,  setError]  = useState("");
+
+  // Activo fijo: mismos tipos que el backend (clasificacion_service.TIPOS_CON_ACTIVO_FIJO)
+  const admiteActivoFijo = ["FAC", "NDB", "NCR", "NVE"].includes(tipoDoc);
 
   // ── Helpers ─────────────────────────────────────────────────────────────────
   const recalcularTotal = (sub0: string, subIva: string, iva: string) => {
@@ -170,7 +176,8 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
       formData.append("deducible_renta",        String(esRet ? false : deducibleRenta));
       formData.append("credito_tributario_iva", String(esRet ? lineasRet.some(l => l.tipo === "2") : tipoDoc === "NVE" ? false : creditoTributarioIva));
       if (notas) formData.append("notas", notas);
-      if (activoFijo && !esRet && tipoDoc !== "NVE") formData.append("activo_fijo", "true");
+      if (activoFijo && admiteActivoFijo) formData.append("activo_fijo", "true");
+      if (marcasTocadas && !esRet) formData.append("marcas_del_usuario", "true");
 
       if (esRet) {
         formData.append("subtotal_0",    "0");
@@ -592,7 +599,7 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
             </div>
             <button
               type="button"
-              onClick={() => setDeducibleRenta(!deducibleRenta)}
+              onClick={() => { setDeducibleRenta(!deducibleRenta); setMarcasTocadas(true); }}
               className="w-10 h-5 rounded-full transition-colors relative"
               style={{
                 background: deducibleRenta
@@ -614,7 +621,7 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
               </div>
               <button
                 type="button"
-                onClick={() => setCreditoTributarioIva(!creditoTributarioIva)}
+                onClick={() => { setCreditoTributarioIva(!creditoTributarioIva); setMarcasTocadas(true); }}
                 className="w-10 h-5 rounded-full transition-colors relative"
                 style={{
                   background: creditoTributarioIva
@@ -629,16 +636,20 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
               </button>
             </div>
           )}
-          {tipoDoc !== "NVE" && (
+          {admiteActivoFijo && (
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm" style={{ color: "var(--kipu-text)" }}>Es un activo fijo</p>
-                <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Equipos, vehículos o maquinaria (casillero 501)</p>
+                <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+                  {tipoDoc === "NVE"
+                    ? "Muebles o equipos que usarás más de un año"
+                    : "Equipos, vehículos o maquinaria (casillero 501)"}
+                </p>
               </div>
               <button
                 type="button"
                 aria-pressed={activoFijo}
-                onClick={() => setActivoFijo(!activoFijo)}
+                onClick={() => { setActivoFijo(!activoFijo); setMarcasTocadas(true); }}
                 className="w-10 h-5 rounded-full transition-colors relative"
                 style={{
                   background: activoFijo

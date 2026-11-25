@@ -77,6 +77,9 @@ export default function ReviewXML({ parsed, xmlFile, onBack, onDone, suscripcion
   const [vinculoResults,  setVinculoResults]  = useState<DocVinculo[]>([]);
   const [vinculoSelected, setVinculoSelected] = useState<DocVinculo | null>(null);
   const [vinculoLoading,  setVinculoLoading]  = useState(false);
+  // ¿El usuario tocó algún interruptor? Solo entonces se mandan los ítems y las
+  // marcas (marcas_del_usuario): si no, se respeta lo que Kipu clasificó al subir el XML
+  const [marcasTocadas,   setMarcasTocadas]   = useState(false);
 
   const necesitaVinculo = (tipo: string) => ["NCR", "NDB", "RET"].includes(tipo);
   const vinculoLabel    = (tipo: string) => {
@@ -104,6 +107,7 @@ export default function ReviewXML({ parsed, xmlFile, onBack, onDone, suscripcion
 
   const editItem = (idx: number, field: "deducible_renta" | "credito_tributario_iva", val: boolean) => {
     setItems(prev => prev.map((item, i) => i === idx ? { ...item, [field]: val } : item));
+    setMarcasTocadas(true);
   };
 
   const guardar = async () => {
@@ -115,17 +119,21 @@ export default function ReviewXML({ parsed, xmlFile, onBack, onDone, suscripcion
         headers: { "Content-Type": "multipart/form-data" },
       });
       const docId   = resXml.data.id;
-      const payload: any = {
-        items_detalle:          items,
-        deducible_renta:        items.some(i => i.deducible_renta),
-        credito_tributario_iva: items.some(i => i.credito_tributario_iva),
-        notas:                  notas || null,
-      };
+      const payload: Record<string, unknown> = {};
+      if (marcasTocadas) {
+        payload.items_detalle          = items;
+        payload.deducible_renta        = items.some(i => i.deducible_renta);
+        payload.credito_tributario_iva = items.some(i => i.credito_tributario_iva);
+        payload.marcas_del_usuario     = true;
+      }
+      if (notas) payload.notas = notas;
       if (vinculoSelected) {
         if (parsed.tipo_doc === "RET") payload.doc_origen_emitido_id  = vinculoSelected.id;
         else                           payload.doc_origen_recibido_id = vinculoSelected.id;
       }
-      await api.patch(`/api/v1/app/recibidos/${docId}`, payload);
+      if (Object.keys(payload).length > 0) {
+        await api.patch(`/api/v1/app/recibidos/${docId}`, payload);
+      }
       onDone();
     } catch (err: any) {
       const detail = err?.response?.data?.detail;
