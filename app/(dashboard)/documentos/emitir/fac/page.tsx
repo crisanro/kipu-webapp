@@ -53,6 +53,9 @@ const FORMA_PAGO_COBRO_MAP: Record<string, string> = {
   "20": "TRANSFERENCIA",
 };
 
+/** Tope del SRI para facturar a Consumidor Final (07), propina incluida */
+const LIMITE_CONSUMIDOR_FINAL = 50;
+
 function calcTotales(items: Item[], incluirPropina: boolean) {
   const base = items.reduce(
     (acc, item) => {
@@ -159,6 +162,16 @@ export default function NuevaFacturaPage() {
   // ── Totales ─────────────────────────────────────────────────────────────────
   const totales = calcTotales(items, propina);
 
+  // Consumidor Final: el SRI no acepta facturas de más de $50 (propina incluida;
+  // el backend valida lo mismo en documento_service)
+  const aConsumidorFinal = esConsumidorFinal
+    || clienteSelected?.tipo_identificacion_sri === "07"
+    || clienteNuevo?.tipo_identificacion_sri === "07";
+  const avisoConsumidorFinal = aConsumidorFinal && totales.total > LIMITE_CONSUMIDOR_FINAL
+    ? `A Consumidor Final no se puede facturar más de $${fmt(LIMITE_CONSUMIDOR_FINAL)} `
+      + `(total: $${fmt(totales.total)}). Elige un cliente con cédula o RUC.`
+    : null;
+
   // ── Cargar estructura ────────────────────────────────────────────────────────
 
   // ── Prefill / clonación ──────────────────────────────────────────────────────
@@ -246,6 +259,10 @@ export default function NuevaFacturaPage() {
     if (clienteNuevo) {
       const errId = errorIdentificacion(clienteNuevo.tipo_identificacion_sri, clienteNuevo.identificacion);
       if (errId) { setError(`Cliente: ${errId}`); return; }
+    }
+    if (avisoConsumidorFinal) {
+      setError(avisoConsumidorFinal);
+      return;
     }
     if (!estabSelected || !ptoSelected) {
       setError("Elige el establecimiento y el punto de emisión.");
@@ -629,6 +646,7 @@ export default function NuevaFacturaPage() {
             totales={totales}
             submitting={submitting}
             error={error}
+            aviso={avisoConsumidorFinal}
             suscripcionActiva={empresa?.suscripcion_activa ?? false}
             balanceApi={empresa?.balance_api ?? 0}
             emisionGratis={!!empresa?.emision_gratis
