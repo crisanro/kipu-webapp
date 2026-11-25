@@ -86,8 +86,15 @@ function ReporteRenta({ anio }: { anio: string }) {
               <span style={{ color: "var(--kipu-subtle)" }}>(-) Notas de crédito emitidas</span>
               <span className="font-mono text-red-400">-${fmt(data?.notas_credito_emitidas)}</span>
             </div>
+            {/* Liquidaciones de compra a tu nombre: las emitió tu cliente, son ventas tuyas */}
+            {(data?.ventas_liquidaciones_recibidas ?? 0) > 0 && (
+              <div className="flex justify-between">
+                <span style={{ color: "var(--kipu-subtle)" }}>(+) Ventas con liquidación de compra (la emitió tu cliente)</span>
+                <span className="font-mono font-medium">${fmt(data?.ventas_liquidaciones_recibidas)}</span>
+              </div>
+            )}
             <div className="pt-2 flex justify-between font-bold text-sm" style={{ borderTop: "1px solid var(--kipu-border)" }}>
-              <span>Total Ingresos Facturados</span>
+              <span>{(data?.ventas_liquidaciones_recibidas ?? 0) > 0 ? "Total Ingresos" : "Total Ingresos Facturados"}</span>
               <span className="text-emerald-500">${fmt(data?.ventas_netas)}</span>
             </div>
           </div>

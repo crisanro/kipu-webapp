@@ -802,8 +802,9 @@ function DetalleRecibido({ id }: { id: string }) {
             <Download size={13} /> Descargar XML
           </a>
         )}
-        {/* Emitir RET — solo FAC/LIQ sin retención */}
-        {["FAC", "LIQ"].includes(doc.tipo_doc) && !doc.retencion_emitida && verRet && (
+        {/* Emitir RET — solo FAC sin retención. La liquidación recibida la emitió tu
+            cliente: es una venta tuya, no se le emite retención */}
+        {doc.tipo_doc === "FAC" && !doc.retencion_emitida && verRet && (
           <button
             onClick={() => router.push(retSinPlan ? "/planes" : `/documentos/emitir/ret?doc_origen_recibido_id=${doc.id}`)}
             title={retSinPlan ? "Disponible en Kipu Pro" : undefined}
