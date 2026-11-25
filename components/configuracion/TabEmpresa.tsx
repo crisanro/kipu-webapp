@@ -25,6 +25,9 @@ interface CampoFiscal {
   opciones?: string[];
   render?:   (v: any) => string;
   span?:     boolean;
+  maxLength?:   number;
+  placeholder?: string;
+  ayuda?:       string;   // texto chico debajo del valor
 }
 
 const CAMPOS_FISCALES: CampoFiscal[] = [
@@ -35,6 +38,11 @@ const CAMPOS_FISCALES: CampoFiscal[] = [
   { key: "obligado_contabilidad",   label: "Obligado Contabilidad", editable: true,  tipo: "select", opciones: ["SI", "NO"] },
   { key: "contribuyente_especial",  label: "Contrib. Especial Nro", editable: true },
   { key: "ambiente",                label: "Ambiente SRI",          editable: false, render: (v: any) => v === 2 ? "🟢 Producción" : "🟡 Pruebas" },
+  // Contexto para clasificar las compras (backend: clasificacion_ia_service)
+  { key: "actividad_economica",     label: "Actividad económica (SRI)", editable: false, span: true },
+  { key: "descripcion_negocio",     label: "Describe tu negocio en una línea", editable: true, span: true,
+    maxLength: 120, placeholder: "Ej.: consultorio odontológico, venta de repuestos de motos",
+    ayuda: "Opcional. Ayuda a Kipu a saber qué compras son de tu negocio." },
 ];
 
 const REGIMEN_OPCIONES = [
@@ -180,7 +188,7 @@ export default function TabEmpresa({ legal, health, onActualizar }: Props) {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {CAMPOS_FISCALES.map((campo) => {
-            const { key, label, editable, tipo, opciones, render, span } = campo;
+            const { key, label, editable, tipo, opciones, render, span, maxLength, placeholder, ayuda } = campo;
             const valor        = render ? render(legal[key]) : (legal[key] || "—");
             const estaEditando = editando === key;
 
@@ -237,6 +245,8 @@ export default function TabEmpresa({ legal, health, onActualizar }: Props) {
                       <input
                         type="text"
                         value={editValor}
+                        maxLength={maxLength}
+                        placeholder={placeholder}
                         onChange={(e) => setEditValor(e.target.value)}
                         className="flex-1 rounded-lg px-2.5 py-1.5 text-sm font-medium focus:outline-none"
                         style={{
@@ -274,6 +284,10 @@ export default function TabEmpresa({ legal, health, onActualizar }: Props) {
                   >
                     {valor}
                   </div>
+                )}
+
+                {ayuda && (
+                  <p className="text-[11px] mt-1" style={{ color: "var(--kipu-subtle)" }}>{ayuda}</p>
                 )}
 
                 {estaEditando && errorCampo && (
