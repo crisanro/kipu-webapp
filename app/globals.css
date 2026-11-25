@@ -18,6 +18,11 @@
   --kipu-danger:   #ef4444;
   /* Estados en curso / informativos (en cola, en proceso, parcial, prueba) */
   --kipu-info:     #0e7490;
+  /* Texto chico de esos colores sobre su fondo suave (insignias de estado): el
+     tono base no llega a 4,5:1; estos sí (verde 5,5, ámbar 5, rojo 6,5) */
+  --kipu-success-texto: #047857;
+  --kipu-warning-texto: #b45309;
+  --kipu-danger-texto:  #b91c1c;
   /* Modo sandbox / pruebas (banner, interruptor, keys kp_test_) */
   --kipu-sandbox:  #2563eb;
 }
@@ -38,6 +43,9 @@
   --kipu-danger:   #ef4444;
   --kipu-info:     #22d3ee;
   --kipu-sandbox:  #3b82f6;
+  --kipu-success-texto: #34d399;
+  --kipu-warning-texto: #fbbf24;
+  --kipu-danger-texto:  #f87171;
 }
 
 /* Según con qué se usa la pantalla, no según su ancho: un portátil táctil o una
@@ -87,6 +95,9 @@
   --color-peligro:      var(--kipu-danger);
   --color-info:         var(--kipu-info);
   --color-sandbox:      var(--kipu-sandbox);
+  --color-exito-texto:   var(--kipu-success-texto);
+  --color-alerta-texto:  var(--kipu-warning-texto);
+  --color-peligro-texto: var(--kipu-danger-texto);
   /* Fondos tonales (avisos, chips de estado): en vez de repetir color-mix */
   --color-acento-suave:  color-mix(in srgb, var(--kipu-accent)  12%, transparent);
   --color-exito-suave:   color-mix(in srgb, var(--kipu-success) 12%, transparent);
@@ -145,6 +156,10 @@ button, [role="button"] {
 @media (max-width: 1023.98px) {
   :root:has(#barra-pestanas) { --alto-barra-inferior: 56px; }
 }
+
+/* Filas que se deslizan de lado (chips de filtros): sin barra de desplazamiento */
+.sin-barra { scrollbar-width: none; }
+.sin-barra::-webkit-scrollbar { display: none; }
 
 /* Quien pide menos movimiento en el sistema: sin animaciones ni transiciones */
 @media (prefers-reduced-motion: reduce) {
