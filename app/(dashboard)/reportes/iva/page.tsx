@@ -1,4 +1,5 @@
 "use client";
+import { useConfirmar } from "@/components/ui/Confirmar";
 import { useState, useEffect, useCallback } from "react";
 import { notFound, useRouter, useSearchParams } from "next/navigation";
 import api from "@/lib/api";
@@ -58,6 +59,7 @@ export default function ReporteIVAPage() {
 
 // periodo: "2026-08" (o "2026-07" para el 2do semestre)
 function ReporteIVA({ periodo }: { periodo: string }) {
+  const confirmar = useConfirmar();
   const router  = useRouter();
   // Volvió de pagar el pase en Stripe (?pase=pagado): se espera a que se active
   const busqueda   = useSearchParams();
@@ -274,12 +276,13 @@ function ReporteIVA({ periodo }: { periodo: string }) {
         {!esDemo && (
           <button
             type="button"
-            onClick={() => {
-              if (declarado && !window.confirm(
-                "Este periodo ya está declarado. Regenerar reemplaza los valores guardados y puede " +
-                "cambiar el saldo a favor de los meses siguientes. Hazlo solo si vas a presentar una " +
-                "declaración sustitutiva. ¿Continuar?"
-              )) return;
+            onClick={async () => {
+              if (declarado && !(await confirmar({
+                titulo: "¿Regenerar un período ya declarado?",
+                mensaje: "Reemplaza los valores guardados y puede cambiar el saldo a favor de los meses " +
+                         "siguientes. Hazlo solo si vas a presentar una declaración sustitutiva.",
+                textoConfirmar: "Regenerar", peligro: true,
+              }))) return;
               cargar(true);
             }}
             disabled={regenerando}

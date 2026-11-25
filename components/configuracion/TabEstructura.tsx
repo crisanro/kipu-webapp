@@ -1,5 +1,6 @@
 "use client";
 
+import { useAvisos } from "@/components/ui/Avisos";
 import { useState } from "react";
 import api from "@/lib/api";
 import {
@@ -69,6 +70,7 @@ const inputDisStyle = {
 };
 
 export default function TabEstructura({ estructura, onActualizar }: Props) {
+  const avisos    = useAvisos();
 
   // ── Helper: invalida caché local + refresca datos ────────────────────────────
   const invalidarEstructuraLocal = () => {
@@ -151,7 +153,7 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
       await api.put(`/api/v1/app/estructura/establecimientos/${estabId}`, { is_active: !activo });
       invalidarEstructuraLocal();
     } catch (e: any) {
-      alert(e?.response?.data?.detail ?? "Error.");
+      avisos.error(e?.response?.data?.detail ?? "No se pudo cambiar el establecimiento.");
     } finally { setToggling(null); }
   };
 
@@ -161,7 +163,7 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
       await api.put(`/api/v1/app/estructura/puntos-emision/${puntoId}`, { is_active: !activo });
       invalidarEstructuraLocal();
     } catch (e: any) {
-      alert(e?.response?.data?.detail ?? "Error.");
+      avisos.error(e?.response?.data?.detail ?? "No se pudo cambiar el punto de emisión.");
     } finally { setToggling(null); }
   };
 

@@ -1,6 +1,7 @@
 "use client";
 // Cobros en línea: la empresa conecta SU cuenta de Payphone o PagoPlux.
 // Las credenciales nunca vuelven del servidor (solo los 4 últimos caracteres).
+import { useConfirmar } from "@/components/ui/Confirmar";
 import { useEffect, useState } from "react";
 import { CreditCard, Copy, CheckCircle2, RefreshCw, Unplug, KeyRound } from "lucide-react";
 import api from "@/lib/api";
@@ -39,6 +40,7 @@ const input = {
 };
 
 export default function TabCobrosEnLinea() {
+  const confirmar = useConfirmar();
   const email = useAuthStore((s) => s.email) ?? "";
   const [opciones,   setOpciones]   = useState<Opcion[]>([]);
   const [conexiones, setConexiones] = useState<Conexion[]>([]);
@@ -102,7 +104,11 @@ export default function TabCobrosEnLinea() {
   };
 
   const regenerar = async (c: Conexion) => {
-    if (!confirm(`¿Generar una URL nueva? La actual deja de funcionar y tendrás que pegar la nueva en ${c.nombre}.`)) return;
+    if (!(await confirmar({
+      titulo: "¿Generar una URL nueva?",
+      mensaje: `La actual deja de funcionar y tendrás que pegar la nueva en ${c.nombre}.`,
+      textoConfirmar: "Generar URL nueva", peligro: true,
+    }))) return;
     try {
       const res = await api.post(`/api/v1/app/cobros-en-linea/config/${c.proveedor}/regenerar-webhook`);
       setConexiones(res.data.data ?? []);

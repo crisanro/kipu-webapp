@@ -1,6 +1,8 @@
 // app/bienvenida/page.tsx
 "use client";
 
+import { useConfirmar } from "@/components/ui/Confirmar";
+import { useAvisos } from "@/components/ui/Avisos";
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { auth } from "@/lib/firebase";
@@ -16,6 +18,8 @@ import VerificarCorreo from "@/components/auth/VerificarCorreo";
 import EliminarCuenta from "@/components/cuenta/EliminarCuenta";
 
 export default function BienvenidaPage() {
+  const confirmar = useConfirmar();
+  const avisos    = useAvisos();
   const router       = useRouter();
   const searchParams = useSearchParams();
   const empresaParam = searchParams.get("empresa");
@@ -106,13 +110,17 @@ export default function BienvenidaPage() {
 
   // Correo mal escrito: no hay cómo verificarlo, se borra la cuenta y se registra de nuevo
   const handleCambiarCorreo = async () => {
-    if (!confirm("Borraremos esta cuenta para que te registres con el correo correcto. ¿Continuar?")) return;
+    if (!(await confirmar({
+      titulo: "¿Cambiar el correo?",
+      mensaje: "Borraremos esta cuenta para que te registres con el correo correcto.",
+      textoConfirmar: "Borrar y registrarme", peligro: true,
+    }))) return;
     try {
       await auth.currentUser?.delete();
       logout();
       router.replace(empresaParam ? `/register?empresa=${encodeURIComponent(empresaParam)}` : "/register");
     } catch {
-      alert("Por seguridad, cierra sesión, vuelve a entrar y elige \"Eliminar mi cuenta\".");
+      avisos.error("Por seguridad, cierra sesión, vuelve a entrar y elige \"Eliminar mi cuenta\".", { duracion: 0 });
     }
   };
 

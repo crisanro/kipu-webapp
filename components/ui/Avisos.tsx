@@ -13,7 +13,7 @@
 
 "use client";
 
-import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { AlertCircle, CheckCircle2, Info, X } from "lucide-react";
 import { useEsCliente } from "./Hoja";
@@ -41,6 +41,27 @@ const MAXIMO_VISIBLES = 3;
 const ICONOS = { exito: CheckCircle2, error: AlertCircle, info: Info } as const;
 
 const Contexto = createContext<ApiAvisos | null>(null);
+
+// ── Aviso que sobrevive a una recarga ────────────────────────────────────────
+// Para código fuera de React que recarga la página (p. ej. lib/api.ts al perder
+// el acceso a la empresa): se guarda y el proveedor lo muestra al volver a cargar.
+const CLAVE_PENDIENTE = "kipu:aviso-pendiente";
+
+export function avisarAlRecargar(mensaje: string, tipo: TipoAviso = "info") {
+  try { sessionStorage.setItem(CLAVE_PENDIENTE, JSON.stringify({ mensaje, tipo })); } catch {}
+}
+
+function tomarAvisoPendiente(): { mensaje: string; tipo: TipoAviso } | null {
+  try {
+    const crudo = sessionStorage.getItem(CLAVE_PENDIENTE);
+    if (!crudo) return null;
+    sessionStorage.removeItem(CLAVE_PENDIENTE);
+    const p = JSON.parse(crudo);
+    return typeof p?.mensaje === "string" ? { mensaje: p.mensaje, tipo: p.tipo ?? "info" } : null;
+  } catch {
+    return null;
+  }
+}
 
 /** Sin proveedor: no se pierde un error, el resto a la consola. */
 const avisosNativos: ApiAvisos = (() => {
@@ -86,6 +107,16 @@ export function ProveedorAvisos({ children }: { children: ReactNode }) {
     info:  (m, o) => mostrar(m, { ...o, tipo: "info" }),
     cerrar,
   }), [mostrar, cerrar]);
+
+  // El aviso que dejó avisarAlRecargar() antes de recargar, cuando ya se ve la pantalla
+  // (se toma recién al mostrarlo: en desarrollo React corre el efecto dos veces)
+  useEffect(() => {
+    const t = setTimeout(() => {
+      const pendiente = tomarAvisoPendiente();
+      if (pendiente) mostrar(pendiente.mensaje, { tipo: pendiente.tipo, duracion: 6000 });
+    }, 400);
+    return () => clearTimeout(t);
+  }, [mostrar]);
 
   return (
     <Contexto.Provider value={api}>

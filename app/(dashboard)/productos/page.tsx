@@ -1,5 +1,6 @@
 "use client";
 
+import { useConfirmar } from "@/components/ui/Confirmar";
 import { useState, useEffect, useCallback, useRef, lazy, Suspense } from "react";
 import { etiquetaIva, opcionesIva } from "@/lib/iva";
 import { baseDesdeTotal, tarifaPct } from "@/lib/precios";
@@ -60,6 +61,7 @@ function desglose(precio: number, incluyeIva: boolean, tipoIva: string) {
 type ScanMode = "buscar" | "codigo";
 
 export default function ProductosPage() {
+  const confirmar = useConfirmar();
   const puedeVer = usePermiso("productos");
 
   const [productos,    setProductos]    = useState<Producto[]>([]);
@@ -221,7 +223,11 @@ export default function ProductosPage() {
   };
 
   const desactivar = async (id: string) => {
-    if (!confirm("¿Desactivar este producto?")) return;
+    if (!(await confirmar({
+      titulo: "¿Desactivar este producto?",
+      mensaje: "Ya no aparecerá al facturar. Puedes reactivarlo cuando quieras.",
+      textoConfirmar: "Desactivar", peligro: true,
+    }))) return;
     try {
       await api.delete(`/api/v1/app/productos/${id}`);
       await cargar();
@@ -231,7 +237,11 @@ export default function ProductosPage() {
   };
 
   const reactivar = async (id: string) => {
-    if (!confirm("¿Reactivar este producto?")) return;
+    if (!(await confirmar({
+      titulo: "¿Reactivar este producto?",
+      mensaje: "Volverá a aparecer al facturar.",
+      textoConfirmar: "Reactivar",
+    }))) return;
     try {
       await api.patch(`/api/v1/app/productos/${id}`, { activo: true });
       await cargar();

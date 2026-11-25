@@ -1,5 +1,6 @@
 "use client";
 
+import { useConfirmar } from "@/components/ui/Confirmar";
 import { useEffect, useState } from "react";
 import { Eye, EyeOff, KeyRound, Loader2, Trash2 } from "lucide-react";
 import api from "@/lib/api";
@@ -19,6 +20,7 @@ function detalle(err: unknown, porDefecto: string): string {
  * Se guarda cifrada; nunca se vuelve a mostrar aquí. Se ve quién la usó y para qué.
  */
 export default function ClaveSri() {
+  const confirmar = useConfirmar();
   const [estado,   setEstado]   = useState<EstadoClave | null>(null);
   const [clave,    setClave]    = useState("");
   const [ver,      setVer]      = useState(false);
@@ -60,7 +62,11 @@ export default function ClaveSri() {
   };
 
   const borrar = async () => {
-    if (!confirm("¿Borrar tu clave del SRI de Kipu? Sin ella no podemos presentar tus declaraciones.")) return;
+    if (!(await confirmar({
+      titulo: "¿Borrar tu clave del SRI?",
+      mensaje: "Sin ella no podemos presentar tus declaraciones.",
+      textoConfirmar: "Borrar clave", peligro: true,
+    }))) return;
     setEnviando(true);
     setError("");
     try {

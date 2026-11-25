@@ -1,4 +1,6 @@
 "use client";
+import { useConfirmar } from "@/components/ui/Confirmar";
+import { useAvisos } from "@/components/ui/Avisos";
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import api from "@/lib/api";
@@ -95,6 +97,8 @@ const FEATURES: { texto: string; destacado?: boolean }[] = [
 ];
 
 export default function PlanesPage() {
+  const confirmar = useConfirmar();
+  const avisos    = useAvisos();
   const empresa = useAuthStore((s) => s.empresa);
 
   const [sub,        setSub]        = useState<EstadoSub | null>(null);
@@ -157,7 +161,7 @@ export default function PlanesPage() {
       const res = await api.post("/api/v1/app/suscripcion/checkout");
       window.location.assign(res.data.checkout_url);
     } catch (err) {
-      alert(detalleError(err, "Error al iniciar el pago."));
+      avisos.error(detalleError(err, "No se pudo iniciar el pago."));
       setPagando(null);
     }
   };
@@ -168,7 +172,7 @@ export default function PlanesPage() {
       const res = await api.post("/api/v1/app/creditos/checkout", { plan_id });
       window.location.assign(res.data.checkout_url);
     } catch (err) {
-      alert(detalleError(err, "Error al iniciar el pago."));
+      avisos.error(detalleError(err, "No se pudo iniciar el pago."));
       setPagando(null);
     }
   };
@@ -179,18 +183,22 @@ export default function PlanesPage() {
       const res = await api.post("/api/v1/app/suscripcion/portal");
       window.location.assign(res.data.portal_url);
     } catch (err) {
-      alert(detalleError(err, "Error al abrir el portal."));
+      avisos.error(detalleError(err, "Error al abrir el portal."));
     } finally { setAbriendo(false); }
   };
 
   const cancelar = async () => {
-    if (!confirm("¿Cancelar la suscripción al final del período actual?")) return;
+    if (!(await confirmar({
+      titulo: "¿Cancelar tu suscripción?",
+      mensaje: "Sigues con tu plan hasta el final del período actual.",
+      textoConfirmar: "Cancelar suscripción", textoCancelar: "Mantener", peligro: true,
+    }))) return;
     setCancelando(true);
     try {
       await api.post("/api/v1/app/suscripcion/cancelar");
       recargar();
     } catch (err) {
-      alert(detalleError(err, "Error al cancelar."));
+      avisos.error(detalleError(err, "No se pudo cancelar la suscripción."));
     } finally { setCancelando(false); }
   };
 
@@ -199,7 +207,7 @@ export default function PlanesPage() {
       await api.post("/api/v1/app/suscripcion/reactivar");
       recargar();
     } catch (err) {
-      alert(detalleError(err, "Error al reactivar."));
+      avisos.error(detalleError(err, "No se pudo reactivar la suscripción."));
     }
   };
 

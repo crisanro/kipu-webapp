@@ -1,5 +1,6 @@
 "use client";
 
+import { useAvisos } from "@/components/ui/Avisos";
 import { useState } from "react";
 import { AlertTriangle } from "lucide-react";
 import api from "@/lib/api";
@@ -21,6 +22,7 @@ interface Props {
 const IVA = parseFloat(process.env.NEXT_PUBLIC_IVA_RATE ?? "0.15");
 
 export default function TabCreditos({ creditos, planes, ambiente }: Props) {
+  const avisos    = useAvisos();
   const [pagando, setPagando] = useState<number | null>(null);
 
   const iniciarPago = async (planId: number) => {
@@ -29,7 +31,7 @@ export default function TabCreditos({ creditos, planes, ambiente }: Props) {
       const res = await api.post("/api/v1/app/planes/stripe/checkout", { plan_id: planId });
       window.location.href = res.data.checkout_url;
     } catch (err: any) {
-      alert(err?.response?.data?.detail ?? "Error al iniciar el pago.");
+      avisos.error(err?.response?.data?.detail ?? "No se pudo iniciar el pago.");
     } finally {
       setPagando(null);
     }

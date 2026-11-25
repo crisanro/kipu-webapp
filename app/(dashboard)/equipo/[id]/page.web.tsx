@@ -1,5 +1,6 @@
 "use client";
 
+import { useConfirmar } from "@/components/ui/Confirmar";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -31,6 +32,7 @@ function waLink(numero: string | null) {
 
 // ── Una declaración y sus acciones ────────────────────────────────────────────
 function FilaGestion({ g, emisorId, alCambiar }: { g: Gestion; emisorId: number; alCambiar: () => void }) {
+  const confirmar = useConfirmar();
   const [modo,     setModo]     = useState<"" | "resumen" | "presentar">("");
   const [resumen,  setResumen]  = useState(g.resumen ?? "");
   const [valor,    setValor]    = useState(g.valor_a_pagar?.toString() ?? "");
@@ -109,8 +111,13 @@ function FilaGestion({ g, emisorId, alCambiar }: { g: Gestion; emisorId: number;
               <Upload size={13} /> Marcar presentada
             </button>
             <button type="button" disabled={enviando}
-                    onClick={() => confirm("¿Marcar que este período no se presenta porque no pagó el servicio? Se le avisa por WhatsApp.") &&
-                      accion(() => api.post(`${base}/no-pagado`))}
+                    onClick={async () => {
+                      if (await confirmar({
+                        titulo: "¿Marcar que no pagó?",
+                        mensaje: "Este período no se presentará porque no pagó el servicio. Se le avisa por WhatsApp.",
+                        textoConfirmar: "Marcar no pagó", peligro: true,
+                      })) accion(() => api.post(`${base}/no-pagado`));
+                    }}
                     className="px-2.5 py-1.5 rounded-lg" style={{ color: "var(--kipu-danger)" }}>
               No pagó
             </button>

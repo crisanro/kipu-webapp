@@ -4,6 +4,7 @@ import { auth, tokenAppCheck } from "./firebase";
 import { useSandboxStore } from "@/store/sandbox.store";
 import { useAuthStore } from "@/store/auth.store";
 import { API_BASE_URL } from "./config";
+import { avisarAlRecargar } from "@/components/ui/Avisos";
 
 const api = axios.create({
   baseURL:         API_BASE_URL,
@@ -66,7 +67,8 @@ api.interceptors.response.use(
         typeof window !== "undefined" && !redirigiendo) {
       redirigiendo = true;
       try { sessionStorage.removeItem("kipu-empresa-sesion"); } catch {}  // = SESSION_EMPRESA_KEY
-      alert("Ya no tienes acceso a esta empresa. Te llevamos a otra de tus empresas.");
+      // Se muestra al cargar de nuevo (un alert() bloquea la pantalla y en la app sale como diálogo del sistema)
+      avisarAlRecargar("Ya no tienes acceso a esta empresa. Te llevamos a otra de tus empresas.");
       window.location.href = "/dashboard";
     }
     // Rate limit: las pantallas muestran response.data.detail; si el 429 no lo

@@ -1,4 +1,5 @@
 "use client";
+import { useAvisos } from "@/components/ui/Avisos";
 import { rutas } from "@/lib/rutas";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { notFound, useRouter, useSearchParams } from "next/navigation";
@@ -28,6 +29,7 @@ export default function DetalleProformaPage() {
 }
 
 function DetalleProforma({ id }: { id: string }) {
+  const avisos    = useAvisos();
   const router = useRouter();
 
   const [data,         setData]         = useState<any>(null);
@@ -56,7 +58,7 @@ function DetalleProforma({ id }: { id: string }) {
       await api.delete(`/api/v1/app/proformas/${id}`);
       router.push("/proformas");
     } catch (err: any) {
-      alert(err?.response?.data?.detail ?? "Error al eliminar.");
+      avisos.error(err?.response?.data?.detail ?? "No se pudo eliminar la proforma.");
     } finally {
       setEliminando(false);
     }

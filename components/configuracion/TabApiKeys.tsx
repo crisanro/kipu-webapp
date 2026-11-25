@@ -1,4 +1,6 @@
 "use client";
+import { useConfirmar } from "@/components/ui/Confirmar";
+import { useAvisos } from "@/components/ui/Avisos";
 import { useState, useEffect } from "react";
 import api from "@/lib/api";
 import {
@@ -24,6 +26,8 @@ interface SandboxKey {
 }
 
 export default function TabApiKeys() {
+  const confirmar = useConfirmar();
+  const avisos    = useAvisos();
   const email   = useAuthStore((s) => s.email) ?? "";
   const empresa = useAuthStore((s) => s.empresa);
 
@@ -72,14 +76,18 @@ export default function TabApiKeys() {
   };
 
   const regenerarSandbox = async () => {
-    if (!confirm("¿Regenerar la key de sandbox? La anterior dejará de funcionar.")) return;
+    if (!(await confirmar({
+      titulo: "¿Regenerar la key de sandbox?",
+      mensaje: "La anterior dejará de funcionar.",
+      textoConfirmar: "Regenerar", peligro: true,
+    }))) return;
     setRegenSandbox(true);
     try {
       const res = await api.post("/api/v1/app/apikeys/sandbox/regenerar");
       setSandboxKey(res.data.data);
       setShowSandbox(true);
     } catch (e: any) {
-      alert(e?.response?.data?.detail ?? "Error al regenerar.");
+      avisos.error(e?.response?.data?.detail ?? "No se pudo regenerar la key.");
     } finally {
       setRegenSandbox(false);
     }

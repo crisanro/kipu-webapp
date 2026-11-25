@@ -1,4 +1,6 @@
 "use client";
+import { useConfirmar } from "@/components/ui/Confirmar";
+import { useAvisos } from "@/components/ui/Avisos";
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import api from "@/lib/api";
@@ -33,6 +35,8 @@ const DOC_CONFIG: Record<string, { label: string; color: string; bg: string; ico
 type Tab = "overview" | "suscripcion" | "documentos" | "usuarios" | "creditos" | "notificar";
 
 export default function AdminEmisorDetallePage() {
+  const confirmar = useConfirmar();
+  const avisos    = useAvisos();
   const { id } = useParams();
   const router = useRouter();
 
@@ -171,7 +175,11 @@ export default function AdminEmisorDetallePage() {
   };
 
   const forzarEstado = async (estado: string) => {
-    if (!confirm(`¿Forzar suscripción a "${estado}"? Esto no emite factura.`)) return;
+    if (!(await confirmar({
+      titulo: `¿Forzar la suscripción a "${estado}"?`,
+      mensaje: "Esto no emite factura.",
+      textoConfirmar: "Forzar", peligro: true,
+    }))) return;
     setForzandoEstado(true);
     try {
       await api.post("/api/v1/admin/panel/suscripcion/forzar", {
@@ -182,7 +190,7 @@ export default function AdminEmisorDetallePage() {
       });
       await cargar();
     } catch (e: any) {
-      alert(e?.response?.data?.detail ?? "Error.");
+      avisos.error(e?.response?.data?.detail ?? "No se pudo forzar la suscripción.");
     } finally {
       setForzandoEstado(false);
     }
