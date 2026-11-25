@@ -161,6 +161,11 @@ export default function EstadoDocumento({ factura, onRecargar, consumidorFinal, 
       {/* El monto, en grande */}
       <p className="mt-4 text-3xl font-bold tabular-nums text-texto">${fmt(factura.importe_total)}</p>
       <p className="mt-1 text-xs leading-relaxed text-tenue">{descripcion}</p>
+      {factura.es_sandbox && (
+        <p className="mt-1 text-xs leading-relaxed text-sutil">
+          Los comprobantes de prueba no se envían por correo. Descarga el PDF para ver cómo quedará.
+        </p>
+      )}
       {factura.sri_verificado_at && consultable && (
         <p className="mt-0.5 text-[11px] text-sutil">
           Última consulta al SRI: {formatearFechaHora(factura.sri_verificado_at)}
