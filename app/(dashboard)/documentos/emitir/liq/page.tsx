@@ -4,7 +4,7 @@ import { errorIdentificacion } from "@/lib/identificacion";
 import { r2 } from "@/lib/dinero";
 import { useRouter } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
-import { debeRenovarClave, esPlanRequerido, esUsoJusto, mensajeErrorEmision } from "@/lib/emision";
+import { anotarEnvio, claveParaEnviar, esPlanRequerido, esUsoJusto, mensajeErrorEmision } from "@/lib/emision";
 import { refrescarEmpresaActual } from "@/lib/empresa";
 import api from "@/lib/api";
 import AvisoColchon from "@/components/uso-justo/AvisoColchon";
@@ -176,48 +176,50 @@ export default function NuevaLiqPage() {
 
     setSubmitting(true);
     try {
+      const payload = {
+        establecimiento: estabSelected,
+        punto_emision:   ptoSelected,
+        cliente_id:      proveedorNuevo ? undefined : proveedorSelected?.id,
+        cliente:         proveedorNuevo ? {
+          tipo_id:        proveedorNuevo.tipo_identificacion_sri,
+          nombre:         proveedorNuevo.razon_social,
+          identificacion: proveedorNuevo.identificacion,
+          email:          proveedorNuevo.email,
+          direccion:      proveedorNuevo.direccion,
+        } : undefined,
+        items: items.map(i => {
+          const c = calcItem(i);
+          return {
+            codigo:          i.codigo || undefined,
+            descripcion:     i.descripcion,
+            cantidad:        i.cantidad,
+            precio_unitario: i.precio,
+            descuento:       c.descuento,
+            tipo_iva:        i.tipo_iva,
+            unidad_medida:   i.unidad,
+          };
+        }),
+        pagos: pagos.map(p => ({
+          forma_pago: p.forma_pago,
+          ...(p.total !== null ? { total: p.total } : {}),
+        })),
+        campos_adicionales: camposAdicionales.filter(c => c.nombre && c.valor),
+      };
       const res = await api.post(
         "/api/v1/app/documentos/emit/LIQ",
-        {
-          establecimiento: estabSelected,
-          punto_emision:   ptoSelected,
-          cliente_id:      proveedorNuevo ? undefined : proveedorSelected?.id,
-          cliente:         proveedorNuevo ? {
-            tipo_id:        proveedorNuevo.tipo_identificacion_sri,
-            nombre:         proveedorNuevo.razon_social,
-            identificacion: proveedorNuevo.identificacion,
-            email:          proveedorNuevo.email,
-            direccion:      proveedorNuevo.direccion,
-          } : undefined,
-          items: items.map(i => {
-            const c = calcItem(i);
-            return {
-              codigo:          i.codigo || undefined,
-              descripcion:     i.descripcion,
-              cantidad:        i.cantidad,
-              precio_unitario: i.precio,
-              descuento:       c.descuento,
-              tipo_iva:        i.tipo_iva,
-              unidad_medida:   i.unidad,
-            };
-          }),
-          pagos: pagos.map(p => ({
-            forma_pago: p.forma_pago,
-            ...(p.total !== null ? { total: p.total } : {}),
-          })),
-          campos_adicionales: camposAdicionales.filter(c => c.nombre && c.valor),
-        },
+        payload,
         {
           headers: {
-            "X-Idempotency-Key": idempotencyKey.current,
+            "X-Idempotency-Key": claveParaEnviar(idempotencyKey, "LIQ", payload),
           },
         }
       );
+      anotarEnvio(idempotencyKey, "LIQ");
       setResultado(res.data);
     } catch (err: any) {
       // Solo con un rechazo definitivo se usa otra clave; ante timeout, red,
-      // 5xx o 409 se reintenta con la misma para no duplicar el comprobante
-      if (debeRenovarClave(err)) idempotencyKey.current = uuidv4();
+      // 5xx o 409 se reintenta con la misma (aunque la app se recargue)
+      anotarEnvio(idempotencyKey, "LIQ", err);
       const mensaje = mensajeErrorEmision(err, "Error al emitir la liquidación.");
       setError(mensaje);
       setUsoJusto(esUsoJusto(err) ? mensaje : "");

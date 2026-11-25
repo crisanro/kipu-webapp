@@ -7,7 +7,7 @@ import { TIPOS_IVA } from "@/lib/iva";
 import { r2 } from "@/lib/dinero";
 import { useRouter } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
-import { debeRenovarClave, esUsoJusto, mensajeErrorEmision } from "@/lib/emision";
+import { anotarEnvio, claveParaEnviar, esUsoJusto, mensajeErrorEmision } from "@/lib/emision";
 import api from "@/lib/api";
 import AvisoColchon from "@/components/uso-justo/AvisoColchon";
 import { useAuthStore } from "@/store/auth.store";
@@ -363,11 +363,13 @@ export default function NuevaFacturaPage() {
       for (const campo of ["estado_cobro", "forma_pago_cobro", "fecha_pago", "numero_comprobante_pago",
                            "link_pago", "proforma_id"]) delete factura[campo];
       try {
+        const clave = claveParaEnviar(idempotencyKey, "FAC-COBRO", factura);
         const res = await api.post("/api/v1/app/cobros-en-linea/cobros", factura,
-                                   { headers: { "X-Idempotency-Key": idempotencyKey.current } });
+                                   { headers: { "X-Idempotency-Key": clave } });
+        anotarEnvio(idempotencyKey, "FAC-COBRO");
         setCobroCreado(res.data.data);
       } catch (err: unknown) {
-        if (debeRenovarClave(err)) idempotencyKey.current = uuidv4();
+        anotarEnvio(idempotencyKey, "FAC-COBRO", err);
         // Sin plan, el link cuenta en el uso justo: agotado, mismo aviso con ampliación y Kipu Pro
         const mensaje = mensajeErrorEmision(err, "No se pudo crear el link de cobro.");
         setError(mensaje);
@@ -384,15 +386,16 @@ export default function NuevaFacturaPage() {
         payload,
         {
           headers: {
-            "X-Idempotency-Key": idempotencyKey.current,
+            "X-Idempotency-Key": claveParaEnviar(idempotencyKey, "FAC", payload),
           },
         }
       );
+      anotarEnvio(idempotencyKey, "FAC");
       setResultado(res.data);
     } catch (err: any) {
       // Solo con un rechazo definitivo se usa otra clave; ante timeout, red,
-      // 5xx o 409 se reintenta con la misma para no duplicar el comprobante
-      if (debeRenovarClave(err)) idempotencyKey.current = uuidv4();
+      // 5xx o 409 se reintenta con la misma (aunque la app se recargue)
+      anotarEnvio(idempotencyKey, "FAC", err);
       const mensaje = mensajeErrorEmision(err, "Error al emitir la factura.");
       setError(mensaje);
       setUsoJusto(esUsoJusto(err) ? mensaje : "");

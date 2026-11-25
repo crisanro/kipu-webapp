@@ -5,7 +5,7 @@ import { useState, useEffect, useRef } from "react";
 import { r2 } from "@/lib/dinero";
 import { useRouter, useSearchParams } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
-import { debeRenovarClave, mensajeErrorEmision } from "@/lib/emision";
+import { anotarEnvio, claveParaEnviar, mensajeErrorEmision } from "@/lib/emision";
 import api from "@/lib/api";
 import AvisoColchon from "@/components/uso-justo/AvisoColchon";
 import { useAuthStore } from "@/store/auth.store";
@@ -198,15 +198,16 @@ export default function NuevaNcrPage() {
         payload,
         {
           headers: {
-            "X-Idempotency-Key": idempotencyKey.current,
+            "X-Idempotency-Key": claveParaEnviar(idempotencyKey, "NCR", payload),
           },
         }
       );
+      anotarEnvio(idempotencyKey, "NCR");
       setResultado(res.data);
     } catch (err: any) {
       // Solo con un rechazo definitivo se usa otra clave; ante timeout, red,
-      // 5xx o 409 se reintenta con la misma para no duplicar el comprobante
-      if (debeRenovarClave(err)) idempotencyKey.current = uuidv4();
+      // 5xx o 409 se reintenta con la misma (aunque la app se recargue)
+      anotarEnvio(idempotencyKey, "NCR", err);
       setError(mensajeErrorEmision(err, "Error al emitir la nota de crédito."));
     } finally {
       setSubmitting(false);

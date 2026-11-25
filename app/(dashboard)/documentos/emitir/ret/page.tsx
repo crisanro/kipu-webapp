@@ -4,7 +4,7 @@ import { r2 } from "@/lib/dinero";
 import { useRouter, useSearchParams } from "next/navigation";
 import AccionesUsoJusto from "../components/AccionesUsoJusto";
 import { v4 as uuidv4 } from "uuid";
-import { debeRenovarClave, esPlanRequerido, esUsoJusto, mensajeErrorEmision } from "@/lib/emision";
+import { anotarEnvio, claveParaEnviar, esPlanRequerido, esUsoJusto, mensajeErrorEmision } from "@/lib/emision";
 import { refrescarEmpresaActual } from "@/lib/empresa";
 import api from "@/lib/api";
 import AvisoColchon from "@/components/uso-justo/AvisoColchon";
@@ -696,15 +696,16 @@ export default function NuevaRetPage() {
         payload,
         {
           headers: {
-            "X-Idempotency-Key": idempotencyKey.current,
+            "X-Idempotency-Key": claveParaEnviar(idempotencyKey, "RET", payload),
           },
         }
       );
+      anotarEnvio(idempotencyKey, "RET");
       setResultado(res.data);
     } catch (err: any) {
       // Solo con un rechazo definitivo se usa otra clave; ante timeout, red,
-      // 5xx o 409 se reintenta con la misma para no duplicar el comprobante
-      if (debeRenovarClave(err)) idempotencyKey.current = uuidv4();
+      // 5xx o 409 se reintenta con la misma (aunque la app se recargue)
+      anotarEnvio(idempotencyKey, "RET", err);
       const mensaje = mensajeErrorEmision(err, "Error al emitir la retención.");
       setError(mensaje);
       setUsoJusto(esUsoJusto(err) ? mensaje : "");
