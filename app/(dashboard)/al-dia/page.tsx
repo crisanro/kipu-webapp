@@ -144,6 +144,7 @@ export default function KipuAlDiaPage() {
   // Si el elegido no se ofrece, el otro. Sin el precio de Stripe no se muestra un monto (se ve al pagar).
   const periodo = periodoDisponible(estado?.precios, periodoElegido);
   const precio  = estado?.precios?.[periodo]?.total ?? null;
+  const base    = estado?.precios?.[periodo]?.base  ?? null;   // sin IVA (IVA_RATE del .env del backend)
   const unidad  = periodo === "ANUAL" ? "al año" : "al mes";
 
   if (cargando) {
@@ -210,9 +211,11 @@ export default function KipuAlDiaPage() {
 
         <div className="flex flex-col items-center gap-1.5 pt-1">
           <SelectorPeriodo valor={periodo} onCambio={setPeriodo} precios={estado?.precios} />
-          {precio !== null && periodo === "ANUAL" && (
+          {precio !== null && (base !== null || periodo === "ANUAL") && (
             <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
-              equivale a ${(precio / 12).toFixed(2)} al mes
+              {base !== null && `$${base.toFixed(2)} + IVA`}
+              {base !== null && periodo === "ANUAL" && " · "}
+              {periodo === "ANUAL" && `equivale a $${(precio / 12).toFixed(2)} al mes`}
             </p>
           )}
         </div>
@@ -284,7 +287,7 @@ export default function KipuAlDiaPage() {
         )}
         {/* Si tuvo el servicio, su historial se sigue viendo */}
         <PanelCliente soloHistorial />
-        <HeroAlDia precio={precio} periodo={periodo} onContratar={irAContratar} />
+        <HeroAlDia precio={precio} base={base} periodo={periodo} onContratar={irAContratar} />
         <DemoAlDia ruc={empresa?.ruc} semestral={empresa?.periodo_iva === "SEMESTRAL"} enProduccion={enProduccion} />
         <ComoFunciona />
         <QueIncluye precioRenta={estado?.precio_renta?.total ?? null} />

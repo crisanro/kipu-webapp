@@ -957,6 +957,7 @@ function TarjetaAlDia({ estado, precios, periodo: pedido, enProduccion, esAdmin,
   // El mismo Mensual / Anual de arriba; si Al Día no se ofrece en ese, el otro
   const periodo = periodoDisponible(precios, pedido);
   const total = precios?.[periodo]?.total ?? null;   // sin Stripe no se inventa un monto
+  const base  = precios?.[periodo]?.base  ?? null;   // sin IVA (el backend lo saca con IVA_RATE del .env)
   const unidad = periodo === "ANUAL" ? "año" : "mes";
 
   // Por qué no se puede contratar todavía (la producción primero, como en Pro)
@@ -1000,9 +1001,11 @@ function TarjetaAlDia({ estado, precios, periodo: pedido, enProduccion, esAdmin,
             {periodo === "ANUAL" ? "Anual" : "Mensual"} · el precio lo ves al pagar
           </p>
         )}
-        {total !== null && periodo === "ANUAL" && (
+        {/* Como en Pro: la base sin IVA, para que los dos se lean igual */}
+        {total !== null && base !== null && (
           <p className="text-xs mt-1" style={{ color: "var(--kipu-subtle)" }}>
-            equivale a ${(total / 12).toFixed(2)}/mes
+            ${base.toFixed(2)} + IVA
+            {periodo === "ANUAL" && ` · equivale a $${(total / 12).toFixed(2)}/mes`}
           </p>
         )}
         {periodo === "ANUAL" && <AhorroAnual precios={precios} />}
