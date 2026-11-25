@@ -14,7 +14,6 @@ import {
   escucharPrimerPlano,
   permisoNotificaciones,
 } from "@/lib/notifications";
-import { useTheme } from "next-themes";
 import { ES_APP_NATIVA, rutaFueraDelPlan } from "@/lib/plataforma";
 import api from "@/lib/api";
 import { detalleError } from "@/lib/errores";
@@ -52,9 +51,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const pathname = usePathname();
   const { empresa, empresas, role, logout } = useAuthStore();
   const { activo: sandbox, setSandbox, porPruebas, forzarPorPruebas } = useSandboxStore();
-  const { resolvedTheme } = useTheme();
 
-  const [mounted, setMounted] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [cerrandoSesion,  setCerrandoSesion]  = useState(false);
@@ -70,7 +67,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [mainEl, setMainEl] = useState<HTMLElement | null>(null);
   useRestaurarScroll(mainEl);
 
-  useEffect(() => setMounted(true), []);
 
   // "Cambiar empresa" y "Cerrar sesión" desde la barra superior y la pantalla Más
   useEffect(() => {
@@ -239,8 +235,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <Sidebar
         sidebarOpen={sidebarOpen}
         setSidebarOpen={setSidebarOpen}
-        mounted={mounted}
-        resolvedTheme={resolvedTheme}
         empresa={empresa}
         empresas={empresas}
         role={role}

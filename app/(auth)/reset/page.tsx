@@ -6,7 +6,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/auth.store";
 import Link from "next/link";
-import Image from "next/image";
+import LogoKipu from "@/components/auth/LogoKipu";
 import api from "@/lib/api";
 import { CheckCircle2, ArrowLeft } from "lucide-react";
 import Boton from "@/components/ui/Boton";
@@ -45,7 +45,7 @@ export default function ResetPage() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-fondo px-4 py-10">
       <div className="w-full max-w-sm">
-        <LogoKipu />
+        <div className="mb-8 flex justify-center"><LogoKipu /></div>
 
         {sent ? (
           <div className="space-y-4 text-center" role="status">
@@ -102,17 +102,5 @@ export default function ResetPage() {
         )}
       </div>
     </main>
-  );
-}
-
-/** Logo según el tema, sin esperar a montar: el CSS elige (data-theme en <html>). */
-function LogoKipu() {
-  return (
-    <div className="mb-8 flex h-10 justify-center">
-      <Image src="/images/logo.svg" alt="Kipu" width={200} height={40} priority
-             className="h-10 w-auto [[data-theme=dark]_&]:hidden" />
-      <Image src="/images/logo-dark.svg" alt="" aria-hidden width={200} height={40} priority
-             className="hidden h-10 w-auto [[data-theme=dark]_&]:block" />
-    </div>
   );
 }

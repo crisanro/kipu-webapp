@@ -10,7 +10,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { auth } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
-import Image from "next/image";
+import LogoKipu from "@/components/auth/LogoKipu";
 import Link from "next/link";
 import { enlaceWhatsAppFalla } from "@/lib/soporte";
 import { detalleError } from "@/lib/errores";
@@ -142,7 +142,7 @@ export default function BienvenidaPage() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-fondo px-4 py-10">
       <div className="w-full max-w-sm">
-        <LogoKipu />
+        <div className="mb-8 flex justify-center"><LogoKipu /></div>
 
         {!correoOk ? (
           <>
@@ -258,17 +258,5 @@ export default function BienvenidaPage() {
         </div>
       </div>
     </main>
-  );
-}
-
-/** Logo según el tema, sin esperar a montar: el CSS elige (data-theme en <html>). */
-function LogoKipu() {
-  return (
-    <div className="mb-8 flex h-10 justify-center">
-      <Image src="/images/logo.svg" alt="Kipu" width={200} height={40} priority
-             className="h-10 w-auto [[data-theme=dark]_&]:hidden" />
-      <Image src="/images/logo-dark.svg" alt="" aria-hidden width={200} height={40} priority
-             className="hidden h-10 w-auto [[data-theme=dark]_&]:block" />
-    </div>
   );
 }

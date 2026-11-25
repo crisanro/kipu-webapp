@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import LogoKipu from "@/components/auth/LogoKipu";
 import {
   X,
   ChevronUp,
@@ -52,8 +52,6 @@ function EnlacePlan({ children }: { children: React.ReactNode }) {
 interface SidebarProps {
   sidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
-  mounted: boolean;
-  resolvedTheme?: string;
   empresa: any;
   empresas: any[];
   role: string | null;
@@ -71,8 +69,6 @@ interface SidebarProps {
 export function Sidebar({
   sidebarOpen,
   setSidebarOpen,
-  mounted,
-  resolvedTheme,
   empresa,
   empresas,
   role,
@@ -142,17 +138,7 @@ export function Sidebar({
         className="flex items-center gap-2 px-5 py-5"
         style={{ borderBottom: "2px solid var(--kipu-border)" }}
       >
-        {mounted ? (
-          <Image
-            src={resolvedTheme === "dark" ? "/images/logo-dark.svg" : "/images/logo.svg"}
-            alt="Kipu"
-            width={100}
-            height={32}
-            priority
-          />
-        ) : (
-          <div className="w-[100px] h-[32px]" />
-        )}
+        <LogoKipu className="h-7" />
         <button
           className="ml-auto lg:hidden"
           style={{ color: "var(--kipu-muted)" }}

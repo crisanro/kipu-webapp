@@ -6,7 +6,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
+import LogoKipu from "@/components/auth/LogoKipu";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import api from "@/lib/api";
@@ -100,7 +100,7 @@ export default function RegisterPage() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-fondo px-4 py-10">
       <div className="w-full max-w-sm">
-        <LogoKipu />
+        <div className="mb-8 flex justify-center"><LogoKipu /></div>
         <h1 className="mb-6 text-center text-lg font-semibold text-texto">Crea tu cuenta</h1>
 
         <form onSubmit={handleRegister} className="space-y-4" noValidate>
@@ -189,17 +189,5 @@ export default function RegisterPage() {
         </p>
       </div>
     </main>
-  );
-}
-
-/** Logo según el tema, sin esperar a montar: el CSS elige (data-theme en <html>). */
-function LogoKipu() {
-  return (
-    <div className="mb-8 flex h-10 justify-center">
-      <Image src="/images/logo.svg" alt="Kipu" width={200} height={40} priority
-             className="h-10 w-auto [[data-theme=dark]_&]:hidden" />
-      <Image src="/images/logo-dark.svg" alt="" aria-hidden width={200} height={40} priority
-             className="hidden h-10 w-auto [[data-theme=dark]_&]:block" />
-    </div>
   );
 }
