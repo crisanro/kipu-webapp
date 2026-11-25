@@ -1,22 +1,23 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+// Liquidación de compra: lo que se le compra a una persona natural que no
+// factura (sin RUC). Solo con Kipu Pro o Al Día.
+
+import { useState, useMemo } from "react";
 import { errorIdentificacion } from "@/lib/identificacion";
 import { r2 } from "@/lib/dinero";
-import { v4 as uuidv4 } from "uuid";
-import { anotarEnvio, claveParaEnviar, esPlanRequerido, esUsoJusto, mensajeErrorEmision } from "@/lib/emision";
-import { refrescarEmpresaActual } from "@/lib/empresa";
-import api from "@/lib/api";
+import { useBorrador } from "@/lib/borradores";
 import BloqueoPlanPro from "@/components/dashboard/BloqueoPlanPro";
 import { useAuthStore } from "@/store/auth.store";
-import { User, Search, X } from "lucide-react";
 import PuntoEmision from "../components/PuntoEmision";
 import PantallaResultado from "../components/PantallaResultado";
 import { usePuntoEmision } from "../components/usePuntoEmision";
+import ClienteSelector from "../components/ClienteSelector";
 import ItemsEditor, { Item, calcItem, genId, EMPTY_ITEM } from "../components/ItemsEditor";
 import PagosMixtos, { PagoItem, PAGO_INICIAL } from "../components/PagosMixtos";
 import CamposAdicionales, { CampoAdicional } from "../components/CamposAdicionales";
 import ResumenTotales from "../components/ResumenTotales";
-import { tecladoIdentificacion } from "@/lib/teclado";
+import EmisionLayout from "../components/EmisionLayout";
+import { useEmision } from "../components/useEmision";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const fmt = (n: number) => r2(n).toFixed(2);
@@ -57,26 +58,25 @@ interface ProveedorNuevo {
   identificacion:          string;
   razon_social:            string;
   email:                   string;
-  direccion:               string;
+  direccion?:              string;
 }
+
+const ITEMS_VACIOS = (): Item[] => [{ _id: genId(), ...EMPTY_ITEM }];
 
 // ── Página ────────────────────────────────────────────────────────────────────
 export default function NuevaLiqPage() {
   const empresa = useAuthStore((s) => s.empresa);
 
-  // ── Idempotencia ────────────────────────────────────────────────────────────
-  const idempotencyKey = useRef(uuidv4());
+  // Envío: clave anti-duplicados, error, uso justo, plan requerido y resultado
+  const em = useEmision();
+  const { enviando: submitting, error, setError, resultado } = em;
 
-  // Proveedor
-  const [query,             setQuery]             = useState("");
-  const [results,           setResults]           = useState<Proveedor[]>([]);
-  const [loading,           setLoading]           = useState(false);
-  const [showDrop,          setShowDrop]          = useState(false);
+  // Proveedor (persona natural: sin RUC ni consumidor final)
   const [proveedorSelected, setProveedorSelected] = useState<Proveedor | null>(null);
   const [proveedorNuevo,    setProveedorNuevo]    = useState<ProveedorNuevo | null>(null);
 
   // Items
-  const [items, setItems] = useState<Item[]>([{ _id: genId(), ...EMPTY_ITEM }]);
+  const [items, setItems] = useState<Item[]>(ITEMS_VACIOS);
 
   // Pagos
   const [pagos, setPagos] = useState<PagoItem[]>([{ ...PAGO_INICIAL }]);
@@ -88,60 +88,33 @@ export default function NuevaLiqPage() {
   const pe = usePuntoEmision();
   const { estabSelected, ptoSelected } = pe;
 
-  // UI
-  const [submitting, setSubmitting] = useState(false);
-  const [resultado,  setResultado]  = useState<any>(null);
-  const [error,      setError]      = useState("");
-  const [usoJusto,   setUsoJusto]   = useState("");   // mensaje del uso justo (para ofrecer Pro o créditos)
-  // 402 PLAN_REQUERIDO del backend (p. ej. el plan venció con la página abierta): su mensaje
-  const [planRequerido, setPlanRequerido] = useState("");
-
   const totales = calcTotales(items);
 
-  // Buscar proveedor — solo cédula/pasaporte/exterior (no RUC)
-  useEffect(() => {
-    if (!query || query.length < 2) { setResults([]); return; }
-    const t = setTimeout(async () => {
-      setLoading(true);
-      try {
-        // Buscar en clientes pero filtrar solo los que no son RUC
-        const res = await api.get(`/api/v1/app/clientes?q=${encodeURIComponent(query)}`);
-        const todos = res.data.data ?? [];
-        // LIQ no acepta RUC ni consumidor final
-        setResults(todos.filter((c: Proveedor) =>
-          !["04", "07"].includes(c.tipo_identificacion_sri)
-        ));
-        setShowDrop(true);
-      } catch { setResults([]); }
-      finally { setLoading(false); }
-    }, 300);
-    return () => clearTimeout(t);
-  }, [query]);
-
-  const seleccionar = (p: Proveedor) => {
-    setProveedorSelected(p);
-    setQuery(p.razon_social);
-    setShowDrop(false);
-    setResults([]);
-  };
-
-  const limpiar = () => {
-    setProveedorSelected(null);
-    setProveedorNuevo(null);
-    setQuery("");
-    setResults([]);
-    setShowDrop(false);
+  // ── Borrador ──
+  const datosBorrador = useMemo(() => ({ proveedorSelected, proveedorNuevo, items, pagos, camposAdicionales }),
+    [proveedorSelected, proveedorNuevo, items, pagos, camposAdicionales]);
+  const borrador = useBorrador("LIQ", datosBorrador, {
+    vacio: !proveedorSelected && !proveedorNuevo && camposAdicionales.length === 0
+      && items.every(i => !i.descripcion?.trim() && !i.codigo?.trim() && !i.precio),
+  });
+  const seguirBorrador = () => {
+    const d = borrador.recuperar();
+    if (!d) return;
+    setProveedorSelected(d.proveedorSelected ?? null);
+    setProveedorNuevo(d.proveedorNuevo ?? null);
+    if (Array.isArray(d.items) && d.items.length) setItems(d.items);
+    if (Array.isArray(d.pagos) && d.pagos.length) setPagos(d.pagos);
+    setCamposAdicionales(Array.isArray(d.camposAdicionales) ? d.camposAdicionales : []);
   };
 
   const reset = () => {
     pe.reiniciar();
-    idempotencyKey.current = uuidv4(); // Regenerar key al resetear
-    setResultado(null);
-    limpiar();
-    setItems([{ _id: genId(), ...EMPTY_ITEM }]);
+    em.reiniciar();
+    setProveedorSelected(null);
+    setProveedorNuevo(null);
+    setItems(ITEMS_VACIOS());
     setPagos([{ ...PAGO_INICIAL, _id: Math.random().toString(36).slice(2) }]);
     setCamposAdicionales([]);
-    setError("");
   };
 
   const emitir = async () => {
@@ -172,384 +145,113 @@ export default function NuevaLiqPage() {
       setError(`Los pagos ($${fmt(totalCubierto)}) superan el total ($${fmt(totales.total)}).`); return;
     }
 
-    setSubmitting(true);
-    try {
-      const payload = {
-        establecimiento: estabSelected,
-        punto_emision:   ptoSelected,
-        cliente_id:      proveedorNuevo ? undefined : proveedorSelected?.id,
-        cliente:         proveedorNuevo ? {
-          tipo_id:        proveedorNuevo.tipo_identificacion_sri,
-          nombre:         proveedorNuevo.razon_social,
-          identificacion: proveedorNuevo.identificacion,
-          email:          proveedorNuevo.email,
-          direccion:      proveedorNuevo.direccion,
-        } : undefined,
-        items: items.map(i => {
-          const c = calcItem(i);
-          return {
-            codigo:          i.codigo || undefined,
-            descripcion:     i.descripcion,
-            cantidad:        i.cantidad,
-            precio_unitario: i.precio,
-            descuento:       c.descuento,
-            tipo_iva:        i.tipo_iva,
-            unidad_medida:   i.unidad,
-          };
-        }),
-        pagos: pagos.map(p => ({
-          forma_pago: p.forma_pago,
-          ...(p.total !== null ? { total: p.total } : {}),
-        })),
-        campos_adicionales: camposAdicionales.filter(c => c.nombre && c.valor),
-      };
-      const res = await api.post(
-        "/api/v1/app/documentos/emit/LIQ",
-        payload,
-        {
-          headers: {
-            "X-Idempotency-Key": claveParaEnviar(idempotencyKey, "LIQ", payload),
-          },
-        }
-      );
-      anotarEnvio(idempotencyKey, "LIQ");
-      setResultado(res.data);
-    } catch (err: any) {
-      // Solo con un rechazo definitivo se usa otra clave; ante timeout, red,
-      // 5xx o 409 se reintenta con la misma (aunque la app se recargue)
-      anotarEnvio(idempotencyKey, "LIQ", err);
-      const mensaje = mensajeErrorEmision(err, "Error al emitir la liquidación.");
-      setError(mensaje);
-      setUsoJusto(esUsoJusto(err) ? mensaje : "");
-      if (esPlanRequerido(err)) {
-        setPlanRequerido(mensaje);
-        refrescarEmpresaActual();   // el menú y las demás pantallas ven el plan actual
-      }
-    } finally {
-      setSubmitting(false);
-    }
+    const payload = {
+      establecimiento: estabSelected,
+      punto_emision:   ptoSelected,
+      cliente_id:      proveedorNuevo ? undefined : proveedorSelected?.id,
+      cliente:         proveedorNuevo ? {
+        tipo_id:        proveedorNuevo.tipo_identificacion_sri,
+        nombre:         proveedorNuevo.razon_social,
+        identificacion: proveedorNuevo.identificacion,
+        email:          proveedorNuevo.email,
+        direccion:      proveedorNuevo.direccion ?? "",
+      } : undefined,
+      items: items.map(i => {
+        const c = calcItem(i);
+        return {
+          codigo:          i.codigo || undefined,
+          descripcion:     i.descripcion,
+          cantidad:        i.cantidad,
+          precio_unitario: i.precio,
+          descuento:       c.descuento,
+          tipo_iva:        i.tipo_iva,
+          unidad_medida:   i.unidad,
+        };
+      }),
+      pagos: pagos.map(p => ({
+        forma_pago: p.forma_pago,
+        ...(p.total !== null ? { total: p.total } : {}),
+      })),
+      campos_adicionales: camposAdicionales.filter(c => c.nombre && c.valor),
+    };
+
+    const r = await em.enviar("/api/v1/app/documentos/emit/LIQ", payload,
+                              { tipo: "LIQ", porDefecto: "Error al emitir la liquidación." });
+    if (r) { borrador.borrar(); em.setResultado(r); }
   };
 
   // Liquidación de compra: solo con Kipu Pro o Al Día (el backend responde 402 PLAN_REQUERIDO)
-  if ((empresa && !empresa.suscripcion_activa) || planRequerido) {
+  if ((empresa && !empresa.suscripcion_activa) || em.planRequerido) {
     return (
       <div className="p-4 md:p-6">
-        <BloqueoPlanPro mensaje={planRequerido || undefined} />
+        <BloqueoPlanPro mensaje={em.planRequerido || undefined} />
       </div>
     );
   }
 
   // Pantalla resultado
   if (resultado) {
-    return (
-      <PantallaResultado tipo="LIQ" resultado={resultado} onNueva={reset} />
-    );
+    return <PantallaResultado tipo="LIQ" resultado={resultado} onNueva={reset} />;
   }
 
   return (
-    <div className="p-4 md:p-6 max-w-4xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-xl font-bold" style={{ color: "var(--kipu-text)" }}>
-          Nueva Liquidación de Compra{" "}
-          <span className="text-base font-normal" style={{ color: "var(--kipu-subtle)" }}>
-            LIQ
-          </span>
-        </h1>
-        <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>
-          {empresa?.razon_social} · {empresa?.ambiente === 2 ? "Producción" : "Pruebas"}
-        </p>
+    <EmisionLayout
+      titulo="Nueva liquidación de compra"
+      subtitulo={<>{empresa?.razon_social} · {empresa?.ambiente === 2 ? "Producción" : "Pruebas"}</>}
+      tiposEmision={["LIQ"]}
+      borrador={borrador.pendiente && {
+        hace: borrador.pendiente.hace, que: "una liquidación de compra",
+        onSeguir: seguirBorrador, onDescartar: borrador.descartar,
+      }}
+      lateral={<>
+        <div className="hidden lg:block">
+          <PuntoEmision {...pe} />
+        </div>
+        <ResumenTotales
+          serie={pe.serie}
+          totales={totales}
+          submitting={submitting}
+          error={error}
+          suscripcionActiva={empresa?.suscripcion_activa ?? false}
+          balanceApi={empresa?.balance_api ?? 0}
+          emisionGratis={!!empresa?.emision_gratis}
+          usoJusto={em.esUsoJusto}
+          onEmitir={emitir}
+          conBarraFija
+        />
+      </>}
+      barra={{
+        total:    totales.total,
+        texto:    `Emitir${pe.serie ? ` desde ${pe.serie}` : ""}`,
+        onEmitir: emitir,
+        enviando: submitting,
+        error,
+      }}
+    >
+      <div className="lg:hidden">
+        <PuntoEmision {...pe} />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
+      <ClienteSelector
+        proveedor
+        clienteSelected={proveedorSelected}
+        clienteNuevo={proveedorNuevo}
+        onSelectCliente={(p) => { setProveedorSelected(p); setProveedorNuevo(null); }}
+        onClienteNuevo={(p) => { setProveedorNuevo(p); if (p) setProveedorSelected(null); }}
+        onClear={() => { setProveedorSelected(null); setProveedorNuevo(null); }}
+      />
 
-          <div className="lg:hidden">
-            <PuntoEmision {...pe} />
-          </div>
+      <ItemsEditor items={items} onChange={setItems} />
 
-          {/* Selector proveedor */}
-          <div
-            className="rounded-xl p-4"
-            style={{
-              background: "var(--kipu-surface)",
-              border: "1px solid var(--kipu-border)",
-            }}
-          >
-            <div className="flex items-center gap-2 mb-3">
-              <User size={15} style={{ color: "var(--kipu-accent)" }} />
-              <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>
-                Proveedor
-              </h2>
-              <span
-                className="text-[10px] px-2 py-0.5 rounded-full"
-                style={{
-                  color: "var(--kipu-warning)",
-                  background: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)",
-                  border: "1px solid color-mix(in srgb, var(--kipu-warning) 20%, transparent)",
-                }}
-              >
-                Solo cédula / pasaporte / exterior
-              </span>
-            </div>
+      <PagosMixtos
+        pagos={pagos}
+        totalFactura={totales.total}
+        propina={false}
+        onChange={setPagos}
+        onPropinaChange={() => {}}
+      />
 
-            <div className="relative">
-              <Search
-                size={15}
-                className="absolute left-3 top-1/2 -translate-y-1/2"
-                style={{ color: "var(--kipu-subtle)" }}
-              />
-              <input
-                value={query}
-                onChange={e => {
-                  setQuery(e.target.value);
-                  setProveedorSelected(null);
-                  setProveedorNuevo(null);
-                  setShowDrop(true);
-                }}
-                onFocus={(e) => {
-                  if (query.length >= 2) setShowDrop(true);
-                  e.currentTarget.style.borderColor = "var(--kipu-accent)";
-                }}
-                onBlur={(e) => e.currentTarget.style.borderColor = "var(--kipu-border)"}
-                placeholder="Buscar por nombre o cédula..."
-                className="w-full pl-9 pr-4 py-2.5 rounded-lg text-sm transition-colors focus:outline-none"
-                style={{
-                  background: "var(--kipu-surface)",
-                  border: "1px solid var(--kipu-border)",
-                  color: "var(--kipu-text)",
-                }}
-              />
-              {loading && (
-                <div
-                  className="w-3.5 h-3.5 border-2 border-t-transparent rounded-full animate-spin absolute right-3 top-1/2 -translate-y-1/2"
-                  style={{ borderColor: "var(--kipu-accent)", borderTopColor: "transparent" }}
-                />
-              )}
-
-              {showDrop && query.length >= 2 && (
-                <div
-                  className="absolute z-10 w-full mt-1 rounded-lg shadow-xl overflow-hidden max-h-60 overflow-y-auto"
-                  style={{
-                    background: "var(--kipu-surface)",
-                    border: "1px solid var(--kipu-border)",
-                  }}
-                >
-                  {results.map(p => (
-                    <button
-                      type="button"
-                      key={p.id}
-                      onClick={() => seleccionar(p)}
-                      className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors"
-                      style={{ borderBottom: "1px solid var(--kipu-border)" }}
-                      onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 5%, transparent)"}
-                      onMouseLeave={e => e.currentTarget.style.background = "transparent"}
-                    >
-                      <div
-                        className="w-7 h-7 rounded-full flex items-center justify-center shrink-0"
-                        style={{ background: "color-mix(in srgb, var(--kipu-accent) 20%, transparent)" }}
-                      >
-                        <span className="text-xs font-bold" style={{ color: "var(--kipu-accent)" }}>
-                          {p.razon_social[0]}
-                        </span>
-                      </div>
-                      <div>
-                        <p className="text-sm" style={{ color: "var(--kipu-text)" }}>{p.razon_social}</p>
-                        <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>{p.identificacion}</p>
-                      </div>
-                    </button>
-                  ))}
-                  {results.length === 0 && (
-                    <div className="px-4 py-3 space-y-2">
-                      <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>No encontrado.</p>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowDrop(false);
-                          setProveedorNuevo({
-                            tipo_identificacion_sri: "05",
-                            identificacion:          query,
-                            razon_social:            "",
-                            email:                   "",
-                            direccion:               "",
-                          });
-                        }}
-                        className="text-xs underline text-left block"
-                        style={{ color: "var(--kipu-accent)" }}
-                      >
-                        + Registrar "{query}" como nuevo proveedor
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Formulario proveedor nuevo */}
-            {proveedorNuevo && (
-              <div
-                className="mt-3 rounded-lg p-3 space-y-2"
-                style={{
-                  background: "color-mix(in srgb, var(--kipu-surface) 60%, transparent)",
-                  border: "1px solid color-mix(in srgb, var(--kipu-accent) 30%, transparent)",
-                }}
-              >
-                <p className="text-xs font-medium" style={{ color: "var(--kipu-accent)" }}>
-                  Nuevo proveedor
-                </p>
-                <div className="grid grid-cols-2 gap-2">
-                  <select
-                    value={proveedorNuevo.tipo_identificacion_sri}
-                    onChange={e => setProveedorNuevo({ ...proveedorNuevo, tipo_identificacion_sri: e.target.value })}
-                    className="px-2 py-1.5 rounded-lg text-xs transition-colors focus:outline-none"
-                    style={{
-                      background: "var(--kipu-surface)",
-                      border: "1px solid var(--kipu-border)",
-                      color: "var(--kipu-text)",
-                    }}
-                    onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                    onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
-                  >
-                    <option value="05">Cédula</option>
-                    <option value="06">Pasaporte</option>
-                    <option value="08">Exterior</option>
-                  </select>
-                  <input
-                    value={proveedorNuevo.identificacion}
-                    inputMode={tecladoIdentificacion(proveedorNuevo.tipo_identificacion_sri)}
-                    onChange={e => setProveedorNuevo({ ...proveedorNuevo, identificacion: e.target.value })}
-                    placeholder="Identificación"
-                    className="px-2 py-1.5 rounded-lg text-xs transition-colors focus:outline-none"
-                    style={{
-                      background: "var(--kipu-surface)",
-                      border: "1px solid var(--kipu-border)",
-                      color: "var(--kipu-text)",
-                    }}
-                    onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                    onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
-                  />
-                </div>
-                <input
-                  value={proveedorNuevo.razon_social}
-                  onChange={e => setProveedorNuevo({ ...proveedorNuevo, razon_social: e.target.value })}
-                  placeholder="Nombre completo *"
-                  className="w-full px-2 py-1.5 rounded-lg text-xs transition-colors focus:outline-none"
-                  style={{
-                    background: "var(--kipu-surface)",
-                    border: "1px solid var(--kipu-border)",
-                    color: "var(--kipu-text)",
-                  }}
-                  onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                  onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
-                />
-                <input
-                  value={proveedorNuevo.direccion}
-                  onChange={e => setProveedorNuevo({ ...proveedorNuevo, direccion: e.target.value })}
-                  placeholder="Dirección (opcional)"
-                  className="w-full px-2 py-1.5 rounded-lg text-xs transition-colors focus:outline-none"
-                  style={{
-                    background: "var(--kipu-surface)",
-                    border: "1px solid var(--kipu-border)",
-                    color: "var(--kipu-text)",
-                  }}
-                  onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                  onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
-                />
-                <input
-                  value={proveedorNuevo.email}
-                  type="email"
-                  onChange={e => setProveedorNuevo({ ...proveedorNuevo, email: e.target.value })}
-                  placeholder="Email (opcional)"
-                  className="w-full px-2 py-1.5 rounded-lg text-xs transition-colors focus:outline-none"
-                  style={{
-                    background: "var(--kipu-surface)",
-                    border: "1px solid var(--kipu-border)",
-                    color: "var(--kipu-text)",
-                  }}
-                  onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                  onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
-                />
-                <button
-                  type="button"
-                  onClick={() => setProveedorNuevo(null)}
-                  className="text-xs transition-colors"
-                  style={{ color: "var(--kipu-subtle)" }}
-                  onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
-                  onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-subtle)"}
-                >
-                  Cancelar
-                </button>
-              </div>
-            )}
-
-            {/* Proveedor seleccionado */}
-            {proveedorSelected && (
-              <div
-                className="mt-3 flex items-center gap-3 rounded-lg px-3 py-2.5"
-                style={{
-                  background: "color-mix(in srgb, var(--kipu-text) 5%, transparent)",
-                }}
-              >
-                <div
-                  className="w-7 h-7 rounded-full flex items-center justify-center shrink-0"
-                  style={{ background: "color-mix(in srgb, var(--kipu-accent) 20%, transparent)" }}
-                >
-                  <User size={13} style={{ color: "var(--kipu-accent)" }} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate" style={{ color: "var(--kipu-text)" }}>
-                    {proveedorSelected.razon_social}
-                  </p>
-                  <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
-                    {proveedorSelected.identificacion}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={limpiar}
-                  className="p-1 transition-colors"
-                  style={{ color: "var(--kipu-subtle)" }}
-                  onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
-                  onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-subtle)"}
-                >
-                  <X size={16} />
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Ítems */}
-          <ItemsEditor items={items} onChange={setItems} />
-
-          {/* Pagos */}
-          <PagosMixtos
-            pagos={pagos}
-            totalFactura={totales.total}
-            propina={false}
-            onChange={setPagos}
-            onPropinaChange={() => {}}
-          />
-
-          <CamposAdicionales campos={camposAdicionales} onChange={setCamposAdicionales} />
-        </div>
-
-        {/* Panel lateral */}
-        <div className="space-y-4">
-          <div className="hidden lg:block">
-            <PuntoEmision {...pe} />
-          </div>
-          <ResumenTotales
-            serie={pe.serie}
-            totales={totales}
-            submitting={submitting}
-            error={error}
-            suscripcionActiva={empresa?.suscripcion_activa ?? false}
-            balanceApi={empresa?.balance_api ?? 0}
-            emisionGratis={!!empresa?.emision_gratis}
-            usoJusto={!!usoJusto && usoJusto === error}
-            onEmitir={emitir}
-          />
-        </div>
-      </div>
-    </div>
+      <CamposAdicionales campos={camposAdicionales} onChange={setCamposAdicionales} />
+    </EmisionLayout>
   );
 }

@@ -23,6 +23,8 @@ import Boton from "@/components/ui/Boton";
 import BotonIcono from "@/components/ui/BotonIcono";
 import { r2 } from "@/lib/dinero";
 import { hayEmisionSinConfirmar } from "@/lib/emision";
+import { useAuthStore } from "@/store/auth.store";
+import SoloWeb from "@/components/SoloWeb";
 
 export interface BarraEmision {
   total:          number;
@@ -84,7 +86,7 @@ export default function EmisionLayout({
 }: {
   titulo:     string;
   subtitulo?: ReactNode;
-  /** Aviso arriba del formulario (p. ej. sin acceso para emitir). */
+  /** Aviso propio de la pantalla arriba del formulario ("Sin acceso para emitir" ya lo pone el esqueleto). */
   alerta?:    ReactNode;
   /** Panel derecho en la compu; en el celular va al final del formulario. */
   lateral:    ReactNode;
@@ -96,6 +98,8 @@ export default function EmisionLayout({
   borrador?:  AvisoBorrador | null;
 }) {
   const escribiendo = useEscribiendo();
+  const empresa = useAuthStore((s) => s.empresa);
+  const sinAcceso = !!empresa && !empresa.suscripcion_activa && empresa.balance_api === 0 && !empresa.emision_gratis;
   // Al abrir: ¿quedó un envío sin respuesta (se cortó la conexión, se cerró la app)?
   const [sinConfirmar, setSinConfirmar] = useState(() =>
     typeof window !== "undefined" && !!tiposEmision?.length && hayEmisionSinConfirmar(tiposEmision));
@@ -132,6 +136,17 @@ export default function EmisionLayout({
             <Boton variante="fantasma" tamano="sm" onClick={borrador.onDescartar}>Descartar</Boton>
             <Boton tamano="sm" onClick={borrador.onSeguir}>Seguir</Boton>
           </div>
+        </div>
+      )}
+
+      {/* Sin suscripción activa ni créditos API (con el plan gratis sí puede emitir) */}
+      {sinAcceso && (
+        <div className="flex items-center gap-2 rounded-xl border border-peligro/20 bg-peligro-suave px-4 py-3">
+          <AlertTriangle size={16} className="shrink-0 text-peligro" aria-hidden />
+          <p className="text-sm text-peligro-texto">
+            Sin acceso para emitir.{" "}
+            <SoloWeb><Link href="/planes" className="underline underline-offset-2">Ver opciones</Link></SoloWeb>
+          </p>
         </div>
       )}
 

@@ -1,22 +1,34 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+// Comprobante de retención sobre una factura o nota de débito recibida, o sobre
+// una liquidación de compra emitida. Solo con Kipu Pro o Al Día y con las
+// retenciones activadas en Configuración.
+
+import { useState, useEffect, useRef, useMemo } from "react";
 import { r2 } from "@/lib/dinero";
 import { useSearchParams } from "next/navigation";
-import AccionesUsoJusto from "../components/AccionesUsoJusto";
-import { v4 as uuidv4 } from "uuid";
-import { anotarEnvio, claveParaEnviar, esPlanRequerido, esUsoJusto, mensajeErrorEmision } from "@/lib/emision";
-import { refrescarEmpresaActual } from "@/lib/empresa";
 import api from "@/lib/api";
+import { useBorrador } from "@/lib/borradores";
 import BloqueoPlanPro from "@/components/dashboard/BloqueoPlanPro";
 import { usePermiso } from "@/hooks/usePermiso";
 import { useAuthStore } from "@/store/auth.store";
 import { useSandboxStore } from "@/store/sandbox.store";
-import { AlertTriangle, Plus, Trash2, Calendar } from "lucide-react";
+import { AlertTriangle, Plus, Trash2, CalendarDays, Percent } from "lucide-react";
+import Boton from "@/components/ui/Boton";
+import BotonIcono from "@/components/ui/BotonIcono";
+import ChipsFiltro from "@/components/ui/ChipsFiltro";
+import Hoja from "@/components/ui/Hoja";
+import Seccion from "@/components/ui/Seccion";
+import { Campo, Entrada, Selector } from "@/components/ui/Campo";
+import { cn } from "@/components/ui/cn";
+import AccionesUsoJusto from "../components/AccionesUsoJusto";
 import PuntoEmision from "../components/PuntoEmision";
 import PantallaResultado from "../components/PantallaResultado";
 import { usePuntoEmision } from "../components/usePuntoEmision";
 import CamposAdicionales, { CampoAdicional } from "../components/CamposAdicionales";
 import DocOrigenSelector, { DocOrigen } from "../components/DocOrigenSelector";
+import EmisionLayout from "../components/EmisionLayout";
+import { InputDecimal } from "../components/HojaItem";
+import { useEmision } from "../components/useEmision";
 import { getPaisesOrdenados } from "@/lib/catalogos/paises-sri";
 import {
   fechaCatalogo, obtenerCatalogoRetenciones, type CatalogoRetenciones,
@@ -25,6 +37,10 @@ import {
 import { formatoPeriodo } from "@/lib/teclado";
 
 const fmt = (n: number) => r2(n).toFixed(2);
+
+const CLASE_VALOR =
+  "h-9 w-full rounded-lg border border-borde bg-superficie px-3 text-sm tabular-nums text-texto tactil:h-11 tactil:text-base " +
+  "placeholder:text-sutil focus:border-acento focus:outline-none";
 const genId = () => Math.random().toString(36).slice(2);
 
 interface ImpuestoRet {
@@ -320,25 +336,25 @@ const TIPOS_IMPUESTO = [
 type OrigenRet = "fac_recibida" | "liq_emitida" | "ndb_recibida";
 
 const ORIGEN_CONFIG: Record<OrigenRet, {
-  label: string; sublabel: string; tiposDoc: string; tabla: "emitidos" | "recibidos"; nota: string;
+  chip: string; label: string; tiposDoc: string; tabla: "emitidos" | "recibidos"; nota: string;
 }> = {
   fac_recibida: {
-    label:    "FAC recibida",
-    sublabel: "Factura que me emitieron",
+    chip:     "Factura recibida",
+    label:    "Factura del proveedor",
     tiposDoc: "FAC",
     tabla:    "recibidos",
     nota:     "Retención sobre una factura que recibiste de un proveedor",
   },
   liq_emitida: {
-    label:    "LIQ emitida",
-    sublabel: "Liquidación que yo emití",
+    chip:     "Liquidación que emití",
+    label:    "Liquidación de compra",
     tiposDoc: "LIQ",
     tabla:    "emitidos",
     nota:     "Retención sobre una liquidación de compra que tú emitiste al proveedor",
   },
   ndb_recibida: {
-    label:    "NDB recibida",
-    sublabel: "Nota de débito que me emitieron",
+    chip:     "Nota de débito recibida",
+    label:    "Nota de débito del proveedor",
     tiposDoc: "NDB",
     tabla:    "recibidos",
     nota:     "Retención sobre una nota de débito que recibiste de un proveedor",
@@ -379,8 +395,9 @@ export default function NuevaRetPage() {
   // Lista de países ordenada desde el módulo externo
   const paisesOrdenados = getPaisesOrdenados();
 
-  // ── Idempotencia ────────────────────────────────────────────────────────────
-  const idempotencyKey = useRef(uuidv4());
+  // Envío: clave anti-duplicados, error, uso justo, plan requerido y resultado
+  const em = useEmision();
+  const { enviando: submitting, error, setError, resultado } = em;
 
   // Tipo de origen
   const [origenTipo, setOrigenTipo] = useState<OrigenRet>("fac_recibida");
@@ -444,13 +461,6 @@ export default function NuevaRetPage() {
   const pe = usePuntoEmision(origenTipo === "liq_emitida" ? (docOrigen?.tipo === "kipu" ? docOrigen.data.numero_doc : docOrigen?.tipo === "manual" ? docOrigen.data.numero : null) : null);
   const { estabSelected, ptoSelected } = pe;
 
-  // UI
-  const [submitting, setSubmitting] = useState(false);
-  const [resultado,  setResultado]  = useState<any>(null);
-  const [error,      setError]      = useState("");
-  const [usoJusto,   setUsoJusto]   = useState("");   // mensaje del uso justo (para ofrecer Pro o créditos)
-  // 402 PLAN_REQUERIDO del backend (p. ej. el plan venció con la página abierta): su mensaje
-  const [planRequerido, setPlanRequerido] = useState("");
   // En producción, una retención genera la obligación del 103 (y del 104 si
   // retiene IVA): se pide confirmar antes de emitir para evitar "pruebas" reales.
   const [confirmarProduccion, setConfirmarProduccion] = useState(false);
@@ -609,10 +619,42 @@ export default function NuevaRetPage() {
     }));
   };
 
+  // ── Borrador (con documento de fuera la pantalla llega cargada: no se ofrece el viejo) ──
+  const desdeDocumento = !!(searchParams.get("doc_origen_recibido_id") || searchParams.get("doc_origen_emitido_id"));
+  const datosBorrador = useMemo(() => ({
+    origenTipo, docOrigen, periodoFiscal, codSustento, pagoLocExt, parteRel, formaPagoSustento,
+    tipoRegi, paisEfecPago, aplicConvDobTrib, pagExtSujRetNorLeg, pagoRegFis, tipoSujetoRetenido,
+    impuestos, camposAdicionales,
+  }), [origenTipo, docOrigen, periodoFiscal, codSustento, pagoLocExt, parteRel, formaPagoSustento,
+       tipoRegi, paisEfecPago, aplicConvDobTrib, pagExtSujRetNorLeg, pagoRegFis, tipoSujetoRetenido,
+       impuestos, camposAdicionales]);
+  const borrador = useBorrador("RET", datosBorrador, {
+    vacio: !docOrigen && camposAdicionales.length === 0 && impuestos.every(i => !i.baseImponible),
+    desactivado: desdeDocumento,
+  });
+  const seguirBorrador = () => {
+    const d = borrador.recuperar();
+    if (!d) return;
+    setOrigenTipo(d.origenTipo ?? "fac_recibida");
+    setDocOrigen(d.docOrigen ?? null);
+    if (d.periodoFiscal) setPeriodoFiscal(d.periodoFiscal);
+    setCodSustento(d.codSustento ?? "01");
+    setPagoLocExt(d.pagoLocExt ?? "01");
+    setParteRel(d.parteRel ?? "NO");
+    setFormaPagoSustento(d.formaPagoSustento ?? "01");
+    setTipoRegi(d.tipoRegi ?? "01");
+    setPaisEfecPago(d.paisEfecPago ?? "");
+    setAplicConvDobTrib(d.aplicConvDobTrib ?? "NO");
+    setPagExtSujRetNorLeg(d.pagExtSujRetNorLeg ?? "SI");
+    setPagoRegFis(d.pagoRegFis ?? "NO");
+    setTipoSujetoRetenido(d.tipoSujetoRetenido ?? "02");
+    if (Array.isArray(d.impuestos) && d.impuestos.length) setImpuestos(d.impuestos);
+    setCamposAdicionales(Array.isArray(d.camposAdicionales) ? d.camposAdicionales : []);
+  };
+
   const reset = () => {
     pe.reiniciar();
-    idempotencyKey.current = uuidv4();
-    setResultado(null);
+    em.reiniciar();
     setDocOrigen(null);
     setOrigenTipo("fac_recibida");
     setImpuestos([lineaRenta(catalogo, 0, false, "01")]);
@@ -628,101 +670,78 @@ export default function NuevaRetPage() {
     setPagoRegFis("NO");
     setTipoSujetoRetenido("02");
     setConfirmarProduccion(false);
-    setError("");
   };
+
+  const puedeEmitir = !!empresa && (empresa.suscripcion_activa || empresa.balance_api > 0 || !!empresa.emision_gratis);
 
   const emitir = async (confirmado = false) => {
     setError("");
     if (!docOrigen)                     { setError("Selecciona el documento sustento."); return; }
     if (!estabSelected || !ptoSelected) { setError("Elige el establecimiento y el punto de emisión."); return; }
     if (impuestos.some(i => i.baseImponible <= 0)) { setError("La base imponible debe ser mayor a $0."); return; }
-    if (esExterior && !paisEfecPago)    { setError("Selecciona el país del pago al exterior."); return; }
+    if (esExterior && !paisEfecPago)    { setError("Selecciona el país del pago al exterior (en Período y sustento)."); return; }
 
     if (enProduccion && !confirmado) { setConfirmarProduccion(true); return; }
     setConfirmarProduccion(false);
 
-    setSubmitting(true);
-    try {
-      const payload: any = {
-        establecimiento:     estabSelected,
-        punto_emision:       ptoSelected,
-        periodo_fiscal:      periodoFiscal,
-        cod_sustento:        codSustento,
-        pago_loc_ext:        pagoLocExt,
-        forma_pago_sustento: formaPagoSustento,
-        parte_rel:           parteRel,
-        ...(esExterior ? {
-          tipo_regi:               tipoRegi,
-          pais_efec_pago:          paisEfecPago,
-          aplic_conv_dob_trib:      aplicConvDobTrib,
-          pag_ext_suj_ret_nor_leg: pagExtSujRetNorLeg,
-          pago_reg_fis:            pagoRegFis,
-          // El backend solo lo escribe en el XML si el sujeto retenido tiene identificación 08
-          tipo_sujeto_retenido:    tipoSujetoRetenido,
-        } : {}),
-        impuestos: impuestos.map(i => ({
-          codigo:            i.codigo,
-          codigoRetencion:   i.codigoRetencion,
-          baseImponible:     i.baseImponible,
-          porcentajeRetener: i.porcentajeRetener,
-          valorRetenido:     i.valorRetenido,
-        })),
-        campos_adicionales: camposAdicionales.filter(c => c.nombre && c.valor),
-      };
+    const payload: Record<string, unknown> = {
+      establecimiento:     estabSelected,
+      punto_emision:       ptoSelected,
+      periodo_fiscal:      periodoFiscal,
+      cod_sustento:        codSustento,
+      pago_loc_ext:        pagoLocExt,
+      forma_pago_sustento: formaPagoSustento,
+      parte_rel:           parteRel,
+      ...(esExterior ? {
+        tipo_regi:               tipoRegi,
+        pais_efec_pago:          paisEfecPago,
+        aplic_conv_dob_trib:      aplicConvDobTrib,
+        pag_ext_suj_ret_nor_leg: pagExtSujRetNorLeg,
+        pago_reg_fis:            pagoRegFis,
+        // El backend solo lo escribe en el XML si el sujeto retenido tiene identificación 08
+        tipo_sujeto_retenido:    tipoSujetoRetenido,
+      } : {}),
+      impuestos: impuestos.map(i => ({
+        codigo:            i.codigo,
+        codigoRetencion:   i.codigoRetencion,
+        baseImponible:     i.baseImponible,
+        porcentajeRetener: i.porcentajeRetener,
+        valorRetenido:     i.valorRetenido,
+      })),
+      campos_adicionales: camposAdicionales.filter(c => c.nombre && c.valor),
+    };
 
-      if (origenTipo === "liq_emitida") {
-        if (docOrigen.tipo === "kipu") {
-          payload.doc_origen_emitido_id = docOrigen.data.id;
-        } else {
-          payload.doc_origen_numero  = docOrigen.data.numero;
-          payload.doc_origen_fecha   = docOrigen.data.fecha;
-          payload.doc_origen_cod_doc = docOrigen.data.cod_doc;
-          payload.cliente_origen     = docOrigen.data.cliente;
-        }
+    if (origenTipo === "liq_emitida") {
+      if (docOrigen.tipo === "kipu") {
+        payload.doc_origen_emitido_id = docOrigen.data.id;
       } else {
-        if (docOrigen.tipo === "kipu") {
-          payload.doc_origen_recibido_id = docOrigen.data.id;
-        } else {
-          payload.doc_origen_numero  = docOrigen.data.numero;
-          payload.doc_origen_fecha   = docOrigen.data.fecha;
-          payload.doc_origen_cod_doc = docOrigen.data.cod_doc;
-          payload.cliente_origen     = docOrigen.data.cliente;
-        }
+        payload.doc_origen_numero  = docOrigen.data.numero;
+        payload.doc_origen_fecha   = docOrigen.data.fecha;
+        payload.doc_origen_cod_doc = docOrigen.data.cod_doc;
+        payload.cliente_origen     = docOrigen.data.cliente;
       }
-
-      const res = await api.post(
-        "/api/v1/app/documentos/emit/RET",
-        payload,
-        {
-          headers: {
-            "X-Idempotency-Key": claveParaEnviar(idempotencyKey, "RET", payload),
-          },
-        }
-      );
-      anotarEnvio(idempotencyKey, "RET");
-      setResultado(res.data);
-    } catch (err: any) {
-      // Solo con un rechazo definitivo se usa otra clave; ante timeout, red,
-      // 5xx o 409 se reintenta con la misma (aunque la app se recargue)
-      anotarEnvio(idempotencyKey, "RET", err);
-      const mensaje = mensajeErrorEmision(err, "Error al emitir la retención.");
-      setError(mensaje);
-      setUsoJusto(esUsoJusto(err) ? mensaje : "");
-      if (esPlanRequerido(err)) {
-        setPlanRequerido(mensaje);
-        refrescarEmpresaActual();   // el menú y las demás pantallas ven el plan actual
+    } else {
+      if (docOrigen.tipo === "kipu") {
+        payload.doc_origen_recibido_id = docOrigen.data.id;
+      } else {
+        payload.doc_origen_numero  = docOrigen.data.numero;
+        payload.doc_origen_fecha   = docOrigen.data.fecha;
+        payload.doc_origen_cod_doc = docOrigen.data.cod_doc;
+        payload.cliente_origen     = docOrigen.data.cliente;
       }
-    } finally  {
-      setSubmitting(false);
     }
+
+    const r = await em.enviar("/api/v1/app/documentos/emit/RET", payload,
+                              { tipo: "RET", porDefecto: "Error al emitir la retención." });
+    if (r) { borrador.borrar(); em.setResultado(r); }
   };
 
   // Primero el plan: a una empresa Gratis no le sirve activar las retenciones
   // (el backend responde 402 PLAN_REQUERIDO)
-  if ((empresa && !empresa.suscripcion_activa) || planRequerido) {
+  if ((empresa && !empresa.suscripcion_activa) || em.planRequerido) {
     return (
       <div className="p-4 md:p-6">
-        <BloqueoPlanPro mensaje={planRequerido || undefined} />
+        <BloqueoPlanPro mensaje={em.planRequerido || undefined} />
       </div>
     );
   }
@@ -749,785 +768,335 @@ export default function NuevaRetPage() {
   }
 
   if (resultado) {
-    return (
-      <PantallaResultado tipo="RET" resultado={resultado} onNueva={reset} />
-    );
+    return <PantallaResultado tipo="RET" resultado={resultado} onNueva={reset} />;
   }
 
   const origenCfg = ORIGEN_CONFIG[origenTipo];
   const esLiqEmitida = origenTipo === "liq_emitida" && docOrigen !== null;
+  const resumenSri = `${periodoFiscal} · sustento ${codSustento} · `
+    + (esExterior ? `exterior${paisEfecPago ? ` (${paisEfecPago})` : ""}` : "local");
 
   return (
-    <div className="p-4 md:p-6 max-w-4xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-xl font-bold" style={{ color: "var(--kipu-text)" }}>
-          Nueva Retención{" "}
-          <span className="text-base font-normal" style={{ color: "var(--kipu-subtle)" }}>
-            RET
-          </span>
-        </h1>
-        <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>
-          {empresa?.razon_social} · {empresa?.ambiente === 2 ? "Producción" : "Pruebas"}
-        </p>
-      </div>
+    <EmisionLayout
+      titulo="Nueva retención"
+      subtitulo={<>{empresa?.razon_social} · {empresa?.ambiente === 2 ? "Producción" : "Pruebas"}</>}
+      tiposEmision={["RET"]}
+      borrador={borrador.pendiente && {
+        hace: borrador.pendiente.hace, que: "una retención",
+        onSeguir: seguirBorrador, onDescartar: borrador.descartar,
+      }}
+      lateral={<>
+        <div className="hidden lg:block">
+          <PuntoEmision {...pe} />
+        </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-
-          <div className="lg:hidden">
-            <PuntoEmision {...pe} />
-          </div>
-
-          {/* Toggle tipo de origen */}
-          <div
-            className="rounded-xl p-4 space-y-3"
-            style={{
-              background: "var(--kipu-surface)",
-              border: "1px solid var(--kipu-border)",
-            }}
-          >
-            <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>
-              Tipo de documento sustento
-            </h2>
-            <div className="grid grid-cols-3 gap-2">
-              {(Object.entries(ORIGEN_CONFIG) as [OrigenRet, typeof ORIGEN_CONFIG[OrigenRet]][]).map(([key, cfg]) => {
-                const isSelected = origenTipo === key;
-                return (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => cambiarOrigen(key)}
-                    className="flex flex-col items-center gap-1 px-3 py-2.5 rounded-lg text-center transition-colors"
-                    style={{
-                      background: isSelected
-                        ? "color-mix(in srgb, var(--kipu-info) 10%, transparent)"
-                        : "var(--kipu-surface)",
-                      border: isSelected
-                        ? "1px solid var(--kipu-info)"
-                        : "1px solid var(--kipu-border)",
-                      color: isSelected ? "var(--kipu-info)" : "var(--kipu-muted)",
-                    }}
-                    onMouseEnter={e => {
-                      if (!isSelected) {
-                        e.currentTarget.style.color = "var(--kipu-text)";
-                        e.currentTarget.style.borderColor = "color-mix(in srgb, var(--kipu-text) 20%, transparent)";
-                      }
-                    }}
-                    onMouseLeave={e => {
-                      if (!isSelected) {
-                        e.currentTarget.style.color = "var(--kipu-muted)";
-                        e.currentTarget.style.borderColor = "var(--kipu-border)";
-                      }
-                    }}
-                  >
-                    <span className="text-xs font-bold">{cfg.label}</span>
-                    <span className="text-[10px] leading-tight" style={{ color: "var(--kipu-subtle)" }}>
-                      {cfg.sublabel}
-                    </span>
-                  </button>
-                );
-              })}
+        <section className="space-y-3 rounded-xl border border-borde bg-superficie p-4 lg:sticky lg:top-4">
+          <h2 className="text-sm font-semibold text-texto">Resumen</h2>
+          <div className="space-y-2 text-sm">
+            {impuestos.map((imp) => (
+              <div key={imp._id} className="flex justify-between gap-3 text-tenue">
+                <span>{TIPOS_IMPUESTO.find(t => t.value === imp.codigo)?.label ?? "Retención"} {imp.codigoRetencion} · {imp.porcentajeRetener}%</span>
+                <span className="tabular-nums">${fmt(imp.valorRetenido)}</span>
+              </div>
+            ))}
+            <div className="flex justify-between border-t border-borde pt-2 text-base font-bold text-texto">
+              <span>Total retenido</span>
+              <span className="tabular-nums">${fmt(totalRetenido)}</span>
             </div>
           </div>
 
-          {/* Selector de documento según tipo */}
-          <DocOrigenSelector
-            tiposDoc={origenCfg.tiposDoc}
-            tabla={origenCfg.tabla}
-            value={docOrigen}
-            onChange={async (selected) => {
-              setDocOrigen(selected);
-              await sugerirDesdeOrigen(selected);
-            }}
-            label={origenCfg.label}
-            nota={origenCfg.nota}
-            colorAccent="blue"
-            // Sin base ni IVA del documento externo el XML no sale (ver PENDIENTES.md)
-            externoNoDisponible="Próximamente: retención sobre documentos que no están en Kipu"
-          />
-
-          {/* Período fiscal */}
-          <div
-            className="rounded-xl p-4"
-            style={{
-              background: "var(--kipu-surface)",
-              border: "1px solid var(--kipu-border)",
-            }}
-          >
-            <div className="flex items-center gap-2 mb-3">
-              <Calendar size={15} style={{ color: "var(--kipu-accent)" }} />
-              <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>
-                Período fiscal
-              </h2>
-            </div>
-            <input
-              value={periodoFiscal}
-              inputMode="numeric"
-              onChange={e => setPeriodoFiscal(formatoPeriodo(e.target.value))}
-              placeholder="MM/YYYY"
-              maxLength={7}
-              className="w-40 px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none"
-              style={{
-                background: "var(--kipu-surface)",
-                border: "1px solid var(--kipu-border)",
-                color: "var(--kipu-text)",
-              }}
-              onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-              onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
-            />
-            <p className="text-xs mt-1" style={{ color: "var(--kipu-subtle)" }}>
-              Formato: MM/YYYY · ej: 08/2026
+          {puedeEmitir && (
+            <p className={cn("rounded-lg px-3 py-2 text-xs",
+              usaCreditos ? "bg-alerta-suave text-alerta-texto" : "bg-exito-suave text-exito-texto")}>
+              {usaCreditos
+                ? `Consumirá 1 crédito API · Disponibles: ${empresa?.balance_api}`
+                : !empresa?.suscripcion_activa
+                  ? "Plan gratis · uso justo de comprobantes al mes"
+                  : "Incluido en tu suscripción"}
             </p>
-          </div>
+          )}
 
-          {/* Datos documento sustento — RET v2.0.0 */}
-          <div
-            className="rounded-xl p-4 space-y-3"
-            style={{
-              background: "var(--kipu-surface)",
-              border: "1px solid var(--kipu-border)",
-            }}
-          >
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>
-                Clasificación del sustento
-              </h2>
-              <span
-                className="text-[10px] px-1.5 py-0.5 rounded font-medium"
-                style={{
-                  background: "color-mix(in srgb, var(--kipu-text) 8%, transparent)",
-                  color: "var(--kipu-subtle)",
-                }}
-              >
-                {codSustento} · {esExterior ? `Exterior (${paisEfecPago || "?"})` : "Local"} · Parte rel: {parteRel}
-              </span>
-            </div>
+          {error && (
+            <p className="rounded-lg bg-peligro-suave px-3 py-2 text-xs text-peligro-texto" role="alert">{error}</p>
+          )}
+          {em.esUsoJusto && <AccionesUsoJusto />}
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {/* Código sustento */}
-              <div className="sm:col-span-2 space-y-1">
-                <label className="text-[10px] uppercase font-semibold tracking-wider" style={{ color: "var(--kipu-subtle)" }}>
-                  Código de sustento (ATS)
-                </label>
-                <select
-                  value={codSustento}
-                  onChange={e => setCodSustento(e.target.value)}
-                  className="w-full px-2.5 py-2 rounded-lg text-sm transition-colors focus:outline-none"
-                  style={{
-                    background: "var(--kipu-surface)",
-                    border: "1px solid var(--kipu-border)",
-                    color: "var(--kipu-text)",
-                  }}
-                  onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                  onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
-                >
-                  {catalogo.sustento.map(c => (
-                    <option key={c.value} value={c.value}>{c.value} · {c.label}</option>
-                  ))}
-                </select>
-                {esExterior && (
-                  <p className="text-[10px]" style={{ color: "var(--kipu-subtle)" }}>
-                    Si es un servicio digital (Meta, Google, etc.), usa sustento 15
-                  </p>
-                )}
-              </div>
-
-              {/* Pago local/exterior */}
-              <div className="space-y-1">
-                <label className="text-[10px] uppercase font-semibold tracking-wider" style={{ color: "var(--kipu-subtle)" }}>
-                  Pago
-                </label>
-                <select
-                  value={pagoLocExt}
-                  onChange={e => cambiarPagoLocExt(e.target.value)}
-                  className="w-full px-2.5 py-2 rounded-lg text-sm transition-colors focus:outline-none"
-                  style={{
-                    background: "var(--kipu-surface)",
-                    border: "1px solid var(--kipu-border)",
-                    color: "var(--kipu-text)",
-                  }}
-                  onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                  onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
-                >
-                  <option value="01">Local</option>
-                  <option value="02">Exterior</option>
-                </select>
-              </div>
-            </div>
-
-            {/* ── Campos pago exterior (condicional) ── */}
-            {esExterior && (
-              <div className="pt-2 border-t space-y-3" style={{ borderColor: "var(--kipu-border)" }}>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {/* Tipo régimen fiscal */}
-                  <div className="space-y-1">
-                    <label className="text-[10px] uppercase font-semibold tracking-wider" style={{ color: "var(--kipu-subtle)" }}>
-                      Régimen fiscal exterior
-                    </label>
-                    <select
-                      value={tipoRegi}
-                      onChange={e => cambiarTipoRegi(e.target.value)}
-                      className="w-full px-2.5 py-2 rounded-lg text-sm transition-colors focus:outline-none"
-                      style={{
-                        background: "var(--kipu-surface)",
-                        border: "1px solid var(--kipu-border)",
-                        color: "var(--kipu-text)",
-                      }}
-                      onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                      onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
-                    >
-                      <option value="01">01 · General</option>
-                      <option value="02">02 · Paraíso fiscal</option>
-                      <option value="03">03 · Régimen fiscal preferente</option>
-                    </select>
-                  </div>
-
-                  {/* País efectivo del pago */}
-                  <div className="space-y-1">
-                    <label className="text-[10px] uppercase font-semibold tracking-wider" style={{ color: "var(--kipu-subtle)" }}>
-                      País del pago
-                    </label>
-                    <select
-                      value={paisEfecPago}
-                      onChange={e => setPaisEfecPago(e.target.value)}
-                      className="w-full px-2.5 py-2 rounded-lg text-sm transition-colors focus:outline-none"
-                      style={{
-                        background: "var(--kipu-surface)",
-                        border: "1px solid var(--kipu-border)",
-                        color: "var(--kipu-text)",
-                      }}
-                      onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                      onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
-                    >
-                      <option value="">Selecciona el país…</option>
-                      {paisesOrdenados.map(p => (
-                        <option key={p.codigo} value={p.codigo}>{p.codigo} · {p.nombre}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {/* Convenio doble tributación */}
-                  <div className="space-y-1">
-                    <label className="text-[10px] uppercase font-semibold tracking-wider" style={{ color: "var(--kipu-subtle)" }}>
-                      Convenio doble tributación
-                    </label>
-                    <select
-                      value={aplicConvDobTrib}
-                      onChange={e => cambiarConvenio(e.target.value)}
-                      className="w-full px-2.5 py-2 rounded-lg text-sm transition-colors focus:outline-none"
-                      style={{
-                        background: "var(--kipu-surface)",
-                        border: "1px solid var(--kipu-border)",
-                        color: "var(--kipu-text)",
-                      }}
-                      onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                      onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
-                    >
-                      <option value="NO">NO</option>
-                      <option value="SI">SI</option>
-                    </select>
-                  </div>
-
-                  {/* Pago a régimen fiscal preferente */}
-                  <div className="space-y-1">
-                    <label className="text-[10px] uppercase font-semibold tracking-wider" style={{ color: "var(--kipu-subtle)" }}>
-                      Pago a régimen fiscal preferente
-                    </label>
-                    <select
-                      value={pagoRegFis}
-                      onChange={e => setPagoRegFis(e.target.value)}
-                      className="w-full px-2.5 py-2 rounded-lg text-sm transition-colors focus:outline-none"
-                      style={{
-                        background: "var(--kipu-surface)",
-                        border: "1px solid var(--kipu-border)",
-                        color: "var(--kipu-text)",
-                      }}
-                      onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                      onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
-                    >
-                      <option value="NO">NO</option>
-                      <option value="SI">SI</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* Pago sujeto a retención (solo si NO hay convenio) */}
-                {aplicConvDobTrib === "NO" && (
-                  <div className="space-y-1">
-                    <label className="text-[10px] uppercase font-semibold tracking-wider" style={{ color: "var(--kipu-subtle)" }}>
-                      Sujeto a retención por norma legal
-                    </label>
-                    <select
-                      value={pagExtSujRetNorLeg}
-                      onChange={e => setPagExtSujRetNorLeg(e.target.value)}
-                      className="w-full px-2.5 py-2 rounded-lg text-sm transition-colors focus:outline-none"
-                      style={{
-                        background: "var(--kipu-surface)",
-                        border: "1px solid var(--kipu-border)",
-                        color: "var(--kipu-text)",
-                      }}
-                      onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                      onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
-                    >
-                      <option value="SI">SI</option>
-                      <option value="NO">NO</option>
-                    </select>
-                  </div>
-                )}
-
-                {/* Tipo de sujeto retenido (obligatorio con identificación 08) */}
-                <div className="space-y-1">
-                  <label className="text-[10px] uppercase font-semibold tracking-wider" style={{ color: "var(--kipu-subtle)" }}>
-                    Tipo de sujeto retenido
-                  </label>
-                  <select
-                    value={tipoSujetoRetenido}
-                    onChange={e => setTipoSujetoRetenido(e.target.value)}
-                    className="w-full px-2.5 py-2 rounded-lg text-sm transition-colors focus:outline-none"
-                    style={{
-                      background: "var(--kipu-surface)",
-                      border: "1px solid var(--kipu-border)",
-                      color: "var(--kipu-text)",
-                    }}
-                    onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                    onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
-                  >
-                    <option value="01">01 · Persona natural</option>
-                    <option value="02">02 · Sociedad</option>
-                  </select>
-                </div>
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {/* Parte relacionada */}
-              <div className="space-y-1">
-                <label className="text-[10px] uppercase font-semibold tracking-wider" style={{ color: "var(--kipu-subtle)" }}>
-                  Parte relacionada
-                </label>
-                <select
-                  value={parteRel}
-                  onChange={e => setParteRel(e.target.value)}
-                  className="w-full px-2.5 py-2 rounded-lg text-sm transition-colors focus:outline-none"
-                  style={{
-                    background: "var(--kipu-surface)",
-                    border: "1px solid var(--kipu-border)",
-                    color: "var(--kipu-text)",
-                  }}
-                  onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                  onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
-                >
-                  <option value="NO">NO</option>
-                  <option value="SI">SI</option>
-                </select>
-              </div>
-
-              {/* Forma de pago del sustento */}
-              <div className="space-y-1">
-                <label className="text-[10px] uppercase font-semibold tracking-wider" style={{ color: "var(--kipu-subtle)" }}>
-                  Forma de pago del documento sustento
-                </label>
-                <select
-                  value={formaPagoSustento}
-                  onChange={e => setFormaPagoSustento(e.target.value)}
-                  className="w-full px-2.5 py-2 rounded-lg text-sm transition-colors focus:outline-none"
-                  style={{
-                    background: "var(--kipu-surface)",
-                    border: "1px solid var(--kipu-border)",
-                    color: "var(--kipu-text)",
-                  }}
-                  onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                  onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
-                >
-                  {FORMAS_PAGO_RET.map(f => (
-                    <option key={f.value} value={f.value}>{f.value} · {f.label}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          </div>
-
-          {/* Impuestos retenidos */}
-          <div
-            className="rounded-xl p-4 space-y-3"
-            style={{
-              background: "var(--kipu-surface)",
-              border: "1px solid var(--kipu-border)",
-            }}
-          >
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>
-                Impuestos retenidos
-              </h2>
-              {!esLiqEmitida && (
-                <button
-                  type="button"
-                  onClick={addImpuesto}
-                  className="flex items-center gap-1 text-xs transition-colors"
-                  style={{ color: "var(--kipu-accent)" }}
-                  onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent-h)"}
-                  onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-accent)"}
-                >
-                  <Plus size={13} /> Agregar
-                </button>
-              )}
-            </div>
-
-            {avisoCatalogo && (
-              <p className="text-xs flex items-center gap-1.5" style={{ color: "var(--kipu-warning)" }}>
-                <AlertTriangle size={12} className="shrink-0" /> {avisoCatalogo}
-              </p>
-            )}
-
-            {esLiqEmitida && (
-              <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
-                Las bases imponibles se calcularon automáticamente desde la liquidación. Puedes ajustar el tipo y porcentaje de retención.
-              </p>
-            )}
-
-            {impuestos.map((imp, idx) => {
-              const opciones = getOpciones(catalogo, imp.codigo, esExterior, tipoRegi);
-              return (
-                <div
-                  key={imp._id}
-                  className="p-3 rounded-xl space-y-3"
-                  style={{
-                    background: "color-mix(in srgb, var(--kipu-surface) 60%, transparent)",
-                    border: "1px solid var(--kipu-border)",
-                  }}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium" style={{ color: "var(--kipu-subtle)" }}>
-                      Retención #{idx + 1}
-                    </span>
-                    {!esLiqEmitida && (
-                      <button
-                        type="button"
-                        onClick={() => removeImpuesto(imp._id)}
-                        disabled={impuestos.length === 1}
-                        className="p-1.5 rounded-lg transition-colors disabled:opacity-20"
-                        style={{ color: "var(--kipu-subtle)" }}
-                        onMouseEnter={e => {
-                          if (impuestos.length > 1) {
-                            e.currentTarget.style.color = "var(--kipu-danger)";
-                            e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-danger) 10%, transparent)";
-                          }
-                        }}
-                        onMouseLeave={e => {
-                          if (impuestos.length > 1) {
-                            e.currentTarget.style.color = "var(--kipu-subtle)";
-                            e.currentTarget.style.background = "transparent";
-                          }
-                        }}
-                      >
-                        <Trash2 size={13} />
-                      </button>
-                    )}
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="space-y-1">
-                      <label className="text-[10px] uppercase font-semibold tracking-wider" style={{ color: "var(--kipu-subtle)" }}>
-                        Tipo
-                      </label>
-                      <select
-                        value={imp.codigo}
-                        onChange={e => editImpuesto(imp._id, "codigo", e.target.value)}
-                        className="w-full px-2.5 py-2 rounded-lg text-sm transition-colors focus:outline-none"
-                        style={{
-                          background: "var(--kipu-surface)",
-                          border: "1px solid var(--kipu-border)",
-                          color: "var(--kipu-text)",
-                        }}
-                        onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                        onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
-                      >
-                        {TIPOS_IMPUESTO.map(t => (
-                          <option key={t.value} value={t.value}>{t.label}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] uppercase font-semibold tracking-wider" style={{ color: "var(--kipu-subtle)" }}>
-                        Código / Concepto
-                      </label>
-                      <select
-                        value={imp.codigoRetencion}
-                        onChange={e => editImpuesto(imp._id, "codigoRetencion", e.target.value)}
-                        className="w-full px-2.5 py-2 rounded-lg text-sm transition-colors focus:outline-none"
-                        style={{
-                          background: "var(--kipu-surface)",
-                          border: "1px solid var(--kipu-border)",
-                          color: "var(--kipu-text)",
-                        }}
-                        onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                        onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
-                      >
-                        {imp.codigo === "1" ? (() => {
-                          const { masUsados, todos } = agruparRenta(opciones, esExterior);
-                          const opcion = (o: OpcionRet) => (
-                            <option key={o.cod} value={o.cod}>{o.cod} · {o.label}</option>
-                          );
-                          return (
-                            <>
-                              {masUsados.length > 0 && <optgroup label="Más usados">{masUsados.map(opcion)}</optgroup>}
-                              {todos.length > 0 && <optgroup label="Todos los códigos">{todos.map(opcion)}</optgroup>}
-                            </>
-                          );
-                        })() : opciones.map(o => (
-                          <option key={o.cod} value={o.cod}>{o.cod} · {o.label}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className="space-y-1">
-                      <label className="text-[10px] uppercase font-semibold tracking-wider" style={{ color: "var(--kipu-subtle)" }}>
-                        Base imponible
-                      </label>
-                      <div className="relative">
-                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-sm" style={{ color: "var(--kipu-subtle)" }}>$</span>
-                        <input
-                          type="number"
-                          value={imp.baseImponible}
-                          onChange={e => editImpuesto(imp._id, "baseImponible", parseFloat(e.target.value) || 0)}
-                          readOnly={esLiqEmitida}
-                          min={0}
-                          step={0.01}
-                          className="w-full pl-6 pr-2 py-2 rounded-lg text-sm text-right transition-colors focus:outline-none"
-                          style={{
-                            background: "var(--kipu-surface)",
-                            border: "1px solid var(--kipu-border)",
-                            color: "var(--kipu-text)",
-                            opacity: esLiqEmitida ? 0.7 : 1,
-                            cursor: esLiqEmitida ? "not-allowed" : "text",
-                          }}
-                          onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                          onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] uppercase font-semibold tracking-wider" style={{ color: "var(--kipu-subtle)" }}>
-                        % Retener
-                      </label>
-                      <div className="relative">
-                        <input
-                          type="number"
-                          value={imp.porcentajeRetener}
-                          readOnly={!pctEditable(imp)}
-                          onChange={e => {
-                            if (pctEditable(imp)) editImpuesto(imp._id, "porcentajeRetener", parseFloat(e.target.value) || 0);
-                          }}
-                          min={0}
-                          max={100}
-                          step={0.01}
-                          className="w-full px-2 pr-6 py-2 rounded-lg text-sm text-center focus:outline-none"
-                          style={{
-                            background: pctEditable(imp)
-                              ? "var(--kipu-surface)"
-                              : "color-mix(in srgb, var(--kipu-text) 4%, transparent)",
-                            border: "1px solid var(--kipu-border)",
-                            color: "var(--kipu-text)",
-                            cursor: pctEditable(imp) ? "text" : "not-allowed",
-                          }}
-                        />
-                        <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-sm" style={{ color: "var(--kipu-subtle)" }}>%</span>
-                      </div>
-                      {pctEditable(imp) && (
-                        <p className="text-[10px]" style={{ color: "var(--kipu-subtle)" }}>
-                          Ajusta el % según la tarifa del convenio
-                        </p>
-                      )}
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] uppercase font-semibold tracking-wider" style={{ color: "var(--kipu-subtle)" }}>
-                        Valor retenido
-                      </label>
-                      <div className="relative">
-                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-sm" style={{ color: "var(--kipu-subtle)" }}>$</span>
-                        <input
-                          type="number"
-                          value={imp.valorRetenido}
-                          onChange={e => editImpuesto(imp._id, "valorRetenido", parseFloat(e.target.value) || 0)}
-                          min={0}
-                          step={0.01}
-                          className="w-full pl-6 pr-2 py-2 rounded-lg text-sm text-right transition-colors focus:outline-none"
-                          style={{
-                            background: "var(--kipu-surface)",
-                            border: "1px solid var(--kipu-border)",
-                            color: "var(--kipu-text)",
-                          }}
-                          onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                          onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-            <div
-              className="flex justify-between text-sm pt-2 px-1"
-              style={{ borderTop: "1px solid var(--kipu-border)" }}
-            >
-              <span style={{ color: "var(--kipu-muted)" }}>Total retenido</span>
-              <span className="font-bold" style={{ color: "var(--kipu-text)" }}>${fmt(totalRetenido)}</span>
-            </div>
-          </div>
-
-          <CamposAdicionales campos={camposAdicionales} onChange={setCamposAdicionales} />
-        </div>
-
-        {/* Panel lateral */}
-        <div className="space-y-4">
-          <div className="hidden lg:block">
-            <PuntoEmision {...pe} />
-          </div>
-
-          <div
-            className="rounded-xl p-4 sticky top-4"
-            style={{
-              background: "var(--kipu-surface)",
-              border: "1px solid var(--kipu-border)",
-            }}
-          >
-            <h2 className="text-sm font-semibold mb-4" style={{ color: "var(--kipu-text)" }}>Resumen</h2>
-            <div className="space-y-2 text-sm">
-              {impuestos.map((imp, idx) => (
-                <div key={imp._id} className="flex justify-between" style={{ color: "var(--kipu-muted)" }}>
-                  <span>RET {idx + 1} · {imp.porcentajeRetener}%</span>
-                  <span>${fmt(imp.valorRetenido)}</span>
-                </div>
-              ))}
-              <div
-                className="pt-2 flex justify-between font-bold text-base"
-                style={{
-                  borderTop: "1px solid var(--kipu-border)",
-                  color: "var(--kipu-text)",
-                }}
-              >
-                <span>Total retenido</span>
-                <span>${fmt(totalRetenido)}</span>
-              </div>
-            </div>
-
-            {empresa?.suscripcion_activa || (empresa?.balance_api ?? 0) > 0 || empresa?.emision_gratis ? (
-              <div
-                className="mt-3 px-3 py-2 rounded-lg text-xs"
-                style={{
-                  background: usaCreditos
-                    ? "color-mix(in srgb, var(--kipu-warning) 10%, transparent)"
-                    : "color-mix(in srgb, var(--kipu-success) 10%, transparent)",
-                  border: usaCreditos
-                    ? "1px solid color-mix(in srgb, var(--kipu-warning) 20%, transparent)"
-                    : "1px solid color-mix(in srgb, var(--kipu-success) 20%, transparent)",
-                  color: usaCreditos ? "var(--kipu-warning)" : "var(--kipu-success)",
-                }}
-              >
-                {usaCreditos
-                  ? `Consumirá 1 crédito API · Disponibles: ${empresa?.balance_api}`
-                  : !empresa?.suscripcion_activa
-                    ? "Plan gratis · uso justo de comprobantes al mes"
-                    : "✅ Incluido en tu suscripción"
-                }
-              </div>
-            ) : (
-              <div
-                className="mt-3 rounded-lg px-3 py-2 flex items-center"
-                style={{
-                  background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
-                  border: "1px solid color-mix(in srgb, var(--kipu-danger) 20%, transparent)",
-                }}
-              >
-                <AlertTriangle size={12} style={{ color: "var(--kipu-danger)" }} />
-                <span className="text-xs font-medium ml-1.5" style={{ color: "var(--kipu-danger)" }}>Sin acceso para emitir</span>
-              </div>
-            )}
-
-            {error && (
-              <p
-                className="mt-3 text-xs px-3 py-2 rounded-lg"
-                style={{
-                  color: "var(--kipu-danger)",
-                  background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
-                }}
-              >
-                {error}
-              </p>
-            )}
-            {error && usoJusto === error && <AccionesUsoJusto />}
-
-            {confirmarProduccion && !submitting ? (
-              <div
-                className="mt-4 rounded-lg px-3 py-3 space-y-2"
-                style={{
-                  background: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)",
-                  border: "1px solid color-mix(in srgb, var(--kipu-warning) 30%, transparent)",
-                }}
-              >
-                <div className="flex items-start gap-1.5">
-                  <AlertTriangle size={14} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-warning)" }} />
-                  <p className="text-xs font-semibold" style={{ color: "var(--kipu-text)" }}>
-                    Esta retención te obliga a presentar el formulario 103 de {mesDelPeriodo(periodoFiscal)}
-                    {retieneIva && <> y, por la retención de IVA, también el formulario 104 de ese mes</>}.
-                  </p>
-                </div>
-                <p className="text-[11px]" style={{ color: "var(--kipu-subtle)" }}>
-                  Se emite en ambiente de producción y tiene validez tributaria. Si solo querías probar, activa el modo de pruebas antes de emitir.
-                </p>
-                <div className="flex gap-2 pt-1">
-                  <button
-                    onClick={() => setConfirmarProduccion(false)}
-                    className="flex-1 py-2 rounded-lg text-xs font-semibold"
-                    style={{ border: "1px solid var(--kipu-border)", color: "var(--kipu-text)", background: "var(--kipu-surface)" }}
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    onClick={() => emitir(true)}
-                    className="flex-1 py-2 rounded-lg text-xs font-semibold text-white"
-                    style={{ background: "var(--kipu-accent)" }}
-                  >
-                    Entiendo, emitir
-                  </button>
-                </div>
-              </div>
-            ) : (
-            <button
-              onClick={() => emitir()}
-              disabled={submitting || (!empresa?.suscripcion_activa && (empresa?.balance_api ?? 0) === 0
-                                       && !empresa?.emision_gratis)}
-              className="mt-4 w-full py-3 rounded-lg text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ background: "var(--kipu-accent)" }}
-              onMouseEnter={e => {
-                if (!submitting && (empresa?.suscripcion_activa || (empresa?.balance_api ?? 0) > 0)) {
-                  e.currentTarget.style.background = "var(--kipu-accent-h)";
-                }
-              }}
-              onMouseLeave={e => {
-                if (!submitting && (empresa?.suscripcion_activa || (empresa?.balance_api ?? 0) > 0)) {
-                  e.currentTarget.style.background = "var(--kipu-accent)";
-                }
-              }}
-            >
-              {submitting ? (
-                <>
-                  <div
-                    className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin"
-                    style={{ borderColor: "#FFFFFF", borderTopColor: "transparent" }}
-                  />
-                  Emitiendo...
-                </>
-              ) : (
-                `Emitir retención${pe.serie ? ` desde ${pe.serie}` : ""} · $${fmt(totalRetenido)}`
-              )}
-            </button>
-            )}
-          </div>
-        </div>
+          <Boton anchoCompleto tamano="lg" onClick={() => emitir()} cargando={submitting} disabled={!puedeEmitir}
+                 className="hidden h-auto min-h-11 whitespace-normal py-2.5 lg:flex">
+            {`Emitir retención${pe.serie ? ` desde ${pe.serie}` : ""} · $${fmt(totalRetenido)}`}
+          </Boton>
+        </section>
+      </>}
+      barra={{
+        total:         totalRetenido,
+        texto:         "Emitir retención",
+        onEmitir:      () => emitir(),
+        enviando:      submitting,
+        deshabilitado: !puedeEmitir,
+        error,
+      }}
+    >
+      <div className="lg:hidden">
+        <PuntoEmision {...pe} />
       </div>
+
+      {/* Sobre qué documento se retiene */}
+      <section className="space-y-3 rounded-xl border border-borde bg-superficie p-4">
+        <h2 className="text-sm font-semibold text-texto">¿Sobre qué documento retienes?</h2>
+        <ChipsFiltro
+          etiqueta="Tipo de documento sustento"
+          opciones={(Object.keys(ORIGEN_CONFIG) as OrigenRet[]).map(k => ({ valor: k, etiqueta: ORIGEN_CONFIG[k].chip }))}
+          valor={origenTipo}
+          onCambio={(v) => cambiarOrigen(v as OrigenRet)}
+        />
+      </section>
+
+      <DocOrigenSelector
+        tiposDoc={origenCfg.tiposDoc}
+        tabla={origenCfg.tabla}
+        value={docOrigen}
+        onChange={async (selected) => {
+          setDocOrigen(selected);
+          await sugerirDesdeOrigen(selected);
+        }}
+        label={origenCfg.label}
+        nota={origenCfg.nota}
+        // Sin base ni IVA del documento externo el XML no sale (ver PENDIENTES.md)
+        externoNoDisponible="Próximamente: retención sobre documentos que no están en Kipu"
+      />
+
+      {/* Período y clasificación del sustento (RET v2.0.0): casi siempre lo de siempre */}
+      <Seccion titulo="Período y sustento" icono={CalendarDays} resumen={resumenSri} abierta={esExterior}>
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <Campo etiqueta="Período fiscal" ayuda="MM/AAAA">
+              <Entrada
+                inputMode="numeric"
+                autoComplete="off"
+                value={periodoFiscal}
+                onChange={e => setPeriodoFiscal(formatoPeriodo(e.target.value))}
+                placeholder="MM/AAAA"
+                maxLength={7}
+              />
+            </Campo>
+            <Campo etiqueta="Pago">
+              <Selector value={pagoLocExt} onChange={e => cambiarPagoLocExt(e.target.value)}>
+                <option value="01">Local</option>
+                <option value="02">Exterior</option>
+              </Selector>
+            </Campo>
+          </div>
+
+          <Campo etiqueta="Código de sustento (ATS)"
+                 ayuda={esExterior ? "Si es un servicio digital (Meta, Google, etc.), usa sustento 15." : undefined}>
+            <Selector value={codSustento} onChange={e => setCodSustento(e.target.value)}>
+              {catalogo.sustento.map(c => (
+                <option key={c.value} value={c.value}>{c.value} · {c.label}</option>
+              ))}
+            </Selector>
+          </Campo>
+
+          {/* Pago al exterior */}
+          {esExterior && (
+            <div className="space-y-3 border-t border-borde pt-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <Campo etiqueta="Régimen fiscal exterior">
+                  <Selector value={tipoRegi} onChange={e => cambiarTipoRegi(e.target.value)}>
+                    <option value="01">01 · General</option>
+                    <option value="02">02 · Paraíso fiscal</option>
+                    <option value="03">03 · Régimen fiscal preferente</option>
+                  </Selector>
+                </Campo>
+                <Campo etiqueta="País del pago">
+                  <Selector value={paisEfecPago} onChange={e => setPaisEfecPago(e.target.value)}>
+                    <option value="">Elige el país…</option>
+                    {paisesOrdenados.map(p => (
+                      <option key={p.codigo} value={p.codigo}>{p.codigo} · {p.nombre}</option>
+                    ))}
+                  </Selector>
+                </Campo>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <Campo etiqueta="Convenio de doble tributación">
+                  <Selector value={aplicConvDobTrib} onChange={e => cambiarConvenio(e.target.value)}>
+                    <option value="NO">No</option>
+                    <option value="SI">Sí</option>
+                  </Selector>
+                </Campo>
+                <Campo etiqueta="Pago a régimen preferente">
+                  <Selector value={pagoRegFis} onChange={e => setPagoRegFis(e.target.value)}>
+                    <option value="NO">No</option>
+                    <option value="SI">Sí</option>
+                  </Selector>
+                </Campo>
+              </div>
+              {/* Solo si NO hay convenio */}
+              {aplicConvDobTrib === "NO" && (
+                <Campo etiqueta="Sujeto a retención por norma legal">
+                  <Selector value={pagExtSujRetNorLeg} onChange={e => setPagExtSujRetNorLeg(e.target.value)}>
+                    <option value="SI">Sí</option>
+                    <option value="NO">No</option>
+                  </Selector>
+                </Campo>
+              )}
+              {/* Obligatorio con identificación 08 */}
+              <Campo etiqueta="Tipo de sujeto retenido">
+                <Selector value={tipoSujetoRetenido} onChange={e => setTipoSujetoRetenido(e.target.value)}>
+                  <option value="01">01 · Persona natural</option>
+                  <option value="02">02 · Sociedad</option>
+                </Selector>
+              </Campo>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <Campo etiqueta="Parte relacionada">
+              <Selector value={parteRel} onChange={e => setParteRel(e.target.value)}>
+                <option value="NO">No</option>
+                <option value="SI">Sí</option>
+              </Selector>
+            </Campo>
+            <Campo etiqueta="Forma de pago del sustento">
+              <Selector value={formaPagoSustento} onChange={e => setFormaPagoSustento(e.target.value)}>
+                {FORMAS_PAGO_RET.map(f => (
+                  <option key={f.value} value={f.value}>{f.value} · {f.label}</option>
+                ))}
+              </Selector>
+            </Campo>
+          </div>
+        </div>
+      </Seccion>
+
+      {/* Impuestos retenidos */}
+      <section className="space-y-3 rounded-xl border border-borde bg-superficie p-4">
+        <h2 className="flex items-center gap-2 text-sm font-semibold text-texto">
+          <Percent size={16} className="text-acento" aria-hidden /> Impuestos retenidos
+        </h2>
+
+        {avisoCatalogo && (
+          <p className="flex items-center gap-1.5 text-xs text-alerta-texto">
+            <AlertTriangle size={12} className="shrink-0" aria-hidden /> {avisoCatalogo}
+          </p>
+        )}
+        {esLiqEmitida && (
+          <p className="text-xs text-sutil">
+            Las bases imponibles salen de la liquidación. Puedes ajustar el tipo y el porcentaje de retención.
+          </p>
+        )}
+
+        {impuestos.map((imp, idx) => {
+          const opciones = getOpciones(catalogo, imp.codigo, esExterior, tipoRegi);
+          const pctLibre = pctEditable(imp);
+          return (
+            <div key={imp._id} className="space-y-3 rounded-lg border border-borde p-3">
+              <div className="flex min-h-8 items-center justify-between">
+                <span className="text-xs font-medium text-sutil">Retención {idx + 1}</span>
+                {!esLiqEmitida && impuestos.length > 1 && (
+                  <BotonIcono etiqueta={`Quitar la retención ${idx + 1}`} icono={<Trash2 size={16} />}
+                              variante="peligro" tamano="sm" onClick={() => removeImpuesto(imp._id)} />
+                )}
+              </div>
+              <div className="grid grid-cols-[6.5rem_1fr] gap-3">
+                <Campo etiqueta="Impuesto">
+                  <Selector value={imp.codigo} onChange={e => editImpuesto(imp._id, "codigo", e.target.value)}>
+                    {TIPOS_IMPUESTO.map(t => (
+                      <option key={t.value} value={t.value}>{t.label}</option>
+                    ))}
+                  </Selector>
+                </Campo>
+                <Campo etiqueta="Código / concepto">
+                  <Selector value={imp.codigoRetencion} onChange={e => editImpuesto(imp._id, "codigoRetencion", e.target.value)}>
+                    {imp.codigo === "1" ? (() => {
+                      const { masUsados, todos } = agruparRenta(opciones, esExterior);
+                      const opcion = (o: OpcionRet) => (
+                        <option key={o.cod} value={o.cod}>{o.cod} · {o.label}</option>
+                      );
+                      return (
+                        <>
+                          {masUsados.length > 0 && <optgroup label="Más usados">{masUsados.map(opcion)}</optgroup>}
+                          {todos.length > 0 && <optgroup label="Todos los códigos">{todos.map(opcion)}</optgroup>}
+                        </>
+                      );
+                    })() : opciones.map(o => (
+                      <option key={o.cod} value={o.cod}>{o.cod} · {o.label}</option>
+                    ))}
+                  </Selector>
+                </Campo>
+              </div>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                <Campo etiqueta="Base imponible" id={`ret-base-${imp._id}`}>
+                  {esLiqEmitida ? (
+                    <Fijo>${fmt(imp.baseImponible)}</Fijo>
+                  ) : (
+                    <InputDecimal id={`ret-base-${imp._id}`} value={imp.baseImponible} placeholder="0.00"
+                                  onChange={v => editImpuesto(imp._id, "baseImponible", v)} className={CLASE_VALOR} />
+                  )}
+                </Campo>
+                <Campo etiqueta="% a retener" id={`ret-pct-${imp._id}`}
+                       ayuda={pctLibre ? "Según la tarifa del convenio." : undefined}>
+                  {pctLibre ? (
+                    <InputDecimal id={`ret-pct-${imp._id}`} value={imp.porcentajeRetener}
+                                  onChange={v => editImpuesto(imp._id, "porcentajeRetener", Math.min(100, v))}
+                                  className={CLASE_VALOR} />
+                  ) : (
+                    <Fijo>{imp.porcentajeRetener}%</Fijo>
+                  )}
+                </Campo>
+                <Campo etiqueta="Valor retenido" id={`ret-valor-${imp._id}`} className="col-span-2 sm:col-span-1">
+                  <InputDecimal id={`ret-valor-${imp._id}`} value={imp.valorRetenido} placeholder="0.00"
+                                onChange={v => editImpuesto(imp._id, "valorRetenido", v)} className={CLASE_VALOR} />
+                </Campo>
+              </div>
+            </div>
+          );
+        })}
+
+        <div className="flex items-center justify-between gap-3 border-t border-borde pt-3">
+          {!esLiqEmitida ? (
+            <Boton variante="secundario" tamano="sm" onClick={addImpuesto} icono={<Plus size={14} />}>
+              Agregar retención
+            </Boton>
+          ) : <span />}
+          <p className="text-sm text-tenue">
+            Total <span className="font-bold tabular-nums text-texto">${fmt(totalRetenido)}</span>
+          </p>
+        </div>
+      </section>
+
+      <CamposAdicionales campos={camposAdicionales} onChange={setCamposAdicionales} />
+
+      {/* En producción, confirmar: la retención genera la obligación del 103 (y del 104) */}
+      <Hoja
+        abierta={confirmarProduccion && !submitting}
+        onCerrar={() => setConfirmarProduccion(false)}
+        titulo="¿Emitir en producción?"
+        pie={<>
+          <Boton variante="secundario" onClick={() => setConfirmarProduccion(false)}>Cancelar</Boton>
+          <Boton onClick={() => emitir(true)}>Entiendo, emitir</Boton>
+        </>}
+      >
+        <div className="space-y-2">
+          <p className="flex items-start gap-2 text-sm text-texto">
+            <AlertTriangle size={16} className="mt-0.5 shrink-0 text-alerta" aria-hidden />
+            <span>
+              Esta retención te obliga a presentar el formulario 103 de {mesDelPeriodo(periodoFiscal)}
+              {retieneIva && <> y, por la retención de IVA, también el formulario 104 de ese mes</>}.
+            </span>
+          </p>
+          <p className="text-xs text-tenue">
+            Tiene validez tributaria. Si solo querías probar, activa el modo de pruebas antes de emitir.
+          </p>
+        </div>
+      </Hoja>
+    </EmisionLayout>
+  );
+}
+
+/** Valor que no se edita (base que sale de la liquidación, % del catálogo). */
+function Fijo({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex h-9 items-center rounded-lg border border-borde bg-presionado px-3 text-sm tabular-nums text-tenue tactil:h-11 tactil:text-base">
+      {children}
     </div>
   );
 }

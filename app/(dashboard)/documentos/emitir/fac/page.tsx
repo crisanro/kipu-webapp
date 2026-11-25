@@ -1,5 +1,4 @@
 "use client";
-import SoloWeb from "@/components/SoloWeb";
 
 import { useState, useEffect, useMemo } from "react";
 import { errorIdentificacion } from "@/lib/identificacion";
@@ -530,24 +529,6 @@ export default function NuevaFacturaPage() {
         hace: borrador.pendiente.hace, que: "una factura",
         onSeguir: seguirBorrador, onDescartar: borrador.descartar,
       }}
-      alerta={
-        // Sin suscripción activa ni créditos API (con el plan gratis sí puede emitir)
-        empresa && !empresa.suscripcion_activa && empresa.balance_api === 0 && !empresa.emision_gratis && (
-          <div
-            className="flex items-center gap-2 rounded-lg px-4 py-3"
-            style={{
-              background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
-              border: "1px solid color-mix(in srgb, var(--kipu-danger) 20%, transparent)",
-            }}
-          >
-            <AlertTriangle size={16} className="shrink-0" style={{ color: "var(--kipu-danger)" }} />
-            <p className="text-sm" style={{ color: "var(--kipu-danger)" }}>
-              Sin acceso para emitir.{" "}
-              <SoloWeb><a href="/planes" className="underline">Ver opciones</a></SoloWeb>
-            </p>
-          </div>
-        )
-      }
       lateral={<>
         {/* Punto de emisión — compu (en el celular va arriba del formulario) */}
         <div className="hidden lg:block">

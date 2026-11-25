@@ -17,7 +17,8 @@
 import { useCallback, useRef, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 import api from "@/lib/api";
-import { anotarEnvio, claveParaEnviar, esUsoJusto, mensajeErrorEmision } from "@/lib/emision";
+import { anotarEnvio, claveParaEnviar, esPlanRequerido, esUsoJusto, mensajeErrorEmision } from "@/lib/emision";
+import { refrescarEmpresaActual } from "@/lib/empresa";
 
 export interface OpcionesEnvio {
   /** Distingue la clave guardada por endpoint: "FAC", "FAC-COBRO", "NCR", "NDB", "LIQ", "RET". */
@@ -35,6 +36,8 @@ export function useEmision<R = any>() {
   const [error,     setError]     = useState("");
   const [usoJusto,  setUsoJusto]  = useState("");      // mensaje del uso justo (para ofrecer cómo seguir)
   const [resultado, setResultado] = useState<R | null>(null);
+  // 402 PLAN_REQUERIDO (liquidación, retención: p. ej. el plan venció con la página abierta)
+  const [planRequerido, setPlanRequerido] = useState("");
 
   /** Envía el comprobante. Devuelve la respuesta, o null si falló (el error queda en `error`). */
   const enviar = useCallback(async <T = R>(url: string, payload: unknown, { tipo, porDefecto }: OpcionesEnvio): Promise<T | null> => {
@@ -54,6 +57,10 @@ export function useEmision<R = any>() {
       const mensaje = mensajeErrorEmision(err, porDefecto);
       setError(mensaje);
       setUsoJusto(esUsoJusto(err) ? mensaje : "");
+      if (esPlanRequerido(err)) {
+        setPlanRequerido(mensaje);
+        refrescarEmpresaActual();   // el menú y las demás pantallas ven el plan actual
+      }
       return null;
     } finally {
       setEnviando(false);
@@ -72,6 +79,8 @@ export function useEmision<R = any>() {
     enviando, error, setError,
     /** true si `error` es el del uso justo (la pantalla ofrece cómo seguir). */
     esUsoJusto: !!usoJusto && usoJusto === error,
+    /** Mensaje del 402 PLAN_REQUERIDO: la pantalla muestra el bloqueo del plan. */
+    planRequerido,
     resultado, setResultado,
     enviar, reiniciar,
   };
