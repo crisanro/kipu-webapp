@@ -17,6 +17,7 @@ import ChipsFiltro from "@/components/ui/ChipsFiltro";
 import { Campo, Entrada } from "@/components/ui/Campo";
 import { useAvisos } from "@/components/ui/Avisos";
 import { cn } from "@/components/ui/cn";
+import Interruptor from "@/components/ui/Interruptor";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- forma de /emisor/config
 type Legal = Record<string, any>;
@@ -300,36 +301,18 @@ export function ImpuestosEmpresa({ legal, onActualizar }: {
 
       {/* Retenciones (enlace /configuracion#retenciones) */}
       <section id="retenciones" className="scroll-mt-4 rounded-xl border border-borde bg-superficie p-4">
-        <label className="flex cursor-pointer items-start gap-3">
-          <span className="min-w-0 flex-1">
-            <span className="block text-sm font-semibold text-texto">Emito comprobantes de retención</span>
-            <span className="mt-0.5 block text-xs text-sutil">
-              Muestra «Retención» en Emitir y en el detalle de tus compras. Actívalo si retienes a tus proveedores.
-            </span>
+        <Interruptor
+          etiqueta={<span className="font-semibold">Emito comprobantes de retención</span>}
+          descripcion={<>
+            Muestra «Retención» en Emitir y en el detalle de tus compras. Actívalo si retienes a tus proveedores.
             {!conPlan && !ES_APP_NATIVA && (
-              <span className="mt-1 block text-xs text-tenue">Emitir retenciones requiere Kipu Pro o Kipu Al Día.</span>
+              <span className="mt-1 block text-tenue">Emitir retenciones requiere Kipu Pro o Kipu Al Día.</span>
             )}
-          </span>
-          <input
-            type="checkbox"
-            role="switch"
-            checked={emiteRetenciones}
-            disabled={guardandoRet}
-            onChange={cambiarRetenciones}
-            className="peer sr-only"
-          />
-          <span aria-hidden className={cn(
-            "relative mt-0.5 h-7 w-12 shrink-0 rounded-full transition-colors duration-(--duracion-base)",
-            "peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-acento",
-            "peer-disabled:opacity-60",
-            emiteRetenciones ? "bg-acento" : "bg-borde",
-          )}>
-            <span className={cn(
-              "absolute top-0.5 size-6 rounded-full bg-white shadow transition-[left] duration-(--duracion-base) ease-estandar",
-              emiteRetenciones ? "left-[22px]" : "left-0.5",
-            )} />
-          </span>
-        </label>
+          </>}
+          activo={emiteRetenciones}
+          deshabilitado={guardandoRet}
+          onCambio={cambiarRetenciones}
+        />
       </section>
 
       {/* Frecuencia del IVA */}
