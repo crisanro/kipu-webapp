@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { rutas } from "@/lib/rutas";
 import Link from "next/link";
 import api from "@/lib/api";
+import { hoyEC, inicioMesEC } from "@/lib/fecha";
 import { usePermiso } from "@/hooks/usePermiso";
 import SinAcceso from "@/components/SinAcceso";
 import { useAuthStore } from "@/store/auth.store";
@@ -92,13 +93,10 @@ const FUENTE_COLOR: Record<string, { color: string; bg: string }> = {
 const SS_KEY_INICIO = "kipu_recibidos_fecha_inicio";
 const SS_KEY_FIN    = "kipu_recibidos_fecha_fin";
 
-function getHoy() {
-  return new Date().toLocaleDateString("en-CA", { timeZone: "America/Guayaquil" });
-}
-
-function leerFecha(key: string): string {
-  try { return sessionStorage.getItem(key) || getHoy(); }
-  catch { return getHoy(); }
+// Sin fechas guardadas en la sesión: el mes en curso (solo hoy casi siempre salía vacío)
+function leerFecha(key: string, porDefecto: string): string {
+  try { return sessionStorage.getItem(key) || porDefecto; }
+  catch { return porDefecto; }
 }
 
 function guardarFecha(key: string, val: string) {
@@ -303,10 +301,10 @@ export default function FacturasRecibidasPage() {
 
   // Estados temporales para los inputs de fecha (no disparan consulta)
   const [tempFechaInicio, setTempFechaInicio] = useState<string>(() => {
-    return searchParams.get("fecha_inicio") || leerFecha(SS_KEY_INICIO);
+    return searchParams.get("fecha_inicio") || leerFecha(SS_KEY_INICIO, inicioMesEC());
   });
   const [tempFechaFin, setTempFechaFin] = useState<string>(() => {
-    return searchParams.get("fecha_fin") || leerFecha(SS_KEY_FIN);
+    return searchParams.get("fecha_fin") || leerFecha(SS_KEY_FIN, hoyEC());
   });
 
   // Fechas activas para la API

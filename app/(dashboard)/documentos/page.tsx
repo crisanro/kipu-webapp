@@ -7,6 +7,7 @@ import { useSearchParams } from "next/navigation";
 import { usePermiso } from "@/hooks/usePermiso";
 import SinAcceso from "@/components/SinAcceso";
 import api from "@/lib/api";
+import { hoyEC, inicioMesEC } from "@/lib/fecha";
 import {
   Search, Plus, FileText, CheckCircle2, Clock,
   XCircle, AlertTriangle, RefreshCw, ChevronDown, ChevronUp,
@@ -73,12 +74,10 @@ const fmt = (n: any) => parseFloat(n ?? 0).toFixed(2);
 const SS_KEY_INICIO = "kipu_emitidos_fecha_inicio";
 const SS_KEY_FIN    = "kipu_emitidos_fecha_fin";
 
-function getHoy() {
-  return new Date().toLocaleDateString("en-CA", { timeZone: "America/Guayaquil" });
-}
-function leerFecha(key: string): string {
-  try { return sessionStorage.getItem(key) || getHoy(); }
-  catch { return getHoy(); }
+// Sin fechas guardadas en la sesión: el mes en curso (solo hoy casi siempre salía vacío)
+function leerFecha(key: string, porDefecto: string): string {
+  try { return sessionStorage.getItem(key) || porDefecto; }
+  catch { return porDefecto; }
 }
 function guardarFecha(key: string, val: string) {
   try { sessionStorage.setItem(key, val); } catch {}
@@ -175,11 +174,11 @@ export default function HistorialPage() {
   // Estados temporales de inputs de fecha
   const [tempFechaInicio, setTempFechaInicio] = useState<string>(() => {
     const fromUrl = searchParams.get("fecha_inicio");
-    return fromUrl || leerFecha(SS_KEY_INICIO);
+    return fromUrl || leerFecha(SS_KEY_INICIO, inicioMesEC());
   });
   const [tempFechaFin, setTempFechaFin] = useState<string>(() => {
     const fromUrl = searchParams.get("fecha_fin");
-    return fromUrl || leerFecha(SS_KEY_FIN);
+    return fromUrl || leerFecha(SS_KEY_FIN, hoyEC());
   });
 
   // Fechas activas para peticiones HTTP
