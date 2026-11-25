@@ -139,6 +139,13 @@ button, [role="button"] {
   -webkit-touch-callout: none;
 }
 
+/* Barra de pestañas (components/shell/BarraPestanas.tsx, solo bajo lg): el
+   contenido y los avisos le dejan su alto. Sin la barra (escritorio, formularios
+   de emisión) la variable no existe y vale 0. */
+@media (max-width: 1023.98px) {
+  :root:has(#barra-pestanas) { --alto-barra-inferior: 56px; }
+}
+
 /* Quien pide menos movimiento en el sistema: sin animaciones ni transiciones */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

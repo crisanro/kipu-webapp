@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { rutas } from "@/lib/rutas";
 import Link from "next/link";
 import api from "@/lib/api";
+import { SegmentosDocumentos } from "@/components/shell/BarraPestanas";
 import { hoyEC, inicioMesEC } from "@/lib/fecha";
 import { usePermiso } from "@/hooks/usePermiso";
 import SinAcceso from "@/components/SinAcceso";
@@ -385,6 +386,7 @@ export default function FacturasRecibidasPage() {
 
   return (
     <div className="p-4 md:p-6 space-y-5">
+      <SegmentosDocumentos />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

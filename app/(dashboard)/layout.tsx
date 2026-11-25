@@ -7,15 +7,13 @@ import { signOut } from "firebase/auth";
 import { useAuthStore } from "@/store/auth.store";
 import { useSandboxStore } from "@/store/sandbox.store";
 import PWAInstallBanner from "@/components/PWAInstallBanner";
-import FranjaSRI from "@/components/dashboard/FranjaSRI";
-import AvisoPro from "@/components/dashboard/AvisoPro";
+import AvisoShell from "@/components/shell/AvisoShell";
 import {
   registrarNotificaciones,
   desregistrarNotificaciones,
   escucharPrimerPlano,
   permisoNotificaciones,
 } from "@/lib/notifications";
-import { AlertTriangle, Bell, FlaskConical } from "lucide-react";
 import { useTheme } from "next-themes";
 import { rutaFueraDelPlan } from "@/lib/plataforma";
 import {
@@ -24,9 +22,11 @@ import {
 } from "@/components/NotificacionesDrawer";
 
 import { Sidebar } from "@/components/dashboard/Sidebar";
-import { MobileHeader } from "@/components/dashboard/MobileHeader";
+import BarraSuperior, { EVENTO_CERRAR_SESION, EVENTO_SELECTOR_EMPRESA } from "@/components/shell/BarraSuperior";
+import BarraPestanas from "@/components/shell/BarraPestanas";
 import { ModalLogout, SelectorEmpresa } from "@/components/dashboard/DashboardModals";
 import { useVerificacionCorreo } from "@/hooks/useVerificacionCorreo";
+import { useCapaAtras } from "@/lib/botonAtras";
 
 // "Ahora no" en el aviso de notificaciones: no volver a mostrarlo por 7 días
 const NOTIF_POSPUESTAS = "kipu-notif-pospuestas";
@@ -54,10 +54,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [cerrandoSesion,  setCerrandoSesion]  = useState(false);
   const [showSelectorEmp, setShowSelectorEmp] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  // Botón atrás de Android: cierra el menú o las notificaciones antes de navegar
+  useCapaAtras(sidebarOpen, () => setSidebarOpen(false));
+  useCapaAtras(drawerOpen,  () => setDrawerOpen(false));
   // Cuentas antiguas que ya tienen empresa pero nunca verificaron el correo
   const correo = useVerificacionCorreo();
 
   useEffect(() => setMounted(true), []);
+
+  // "Cambiar empresa" y "Cerrar sesión" desde la barra superior y la pantalla Más
+  useEffect(() => {
+    const abrirSelector = () => setShowSelectorEmp(true);
+    const abrirLogout   = () => setShowLogoutModal(true);
+    window.addEventListener(EVENTO_SELECTOR_EMPRESA, abrirSelector);
+    window.addEventListener(EVENTO_CERRAR_SESION, abrirLogout);
+    return () => {
+      window.removeEventListener(EVENTO_SELECTOR_EMPRESA, abrirSelector);
+      window.removeEventListener(EVENTO_CERRAR_SESION, abrirLogout);
+    };
+  }, []);
 
   // App de las tiendas: lo que el plan no incluye no se abre ni desde un enlace
   // o una notificación (ver rutaFueraDelPlan en lib/plataforma.ts)
@@ -212,111 +227,34 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Header móvil Extraído */}
-        <MobileHeader
-          mounted={mounted}
-          resolvedTheme={resolvedTheme}
+        {/* Celular: título, atrás y campana (en la compu, el menú lateral) */}
+        <BarraSuperior
           noLeidas={noLeidas}
-          onOpenSidebar={() => setSidebarOpen(true)}
-          onOpenDrawer={() => setDrawerOpen(true)}
+          sandbox={sandbox}
+          onAbrirNotificaciones={() => setDrawerOpen(true)}
         />
 
-        <main className="flex-1 overflow-y-auto">
-          {/* El SRI tiene intermitencias: los comprobantes esperan en cola */}
-          <FranjaSRI sandbox={sandbox} />
-
-          {/* Banner email no verificado */}
-          {!correo.cargando && !correo.verificado && (
-            <div
-              className="w-full px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 shrink-0"
-              style={{
-                background: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)",
-                borderBottom: "1px solid color-mix(in srgb, var(--kipu-warning) 20%, transparent)",
-              }}
-            >
-              <div className="flex items-center gap-2 text-xs" style={{ color: "var(--kipu-warning)" }}>
-                <AlertTriangle size={14} className="shrink-0" />
-                <span>
-                  {correo.error
-                    ? correo.error
-                    : correo.enviado
-                      ? <>Te enviamos un enlace a <strong>{auth.currentUser?.email}</strong>. Busca el correo de no-reply@kipu.ec (revisa también Spam).</>
-                      : <>Tu correo <strong>{auth.currentUser?.email}</strong> no está verificado.
-                        Verifica tu email para poder emitir comprobantes.</>}
-                </span>
-              </div>
-              <button
-                onClick={correo.enviar}
-                disabled={correo.enviando || correo.espera > 0}
-                className="text-xs underline underline-offset-2 whitespace-nowrap shrink-0 disabled:opacity-50 disabled:no-underline"
-                style={{ color: "var(--kipu-warning)" }}
-              >
-                {correo.enviando
-                  ? "Enviando..."
-                  : correo.espera > 0
-                    ? `Reenviar en ${correo.espera} s`
-                    : correo.enviado ? "Reenviar" : "Enviar correo de verificación"}
-              </button>
-            </div>
-          )}
-
-          {/* Activar notificaciones (Firefox/Safari solo preguntan tras un clic) */}
-          {botonNotif && (
-            <div
-              className="w-full px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 shrink-0"
-              style={{
-                background: "color-mix(in srgb, var(--kipu-accent) 10%, transparent)",
-                borderBottom: "1px solid color-mix(in srgb, var(--kipu-accent) 20%, transparent)",
-              }}
-            >
-              <div className="flex items-center gap-2 text-xs" style={{ color: "var(--kipu-text)" }}>
-                <Bell size={14} className="shrink-0" style={{ color: "var(--kipu-accent)" }} />
-                <span>Activa las notificaciones para saber cuándo el SRI autoriza tus comprobantes.</span>
-              </div>
-              <div className="flex items-center gap-3 shrink-0">
-                <button
-                  onClick={posponerNotificaciones}
-                  className="text-xs underline underline-offset-2"
-                  style={{ color: "var(--kipu-muted)" }}
-                >
-                  Ahora no
-                </button>
-                <button
-                  onClick={activarNotificaciones}
-                  className="text-xs font-semibold text-white px-3 py-1.5 rounded-lg"
-                  style={{ background: "var(--kipu-accent)" }}
-                >
-                  Activar notificaciones
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Banner Sandbox */}
-          {sandbox && (
-            <div
-              className="w-full px-4 py-2 flex items-center justify-center gap-2 text-xs font-medium text-white shrink-0"
-              style={{ background: "var(--kipu-sandbox)" }}
-            >
-              <FlaskConical size={14} />
-              <span>MODO SANDBOX — Las facturas no van al SRI real ni poseen validez tributaria.</span>
-              {puedeProduccion && (
-                <button
-                  onClick={() => setSandbox(false)}
-                  className="ml-3 underline underline-offset-2 hover:no-underline font-semibold"
-                >
-                  Salir
-                </button>
-              )}
-            </div>
-          )}
-
-          {/* Sin plan: en cada página, qué suma Kipu Pro */}
-          <AvisoPro />
+        {/* Abajo deja el alto de la barra de pestañas (--alto-barra-inferior, globals.css) */}
+        <main className="flex-1 overflow-y-auto pb-[var(--alto-barra-inferior,0px)]">
+          {/* Un solo lugar para los avisos: sin conexión, SRI, correo, notificaciones,
+              sandbox y Kipu Pro (el más importante en una línea; "+N" despliega el resto) */}
+          <AvisoShell
+            sandbox={sandbox}
+            puedeProduccion={puedeProduccion}
+            onSalirSandbox={() => setSandbox(false)}
+            correo={correo}
+            email={auth.currentUser?.email}
+            pedirNotificaciones={botonNotif}
+            onActivarNotificaciones={activarNotificaciones}
+            onPosponerNotificaciones={posponerNotificaciones}
+          />
 
           {fueraDelPlan ? null : children}
         </main>
       </div>
+
+      {/* Celular: Inicio · Documentos · Emitir · Personas · Más */}
+      <BarraPestanas />
 
       <PWAInstallBanner />
     </div>

@@ -8,6 +8,7 @@ import { etiquetaIva, opcionesIva } from "@/lib/iva";
 import { baseDesdeTotal, tarifaPct } from "@/lib/precios";
 import { r2 } from "@/lib/dinero";
 import api from "@/lib/api";
+import { SegmentosPersonas } from "@/components/shell/BarraPestanas";
 import { usePermiso } from "@/hooks/usePermiso";
 import SinAcceso from "@/components/SinAcceso";
 import {
@@ -254,8 +255,9 @@ export default function ProductosPage() {
 
   return (
     <div className="p-4 md:p-6">
+      <SegmentosPersonas />
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-6 mt-4 lg:mt-0">
         <div>
           <h1 className="text-xl font-bold" style={{ color: "var(--kipu-text)" }}>Productos y Servicios</h1>
           <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>

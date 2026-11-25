@@ -1,9 +1,11 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
 import {
-  CheckCircle2, Download, Eye, Share2, ChevronDown, MessageCircle, Link2, Clock,
+  Download, Eye, Share2, ChevronDown, MessageCircle, Link2, Clock, FileText, Loader2,
 } from "lucide-react";
 import { type FacturaBase, PDF_FORMATOS, urlXml, urlPdf, urlConsulta } from "./utils";
+import { useAvisos } from "@/components/ui/Avisos";
+import { esNativo, guardarYCompartir } from "@/lib/nativo";
 
 // Estados que pueden generar PDF. Los anulados no: el servidor ya no los entrega (410)
 const ESTADOS_CON_PDF = ["AUTORIZADO", "FIRMADO", "RECIBIDA", "EN_REVISION"];
@@ -20,7 +22,9 @@ const ESTADOS_COMPARTIR = ["AUTORIZADO"];
 export default function AccionesArchivo({ factura }: { factura: FacturaBase }) {
   const [showPdfMenu,   setShowPdfMenu]   = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
-  const [compartidoMsg, setCompartidoMsg] = useState<string | null>(null);
+  // Archivo que se está bajando para compartir (en la app tarda un momento)
+  const [preparando,    setPreparando]    = useState<"pdf" | "xml" | "compartir" | null>(null);
+  const avisos = useAvisos();
 
   const pdfMenuRef   = useRef<HTMLDivElement>(null);
   const shareMenuRef = useRef<HTMLDivElement>(null);
@@ -47,16 +51,40 @@ export default function AccionesArchivo({ factura }: { factura: FacturaBase }) {
   const puedeDescargarXml = ESTADOS_CON_XML.includes(factura.estado_sri);
   const puedeCompartir    = ESTADOS_COMPARTIR.includes(factura.estado_sri);
 
-  const abrirPDF = (formato: string) => {
-    window.open(urlPdf(factura.clave_acceso, formato), "_blank");
+  const numero = factura.numero_doc || factura.clave_acceso;
+
+  // Web: el PDF se abre en otra pestaña; app: se guarda y sale la hoja de compartir
+  // (abrir, imprimir, guardar en Archivos, WhatsApp…). Ver lib/nativo.ts
+  const conArchivo = async (tipo: "pdf" | "xml" | "compartir", accion: () => Promise<void>) => {
     setShowPdfMenu(false);
+    setShowShareMenu(false);
+    setPreparando(tipo);
+    try {
+      await accion();
+    } catch {
+      avisos.error("No se pudo preparar el archivo. Revisa tu conexión e intenta de nuevo.");
+    } finally {
+      setPreparando(null);
+    }
   };
+
+  const abrirPDF = (formato: string) => conArchivo("pdf", () =>
+    guardarYCompartir({ url: urlPdf(factura.clave_acceso, formato) }, `${numero}-${formato}.pdf`,
+                      { titulo: `Comprobante ${numero}`, abrirEnWeb: true }));
+
+  const descargarXML = () => conArchivo("xml", () =>
+    guardarYCompartir({ url: xml_url }, `${factura.clave_acceso}.xml`, { titulo: `XML ${numero}` }));
+
+  const compartirPDF = () => conArchivo("compartir", () =>
+    guardarYCompartir({ url: urlPdf(factura.clave_acceso, "a4") }, `${numero}.pdf`, {
+      titulo: `Comprobante ${numero}`,
+      texto:  `Aquí está tu comprobante electrónico:\n${consulta_url}`,
+    }));
 
   const compartirLink = async () => {
     await navigator.clipboard.writeText(consulta_url);
-    setCompartidoMsg("¡Enlace copiado!");
+    avisos.exito("Enlace copiado");
     setShowShareMenu(false);
-    setTimeout(() => setCompartidoMsg(null), 2500);
   };
 
   const abrirWhatsApp = () => {
@@ -71,16 +99,6 @@ export default function AccionesArchivo({ factura }: { factura: FacturaBase }) {
 
   return (
     <>
-      {/* Toast compartir */}
-      {compartidoMsg && (
-        <div
-          className="fixed top-4 left-1/2 -translate-x-1/2 z-50 text-white text-sm px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 animate-in fade-in slide-in-from-top-2"
-          style={{ background: "var(--kipu-success)" }}
-        >
-          <CheckCircle2 size={14} /> {compartidoMsg}
-        </div>
-      )}
-
       {/* ── Dropdown PDF ─────────────────────────────────────── */}
       <div className="relative" ref={pdfMenuRef}>
         <button
@@ -106,7 +124,7 @@ export default function AccionesArchivo({ factura }: { factura: FacturaBase }) {
             : "var(--kipu-surface)"
           }
         >
-          {esProvisional ? <Clock size={13} /> : <Eye size={13} />}
+          {preparando === "pdf" ? <Loader2 size={13} className="animate-spin" /> : esProvisional ? <Clock size={13} /> : <Eye size={13} />}
           {esProvisional ? "PDF provisional" : "PDF"}
           <ChevronDown size={11} className={showPdfMenu ? "rotate-180 transition-transform" : "transition-transform"} />
         </button>
@@ -157,10 +175,11 @@ export default function AccionesArchivo({ factura }: { factura: FacturaBase }) {
 
       {/* ── XML (solo autorizado/anulado) ────────────────────── */}
       {puedeDescargarXml && (
-        <a
-          href={xml_url}
-          download
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors"
+        <button
+          type="button"
+          onClick={descargarXML}
+          disabled={preparando !== null}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors disabled:opacity-60"
           style={{
             background: "var(--kipu-surface)",
             color: "var(--kipu-text)",
@@ -168,8 +187,8 @@ export default function AccionesArchivo({ factura }: { factura: FacturaBase }) {
           onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 5%, transparent)"}
           onMouseLeave={e => e.currentTarget.style.background = "var(--kipu-surface)"}
         >
-          <Download size={13} /> XML
-        </a>
+          {preparando === "xml" ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />} XML
+        </button>
       )}
 
       {/* ── Dropdown Compartir (solo vigentes) ───────────────── */}
@@ -186,7 +205,7 @@ export default function AccionesArchivo({ factura }: { factura: FacturaBase }) {
             onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-accent) 25%, transparent)"}
             onMouseLeave={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-accent) 15%, transparent)"}
           >
-            <Share2 size={13} /> Compartir
+            {preparando === "compartir" ? <Loader2 size={13} className="animate-spin" /> : <Share2 size={13} />} Compartir
             <ChevronDown size={11} className={showShareMenu ? "rotate-180 transition-transform" : "transition-transform"} />
           </button>
           {showShareMenu && (
@@ -205,6 +224,20 @@ export default function AccionesArchivo({ factura }: { factura: FacturaBase }) {
                 </p>
               </div>
               {/* Opciones */}
+              {/* App: el PDF por la hoja de compartir del sistema (WhatsApp, correo, Drive…) */}
+              {esNativo() && (
+                <button
+                  onClick={compartirPDF}
+                  className="w-full flex items-center gap-2.5 px-3 py-2.5 transition-colors text-left"
+                  style={{ borderBottom: "1px solid var(--kipu-border)" }}
+                >
+                  <FileText size={13} className="shrink-0" style={{ color: "var(--kipu-accent)" }} />
+                  <div>
+                    <p className="text-sm" style={{ color: "var(--kipu-text)" }}>Compartir PDF</p>
+                    <p className="text-[10px]" style={{ color: "var(--kipu-subtle)" }}>WhatsApp, correo, Drive… con el enlace incluido</p>
+                  </div>
+                </button>
+              )}
               <button
                 onClick={compartirLink}
                 className="w-full flex items-center gap-2.5 px-3 py-2.5 transition-colors text-left"

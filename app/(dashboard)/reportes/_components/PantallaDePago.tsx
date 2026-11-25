@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AlertTriangle, ArrowLeft, Calculator, CheckCircle2, Loader2, Sparkles, Ticket } from "lucide-react";
 import api from "@/lib/api";
+import { abrirExterno, esNativo } from "@/lib/nativo";
 import { ES_APP_NATIVA } from "@/lib/plataforma";
 
 const dinero = (n: number = 0) =>
@@ -65,7 +66,9 @@ export default function PantallaDePago({
     setError("");
     try {
       const res = await api.post("/api/v1/app/declaraciones/pase/checkout", { periodo: pase.periodo });
-      window.location.href = res.data.checkout_url;
+      // App: navegador dentro de la app; al cerrarlo se vuelve a consultar el pase
+      await abrirExterno(res.data.checkout_url, { mismaPestana: true, alCerrar: onRecargar });
+      if (esNativo()) setPagando(false);
     } catch (e) {
       const d = (e as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail;
       setError(typeof d === "string" ? d : "No se pudo abrir el pago. Intenta de nuevo.");

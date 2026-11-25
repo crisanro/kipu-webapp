@@ -3,6 +3,7 @@ import { rutas } from "@/lib/rutas";
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import api from "@/lib/api";
+import { SegmentosPersonas } from "@/components/shell/BarraPestanas";
 import { usePermiso } from "@/hooks/usePermiso";
 import SinAcceso from "@/components/SinAcceso";
 import Hoja from "@/components/ui/Hoja";
@@ -218,8 +219,9 @@ function PersonasContenido() {
 
   return (
     <div className="p-4 md:p-6">
+      <SegmentosPersonas />
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-6 mt-4 lg:mt-0">
         <div>
           <h1 className="text-xl font-bold" style={{ color: "var(--kipu-text)" }}>Personas</h1>
           <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>{personas.length} registradas</p>

@@ -7,6 +7,7 @@
 import { useEffect, useState } from "react";
 import { AlertTriangle, CalendarClock, CheckCircle2, Clock, Download, FileText, Loader2, MessageSquareText, XCircle } from "lucide-react";
 import api from "@/lib/api";
+import { abrirExterno } from "@/lib/nativo";
 
 interface Gestion {
   id:                number;
@@ -49,7 +50,7 @@ export default function PanelCliente({ soloHistorial = false }: { soloHistorial?
     setBajando(g.id);
     try {
       const r = await api.get(`/api/v1/app/al-dia/gestiones/${g.id}/comprobante`);
-      window.open(r.data.url, "_blank", "noopener,noreferrer");
+      await abrirExterno(r.data.url);   // app: navegador dentro de la app
     } catch {
       setError("No se pudo descargar el comprobante. Intenta de nuevo.");
     } finally {

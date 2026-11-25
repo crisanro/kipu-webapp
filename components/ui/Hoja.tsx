@@ -12,7 +12,7 @@
 //
 // En el pie, el primero es el secundario: en la compu queda a la izquierda y en el
 // celular abajo (el principal, arriba y al alcance del pulgar).
-// Pendiente (Fase 2): el botón atrás de Android cerrará la hoja de arriba.
+// El botón atrás de Android cierra la hoja de arriba (lib/botonAtras.ts).
 
 "use client";
 
@@ -22,6 +22,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
+import { useCapaAtras } from "@/lib/botonAtras";
 import BotonIcono from "./BotonIcono";
 import { cn } from "./cn";
 
@@ -77,6 +78,9 @@ export default function Hoja({
   const onCerrarRef = useRef(onCerrar);
   const cerrableRef = useRef(cerrable);
   useEffect(() => { onCerrarRef.current = onCerrar; cerrableRef.current = cerrable; });
+
+  // Botón atrás de Android: cierra esta hoja antes de navegar (si no es cerrable, no hace nada)
+  useCapaAtras(abierta, () => { if (cerrableRef.current) onCerrarRef.current(); });
 
   // Sigue montada mientras dura la animación de salida
   const [abiertaAntes, setAbiertaAntes] = useState(abierta);

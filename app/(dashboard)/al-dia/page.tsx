@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { CalendarCheck, CheckCircle2, Loader2, MessageCircle, ShieldCheck } from "lucide-react";
 import api from "@/lib/api";
+import { abrirExterno, esNativo } from "@/lib/nativo";
 import { useAuthStore } from "@/store/auth.store";
 import ClaveSri from "@/components/al-dia/ClaveSri";
 import PanelCliente from "@/components/al-dia/PanelCliente";
@@ -112,7 +113,10 @@ export default function KipuAlDiaPage() {
         });
       }
       const r = await api.post("/api/v1/app/al-dia/checkout");
-      window.location.href = r.data.checkout_url;
+      // Web: el pago en esta pestaña (Stripe vuelve aquí). App: navegador dentro de
+      // la app; al cerrarlo se vuelve a consultar si el pago entró
+      await abrirExterno(r.data.checkout_url, { mismaPestana: true, alCerrar: () => void cargar() });
+      if (esNativo()) setEnviando(false);
     } catch (err: unknown) {
       setError(detalle(err, "No pudimos continuar al pago. Intenta de nuevo."));
       setEnviando(false);
@@ -123,7 +127,7 @@ export default function KipuAlDiaPage() {
   const gestionarPago = async () => {
     try {
       const r = await api.post("/api/v1/app/suscripcion/portal?volver=al-dia");
-      window.location.href = r.data.portal_url;
+      await abrirExterno(r.data.portal_url, { mismaPestana: true, alCerrar: () => void cargar() });
     } catch (err: unknown) {
       setError(detalle(err, "No pudimos abrir la gestión del pago."));
     }

@@ -28,6 +28,17 @@ const config: CapacitorConfig = {
       smallIcon: "ic_stat_kipu",
       iconColor: "#059669",   // = @color/ic_launcher_background
     },
+    // El splash se queda hasta que la app está lista (components/shell/PuenteNativo.tsx
+    // lo quita; a los 8 s sale igual): sin pantalla en blanco ni doble spinner al abrir
+    SplashScreen: {
+      launchAutoHide: false,
+      showSpinner:    false,
+    },
+    // Android a pantalla completa (edge-to-edge): que el WebView se achique con el
+    // teclado, para que no tape los campos ni los botones fijos de abajo
+    Keyboard: {
+      resizeOnFullScreen: true,
+    },
   },
   experimental: {
     ios: {
