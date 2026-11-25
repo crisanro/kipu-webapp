@@ -62,7 +62,8 @@ const FEATURES_AL_DIA = [
 ];
 const SISTEMA_AL_DIA = [
   "Facturas sin límite",
-  "Compras y reportes de IVA, renta y ATS",
+  "Tus compras del SRI importadas con un clic",
+  "Reportes de IVA, renta y ATS",
   "Cuentas por cobrar y pagar, y proformas",
   "Hasta 5 usuarios",
 ];
@@ -86,7 +87,8 @@ const ESTADO_COLOR: Record<string, { color: string; bg: string; border: string }
 
 const FEATURES: { texto: string; destacado?: boolean }[] = [
   { texto: "Facturas, liquidaciones, notas y retenciones sin límite" },
-  { texto: "Registro de compras y reportes de IVA (104), renta y ATS" },
+  { texto: "Tus compras del SRI importadas con un clic (extensión para Chrome y Firefox)" },
+  { texto: "Reportes de IVA (104), renta y ATS" },
   { texto: "Cuentas por cobrar y pagar, y proformas en PDF" },
   { texto: "Alertas de errores antes de declarar y facturas sin la marca de Kipu" },
   { texto: "API: 300 comprobantes al mes incluidos" },
