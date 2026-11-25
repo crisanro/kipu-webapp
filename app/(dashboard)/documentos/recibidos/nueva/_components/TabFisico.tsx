@@ -714,7 +714,7 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
           <div className="grid grid-cols-2 md:grid-cols-1 gap-3">
             {([
               { ref: camaraRef, icono: Camera,    texto: "Tomar foto",   extra: "md:hidden" },
-              { ref: imagenRef, icono: ImageIcon, texto: "Elegir imagen", extra: "" },
+              { ref: imagenRef, icono: ImageIcon, texto: "Elegir de la galería", extra: "" },
             ] as const).map(({ ref, icono: Icono, texto, extra }) => (
               <button
                 key={texto}
@@ -734,7 +734,9 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
                 <Icono size={24} style={{ color: "var(--kipu-subtle)" }} />
                 <div className="text-center">
                   <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>{texto}</p>
-                  <p className="text-xs mt-0.5" style={{ color: "var(--kipu-subtle)" }}>JPG, PNG o WEBP</p>
+                  <p className="text-xs mt-0.5" style={{ color: "var(--kipu-subtle)" }}>
+                    {ref === imagenRef ? "O una foto que te enviaron por WhatsApp" : "JPG, PNG o WEBP"}
+                  </p>
                 </div>
               </button>
             ))}

@@ -1,5 +1,9 @@
 "use client";
-import { Puzzle, Play, ArrowRight, Download, Globe } from "lucide-react";
+import { Puzzle, Play, ArrowRight, Download, Globe, Monitor, Send } from "lucide-react";
+import { ES_APP_NATIVA } from "@/lib/plataforma";
+import { compartir } from "@/lib/nativo";
+import { useAvisos } from "@/components/ui/Avisos";
+import Boton from "@/components/ui/Boton";
 
 interface Props {
   empresa: any;
@@ -11,7 +15,7 @@ const VIDEO_ID: string | null = null;
 const CHROME_EXT_URL  = "https://chromewebstore.google.com/detail/kipu-%E2%80%94-importador-sri/fpaeflibkbihlpdkfbpniminocmplplo";
 const FIREFOX_EXT_URL = "https://addons.mozilla.org/es-ES/firefox/addon/kipu-importador-sri/";
 
-export default function TabSRI({ empresa, onDone }: Props) {
+function ContenidoSRI({ empresa, onDone }: Props) {
   return (
     <div className="space-y-5">
 
@@ -181,5 +185,61 @@ export default function TabSRI({ empresa, onDone }: Props) {
       </div>
 
     </div>
+  );
+}
+
+// ── Solo en la compu ──────────────────────────────────────────────────────────
+// La importación masiva usa la extensión de Chrome/Firefox de computadora: en la
+// app y en el navegador del celular no existe. Ahí se explica cómo hacerlo.
+const URL_PANEL = "https://app.kipu.ec/documentos/recibidos/nueva";
+
+function SoloDesdeLaCompu() {
+  const avisos = useAvisos();
+  const enviarEnlace = async () => {
+    const ok = await compartir({
+      titulo: "Kipu: importar compras del SRI",
+      texto:  "Abre este enlace en tu computadora para importar tus compras del SRI:",
+      url:    URL_PANEL,
+    });
+    if (!ok) {
+      try { await navigator.clipboard.writeText(URL_PANEL); avisos.exito("Enlace copiado"); }
+      catch { avisos.info(URL_PANEL); }
+    }
+  };
+  return (
+    <div className="space-y-4 rounded-xl border border-borde bg-superficie p-5 text-center">
+      <span className="mx-auto inline-flex size-12 items-center justify-center rounded-xl bg-acento-suave text-acento">
+        <Monitor size={22} aria-hidden />
+      </span>
+      <div className="space-y-1.5">
+        <h2 className="text-base font-bold text-texto">El SRI masivo se hace desde la computadora</h2>
+        <p className="text-sm leading-relaxed text-tenue">
+          Usa la extensión <b>Kipu Importador SRI</b>, que funciona en Chrome o Firefox de
+          computadora: entra al portal del SRI y trae todas tus compras a Kipu de una vez.
+        </p>
+      </div>
+      <ol className="space-y-1 text-left text-sm text-tenue">
+        <li>1. En tu computadora, abre <b className="text-texto">app.kipu.ec</b>.</li>
+        <li>2. Ve a Documentos → Recibidos → Registrar → SRI masivo.</li>
+        <li>3. Instala la extensión y sigue los pasos.</li>
+      </ol>
+      <Boton variante="secundario" onClick={enviarEnlace} icono={<Send size={16} />} anchoCompleto>
+        Enviarme el enlace
+      </Boton>
+      <p className="text-xs text-sutil">
+        Desde aquí puedes registrar una compra subiendo su XML o una foto del comprobante.
+      </p>
+    </div>
+  );
+}
+
+export default function TabSRI(props: Props) {
+  // App de las tiendas: nunca. Web: solo en pantallas de computadora.
+  if (ES_APP_NATIVA) return <SoloDesdeLaCompu />;
+  return (
+    <>
+      <div className="lg:hidden"><SoloDesdeLaCompu /></div>
+      <div className="hidden lg:block"><ContenidoSRI {...props} /></div>
+    </>
   );
 }

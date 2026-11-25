@@ -29,7 +29,7 @@
 	<key>NSCameraUsageDescription</key>
 	<string>Kipu usa la cámara para leer códigos de barras de tus productos y tomar fotos de comprobantes.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Kipu usa tus fotos para adjuntar la imagen de un comprobante físico.</string>
+	<string>Kipu usa tus fotos para adjuntar la imagen de un comprobante físico, por ejemplo una foto que te enviaron por WhatsApp.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>
