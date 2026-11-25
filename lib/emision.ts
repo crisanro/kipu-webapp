@@ -16,12 +16,21 @@ export function debeRenovarClave(err: any): boolean {
   return typeof status === "number" && ERRORES_DEFINITIVOS.has(status);
 }
 
-/** true si se pasó el uso justo del plan gratis: la pantalla ofrece Pro o créditos. */
-export function esUsoJusto(err: unknown): boolean {
+/** El `codigo` de un detail {codigo, mensaje} del backend, o "". */
+function codigoError(err: unknown): string {
   const detail = (err as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail as
     { codigo?: unknown } | undefined;
-  return !!detail && typeof detail === "object" && !Array.isArray(detail)
-    && String(detail.codigo ?? "").startsWith("USO_JUSTO");
+  return !!detail && typeof detail === "object" && !Array.isArray(detail) ? String(detail.codigo ?? "") : "";
+}
+
+/** true si se pasó el uso justo del plan gratis: la pantalla ofrece Pro o créditos. */
+export function esUsoJusto(err: unknown): boolean {
+  return codigoError(err).startsWith("USO_JUSTO");
+}
+
+/** true si el comprobante requiere Kipu Pro / Al Día (402 PLAN_REQUERIDO: liquidación y retención). */
+export function esPlanRequerido(err: unknown): boolean {
+  return codigoError(err) === "PLAN_REQUERIDO";
 }
 
 /** Mensaje para el usuario según el tipo de error. */

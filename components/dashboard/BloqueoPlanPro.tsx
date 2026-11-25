@@ -16,8 +16,8 @@ export const MENSAJE_PLAN_LIQ_RET = "Las liquidaciones de compra y las retencion
 interface Props {
   titulo?:  string;
   mensaje?: string;
-  /** Salida propia; sin ella, "Ver planes" (solo en la web). */
-  accion?:  { href: string; label: string };
+  /** Salida propia; sin ella, "Ver planes" (solo en la web); null = sin botón. */
+  accion?:  { href: string; label: string } | null;
 }
 
 export default function BloqueoPlanPro({
@@ -25,7 +25,7 @@ export default function BloqueoPlanPro({
   mensaje = MENSAJE_PLAN_LIQ_RET,
   accion,
 }: Props) {
-  const salida = accion ?? (ES_APP_NATIVA ? null : { href: "/planes", label: "Ver planes" });
+  const salida = accion !== undefined ? accion : ES_APP_NATIVA ? null : { href: "/planes", label: "Ver planes" };
 
   return (
     <div
