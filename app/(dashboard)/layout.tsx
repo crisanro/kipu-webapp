@@ -30,6 +30,7 @@ import { ModalLogout, SelectorEmpresa } from "@/components/dashboard/DashboardMo
 import { useVerificacionCorreo } from "@/hooks/useVerificacionCorreo";
 import { useCapaAtras } from "@/lib/botonAtras";
 import { abrirExterno } from "@/lib/nativo";
+import { enlaceWhatsAppAlDia } from "@/lib/soporte";
 import { useRestaurarScroll } from "@/lib/useRestaurarScroll";
 import { useAvisos } from "@/components/ui/Avisos";
 
@@ -175,11 +176,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   };
 
   // Pago fallido: Stripe reintenta y el plan sigue activo. En la web, enlace al
-  // Customer Portal para los dos planes. En la app solo Al Día lo lleva (es un
-  // servicio); el Pro no tiene enlaces de pago en la app (reglas de las tiendas).
+  // Customer Portal para los dos planes. En la app no hay enlaces de pago (reglas
+  // de las tiendas): Al Día, que es un servicio, se resuelve por WhatsApp con el
+  // equipo; el Pro, solo el aviso.
   const pagoFallido   = !!empresa?.suscripcion?.pago_fallido;
   const subEsAlDia    = empresa?.suscripcion?.plan === "AL_DIA";
-  const avisoConPago  = !ES_APP_NATIVA || subEsAlDia;
+  const avisoConPago  = !ES_APP_NATIVA;
+  const pagoPorWhatsApp = ES_APP_NATIVA && subEsAlDia;
   const adminDelPlan  = empresa?.rol === "admin";      // solo el administrador gestiona el pago
   const actualizarTarjeta = async () => {
     try {
@@ -274,14 +277,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             pedirNotificaciones={botonNotif}
             onActivarNotificaciones={activarNotificaciones}
             onPosponerNotificaciones={posponerNotificaciones}
-            pagoFallido={pagoFallido ? {
+            pagoFallido={pagoFallido ? (pagoPorWhatsApp ? {
+              texto: adminDelPlan
+                ? "El pago de tu servicio falló. Escríbenos por WhatsApp y lo resolvemos."
+                : "El pago del servicio falló. Avísale al administrador de la empresa.",
+              onActualizar: adminDelPlan
+                ? () => void abrirExterno(enlaceWhatsAppAlDia(empresa.razon_social, "pago"))
+                : undefined,
+              etiqueta: "Escribir por WhatsApp",
+            } : {
               texto: !avisoConPago
                 ? "Hubo un problema con tu pago. Revisa tu correo."
                 : adminDelPlan
                   ? "Tu pago falló, actualiza tu tarjeta."
                   : "El pago del plan falló. Avísale al administrador de la empresa para que actualice la tarjeta.",
               onActualizar: avisoConPago && adminDelPlan ? actualizarTarjeta : undefined,
-            } : null}
+            }) : null}
           />
 
           {fueraDelPlan ? null : children}

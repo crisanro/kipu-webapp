@@ -73,3 +73,19 @@ export function enlaceWhatsAppFalla(problema: string, email?: string | null): st
   const texto = email ? `${problema}\nCorreo: ${email}` : problema;
   return `https://wa.me/${WHATSAPP_SOPORTE}?text=${encodeURIComponent(texto)}`;
 }
+
+/**
+ * Kipu Al Día en la app (reglas de las tiendas): no se contrata ni se paga dentro
+ * de la app. El equipo atiende por WhatsApp y manda el link de pago por fuera.
+ *   - "informacion": quien no lo tiene y quiere contratarlo.
+ *   - "pago": quien lo tiene y quiere cambiar la tarjeta, cancelar o resolver un pago.
+ * Para todos, con o sin plan: es una consulta de venta, no soporte.
+ */
+export function enlaceWhatsAppAlDia(razonSocial: string | null | undefined,
+                                    motivo: "informacion" | "pago" = "informacion"): string {
+  const empresa = razonSocial?.trim();
+  const texto = motivo === "pago"
+    ? `Hola, tengo Kipu Al Día${empresa ? ` en mi empresa ${empresa}` : ""} y quiero cambiar la tarjeta, cancelar o resolver un pago.`
+    : `Hola, quiero información sobre Kipu Al Día para mi empresa${empresa ? ` ${empresa}` : ""}`;
+  return `https://wa.me/${WHATSAPP_SOPORTE}?text=${encodeURIComponent(texto)}`;
+}

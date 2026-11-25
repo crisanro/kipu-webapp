@@ -16,7 +16,7 @@ import SelectorPeriodo, { periodoDisponible, type Periodo, type PreciosPlan } fr
 import { ES_APP_NATIVA } from "@/lib/plataforma";
 
 // Contacto de ventas (transferencia, cambio de plan): el mismo número configurado
-import { WHATSAPP_SOPORTE as SOPORTE_WA } from "@/lib/soporte";
+import { WHATSAPP_SOPORTE as SOPORTE_WA, enlaceWhatsAppAlDia } from "@/lib/soporte";
 
 interface Estado {
   disponible:           boolean;
@@ -277,6 +277,41 @@ export default function KipuAlDiaPage() {
   const irAContratar = () =>
     document.getElementById("contratar")?.scrollIntoView({ behavior: "smooth", block: "start" });
 
+  // App (reglas de las tiendas): Al Día no se contrata ni se paga dentro de la app.
+  // Solo se explica el servicio y un botón al WhatsApp del equipo, que cierra la
+  // venta y manda el link de pago por fuera. Sin precios, términos ni pago.
+  const whatsappInfo = enlaceWhatsAppAlDia(empresa?.razon_social, "informacion");
+  const whatsappPago = enlaceWhatsAppAlDia(empresa?.razon_social, "pago");
+  if (ES_APP_NATIVA && !estado?.contratado) {
+    return (
+      <div className="p-4 md:p-6 max-w-3xl mx-auto space-y-8">
+        {error && (
+          <p className="text-sm px-3 py-2 rounded-lg"
+             style={{ color: "var(--kipu-danger)", background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)" }}>
+            {error}
+          </p>
+        )}
+        <PanelCliente soloHistorial />
+        <HeroAlDia precio={null} onContratar={() => {}} whatsapp={whatsappInfo} />
+        <DemoAlDia ruc={empresa?.ruc} semestral={empresa?.periodo_iva === "SEMESTRAL"} enProduccion={enProduccion} />
+        <ComoFunciona />
+        <QueIncluye />
+        <Confianza />
+        <Preguntas />
+        <div className="rounded-xl p-5 text-center space-y-3" style={caja}>
+          <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>
+            ¿Quieres que tu contador de Kipu se encargue? Escríbenos y te contamos cómo empezar.
+          </p>
+          <a href={whatsappInfo} target="_blank" rel="noopener noreferrer"
+             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-white font-semibold text-sm"
+             style={{ background: "var(--kipu-accent)" }}>
+            <MessageCircle size={16} /> Escríbenos por WhatsApp
+          </a>
+        </div>
+      </div>
+    );
+  }
+
   // Sin contratar: página de venta (la demo muestra lo que verá después)
   if (!estado?.contratado) {
     return (
@@ -348,11 +383,17 @@ export default function KipuAlDiaPage() {
             {estado.period_end ? new Date(estado.period_end).toLocaleDateString("es-EC") : "—"}.
             Cualquier duda, escríbenos por WhatsApp de lunes a viernes, de 8:00 a 17:00.
           </p>
-          {esAdmin && (
+          {esAdmin && (ES_APP_NATIVA ? (
+            // App: sin enlaces de pago; tarjeta, cancelación o pagos, por WhatsApp
+            <a href={whatsappPago} target="_blank" rel="noopener noreferrer"
+               className="inline-flex items-center gap-1.5 text-sm font-medium" style={{ color: "var(--kipu-accent)" }}>
+              <MessageCircle size={14} /> Escríbenos por WhatsApp para cambiar la tarjeta o cancelar
+            </a>
+          ) : (
             <button type="button" onClick={gestionarPago} className="text-sm underline" style={{ color: "var(--kipu-accent)" }}>
               Cambiar tarjeta o cancelar
             </button>
-          )}
+          ))}
         </div>
       )}
 
