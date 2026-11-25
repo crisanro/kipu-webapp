@@ -10,12 +10,17 @@ import { debeRenovarClave, esUsoJusto, mensajeErrorEmision } from "@/lib/emision
 import api from "@/lib/api";
 import AvisoColchon from "@/components/uso-justo/AvisoColchon";
 import { useAuthStore } from "@/store/auth.store";
+import { useSandboxStore } from "@/store/sandbox.store";
 import { CheckCircle2, AlertTriangle, Plus, Trash2, Calendar } from "lucide-react";
 import PuntoEmision from "../components/PuntoEmision";
 import { usePuntoEmision } from "../components/usePuntoEmision";
 import CamposAdicionales, { CampoAdicional } from "../components/CamposAdicionales";
 import DocOrigenSelector, { DocOrigen } from "../components/DocOrigenSelector";
 import { getPaisesOrdenados } from "@/lib/catalogos/paises-sri";
+import {
+  fechaCatalogo, obtenerCatalogoRetenciones, type CatalogoRetenciones,
+  MAS_USADOS_RESIDENTES, MAS_USADOS_NO_RESIDENTES,
+} from "@/lib/catalogos/retenciones";
 import { formatoPeriodo } from "@/lib/teclado";
 
 const fmt = (n: number) => r2(n).toFixed(2);
@@ -30,21 +35,271 @@ interface ImpuestoRet {
   valorRetenido:     number;
 }
 
+// ── Catálogos de retención ───────────────────────────────────────────────────
+// El catálogo viene del backend (lib/catalogos/retenciones.ts), versionado por
+// la fecha del documento sustento. Si no se puede cargar, se usa RESPALDO: la
+// lista de la Fase 1 (Catálogo ATS, bloque "Desde 06/08/2026", y ficha técnica
+// v2.34, tabla 20).
+interface OpcionRet {
+  cod:   string;
+  label: string;
+  pct:   number;
+}
+
+// No residentes: el % depende del régimen fiscal (tipoRegi)
+interface OpcionNoResidente extends OpcionRet {
+  pctParaiso: number;   // paraíso fiscal (02) o régimen preferente (03)
+}
+
+// Lo que usa la pantalla. En cada lista, el primero es el sugerido.
+interface CatalogoUI {
+  version:      string | null;   // null = respaldo local
+  residentes:   OpcionRet[];
+  noResidentes: OpcionNoResidente[];
+  iva:          OpcionRet[];
+  isd:          OpcionRet[];
+  sustento:     { value: string; label: string }[];
+}
+
+// Renta, pago a residentes (respaldo)
+const RESPALDO_RESIDENTES: OpcionRet[] = [
+  { cod: "303",  label: "Honorarios profesionales (relacionados con el título)", pct: 10 },
+  { cod: "303A", label: "Servicios profesionales prestados por sociedades residentes", pct: 5 },
+  { cod: "304",  label: "Servicios donde predomina el intelecto (no relacionados con el título)", pct: 10 },
+  { cod: "307",  label: "Servicios donde predomina la mano de obra",        pct: 3  },
+  { cod: "308",  label: "Utilización de imagen o renombre (incl. influencers)", pct: 10 },
+  { cod: "309",  label: "Servicios de medios de comunicación y agencias de publicidad", pct: 3 },
+  // El catálogo indica "1 /0 según resolución NAC-DGERCGC26-00000028"; se sugiere 1.
+  { cod: "310",  label: "Transporte privado de pasajeros o transporte de carga", pct: 1 },
+  { cod: "312",  label: "Transferencia de bienes muebles corporales",       pct: 2  },
+  { cod: "319",  label: "Arrendamiento mercantil (prestado por sociedades)", pct: 2 },
+  { cod: "320",  label: "Arrendamiento de bienes inmuebles",                pct: 10 },
+  { cod: "322",  label: "Seguros y reaseguros (primas y cesiones)",         pct: 2  },
+  { cod: "343",  label: "Otras retenciones aplicables el 1% (incluye RIMPE emprendedores)", pct: 1 },
+  { cod: "343A", label: "Energía eléctrica",                                pct: 2  },
+  { cod: "343B", label: "Construcción de obra material inmueble, urbanización y similares", pct: 2 },
+  { cod: "3440", label: "Otras retenciones aplicables el 3%",               pct: 3  },
+  { cod: "3482", label: "Comisiones a sociedades residentes y establecimientos permanentes", pct: 5 },
+  { cod: "332",  label: "Otras compras no sujetas a retención (incluye RIMPE negocios populares)", pct: 0 },
+];
+
+// Renta, pago a no residentes (respaldo). 501 admite 25 o 37. 501A admite 3, 5,
+// 8, 10, 15, 25 y 37 (las tarifas menores son de convenio): se sugiere 25/37 y,
+// con convenio, el % queda editable.
+// NOTA: 501 confirmado en el Catálogo ATS. Mapeo al casillero 422/472 del 103 deducido (501A ↔ 421 por descripción idéntica), sin tabla oficial.
+const RESPALDO_NO_RESIDENTES: OpcionNoResidente[] = [
+  { cod: "501",  label: "Beneficios / servicios empresariales", pct: 25, pctParaiso: 37 },
+  { cod: "501A", label: "Servicios técnicos, administrativos, consultoría y regalías", pct: 25, pctParaiso: 37 },
+];
+
+// Códigos de IVA (respaldo)
+const RESPALDO_IVA: OpcionRet[] = [
+  { cod: "9",  label: "Retención 10% del IVA",  pct: 10  },
+  { cod: "10", label: "Retención 20% del IVA",  pct: 20  },
+  { cod: "1",  label: "Retención 30% del IVA",  pct: 30  },
+  { cod: "11", label: "Retención 50% del IVA",  pct: 50  },
+  { cod: "2",  label: "Retención 70% del IVA",  pct: 70  },
+  { cod: "3",  label: "Retención 100% del IVA", pct: 100 },
+  { cod: "7",  label: "Retención en cero",      pct: 0   },
+  { cod: "8",  label: "No procede retención",   pct: 0   },
+];
+
+// ISD (respaldo): 2,5% desde el 01/05/2025
+const RESPALDO_ISD: OpcionRet[] = [
+  { cod: "4586", label: "Impuesto a la salida de divisas 2,5%", pct: 2.5 },
+];
+
+// Sustento (respaldo): Tabla 5 del Catálogo ATS, solo códigos vigentes
+const RESPALDO_SUSTENTO = [
+  { value: "01", label: "Crédito tributario para IVA" },
+  { value: "02", label: "Costo o gasto para IR" },
+  { value: "03", label: "Activo fijo — Crédito tributario IVA" },
+  { value: "04", label: "Activo fijo — Costo o gasto IR" },
+  { value: "05", label: "Liquidación gastos de viaje, hospedaje y alimentación (a nombre de empleados)" },
+  { value: "06", label: "Inventario — Crédito tributario IVA" },
+  { value: "07", label: "Inventario — Costo o gasto IR" },
+  { value: "08", label: "Valor pagado para solicitar reembolso de gasto (intermediario)" },
+  { value: "09", label: "Reembolso por siniestros" },
+  { value: "10", label: "Distribución de dividendos, beneficios o utilidades" },
+  { value: "11", label: "Convenios de débito o recaudación para IFIs" },
+  { value: "12", label: "Impuestos y retenciones presuntivos" },
+  { value: "13", label: "Valores reconocidos por entidades del sector público" },
+  { value: "14", label: "Valores facturados por socios a operadoras de transporte" },
+  { value: "15", label: "Pagos por consumos propios y de terceros de servicios digitales" },
+];
+
+const RESPALDO: CatalogoUI = {
+  version:      null,
+  residentes:   RESPALDO_RESIDENTES,
+  noResidentes: RESPALDO_NO_RESIDENTES,
+  iva:          RESPALDO_IVA,
+  isd:          RESPALDO_ISD,
+  sustento:     RESPALDO_SUSTENTO,
+};
+
+// Pone primero el código sugerido por defecto (303 local, 501 exterior)
+function primeroEl<T extends { cod: string }>(lista: T[], cod: string): T[] {
+  const i = lista.findIndex(o => o.cod === cod);
+  return i <= 0 ? lista : [lista[i], ...lista.slice(0, i), ...lista.slice(i + 1)];
+}
+
+// Catálogo del backend → listas de la pantalla. Solo códigos con
+// ofrecer_en_ui y con % sugerido: los que tienen varios % sin sugerido (326,
+// 504…) esperan al selector de % de la Fase B. Una lista vacía usa el respaldo.
+function catalogoUI(c: CatalogoRetenciones): CatalogoUI {
+  const renta = c.renta.codigos.filter(x => x.ofrecer_en_ui && x.porcentaje_sugerido !== null);
+  const residentes = renta
+    .filter(x => x.residencia === "residente")
+    .map(x => ({ cod: x.codigo, label: x.descripcion, pct: x.porcentaje_sugerido as number }));
+  const noResidentes = renta
+    .filter(x => x.residencia === "no_residente")
+    .map(x => ({
+      cod:        x.codigo,
+      label:      x.descripcion.replace(/^Pago a no residentes\s*[-–]\s*/i, ""),
+      pct:        x.porcentaje_sugerido as number,
+      pctParaiso: x.porcentaje_sugerido_paraiso ?? (x.porcentaje_sugerido as number),
+    }));
+  const impuesto = (l: CatalogoRetenciones["iva"]) => l.map(i => ({ cod: i.codigo, label: i.descripcion, pct: i.porcentaje }));
+  const iva = impuesto(c.iva);
+  const isd = impuesto(c.isd);
+  const sustento = c.sustento.map(s => ({ value: s.codigo, label: s.descripcion }));
+  return {
+    version:      c.version,
+    residentes:   residentes.length   ? primeroEl(residentes, "303")   : RESPALDO.residentes,
+    noResidentes: noResidentes.length ? primeroEl(noResidentes, "501") : RESPALDO.noResidentes,
+    iva:          iva.length      ? iva      : RESPALDO.iva,
+    isd:          isd.length      ? isd      : RESPALDO.isd,
+    sustento:     sustento.length ? sustento : RESPALDO.sustento,
+  };
+}
+
+// Catálogo para la fecha del documento sustento; si el backend falla, el respaldo
+async function cargarCatalogoUI(fecha: string): Promise<{ cat: CatalogoUI; ok: boolean }> {
+  try {
+    return { cat: catalogoUI(await obtenerCatalogoRetenciones(fecha)), ok: true };
+  } catch {
+    return { cat: RESPALDO, ok: false };
+  }
+}
+
+// Régimen general (01) → % general; paraíso fiscal (02) o preferente (03) → % de paraíso
+function getOpciones(cat: CatalogoUI, codigo: string, exterior: boolean, tipoRegi: string): OpcionRet[] {
+  if (codigo === "2") return cat.iva;
+  if (codigo === "6") return cat.isd;
+  if (!exterior) return cat.residentes;
+  return cat.noResidentes.map(o => ({ cod: o.cod, label: o.label, pct: tipoRegi === "01" ? o.pct : o.pctParaiso }));
+}
+
+// Selector de renta: "Más usados" (en el orden de la constante) y después el
+// resto en orden numérico, sin repetir
+function agruparRenta(opciones: OpcionRet[], exterior: boolean) {
+  const lista     = exterior ? MAS_USADOS_NO_RESIDENTES : MAS_USADOS_RESIDENTES;
+  const masUsados = lista.flatMap(cod => opciones.filter(o => o.cod === cod));
+  const enGrupo   = new Set(masUsados.map(o => o.cod));
+  const todos     = opciones
+    .filter(o => !enGrupo.has(o.cod))
+    .sort((a, b) => a.cod.localeCompare(b.cod, "es", { numeric: true }));
+  return { masUsados, todos };
+}
+
+function lineaRenta(cat: CatalogoUI, base: number, exterior: boolean, tipoRegi: string): ImpuestoRet {
+  const opcion = getOpciones(cat, "1", exterior, tipoRegi)[0];
+  return {
+    _id: genId(), codigo: "1", codigoRetencion: opcion.cod,
+    baseImponible: r2(base), porcentajeRetener: opcion.pct,
+    valorRetenido: r2(base * (opcion.pct / 100)),
+  };
+}
+
 // Retenciones sugeridas para una compra: la de renta va sobre la base SIN IVA
 // (sobre el total retenía de más: 10% de $115 en vez de $100) y la de IVA
-// sobre el IVA. El usuario ajusta códigos y porcentajes antes de emitir.
-function retencionesSugeridas(base: number, iva: number): ImpuestoRet[] {
-  const lineas: ImpuestoRet[] = [{
-    _id: genId(), codigo: "1", codigoRetencion: "303",
-    baseImponible: r2(base), porcentajeRetener: 10, valorRetenido: r2(base * 0.10),
-  }];
-  if (iva > 0) {
-    lineas.push({
-      _id: genId(), codigo: "2", codigoRetencion: "1",
-      baseImponible: r2(iva), porcentajeRetener: 30, valorRetenido: r2(iva * 0.30),
-    });
+// sobre el IVA (una línea por cada IVA distinto de cero).
+// Local: renta 303 al 10% e IVA código 1 al 30%.
+// Exterior: renta 501 según el régimen e IVA código 3 al 100%.
+// El usuario ajusta códigos y porcentajes antes de emitir.
+function lineasSugeridas(cat: CatalogoUI, base: number, ivas: number[], exterior: boolean, tipoRegi: string): ImpuestoRet[] {
+  const iva = exterior
+    ? { codigoRetencion: "3", porcentajeRetener: 100 }
+    : { codigoRetencion: "1", porcentajeRetener: 30 };
+  return [
+    lineaRenta(cat, base, exterior, tipoRegi),
+    ...ivas.filter(v => v > 0).map(v => ({
+      _id: genId(), codigo: "2", ...iva,
+      baseImponible: r2(v), valorRetenido: r2(v * (iva.porcentajeRetener / 100)),
+    })),
+  ];
+}
+
+// FAC y NDB recibidas: siempre pago local
+function retencionesSugeridas(cat: CatalogoUI, base: number, iva: number): ImpuestoRet[] {
+  return lineasSugeridas(cat, base, [iva], false, "01");
+}
+
+// Ajusta las líneas de renta al catálogo del tipo de pago y régimen actuales:
+// un código que no está en la lista toma el primero de ella, y el % se toma de
+// la lista (así un cambio de régimen pasa el 501 de 25% a 37%).
+function reajustarRenta(cat: CatalogoUI, lineas: ImpuestoRet[], exterior: boolean, tipoRegi: string): ImpuestoRet[] {
+  const opciones = getOpciones(cat, "1", exterior, tipoRegi);
+  return lineas.map(l => {
+    if (l.codigo !== "1") return l;
+    const opcion = opciones.find(o => o.cod === l.codigoRetencion) ?? opciones[0];
+    return {
+      ...l, codigoRetencion: opcion.cod, porcentajeRetener: opcion.pct,
+      valorRetenido: r2(l.baseImponible * (opcion.pct / 100)),
+    };
+  });
+}
+
+// Al cambiar de catálogo (otra fecha de sustento): solo las líneas de renta
+// cuyo código ya no se ofrece pasan al primero de la lista; las demás no se tocan.
+function reemplazarNoOfrecidos(cat: CatalogoUI, lineas: ImpuestoRet[], exterior: boolean, tipoRegi: string): ImpuestoRet[] {
+  const opciones = getOpciones(cat, "1", exterior, tipoRegi);
+  return lineas.map(l => {
+    if (l.codigo !== "1" || opciones.some(o => o.cod === l.codigoRetencion)) return l;
+    const opcion = opciones[0];
+    return {
+      ...l, codigoRetencion: opcion.cod, porcentajeRetener: opcion.pct,
+      valorRetenido: r2(l.baseImponible * (opcion.pct / 100)),
+    };
+  });
+}
+
+// Proveedor del exterior: tipo de identificación 08. Si el registro no trae el
+// tipo, se usa como respaldo la identificación: lo que no es cédula ni RUC
+// (10 o 13 dígitos numéricos) se trata como del exterior.
+function esProveedorExterior(tipoId?: string | null, identificacion?: string | null): boolean {
+  if (tipoId) return tipoId === "08";
+  const ident = (identificacion ?? "").trim();
+  if (!ident) return false;
+  return !/^(\d{10}|\d{13})$/.test(ident);
+}
+
+// Tipo de identificación del proveedor de una LIQ emitida (null si no se pudo leer)
+async function tipoIdProveedorLiq(liqId: string): Promise<string | null> {
+  try {
+    const res = await api.get(`/api/v1/app/documentos/${liqId}`);
+    return res.data.data?.datos?.infoLiquidacionCompra?.tipoIdentificacionProveedor ?? null;
+  } catch {
+    return null;
   }
-  return lineas;
+}
+
+// Líneas sugeridas para una LIQ emitida a partir de su desglose. Sin desglose,
+// el total se toma como base sin IVA.
+async function lineasDesdeLiq(cat: CatalogoUI, liqId: string, importeTotal: number, exterior: boolean, tipoRegi: string): Promise<ImpuestoRet[]> {
+  try {
+    const res     = await api.get(`/api/v1/app/documentos/${liqId}/desglose`);
+    const desglose = res.data.data as {
+      subtotal: number;
+      resumen_impuestos?: { tarifa?: string | number; valor?: string | number }[];
+    };
+    const ivas = (desglose.resumen_impuestos ?? [])
+      .filter(imp => parseFloat(String(imp.tarifa ?? "0")) > 0)
+      .map(imp => parseFloat(String(imp.valor ?? "0")));
+    return lineasSugeridas(cat, Number(desglose.subtotal) || 0, ivas, exterior, tipoRegi);
+  } catch {
+    return lineasSugeridas(cat, Number(importeTotal) || 0, [], exterior, tipoRegi);
+  }
 }
 
 // Base e IVA de un recibido; si el backend no los manda (registros viejos),
@@ -60,38 +315,6 @@ const TIPOS_IMPUESTO = [
   { value: "2", label: "IVA"   },
   { value: "6", label: "ISD"   },
 ];
-
-const PORCENTAJES_RENTA = [
-  { cod: "303",  label: "Honorarios profesionales",             pct: 10 },
-  { cod: "304",  label: "Servicios predomina intelecto",         pct: 8  },
-  { cod: "304A", label: "Servicios profesionales del exterior", pct: 25 },
-  { cod: "307",  label: "Servicios predomina mano obra",         pct: 2  },
-  { cod: "309",  label: "Servicios publicidad",                  pct: 2  },
-  { cod: "310",  label: "Transporte privado de pasajeros",       pct: 1  },
-  { cod: "312",  label: "Transferencia de bienes muebles",       pct: 1  },
-  { cod: "319",  label: "Arrendamiento mercantil",               pct: 2  },
-  { cod: "320",  label: "Arrendamiento bienes inmuebles",        pct: 8  },
-  { cod: "322",  label: "Seguros y reaseguros",                  pct: 2  },
-  { cod: "323A", label: "Rendimientos financieros",              pct: 2  },
-  { cod: "325",  label: "Pagos al exterior - servicios",         pct: 25 },
-  { cod: "325A", label: "Pagos al exterior - otros conceptos",   pct: 25 },
-  { cod: "332",  label: "Compra de bienes",                      pct: 2  },
-  { cod: "340",  label: "Otras retenciones",                     pct: 2  },
-  { cod: "343",  label: "Pagos al exterior - servicios técnicos", pct: 25 },
-  { cod: "344",  label: "Pagos al exterior - marcas y patentes", pct: 25 },
-];
-
-const PORCENTAJES_IVA = [
-  { cod: "9",  label: "Retención 10% del IVA",  pct: 10  },
-  { cod: "10", label: "Retención 20% del IVA",  pct: 20  },
-  { cod: "1",  label: "Retención 30% del IVA",  pct: 30  },
-  { cod: "2",  label: "Retención 70% del IVA",  pct: 70  },
-  { cod: "3",  label: "Retención 100% del IVA", pct: 100 },
-];
-
-function getOpciones(codigo: string) {
-  return codigo === "2" ? PORCENTAJES_IVA : PORCENTAJES_RENTA;
-}
 
 type OrigenRet = "fac_recibida" | "liq_emitida" | "ndb_recibida";
 
@@ -121,17 +344,6 @@ const ORIGEN_CONFIG: Record<OrigenRet, {
   },
 };
 
-const CODIGOS_SUSTENTO = [
-  { value: "01", label: "Crédito tributario para IVA" },
-  { value: "02", label: "Costo o gasto para IR" },
-  { value: "03", label: "Activo fijo — Crédito tributario IVA" },
-  { value: "04", label: "Activo fijo — Costo o gasto IR" },
-  { value: "05", label: "Liquidación gastos viaje/hospedaje" },
-  { value: "06", label: "Inventario — Crédito tributario IVA" },
-  { value: "07", label: "Inventario — Costo o gasto IR" },
-  { value: "00", label: "Casos especiales (sin costo ni gasto)" },
-];
-
 const FORMAS_PAGO_RET = [
   { value: "01", label: "Sin sistema financiero" },
   { value: "16", label: "Tarjeta de débito" },
@@ -141,10 +353,24 @@ const FORMAS_PAGO_RET = [
   { value: "15", label: "Compensación de deudas" },
 ];
 
+const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio",
+  "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+
+// "11/2026" → "noviembre de 2026" (si no tiene ese formato, se devuelve tal cual)
+// PENDIENTE-CONSULTA: confirmar con contador si el 103 corresponde a periodoFiscal o al mes de emisión de la RET (caso: compra fin de mes, RET inicio del mes siguiente).
+function mesDelPeriodo(periodo: string): string {
+  const m = /^(\d{2})\/(\d{4})$/.exec(periodo.trim());
+  const mes = m ? MESES[Number(m[1]) - 1] : undefined;
+  return mes ? `${mes} de ${m![2]}` : periodo;
+}
+
 export default function NuevaRetPage() {
   const router       = useRouter();
   const searchParams = useSearchParams();
   const empresa      = useAuthStore((s) => s.empresa);
+  // Con el sandbox activo el backend emite en pruebas aunque la empresa esté en producción
+  const sandboxActivo = useSandboxStore((s) => s.activo);
+  const enProduccion  = empresa?.ambiente === 2 && !sandboxActivo;
   // Con plan gratis no se gastan créditos (mismo criterio que ResumenTotales)
   const usaCreditos  = !empresa?.suscripcion_activa && !empresa?.emision_gratis && (empresa?.balance_api ?? 0) > 0;
 
@@ -172,16 +398,43 @@ export default function NuevaRetPage() {
 
   // Estados adicionales para pago al exterior (pagoLocExt === "02")
   const [tipoRegi,           setTipoRegi]           = useState("01");
-  const [paisEfecPago,       setPaisEfecPago]       = useState("372");
+  const [paisEfecPago,       setPaisEfecPago]       = useState("");     // tabla 25 (Irlanda = 217)
   const [aplicConvDobTrib,   setAplicConvDobTrib]   = useState("NO");
   const [pagExtSujRetNorLeg, setPagExtSujRetNorLeg] = useState("SI");
   const [pagoRegFis,         setPagoRegFis]         = useState("NO");
+  // Obligatorio con identificación del exterior (08): 01 persona natural, 02 sociedad
+  const [tipoSujetoRetenido, setTipoSujetoRetenido] = useState("02");
+  const esExterior = pagoLocExt === "02";
 
   // Impuestos
-  const [impuestos, setImpuestos] = useState<ImpuestoRet[]>([{
-    _id: genId(), codigo: "1", codigoRetencion: "303",
-    baseImponible: 0, porcentajeRetener: 10, valorRetenido: 0,
-  }]);
+  const [impuestos, setImpuestos] = useState<ImpuestoRet[]>(() => [lineaRenta(RESPALDO, 0, false, "01")]);
+
+  // Catálogo vigente para la fecha del documento sustento (sin documento, hoy)
+  const [catalogo,      setCatalogo]      = useState<CatalogoUI>(RESPALDO);
+  const [avisoCatalogo, setAvisoCatalogo] = useState("");
+  const fechaSustento = fechaCatalogo(
+    docOrigen?.tipo === "kipu" ? docOrigen.data.fecha_emision
+    : docOrigen?.tipo === "manual" ? docOrigen.data.fecha
+    : null
+  );
+  // Pago y régimen al llegar el catálogo (los cambios del usuario los ajustan
+  // cambiarPagoLocExt y cambiarTipoRegi; este efecto solo reacciona a la fecha)
+  const pagoActual = useRef({ esExterior, tipoRegi });
+  useEffect(() => { pagoActual.current = { esExterior, tipoRegi }; }, [esExterior, tipoRegi]);
+
+  // Único efecto que reajusta líneas: al cambiar el catálogo, solo las de renta
+  // con un código que ya no se ofrece
+  useEffect(() => {
+    let vigente = true;
+    cargarCatalogoUI(fechaSustento).then(({ cat, ok }) => {
+      if (!vigente) return;
+      setCatalogo(cat);
+      setAvisoCatalogo(ok ? "" : "No se pudo cargar el catálogo actualizado");
+      const { esExterior: exterior, tipoRegi: regimen } = pagoActual.current;
+      setImpuestos(prev => reemplazarNoOfrecidos(cat, prev, exterior, regimen));
+    });
+    return () => { vigente = false; };
+  }, [fechaSustento]);
 
   const [camposAdicionales, setCamposAdicionales] = useState<CampoAdicional[]>([]);
 
@@ -194,6 +447,11 @@ export default function NuevaRetPage() {
   const [resultado,  setResultado]  = useState<any>(null);
   const [error,      setError]      = useState("");
   const [usoJusto,   setUsoJusto]   = useState("");   // mensaje del uso justo (para ofrecer Pro o créditos)
+  // En producción, una retención genera la obligación del 103 (y del 104 si
+  // retiene IVA): se pide confirmar antes de emitir para evitar "pruebas" reales.
+  const [confirmarProduccion, setConfirmarProduccion] = useState(false);
+  // Solo una retención de IVA con valor activa el 104: los códigos 7 y 8 (0%) no
+  const retieneIva = impuestos.some(i => i.codigo === "2" && i.valorRetenido > 0);
 
   const totalRetenido = r2(impuestos.reduce((s, i) => s + (i.valorRetenido || 0), 0));
 
@@ -224,45 +482,11 @@ export default function NuevaRetPage() {
             }
           });
 
-          try {
-            const resDesglose = await api.get(`/api/v1/app/documentos/${d.id}/desglose`);
-            const desglose    = resDesglose.data.data;
-            const subtotal    = desglose.subtotal;
-            const resumen     = desglose.resumen_impuestos ?? [];
-
-            const nuevasRet: ImpuestoRet[] = [];
-            nuevasRet.push({
-              _id:                genId(),
-              codigo:            "1",
-              codigoRetencion:   "303",
-              baseImponible:     r2(subtotal),
-              porcentajeRetener: 10,
-              valorRetenido:     r2(subtotal * 0.10),
-            });
-
-            resumen.forEach((imp: any) => {
-              const tarifa = parseFloat(imp.tarifa ?? "0");
-              const valor  = parseFloat(imp.valor ?? "0");
-              if (tarifa > 0 && valor > 0) {
-                nuevasRet.push({
-                  _id:                genId(),
-                  codigo:            "2",
-                  codigoRetencion:   "1",
-                  baseImponible:     r2(valor),
-                  porcentajeRetener: 30,
-                  valorRetenido:     r2(valor * 0.30),
-                });
-              }
-            });
-
-            setImpuestos(nuevasRet);
-          } catch {
-            setImpuestos([{
-              _id: genId(), codigo: "1", codigoRetencion: "303",
-              baseImponible: d.importe_total, porcentajeRetener: 10,
-              valorRetenido: r2(d.importe_total * 0.10),
-            }]);
-          }
+          // Al cargar la página el régimen fiscal siempre es el inicial (01)
+          const exterior = esProveedorExterior(info.tipoIdentificacionProveedor, info.identificacionProveedor);
+          setPagoLocExt(exterior ? "02" : "01");
+          const { cat } = await cargarCatalogoUI(fechaCatalogo(d.fecha_emision));
+          setImpuestos(await lineasDesdeLiq(cat, d.id, d.importe_total, exterior, "01"));
         } catch (e) { console.error(e); }
       };
       cargar();
@@ -291,7 +515,9 @@ export default function NuevaRetPage() {
             }
           });
           const { base, iva } = baseEIva(d);
-          setImpuestos(retencionesSugeridas(base, iva));
+          setPagoLocExt("01");
+          const { cat } = await cargarCatalogoUI(fechaCatalogo(d.fecha_emision));
+          setImpuestos(retencionesSugeridas(cat, base, iva));
         } catch (e) { console.error(e); }
       };
       cargar();
@@ -303,10 +529,48 @@ export default function NuevaRetPage() {
     setDocOrigen(null);
   };
 
-  const addImpuesto = () => setImpuestos([...impuestos, {
-    _id: genId(), codigo: "1", codigoRetencion: "303",
-    baseImponible: 0, porcentajeRetener: 10, valorRetenido: 0,
-  }]);
+  // La línea nueva toma el primer código del catálogo vigente (residente o exterior)
+  const addImpuesto = () => setImpuestos([...impuestos, lineaRenta(catalogo, 0, esExterior, tipoRegi)]);
+
+  // Pago local/exterior: cambia el catálogo de renta
+  const cambiarPagoLocExt = (valor: string) => {
+    setPagoLocExt(valor);
+    setImpuestos(prev => reajustarRenta(catalogo, prev, valor === "02", tipoRegi));
+  };
+
+  // Régimen fiscal: cambia el % de renta (25 o 37) y pagoRegFis
+  const cambiarTipoRegi = (valor: string) => {
+    setTipoRegi(valor);
+    setPagoRegFis(valor === "01" ? "NO" : "SI");
+    setImpuestos(prev => reajustarRenta(catalogo, prev, esExterior, valor));
+  };
+
+  // Sin convenio, el % de renta vuelve a la tarifa del catálogo
+  const cambiarConvenio = (valor: string) => {
+    setAplicConvDobTrib(valor);
+    if (valor === "NO") setImpuestos(prev => reajustarRenta(catalogo, prev, esExterior, tipoRegi));
+  };
+
+  // Con convenio de doble tributación, el % de renta se ajusta a la tarifa del convenio
+  const pctEditable = (imp: ImpuestoRet) =>
+    esExterior && aplicConvDobTrib === "SI" && imp.codigo === "1";
+
+  // Detección local/exterior y retenciones sugeridas al elegir el documento sustento
+  const sugerirDesdeOrigen = async (selected: DocOrigen) => {
+    if (selected?.tipo !== "kipu") return;
+    // Mismo pedido (en caché) que el efecto del catálogo: las líneas salen del de esa fecha
+    const { cat } = await cargarCatalogoUI(fechaCatalogo(selected.data.fecha_emision));
+    if (origenTipo === "liq_emitida") {
+      const tipoId   = await tipoIdProveedorLiq(selected.data.id);
+      const exterior = esProveedorExterior(tipoId, selected.data.identificacion);
+      setPagoLocExt(exterior ? "02" : "01");
+      setImpuestos(await lineasDesdeLiq(cat, selected.data.id, selected.data.importe_total, exterior, tipoRegi));
+    } else {
+      const { base, iva } = baseEIva(selected.data);
+      setPagoLocExt("01");
+      setImpuestos(retencionesSugeridas(cat, base, iva));
+    }
+  };
 
   const removeImpuesto = (id: string) => {
     if (impuestos.length === 1) return;
@@ -324,13 +588,13 @@ export default function NuevaRetPage() {
         );
       }
       if (field === "codigo") {
-        const opciones = getOpciones(value);
+        const opciones = getOpciones(catalogo, value, esExterior, tipoRegi);
         updated.codigoRetencion   = opciones[0].cod;
         updated.porcentajeRetener = opciones[0].pct;
         updated.valorRetenido     = r2(updated.baseImponible * (opciones[0].pct / 100));
       }
       if (field === "codigoRetencion") {
-        const opciones = getOpciones(updated.codigo);
+        const opciones = getOpciones(catalogo, updated.codigo, esExterior, tipoRegi);
         const opcion   = opciones.find(o => o.cod === value);
         if (opcion) {
           updated.porcentajeRetener = opcion.pct;
@@ -347,28 +611,34 @@ export default function NuevaRetPage() {
     setResultado(null);
     setDocOrigen(null);
     setOrigenTipo("fac_recibida");
-    setImpuestos([{ _id: genId(), codigo: "1", codigoRetencion: "303", baseImponible: 0, porcentajeRetener: 10, valorRetenido: 0 }]);
+    setImpuestos([lineaRenta(catalogo, 0, false, "01")]);
     setCamposAdicionales([]);
     setCodSustento("01");
     setPagoLocExt("01");
     setParteRel("NO");
     setFormaPagoSustento("01");
     setTipoRegi("01");
-    setPaisEfecPago("372");
+    setPaisEfecPago("");
     setAplicConvDobTrib("NO");
     setPagExtSujRetNorLeg("SI");
     setPagoRegFis("NO");
+    setTipoSujetoRetenido("02");
+    setConfirmarProduccion(false);
     setError("");
   };
 
-  const emitir = async () => {
+  const emitir = async (confirmado = false) => {
     setError("");
     if (!docOrigen)                     { setError("Selecciona el documento sustento."); return; }
     if (!estabSelected || !ptoSelected) { setError("Elige el establecimiento y el punto de emisión."); return; }
     if (impuestos.some(i => i.baseImponible <= 0)) { setError("La base imponible debe ser mayor a $0."); return; }
+    if (esExterior && !paisEfecPago)    { setError("Selecciona el país del pago al exterior."); return; }
 
     const puedeEmitir = empresa?.suscripcion_activa || (empresa?.balance_api ?? 0) > 0 || !!empresa?.emision_gratis;
     if (!puedeEmitir) { setError("Se requiere suscripción activa o créditos API."); return; }
+
+    if (enProduccion && !confirmado) { setConfirmarProduccion(true); return; }
+    setConfirmarProduccion(false);
 
     setSubmitting(true);
     try {
@@ -380,12 +650,14 @@ export default function NuevaRetPage() {
         pago_loc_ext:        pagoLocExt,
         forma_pago_sustento: formaPagoSustento,
         parte_rel:           parteRel,
-        ...(pagoLocExt === "02" ? {
+        ...(esExterior ? {
           tipo_regi:               tipoRegi,
           pais_efec_pago:          paisEfecPago,
           aplic_conv_dob_trib:      aplicConvDobTrib,
           pag_ext_suj_ret_nor_leg: pagExtSujRetNorLeg,
           pago_reg_fis:            pagoRegFis,
+          // El backend solo lo escribe en el XML si el sujeto retenido tiene identificación 08
+          tipo_sujeto_retenido:    tipoSujetoRetenido,
         } : {}),
         impuestos: impuestos.map(i => ({
           codigo:            i.codigo,
@@ -595,52 +867,7 @@ export default function NuevaRetPage() {
             value={docOrigen}
             onChange={async (selected) => {
               setDocOrigen(selected);
-              if (selected?.tipo === "kipu") {
-                try {
-                  if (origenTipo === "liq_emitida") {
-                    const res      = await api.get(`/api/v1/app/documentos/${selected.data.id}/desglose`);
-                    const desglose = res.data.data;
-                    const subtotal = desglose.subtotal;
-                    const resumen  = desglose.resumen_impuestos ?? [];
-
-                    const nuevasRet: ImpuestoRet[] = [];
-
-                    // Retención Renta (sobre subtotal)
-                    nuevasRet.push({
-                      _id:                genId(),
-                      codigo:            "1",
-                      codigoRetencion:   "303",
-                      baseImponible:     r2(subtotal),
-                      porcentajeRetener: 10,
-                      valorRetenido:     r2(subtotal * 0.10),
-                    });
-
-                    // Retención IVA (sobre impuestos de IVA > 0)
-                    resumen.forEach((imp: any) => {
-                      const tarifa = parseFloat(imp.tarifa ?? "0");
-                      const valor  = parseFloat(imp.valor ?? "0");
-                      if (tarifa > 0 && valor > 0) {
-                        nuevasRet.push({
-                          _id:                genId(),
-                          codigo:            "2",
-                          codigoRetencion:   "1",
-                          baseImponible:     r2(valor),
-                          porcentajeRetener: 30,
-                          valorRetenido:     r2(valor * 0.30),
-                        });
-                      }
-                    });
-
-                    setImpuestos(nuevasRet);
-                  } else {
-                    const { base, iva } = baseEIva(selected.data);
-                    setImpuestos(retencionesSugeridas(base, iva));
-                  }
-                } catch {
-                  const { base, iva } = baseEIva(selected.data);
-                  setImpuestos(retencionesSugeridas(base, iva));
-                }
-              }
+              await sugerirDesdeOrigen(selected);
             }}
             label={origenCfg.label}
             nota={origenCfg.nota}
@@ -700,7 +927,7 @@ export default function NuevaRetPage() {
                   color: "var(--kipu-subtle)",
                 }}
               >
-                {codSustento} · {pagoLocExt === "01" ? "Local" : `Exterior (${paisEfecPago})`} · Parte rel: {parteRel}
+                {codSustento} · {esExterior ? `Exterior (${paisEfecPago || "?"})` : "Local"} · Parte rel: {parteRel}
               </span>
             </div>
 
@@ -722,10 +949,15 @@ export default function NuevaRetPage() {
                   onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
                   onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
                 >
-                  {CODIGOS_SUSTENTO.map(c => (
+                  {catalogo.sustento.map(c => (
                     <option key={c.value} value={c.value}>{c.value} · {c.label}</option>
                   ))}
                 </select>
+                {esExterior && (
+                  <p className="text-[10px]" style={{ color: "var(--kipu-subtle)" }}>
+                    Si es un servicio digital (Meta, Google, etc.), usa sustento 15
+                  </p>
+                )}
               </div>
 
               {/* Pago local/exterior */}
@@ -735,7 +967,7 @@ export default function NuevaRetPage() {
                 </label>
                 <select
                   value={pagoLocExt}
-                  onChange={e => setPagoLocExt(e.target.value)}
+                  onChange={e => cambiarPagoLocExt(e.target.value)}
                   className="w-full px-2.5 py-2 rounded-lg text-sm transition-colors focus:outline-none"
                   style={{
                     background: "var(--kipu-surface)",
@@ -752,7 +984,7 @@ export default function NuevaRetPage() {
             </div>
 
             {/* ── Campos pago exterior (condicional) ── */}
-            {pagoLocExt === "02" && (
+            {esExterior && (
               <div className="pt-2 border-t space-y-3" style={{ borderColor: "var(--kipu-border)" }}>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {/* Tipo régimen fiscal */}
@@ -762,7 +994,7 @@ export default function NuevaRetPage() {
                     </label>
                     <select
                       value={tipoRegi}
-                      onChange={e => setTipoRegi(e.target.value)}
+                      onChange={e => cambiarTipoRegi(e.target.value)}
                       className="w-full px-2.5 py-2 rounded-lg text-sm transition-colors focus:outline-none"
                       style={{
                         background: "var(--kipu-surface)",
@@ -795,6 +1027,7 @@ export default function NuevaRetPage() {
                       onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
                       onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
                     >
+                      <option value="">Selecciona el país…</option>
                       {paisesOrdenados.map(p => (
                         <option key={p.codigo} value={p.codigo}>{p.codigo} · {p.nombre}</option>
                       ))}
@@ -810,7 +1043,7 @@ export default function NuevaRetPage() {
                     </label>
                     <select
                       value={aplicConvDobTrib}
-                      onChange={e => setAplicConvDobTrib(e.target.value)}
+                      onChange={e => cambiarConvenio(e.target.value)}
                       className="w-full px-2.5 py-2 rounded-lg text-sm transition-colors focus:outline-none"
                       style={{
                         background: "var(--kipu-surface)",
@@ -871,6 +1104,28 @@ export default function NuevaRetPage() {
                     </select>
                   </div>
                 )}
+
+                {/* Tipo de sujeto retenido (obligatorio con identificación 08) */}
+                <div className="space-y-1">
+                  <label className="text-[10px] uppercase font-semibold tracking-wider" style={{ color: "var(--kipu-subtle)" }}>
+                    Tipo de sujeto retenido
+                  </label>
+                  <select
+                    value={tipoSujetoRetenido}
+                    onChange={e => setTipoSujetoRetenido(e.target.value)}
+                    className="w-full px-2.5 py-2 rounded-lg text-sm transition-colors focus:outline-none"
+                    style={{
+                      background: "var(--kipu-surface)",
+                      border: "1px solid var(--kipu-border)",
+                      color: "var(--kipu-text)",
+                    }}
+                    onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
+                    onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+                  >
+                    <option value="01">01 · Persona natural</option>
+                    <option value="02">02 · Sociedad</option>
+                  </select>
+                </div>
               </div>
             )}
 
@@ -948,6 +1203,12 @@ export default function NuevaRetPage() {
               )}
             </div>
 
+            {avisoCatalogo && (
+              <p className="text-xs flex items-center gap-1.5" style={{ color: "var(--kipu-warning)" }}>
+                <AlertTriangle size={12} className="shrink-0" /> {avisoCatalogo}
+              </p>
+            )}
+
             {esLiqEmitida && (
               <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
                 Las bases imponibles se calcularon automáticamente desde la liquidación. Puedes ajustar el tipo y porcentaje de retención.
@@ -955,7 +1216,7 @@ export default function NuevaRetPage() {
             )}
 
             {impuestos.map((imp, idx) => {
-              const opciones = getOpciones(imp.codigo);
+              const opciones = getOpciones(catalogo, imp.codigo, esExterior, tipoRegi);
               return (
                 <div
                   key={imp._id}
@@ -1031,7 +1292,18 @@ export default function NuevaRetPage() {
                         onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
                         onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
                       >
-                        {opciones.map(o => (
+                        {imp.codigo === "1" ? (() => {
+                          const { masUsados, todos } = agruparRenta(opciones, esExterior);
+                          const opcion = (o: OpcionRet) => (
+                            <option key={o.cod} value={o.cod}>{o.cod} · {o.label}</option>
+                          );
+                          return (
+                            <>
+                              {masUsados.length > 0 && <optgroup label="Más usados">{masUsados.map(opcion)}</optgroup>}
+                              {todos.length > 0 && <optgroup label="Todos los códigos">{todos.map(opcion)}</optgroup>}
+                            </>
+                          );
+                        })() : opciones.map(o => (
                           <option key={o.cod} value={o.cod}>{o.cod} · {o.label}</option>
                         ))}
                       </select>
@@ -1072,17 +1344,30 @@ export default function NuevaRetPage() {
                         <input
                           type="number"
                           value={imp.porcentajeRetener}
-                          readOnly
+                          readOnly={!pctEditable(imp)}
+                          onChange={e => {
+                            if (pctEditable(imp)) editImpuesto(imp._id, "porcentajeRetener", parseFloat(e.target.value) || 0);
+                          }}
+                          min={0}
+                          max={100}
+                          step={0.01}
                           className="w-full px-2 pr-6 py-2 rounded-lg text-sm text-center focus:outline-none"
                           style={{
-                            background: "color-mix(in srgb, var(--kipu-text) 4%, transparent)",
+                            background: pctEditable(imp)
+                              ? "var(--kipu-surface)"
+                              : "color-mix(in srgb, var(--kipu-text) 4%, transparent)",
                             border: "1px solid var(--kipu-border)",
                             color: "var(--kipu-text)",
-                            cursor: "not-allowed",
+                            cursor: pctEditable(imp) ? "text" : "not-allowed",
                           }}
                         />
                         <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-sm" style={{ color: "var(--kipu-subtle)" }}>%</span>
                       </div>
+                      {pctEditable(imp) && (
+                        <p className="text-[10px]" style={{ color: "var(--kipu-subtle)" }}>
+                          Ajusta el % según la tarifa del convenio
+                        </p>
+                      )}
                     </div>
                     <div className="space-y-1">
                       <label className="text-[10px] uppercase font-semibold tracking-wider" style={{ color: "var(--kipu-subtle)" }}>
@@ -1202,8 +1487,44 @@ export default function NuevaRetPage() {
             )}
             {error && usoJusto === error && <AccionesUsoJusto />}
 
+            {confirmarProduccion && !submitting ? (
+              <div
+                className="mt-4 rounded-lg px-3 py-3 space-y-2"
+                style={{
+                  background: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)",
+                  border: "1px solid color-mix(in srgb, var(--kipu-warning) 30%, transparent)",
+                }}
+              >
+                <div className="flex items-start gap-1.5">
+                  <AlertTriangle size={14} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-warning)" }} />
+                  <p className="text-xs font-semibold" style={{ color: "var(--kipu-text)" }}>
+                    Esta retención te obliga a presentar el formulario 103 de {mesDelPeriodo(periodoFiscal)}
+                    {retieneIva && <> y, por la retención de IVA, también el formulario 104 de ese mes</>}.
+                  </p>
+                </div>
+                <p className="text-[11px]" style={{ color: "var(--kipu-subtle)" }}>
+                  Se emite en ambiente de producción y tiene validez tributaria. Si solo querías probar, activa el modo de pruebas antes de emitir.
+                </p>
+                <div className="flex gap-2 pt-1">
+                  <button
+                    onClick={() => setConfirmarProduccion(false)}
+                    className="flex-1 py-2 rounded-lg text-xs font-semibold"
+                    style={{ border: "1px solid var(--kipu-border)", color: "var(--kipu-text)", background: "var(--kipu-surface)" }}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={() => emitir(true)}
+                    className="flex-1 py-2 rounded-lg text-xs font-semibold text-white"
+                    style={{ background: "var(--kipu-accent)" }}
+                  >
+                    Entiendo, emitir
+                  </button>
+                </div>
+              </div>
+            ) : (
             <button
-              onClick={emitir}
+              onClick={() => emitir()}
               disabled={submitting || (!empresa?.suscripcion_activa && (empresa?.balance_api ?? 0) === 0
                                        && !empresa?.emision_gratis)}
               className="mt-4 w-full py-3 rounded-lg text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -1231,6 +1552,7 @@ export default function NuevaRetPage() {
                 `Emitir retención${pe.serie ? ` desde ${pe.serie}` : ""} · $${fmt(totalRetenido)}`
               )}
             </button>
+            )}
           </div>
         </div>
       </div>
