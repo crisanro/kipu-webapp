@@ -11,6 +11,8 @@ import api from "@/lib/api";
 import { aEmpresa } from "@/lib/empresa";
 import { olvidarDispositivoLocal } from "@/lib/notifications";
 import { guardarVolver } from "@/lib/volver";
+import { ProveedorAvisos } from "@/components/ui/Avisos";
+import { ProveedorConfirmar } from "@/components/ui/Confirmar";
 
 // Todo lo demás requiere sesión. Lista de públicas (y no de protegidas) para
 // que una pantalla nueva quede protegida por defecto.
@@ -230,7 +232,12 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
 
   return (
     <ThemeProvider attribute="data-theme" defaultTheme="light" enableSystem={false}>
-      <SWRProvider>{children}</SWRProvider>
+      <SWRProvider>
+        {/* useAvisos() y useConfirmar() en cualquier pantalla (components/ui) */}
+        <ProveedorAvisos>
+          <ProveedorConfirmar>{children}</ProveedorConfirmar>
+        </ProveedorAvisos>
+      </SWRProvider>
     </ThemeProvider>
   );
 }

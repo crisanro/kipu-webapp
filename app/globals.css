@@ -40,8 +40,17 @@
   --kipu-sandbox:  #3b82f6;
 }
 
+/* Según con qué se usa la pantalla, no según su ancho: un portátil táctil o una
+   tablet con teclado también aciertan. tactil:h-11 → botones más altos al dedo. */
+@custom-variant tactil (@media (pointer: coarse));
+@custom-variant raton (@media (pointer: fine));
+
 /* ── Medidas compartidas (componentes de components/ui) ──────────────────────── */
 :root {
+  /* Fondo del botón principal: texto blanco a 5,5:1 (el verde de marca #059669
+     da 3,8:1, bajo el mínimo AA). La marca sigue en íconos, bordes y detalles. */
+  --kipu-boton:   #047857;
+  --kipu-boton-h: #065F46;
   --toque-minimo:   44px;   /* área táctil mínima (Apple HIG / Material: 44–48) */
   --duracion-rapida: 120ms;
   --duracion-base:   200ms;
@@ -67,6 +76,8 @@
   --color-acento:       var(--kipu-accent);
   --color-acento-hover: var(--kipu-accent-h);
   --color-sobre-acento: #ffffff;
+  --color-boton:        var(--kipu-boton);
+  --color-boton-hover:  var(--kipu-boton-h);
   --color-texto:        var(--kipu-text);
   --color-tenue:        var(--kipu-muted);
   --color-sutil:        var(--kipu-subtle);
@@ -86,6 +97,12 @@
 
   --ease-estandar: var(--curva-estandar);
   --ease-enfasis:  var(--curva-enfasis);
+
+  --animate-aviso-entra: aviso-entra var(--duracion-base) var(--curva-enfasis);
+  @keyframes aviso-entra {
+    from { opacity: 0; transform: translateY(12px) scale(0.98); }
+    to   { opacity: 1; transform: none; }
+  }
 }
 
 * {
