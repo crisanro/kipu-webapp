@@ -1,109 +1,223 @@
 "use client";
+// Secciones de la empresa en Configuración (app/(dashboard)/configuracion):
+//   - DatosEmpresa:      datos registrados en el SRI. Cada fila se toca y se edita
+//                        en una hoja (antes el lápiz solo aparecía con el mouse).
+//   - ImpuestosEmpresa:  régimen y leyendas del RIDE, retenciones (#retenciones)
+//                        y frecuencia de la declaración de IVA.
 import { useState } from "react";
-import {
-  Pencil, X, Check, Loader2,
-  Building2, FileText, Calendar,
-  ShieldCheck, HelpCircle, Receipt,
-} from "lucide-react";
+import { ChevronRight, ShieldCheck } from "lucide-react";
 import api from "@/lib/api";
 import Checklist, { HealthData } from "@/components/Checklist";
 import { refrescarEmpresaActual } from "@/lib/empresa";
 import { ES_APP_NATIVA } from "@/lib/plataforma";
 import { useAuthStore } from "@/store/auth.store";
+import Boton from "@/components/ui/Boton";
+import Hoja from "@/components/ui/Hoja";
+import ChipsFiltro from "@/components/ui/ChipsFiltro";
+import { Campo, Entrada } from "@/components/ui/Campo";
+import { useAvisos } from "@/components/ui/Avisos";
+import { cn } from "@/components/ui/cn";
 
-interface Props {
-  legal:        any;
-  health:       HealthData | null;
-  onActualizar: () => void;
-}
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- forma de /emisor/config
+type Legal = Record<string, any>;
 
 interface CampoFiscal {
   key:       string;
   label:     string;
   editable:  boolean;
-  tipo?:     "select";
-  opciones?: string[];
-  render?:   (v: any) => string;
-  span?:     boolean;
+  opciones?: { valor: string; etiqueta: string }[];
+  render?:   (v: unknown) => string;
 }
 
 const CAMPOS_FISCALES: CampoFiscal[] = [
-  { key: "ruc",                     label: "RUC",                   editable: false },
-  { key: "razon_social",            label: "Razón Social",          editable: true,  span: true },
-  { key: "nombre_comercial",        label: "Nombre Comercial",      editable: true,  span: true },
-  { key: "direccion_matriz",        label: "Dirección Matriz",      editable: true,  span: true },
-  { key: "obligado_contabilidad",   label: "Obligado Contabilidad", editable: true,  tipo: "select", opciones: ["SI", "NO"] },
-  { key: "contribuyente_especial",  label: "Contrib. Especial Nro", editable: true },
-  { key: "ambiente",                label: "Ambiente SRI",          editable: false, render: (v: any) => v === 2 ? "🟢 Producción" : "🟡 Pruebas" },
+  { key: "ruc",                    label: "RUC",                          editable: false },
+  { key: "razon_social",           label: "Razón social",                 editable: true },
+  { key: "nombre_comercial",       label: "Nombre comercial",             editable: true },
+  { key: "direccion_matriz",       label: "Dirección matriz",             editable: true },
+  { key: "obligado_contabilidad",  label: "Obligado a llevar contabilidad", editable: true,
+    opciones: [{ valor: "SI", etiqueta: "Sí" }, { valor: "NO", etiqueta: "No" }],
+    render: (v) => v === "SI" ? "Sí" : v === "NO" ? "No" : "—" },
+  { key: "contribuyente_especial", label: "Contribuyente especial (Nro.)", editable: true },
+  { key: "ambiente",               label: "Ambiente SRI",                 editable: false,
+    render: (v) => v === 2 ? "Producción" : "Pruebas" },
 ];
 
 const REGIMEN_OPCIONES = [
-  { value: "",                                                       label: "Régimen General",       desc: "No pertenece al RIMPE" },
-  { value: "CONTRIBUYENTE RÉGIMEN RIMPE",                            label: "RIMPE Emprendedor",     desc: "Ingresos anuales hasta $300.000" },
-  { value: "CONTRIBUYENTE NEGOCIO POPULAR - RÉGIMEN RIMPE",          label: "RIMPE Negocio Popular", desc: "Ingresos anuales hasta $20.000" },
+  { value: "",                                              label: "Régimen General",       desc: "No pertenece al RIMPE" },
+  { value: "CONTRIBUYENTE RÉGIMEN RIMPE",                   label: "RIMPE Emprendedor",     desc: "Ingresos anuales hasta $300.000" },
+  { value: "CONTRIBUYENTE NEGOCIO POPULAR - RÉGIMEN RIMPE", label: "RIMPE Negocio Popular", desc: "Ingresos anuales hasta $20.000" },
 ];
 
-export default function TabEmpresa({ legal, health, onActualizar }: Props) {
-  const [periodoIva,     setPeriodoIva]     = useState<string>(legal?.periodo_iva ?? "MENSUAL");
-  const [guardando,      setGuardando]      = useState(false);
-  const [msgPeriodo,     setMsgPeriodo]     = useState("");
+const PERIODOS = [
+  { valor: "MENSUAL",   titulo: "Mensual",   desc: "Declaración cada mes (obligatorio si llevas contabilidad)." },
+  { valor: "SEMESTRAL", titulo: "Semestral", desc: "Enero–Jun (vence julio) / Jul–Dic (vence enero)." },
+];
 
-  const [editando,       setEditando]       = useState<string | null>(null);
-  const [editValor,      setEditValor]      = useState("");
-  const [guardandoCampo, setGuardandoCampo] = useState(false);
-  const [errorCampo,     setErrorCampo]     = useState("");
+/** Tarjeta de opción (radio): régimen y período. */
+function Opcion({ activo, titulo, desc, onClick, deshabilitado }: {
+  activo: boolean; titulo: string; desc: string; onClick: () => void; deshabilitado?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={activo}
+      onClick={onClick}
+      disabled={deshabilitado}
+      className={cn(
+        "flex min-h-14 w-full items-start gap-2 rounded-xl border p-3 text-left transition-colors",
+        "disabled:cursor-not-allowed disabled:opacity-50",
+        activo ? "border-acento bg-acento-suave" : "border-borde hover:bg-presionado active:bg-presionado",
+      )}
+    >
+      <span className="min-w-0 flex-1">
+        <span className={cn("block text-sm font-semibold", activo ? "text-acento" : "text-texto")}>{titulo}</span>
+        <span className="mt-0.5 block text-xs text-sutil">{desc}</span>
+      </span>
+      {activo && <ShieldCheck size={16} className="mt-0.5 shrink-0 text-acento" aria-hidden />}
+    </button>
+  );
+}
 
-  const [leyendaMsg,        setLeyendaMsg]        = useState("");
-  const [guardandoLeyenda,  setGuardandoLeyenda]  = useState(false);
+// ── Datos de la empresa ──────────────────────────────────────────────────────
+
+export function DatosEmpresa({ legal, health, onActualizar }: {
+  legal:        Legal | null;
+  health:       HealthData | null;
+  onActualizar: () => void;
+}) {
+  const avisos = useAvisos();
+  const [editando,  setEditando]  = useState<CampoFiscal | null>(null);
+  const [valor,     setValor]     = useState("");
+  const [guardando, setGuardando] = useState(false);
+  const [error,     setError]     = useState("");
+
+  if (!legal) return null;
+
+  const abrir = (c: CampoFiscal) => {
+    setEditando(c);
+    setValor(String(legal[c.key] ?? ""));
+    setError("");
+  };
+
+  const guardar = async () => {
+    if (!editando) return;
+    setGuardando(true);
+    setError("");
+    try {
+      await api.patch("/api/v1/app/emisor/config", { [editando.key]: valor.trim() || null });
+      setEditando(null);
+      avisos.exito("Guardado");
+      onActualizar();
+    } catch {
+      setError("No se pudo guardar. Intenta de nuevo.");
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Pasos para pasar a producción (incluye el aviso de producción) */}
+      {health && !health.en_produccion && <Checklist health={health} onUpdate={onActualizar} />}
+
+      <section>
+        <p className="mb-2 px-1 text-xs text-sutil">Información registrada ante el SRI. Toca un dato para corregirlo.</p>
+        <div className="divide-y divide-borde overflow-hidden rounded-xl border border-borde bg-superficie">
+          {CAMPOS_FISCALES.map((c) => {
+            const texto = c.render ? c.render(legal[c.key]) : (legal[c.key] || "—");
+            const contenido = (
+              <>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-xs text-sutil">{c.label}</span>
+                  <span className="mt-0.5 block break-words text-sm font-medium text-texto">{texto}</span>
+                </span>
+                {c.editable && <ChevronRight size={18} className="shrink-0 text-sutil" aria-hidden />}
+              </>
+            );
+            return c.editable ? (
+              <button key={c.key} type="button" onClick={() => abrir(c)}
+                      className="flex min-h-14 w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-presionado active:bg-presionado">
+                {contenido}
+              </button>
+            ) : (
+              <div key={c.key} className="flex min-h-14 items-center gap-3 px-4 py-3">{contenido}</div>
+            );
+          })}
+        </div>
+      </section>
+
+      <Hoja
+        abierta={!!editando}
+        onCerrar={() => !guardando && setEditando(null)}
+        titulo={editando?.label ?? ""}
+        tamano="sm"
+        pie={<>
+          <Boton variante="secundario" onClick={() => setEditando(null)} disabled={guardando}>Cancelar</Boton>
+          <Boton onClick={guardar} cargando={guardando}>Guardar</Boton>
+        </>}
+      >
+        {editando && (editando.opciones ? (
+          <ChipsFiltro etiqueta={editando.label} opciones={editando.opciones} valor={valor} onCambio={setValor} />
+        ) : (
+          <Campo etiqueta={editando.label} error={error || null}>
+            <Entrada
+              value={valor}
+              onChange={(e) => setValor(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); guardar(); } }}
+              enterKeyHint="done"
+              autoFocus
+            />
+          </Campo>
+        ))}
+        {editando?.opciones && error && <p className="mt-2 text-xs text-peligro-texto" role="alert">{error}</p>}
+      </Hoja>
+    </div>
+  );
+}
+
+// ── Impuestos y leyendas ─────────────────────────────────────────────────────
+
+export function ImpuestosEmpresa({ legal, onActualizar }: {
+  legal:        Legal | null;
+  onActualizar: () => void;
+}) {
+  const avisos = useAvisos();
+  const [periodoIva,        setPeriodoIva]        = useState<string>(legal?.periodo_iva ?? "MENSUAL");
+  const [guardandoPeriodo,  setGuardandoPeriodo]  = useState(false);
+
   const [agenteRetencion,   setAgenteRetencion]   = useState(legal?.agente_retencion ?? "");
   const [regimenRimpe,      setRegimenRimpe]      = useState(legal?.regimen_rimpe ?? "");
-  const [granContribuyente, setGranContribuyente]  = useState(legal?.gran_contribuyente_resolucion ?? "");
+  const [granContribuyente, setGranContribuyente] = useState(legal?.gran_contribuyente_resolucion ?? "");
+  const [guardandoLeyenda,  setGuardandoLeyenda]  = useState(false);
 
   // Interruptor de retenciones: se guarda al tocarlo (PATCH /emisor/config)
   const [emiteRetenciones,  setEmiteRetenciones]  = useState<boolean>(!!legal?.emite_retenciones);
   const [guardandoRet,      setGuardandoRet]      = useState(false);
-  const [msgRet,            setMsgRet]            = useState("");
   const conPlan = useAuthStore((s) => !!s.empresa?.suscripcion_activa);
 
   if (!legal) return null;
 
-  const esObligado         = legal.obligado_contabilidad === "SI";
-  const periodoEfectivo    = esObligado ? "MENSUAL" : periodoIva;
-  const puedeEditarPeriodo = !esObligado;
+  const esObligado      = legal.obligado_contabilidad === "SI";
+  const periodoEfectivo = esObligado ? "MENSUAL" : periodoIva;
 
-  const guardarCampo = async (key: string, valor: string) => {
-    setGuardandoCampo(true);
-    setErrorCampo("");
-    try {
-      await api.patch("/api/v1/app/emisor/config", { [key]: valor || null });
-      setEditando(null);
-      onActualizar();
-    } catch {
-      setErrorCampo("No se pudo guardar. Intenta de nuevo.");
-    } finally {
-      setGuardandoCampo(false);
-    }
-  };
-
-  const iniciarEdicion = (key: string) => {
-    setEditando(key);
-    setEditValor(legal[key] || "");
-    setErrorCampo("");
-  };
+  const leyendasModificadas =
+    agenteRetencion   !== (legal.agente_retencion ?? "") ||
+    regimenRimpe      !== (legal.regimen_rimpe ?? "") ||
+    granContribuyente !== (legal.gran_contribuyente_resolucion ?? "");
 
   const guardarLeyendas = async () => {
     setGuardandoLeyenda(true);
-    setLeyendaMsg("");
     try {
       await api.patch("/api/v1/app/emisor/config", {
         agente_retencion:              agenteRetencion || null,
         regimen_rimpe:                 regimenRimpe || null,
         gran_contribuyente_resolucion: granContribuyente || null,
       });
-      setLeyendaMsg("✅ Leyendas actualizadas correctamente.");
+      avisos.exito("Leyendas guardadas");
       onActualizar();
     } catch {
-      setLeyendaMsg("❌ Error al guardar las leyendas.");
+      avisos.error("No se pudieron guardar las leyendas. Intenta de nuevo.");
     } finally {
       setGuardandoLeyenda(false);
     }
@@ -113,15 +227,13 @@ export default function TabEmpresa({ legal, health, onActualizar }: Props) {
     const nuevo = !emiteRetenciones;
     setEmiteRetenciones(nuevo);
     setGuardandoRet(true);
-    setMsgRet("");
     try {
       await api.patch("/api/v1/app/emisor/config", { emite_retenciones: nuevo });
-      // El menú y Nueva RET ven el cambio enseguida. Sin onActualizar(): el cargar()
-      // de Configuración guarda en el store la empresa de antes y lo pisaría.
+      // El menú y Nueva RET ven el cambio enseguida (refresca la empresa del store)
       await refrescarEmpresaActual();
     } catch {
       setEmiteRetenciones(!nuevo);
-      setMsgRet("❌ No se pudo guardar. Intenta de nuevo.");
+      avisos.error("No se pudo guardar. Intenta de nuevo.");
     } finally {
       setGuardandoRet(false);
     }
@@ -129,428 +241,113 @@ export default function TabEmpresa({ legal, health, onActualizar }: Props) {
 
   const guardarPeriodo = async (nuevo: string) => {
     if (nuevo === legal.periodo_iva) return;
-    setGuardando(true);
-    setMsgPeriodo("");
+    const anterior = periodoIva;
+    setPeriodoIva(nuevo);
+    setGuardandoPeriodo(true);
     try {
       await api.patch("/api/v1/app/emisor/config", { periodo_iva: nuevo });
-      setMsgPeriodo("✅ Período guardado.");
+      avisos.exito("Período guardado");
       onActualizar();
     } catch {
-      setMsgPeriodo("❌ Error al guardar el período.");
-      setPeriodoIva(legal.periodo_iva ?? "MENSUAL");
+      setPeriodoIva(anterior);
+      avisos.error("No se pudo guardar el período. Intenta de nuevo.");
     } finally {
-      setGuardando(false);
+      setGuardandoPeriodo(false);
     }
   };
 
-  const leyendasModificadas =
-    agenteRetencion   !== (legal?.agente_retencion ?? "") ||
-    regimenRimpe      !== (legal?.regimen_rimpe ?? "") ||
-    granContribuyente !== (legal?.gran_contribuyente_resolucion ?? "");
-
   return (
     <div className="space-y-6">
+      {/* Régimen y leyendas del RIDE */}
+      <section className="space-y-4 rounded-xl border border-borde bg-superficie p-4">
+        <div>
+          <h3 className="text-sm font-semibold text-texto">Leyendas tributarias</h3>
+          <p className="mt-0.5 text-xs text-sutil">Salen solas en el XML y en el RIDE (Ficha Técnica SRI v2.34).</p>
+        </div>
 
-      {/* Checklist (incluye paso 6 y modal de producción) */}
-      {health && !health.en_produccion && (
-        <Checklist health={health} onUpdate={onActualizar} />
-      )}
-
-      {/* ══ Card 1: Datos Fiscales ════════════════════════════════ */}
-      <section
-        className="rounded-2xl p-5 md:p-6"
-        style={{
-          background: "var(--kipu-surface)",
-          border: "1px solid var(--kipu-border)",
-        }}
-      >
-        <div className="flex items-center gap-2.5 mb-5 pb-3" style={{ borderBottom: "1px solid var(--kipu-border)" }}>
-          <div className="p-2 rounded-lg" style={{ background: "color-mix(in srgb, var(--kipu-accent) 12%, transparent)", color: "var(--kipu-accent)" }}>
-            <Building2 size={18} />
-          </div>
-          <div>
-            <h2 className="text-sm font-bold" style={{ color: "var(--kipu-text)" }}>
-              Datos Fiscales
-            </h2>
-            <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
-              Información registrada ante el SRI. Haz clic en el lápiz para editar.
-            </p>
+        <div role="radiogroup" aria-label="Régimen tributario" className="space-y-2">
+          <p className="text-xs font-medium text-tenue tactil:text-sm">Régimen tributario</p>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            {REGIMEN_OPCIONES.map((op) => (
+              <Opcion key={op.value} activo={regimenRimpe === op.value} titulo={op.label} desc={op.desc}
+                      onClick={() => setRegimenRimpe(op.value)} />
+            ))}
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {CAMPOS_FISCALES.map((campo) => {
-            const { key, label, editable, tipo, opciones, render, span } = campo;
-            const valor        = render ? render(legal[key]) : (legal[key] || "—");
-            const estaEditando = editando === key;
-
-            return (
-              <div
-                key={key}
-                className={`rounded-xl p-3.5 group transition-all ${span ? "sm:col-span-2" : ""}`}
-                style={{
-                  background: estaEditando
-                    ? "color-mix(in srgb, var(--kipu-accent) 5%, transparent)"
-                    : "var(--kipu-bg)",
-                  border: estaEditando
-                    ? "1px solid var(--kipu-accent)"
-                    : "1px solid var(--kipu-border)",
-                }}
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <span
-                    className="text-[11px] font-medium uppercase tracking-wider"
-                    style={{ color: "var(--kipu-subtle)" }}
-                  >
-                    {label}
-                  </span>
-                  {editable && !estaEditando && (
-                    <button
-                      onClick={() => iniciarEdicion(key)}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-md flex items-center gap-1"
-                      style={{ color: "var(--kipu-accent)" }}
-                    >
-                      <Pencil size={12} />
-                      <span className="text-[11px]">Editar</span>
-                    </button>
-                  )}
-                </div>
-
-                {estaEditando ? (
-                  <div className="flex items-center gap-2 mt-1">
-                    {tipo === "select" ? (
-                      <select
-                        value={editValor}
-                        onChange={(e) => setEditValor(e.target.value)}
-                        className="flex-1 rounded-lg px-2.5 py-1.5 text-sm font-medium focus:outline-none"
-                        style={{
-                          background: "var(--kipu-surface)",
-                          border: "1px solid var(--kipu-accent)",
-                          color: "var(--kipu-text)",
-                        }}
-                      >
-                        {opciones?.map((op) => (
-                          <option key={op} value={op}>{op}</option>
-                        ))}
-                      </select>
-                    ) : (
-                      <input
-                        type="text"
-                        value={editValor}
-                        onChange={(e) => setEditValor(e.target.value)}
-                        className="flex-1 rounded-lg px-2.5 py-1.5 text-sm font-medium focus:outline-none"
-                        style={{
-                          background: "var(--kipu-surface)",
-                          border: "1px solid var(--kipu-accent)",
-                          color: "var(--kipu-text)",
-                        }}
-                        autoFocus
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") guardarCampo(key, editValor);
-                          if (e.key === "Escape") setEditando(null);
-                        }}
-                      />
-                    )}
-                    <button
-                      onClick={() => guardarCampo(key, editValor)}
-                      disabled={guardandoCampo}
-                      className="p-1.5 rounded-lg text-white transition-colors"
-                      style={{ background: "var(--kipu-success)" }}
-                    >
-                      {guardandoCampo ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
-                    </button>
-                    <button
-                      onClick={() => setEditando(null)}
-                      className="p-1.5 rounded-lg transition-colors"
-                      style={{ background: "var(--kipu-bg)", color: "var(--kipu-text)" }}
-                    >
-                      <X size={14} />
-                    </button>
-                  </div>
-                ) : (
-                  <div
-                    className="text-sm font-semibold leading-snug"
-                    style={{ color: "var(--kipu-text)", wordBreak: "break-word" }}
-                  >
-                    {valor}
-                  </div>
-                )}
-
-                {estaEditando && errorCampo && (
-                  <p className="text-[11px] mt-1.5" style={{ color: "var(--kipu-error, #ef4444)" }}>{errorCampo}</p>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* ══ Card 2: Leyendas Tributarias SRI ═══════════════════════ */}
-      <section
-        className="rounded-2xl p-5 md:p-6"
-        style={{
-          background: "var(--kipu-surface)",
-          border: "1px solid var(--kipu-border)",
-        }}
-      >
-        <div className="flex items-center gap-2.5 mb-5 pb-3" style={{ borderBottom: "1px solid var(--kipu-border)" }}>
-          <div className="p-2 rounded-lg" style={{ background: "color-mix(in srgb, #f59e0b 12%, transparent)", color: "#f59e0b" }}>
-            <FileText size={18} />
-          </div>
-          <div>
-            <h2 className="text-sm font-bold" style={{ color: "var(--kipu-text)" }}>
-              Leyendas Tributarias
-            </h2>
-            <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
-              Ficha Técnica SRI v2.34 — se incluyen automáticamente en el XML y RIDE.
-            </p>
-          </div>
-        </div>
-
-        <div className="space-y-5">
-          <div>
-            <label
-              className="block text-[11px] font-semibold uppercase tracking-wider mb-2"
-              style={{ color: "var(--kipu-subtle)" }}
-            >
-              Régimen tributario
-            </label>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-              {REGIMEN_OPCIONES.map((op) => {
-                const activo = regimenRimpe === op.value;
-                return (
-                  <button
-                    key={op.value}
-                    type="button"
-                    onClick={() => setRegimenRimpe(op.value)}
-                    className="p-3 rounded-xl text-left transition-all"
-                    style={{
-                      background: activo
-                        ? "color-mix(in srgb, var(--kipu-accent) 10%, transparent)"
-                        : "var(--kipu-bg)",
-                      border: activo
-                        ? "1.5px solid var(--kipu-accent)"
-                        : "1px solid var(--kipu-border)",
-                    }}
-                  >
-                    <span
-                      className="text-xs font-bold block"
-                      style={{ color: activo ? "var(--kipu-accent)" : "var(--kipu-text)" }}
-                    >
-                      {op.label}
-                    </span>
-                    <span className="text-[10px] mt-0.5 block" style={{ color: "var(--kipu-subtle)" }}>
-                      {op.desc}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label
-                className="block text-[11px] font-semibold uppercase tracking-wider mb-1.5"
-                style={{ color: "var(--kipu-subtle)" }}
-              >
-                Agente de Retención
-              </label>
-              <input
-                type="text"
-                value={agenteRetencion}
-                inputMode="numeric"
-                onChange={(e) => setAgenteRetencion(e.target.value.replace(/\D/g, "").slice(0, 8))}
-                placeholder="Nro. resolución (ej: 1)"
-                className="w-full rounded-xl px-3 py-2.5 text-sm focus:outline-none"
-                style={{
-                  background: "var(--kipu-bg)",
-                  border: "1px solid var(--kipu-border)",
-                  color: "var(--kipu-text)",
-                }}
-              />
-              <p className="text-[10px] mt-1 flex items-start gap-1" style={{ color: "var(--kipu-subtle)" }}>
-                <HelpCircle size={10} className="shrink-0 mt-0.5" />
-                Vacío si no eres agente de retención.
-              </p>
-            </div>
-
-            <div>
-              <label
-                className="block text-[11px] font-semibold uppercase tracking-wider mb-1.5"
-                style={{ color: "var(--kipu-subtle)" }}
-              >
-                Gran Contribuyente
-              </label>
-              <input
-                type="text"
-                value={granContribuyente}
-                onChange={(e) => setGranContribuyente(e.target.value.slice(0, 50))}
-                placeholder="Nro. resolución (ej: NAC-GCF...)"
-                className="w-full rounded-xl px-3 py-2.5 text-sm focus:outline-none"
-                style={{
-                  background: "var(--kipu-bg)",
-                  border: "1px solid var(--kipu-border)",
-                  color: "var(--kipu-text)",
-                }}
-              />
-              <p className="text-[10px] mt-1 flex items-start gap-1" style={{ color: "var(--kipu-subtle)" }}>
-                <HelpCircle size={10} className="shrink-0 mt-0.5" />
-                Vacío si no aplica.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3 pt-1">
-            <button
-              onClick={guardarLeyendas}
-              disabled={guardandoLeyenda || !leyendasModificadas}
-              className="px-5 py-2 rounded-xl text-sm font-semibold text-white transition-all flex items-center gap-2"
-              style={{
-                background: leyendasModificadas ? "var(--kipu-accent)" : "var(--kipu-border)",
-                cursor: leyendasModificadas ? "pointer" : "default",
-                opacity: guardandoLeyenda ? 0.7 : 1,
-              }}
-            >
-              {guardandoLeyenda ? (
-                <><Loader2 size={14} className="animate-spin" /> Guardando...</>
-              ) : leyendasModificadas ? (
-                "Guardar cambios"
-              ) : (
-                "Sin cambios"
-              )}
-            </button>
-            {leyendaMsg && (
-              <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>{leyendaMsg}</span>
-            )}
-          </div>
-        </div>
-      </section>
-
-      {/* ══ Card: Comprobantes de retención (enlace /configuracion#retenciones) ══ */}
-      <section
-        id="retenciones"
-        className="rounded-2xl p-5 md:p-6 scroll-mt-4"
-        style={{
-          background: "var(--kipu-surface)",
-          border: "1px solid var(--kipu-border)",
-        }}
-      >
-        <div className="flex items-start gap-2.5">
-          <div className="p-2 rounded-lg" style={{ background: "color-mix(in srgb, var(--kipu-info) 12%, transparent)", color: "var(--kipu-info)" }}>
-            <Receipt size={18} />
-          </div>
-          <div className="flex-1 min-w-0">
-            <h2 className="text-sm font-bold" style={{ color: "var(--kipu-text)" }}>
-              Emito comprobantes de retención
-            </h2>
-            <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
-              Muestra «Retención» en Emitir y en el detalle de tus compras. Actívalo si retienes a tus proveedores.
-            </p>
-            {!conPlan && !ES_APP_NATIVA && (
-              <p className="text-xs mt-1" style={{ color: "var(--kipu-muted)" }}>
-                Emitir retenciones requiere Kipu Pro o Kipu Al Día.
-              </p>
-            )}
-          </div>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={emiteRetenciones}
-            aria-label="Emito comprobantes de retención"
-            onClick={cambiarRetenciones}
-            disabled={guardandoRet}
-            className="w-10 h-5 rounded-full transition-colors relative shrink-0 mt-1"
-            style={{
-              background: emiteRetenciones ? "var(--kipu-accent)" : "var(--kipu-border)",
-              opacity: guardandoRet ? 0.6 : 1,
-            }}
-          >
-            <span
-              className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all"
-              style={{ left: emiteRetenciones ? "22px" : "2px" }}
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Campo etiqueta="Agente de retención" opcional ayuda="Nro. de resolución. Vacío si no lo eres.">
+            <Entrada
+              teclado="numero"
+              value={agenteRetencion}
+              onChange={(e) => setAgenteRetencion(e.target.value.replace(/\D/g, "").slice(0, 8))}
+              placeholder="Ej.: 1"
             />
-          </button>
+          </Campo>
+          <Campo etiqueta="Gran contribuyente" opcional ayuda="Nro. de resolución. Vacío si no aplica.">
+            <Entrada
+              value={granContribuyente}
+              onChange={(e) => setGranContribuyente(e.target.value.slice(0, 50))}
+              placeholder="Ej.: NAC-GCF…"
+            />
+          </Campo>
         </div>
-        {msgRet && (
-          <p className="text-xs mt-2" style={{ color: "var(--kipu-subtle)" }}>{msgRet}</p>
-        )}
+
+        <Boton onClick={guardarLeyendas} cargando={guardandoLeyenda} disabled={!leyendasModificadas}>
+          {leyendasModificadas ? "Guardar cambios" : "Sin cambios"}
+        </Boton>
       </section>
 
-      {/* ══ Card 3: Período de IVA ═════════════════════════════════ */}
-      <section
-        className="rounded-2xl p-5 md:p-6"
-        style={{
-          background: "var(--kipu-surface)",
-          border: "1px solid var(--kipu-border)",
-        }}
-      >
-        <div className="flex items-center gap-2.5 mb-5 pb-3" style={{ borderBottom: "1px solid var(--kipu-border)" }}>
-          <div className="p-2 rounded-lg" style={{ background: "color-mix(in srgb, #10b981 12%, transparent)", color: "#10b981" }}>
-            <Calendar size={18} />
-          </div>
-          <div>
-            <h2 className="text-sm font-bold" style={{ color: "var(--kipu-text)" }}>
-              Frecuencia de Declaración de IVA
-            </h2>
-            <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
-              {esObligado
-                ? "Obligados a llevar contabilidad declaran mensualmente."
-                : "Según tu configuración en el RUC del SRI."}
-            </p>
-          </div>
-        </div>
+      {/* Retenciones (enlace /configuracion#retenciones) */}
+      <section id="retenciones" className="scroll-mt-4 rounded-xl border border-borde bg-superficie p-4">
+        <label className="flex cursor-pointer items-start gap-3">
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-semibold text-texto">Emito comprobantes de retención</span>
+            <span className="mt-0.5 block text-xs text-sutil">
+              Muestra «Retención» en Emitir y en el detalle de tus compras. Actívalo si retienes a tus proveedores.
+            </span>
+            {!conPlan && !ES_APP_NATIVA && (
+              <span className="mt-1 block text-xs text-tenue">Emitir retenciones requiere Kipu Pro o Kipu Al Día.</span>
+            )}
+          </span>
+          <input
+            type="checkbox"
+            role="switch"
+            checked={emiteRetenciones}
+            disabled={guardandoRet}
+            onChange={cambiarRetenciones}
+            className="peer sr-only"
+          />
+          <span aria-hidden className={cn(
+            "relative mt-0.5 h-7 w-12 shrink-0 rounded-full transition-colors duration-(--duracion-base)",
+            "peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-acento",
+            "peer-disabled:opacity-60",
+            emiteRetenciones ? "bg-acento" : "bg-borde",
+          )}>
+            <span className={cn(
+              "absolute top-0.5 size-6 rounded-full bg-white shadow transition-[left] duration-(--duracion-base) ease-estandar",
+              emiteRetenciones ? "left-[22px]" : "left-0.5",
+            )} />
+          </span>
+        </label>
+      </section>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {[
-            { valor: "MENSUAL",   titulo: "Mensual",   desc: "Declaración cada mes (obligatorio si llevas contabilidad)." },
-            { valor: "SEMESTRAL", titulo: "Semestral",  desc: "Enero–Jun (vence julio) / Jul–Dic (vence enero)." },
-          ].map(({ valor, titulo, desc }) => {
-            const seleccionado = periodoEfectivo === valor;
-            return (
-              <button
-                key={valor}
-                type="button"
-                disabled={!puedeEditarPeriodo || guardando}
-                onClick={() => { setPeriodoIva(valor); guardarPeriodo(valor); }}
-                className="p-4 rounded-xl text-left transition-all"
-                style={{
-                  background: seleccionado
-                    ? "color-mix(in srgb, var(--kipu-accent) 10%, transparent)"
-                    : "var(--kipu-bg)",
-                  border: seleccionado
-                    ? "1.5px solid var(--kipu-accent)"
-                    : "1px solid var(--kipu-border)",
-                  opacity: !puedeEditarPeriodo ? 0.5 : 1,
-                  cursor: !puedeEditarPeriodo ? "not-allowed" : "pointer",
-                }}
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <span
-                    className="font-bold text-sm"
-                    style={{ color: seleccionado ? "var(--kipu-accent)" : "var(--kipu-text)" }}
-                  >
-                    {titulo}
-                  </span>
-                  {seleccionado && <ShieldCheck size={16} style={{ color: "var(--kipu-accent)" }} />}
-                </div>
-                <p className="text-[11px] leading-relaxed" style={{ color: "var(--kipu-subtle)" }}>
-                  {desc}
-                </p>
-              </button>
-            );
-          })}
+      {/* Frecuencia del IVA */}
+      <section className="space-y-3 rounded-xl border border-borde bg-superficie p-4">
+        <div>
+          <h3 className="text-sm font-semibold text-texto">Declaración de IVA</h3>
+          <p className="mt-0.5 text-xs text-sutil">
+            {esObligado
+              ? "Los obligados a llevar contabilidad declaran cada mes."
+              : "Según lo que dice tu RUC en el SRI."}
+          </p>
         </div>
-
-        <div className="mt-2 min-h-[20px]">
-          {guardando && (
-            <div className="flex items-center gap-1.5 text-xs" style={{ color: "var(--kipu-subtle)" }}>
-              <Loader2 size={12} className="animate-spin" /> Guardando...
-            </div>
-          )}
-          {!guardando && msgPeriodo && (
-            <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>{msgPeriodo}</p>
-          )}
+        <div role="radiogroup" aria-label="Frecuencia de la declaración de IVA" className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          {PERIODOS.map(({ valor, titulo, desc }) => (
+            <Opcion key={valor} activo={periodoEfectivo === valor} titulo={titulo} desc={desc}
+                    deshabilitado={esObligado || guardandoPeriodo}
+                    onClick={() => guardarPeriodo(valor)} />
+          ))}
         </div>
       </section>
     </div>
