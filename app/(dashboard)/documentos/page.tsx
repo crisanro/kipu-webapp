@@ -7,6 +7,7 @@ import { useSearchParams } from "next/navigation";
 import { usePermiso } from "@/hooks/usePermiso";
 import SinAcceso from "@/components/SinAcceso";
 import api from "@/lib/api";
+import { SegmentosDocumentos } from "@/components/shell/BarraPestanas";
 import { hoyEC, inicioMesEC } from "@/lib/fecha";
 import {
   Search, Plus, FileText, CheckCircle2, Clock,
@@ -261,6 +262,7 @@ export default function HistorialPage() {
 
   return (
     <div className="p-4 md:p-6 space-y-4">
+      <SegmentosDocumentos />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

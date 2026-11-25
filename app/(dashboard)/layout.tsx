@@ -24,7 +24,8 @@ import {
 } from "@/components/NotificacionesDrawer";
 
 import { Sidebar } from "@/components/dashboard/Sidebar";
-import { MobileHeader } from "@/components/dashboard/MobileHeader";
+import BarraSuperior, { EVENTO_CERRAR_SESION, EVENTO_SELECTOR_EMPRESA } from "@/components/shell/BarraSuperior";
+import BarraPestanas from "@/components/shell/BarraPestanas";
 import { ModalLogout, SelectorEmpresa } from "@/components/dashboard/DashboardModals";
 import { useVerificacionCorreo } from "@/hooks/useVerificacionCorreo";
 import { useCapaAtras } from "@/lib/botonAtras";
@@ -62,6 +63,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const correo = useVerificacionCorreo();
 
   useEffect(() => setMounted(true), []);
+
+  // "Cambiar empresa" y "Cerrar sesión" desde la barra superior y la pantalla Más
+  useEffect(() => {
+    const abrirSelector = () => setShowSelectorEmp(true);
+    const abrirLogout   = () => setShowLogoutModal(true);
+    window.addEventListener(EVENTO_SELECTOR_EMPRESA, abrirSelector);
+    window.addEventListener(EVENTO_CERRAR_SESION, abrirLogout);
+    return () => {
+      window.removeEventListener(EVENTO_SELECTOR_EMPRESA, abrirSelector);
+      window.removeEventListener(EVENTO_CERRAR_SESION, abrirLogout);
+    };
+  }, []);
 
   // App de las tiendas: lo que el plan no incluye no se abre ni desde un enlace
   // o una notificación (ver rutaFueraDelPlan en lib/plataforma.ts)
@@ -216,16 +229,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Header móvil Extraído */}
-        <MobileHeader
-          mounted={mounted}
-          resolvedTheme={resolvedTheme}
+        {/* Celular: título, atrás y campana (en la compu, el menú lateral) */}
+        <BarraSuperior
           noLeidas={noLeidas}
-          onOpenSidebar={() => setSidebarOpen(true)}
-          onOpenDrawer={() => setDrawerOpen(true)}
+          sandbox={sandbox}
+          onAbrirNotificaciones={() => setDrawerOpen(true)}
         />
 
-        <main className="flex-1 overflow-y-auto">
+        {/* Abajo deja el alto de la barra de pestañas (--alto-barra-inferior, globals.css) */}
+        <main className="flex-1 overflow-y-auto pb-[var(--alto-barra-inferior,0px)]">
           {/* El SRI tiene intermitencias: los comprobantes esperan en cola */}
           <FranjaSRI sandbox={sandbox} />
 
@@ -321,6 +333,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {fueraDelPlan ? null : children}
         </main>
       </div>
+
+      {/* Celular: Inicio · Documentos · Emitir · Personas · Más */}
+      <BarraPestanas />
 
       <PWAInstallBanner />
     </div>
