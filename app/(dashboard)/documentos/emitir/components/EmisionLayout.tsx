@@ -17,9 +17,12 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import { AlertTriangle } from "lucide-react";
+import Link from "next/link";
+import { AlertTriangle, FileClock, X } from "lucide-react";
 import Boton from "@/components/ui/Boton";
+import BotonIcono from "@/components/ui/BotonIcono";
 import { r2 } from "@/lib/dinero";
+import { hayEmisionSinConfirmar } from "@/lib/emision";
 
 export interface BarraEmision {
   total:          number;
@@ -67,7 +70,18 @@ function useEscribiendo(): boolean {
   return escribiendo;
 }
 
-export default function EmisionLayout({ titulo, subtitulo, alerta, lateral, barra, children }: {
+export interface AvisoBorrador {
+  /** "hace 2 h" (lib/borradores.ts). */
+  hace:        string;
+  /** "una factura", "una nota de crédito"… */
+  que:         string;
+  onSeguir:    () => void;
+  onDescartar: () => void;
+}
+
+export default function EmisionLayout({
+  titulo, subtitulo, alerta, lateral, barra, children, tiposEmision, borrador,
+}: {
   titulo:     string;
   subtitulo?: ReactNode;
   /** Aviso arriba del formulario (p. ej. sin acceso para emitir). */
@@ -76,8 +90,15 @@ export default function EmisionLayout({ titulo, subtitulo, alerta, lateral, barr
   lateral:    ReactNode;
   barra:      BarraEmision;
   children:   ReactNode;
+  /** Tipos que envía esta pantalla ("FAC", "FAC-COBRO"…): si uno quedó sin confirmar, se avisa. */
+  tiposEmision?: string[];
+  /** Hay un borrador guardado: "¿Seguir o descartar?". */
+  borrador?:  AvisoBorrador | null;
 }) {
   const escribiendo = useEscribiendo();
+  // Al abrir: ¿quedó un envío sin respuesta (se cortó la conexión, se cerró la app)?
+  const [sinConfirmar, setSinConfirmar] = useState(() =>
+    typeof window !== "undefined" && !!tiposEmision?.length && hayEmisionSinConfirmar(tiposEmision));
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 p-4 pb-[calc(7rem+var(--sa-bottom))] md:p-6 lg:pb-6">
@@ -85,6 +106,34 @@ export default function EmisionLayout({ titulo, subtitulo, alerta, lateral, barr
         <h1 className="hidden text-xl font-bold text-texto lg:block">{titulo}</h1>
         {subtitulo && <p className="text-xs text-sutil lg:text-sm">{subtitulo}</p>}
       </div>
+
+      {sinConfirmar && (
+        <div className="flex items-start gap-3 rounded-xl border border-alerta/20 bg-alerta-suave px-4 py-3" role="status">
+          <AlertTriangle size={16} className="mt-0.5 shrink-0 text-alerta" aria-hidden />
+          <div className="min-w-0 flex-1 space-y-1">
+            <p className="text-sm font-medium text-alerta-texto">Un envío anterior no se confirmó</p>
+            <p className="text-xs leading-relaxed text-tenue">
+              Se cortó la conexión antes de la respuesta. Revisa en{" "}
+              <Link href="/documentos" className="font-medium text-acento underline underline-offset-2">Documentos</Link>{" "}
+              si se emitió antes de enviar otro. Si vuelves a enviar el mismo, no se duplica.
+            </p>
+          </div>
+          <BotonIcono etiqueta="Cerrar aviso" icono={<X size={16} />} tamano="sm" onClick={() => setSinConfirmar(false)} />
+        </div>
+      )}
+
+      {borrador && (
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-acento/20 bg-acento-suave px-4 py-3">
+          <FileClock size={18} className="shrink-0 text-acento" aria-hidden />
+          <p className="min-w-0 flex-1 text-sm text-texto">
+            Tienes {borrador.que} sin terminar <span className="text-sutil">({borrador.hace})</span>
+          </p>
+          <div className="flex gap-2">
+            <Boton variante="fantasma" tamano="sm" onClick={borrador.onDescartar}>Descartar</Boton>
+            <Boton tamano="sm" onClick={borrador.onSeguir}>Seguir</Boton>
+          </div>
+        </div>
+      )}
 
       {alerta}
 

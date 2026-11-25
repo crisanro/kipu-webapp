@@ -1,7 +1,7 @@
 "use client";
 import SoloWeb from "@/components/SoloWeb";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { errorIdentificacion } from "@/lib/identificacion";
 import { TIPOS_IVA } from "@/lib/iva";
 import { r2 } from "@/lib/dinero";
@@ -22,6 +22,7 @@ import CamposAdicionales, { CampoAdicional } from "../components/CamposAdicional
 import ResumenTotales from "../components/ResumenTotales";
 import EmisionLayout from "../components/EmisionLayout";
 import { useEmision } from "../components/useEmision";
+import { useBorrador } from "@/lib/borradores";
 
 // ── Tipos ──────────────────────────────────────────────────────────────────────
 interface Cliente {
@@ -153,6 +154,32 @@ export default function NuevaFacturaPage() {
 
   // ── Estado Proforma ─────────────────────────────────────────────────────────
   const [proformaId, setProformaId] = useState<string | null>(null);
+
+  // ── Borrador: lo escrito sobrevive a salir de la pantalla o al cierre de la app ──
+  // Con datos de fuera (duplicar, desde proforma) no se ofrece el borrador viejo
+  const [conPrefill] = useState(() =>
+    typeof window !== "undefined" && !!sessionStorage.getItem("kipu:prefill"));
+  const datosBorrador = useMemo(() => ({
+    clienteSelected, esConsumidorFinal, clienteNuevo, items, pagos, propina, cobro, camposAdicionales, proformaId,
+  }), [clienteSelected, esConsumidorFinal, clienteNuevo, items, pagos, propina, cobro, camposAdicionales, proformaId]);
+  const formularioVacio = !clienteSelected && !esConsumidorFinal && !clienteNuevo
+    && camposAdicionales.length === 0
+    && items.every(i => !i.descripcion?.trim() && !i.codigo?.trim() && !i.precio);
+  const borrador = useBorrador("FAC", datosBorrador, { vacio: formularioVacio, desactivado: conPrefill });
+
+  const seguirBorrador = () => {
+    const d = borrador.recuperar();
+    if (!d) return;
+    setClienteSelected(d.clienteSelected ?? null);
+    setEsConsumidorFinal(!!d.esConsumidorFinal);
+    setClienteNuevo(d.clienteNuevo ?? null);
+    if (Array.isArray(d.items) && d.items.length) setItems(d.items);
+    if (Array.isArray(d.pagos) && d.pagos.length) setPagos(d.pagos);
+    setPropina(!!d.propina);
+    if (d.cobro) setCobro(d.cobro);
+    setCamposAdicionales(Array.isArray(d.camposAdicionales) ? d.camposAdicionales : []);
+    setProformaId(d.proformaId ?? null);
+  };
 
   // ── Totales ─────────────────────────────────────────────────────────────────
   const totales = calcTotales(items, propina);
@@ -373,13 +400,13 @@ export default function NuevaFacturaPage() {
       // Sin plan, el link cuenta en el uso justo: agotado, mismo aviso con ampliación
       const r = await em.enviar<{ data: CobroCreado }>("/api/v1/app/cobros-en-linea/cobros", factura,
                                                        { tipo: "FAC-COBRO", porDefecto: "No se pudo crear el link de cobro." });
-      if (r) setCobroCreado(r.data);
+      if (r) { borrador.borrar(); setCobroCreado(r.data); }
       return;
     }
 
     const r = await em.enviar("/api/v1/app/documentos/emit/FAC", payload,
                               { tipo: "FAC", porDefecto: "Error al emitir la factura." });
-    if (r) setResultado(r);
+    if (r) { borrador.borrar(); setResultado(r); }
   };
 
   // ── Link de cobro creado (la factura se emite cuando pague) ──────────────────
@@ -498,6 +525,11 @@ export default function NuevaFacturaPage() {
     <EmisionLayout
       titulo="Nueva factura"
       subtitulo={<>{empresa?.razon_social} · {empresa?.ambiente === 2 ? "Producción" : "Pruebas"}</>}
+      tiposEmision={["FAC", "FAC-COBRO"]}
+      borrador={borrador.pendiente && {
+        hace: borrador.pendiente.hace, que: "una factura",
+        onSeguir: seguirBorrador, onDescartar: borrador.descartar,
+      }}
       alerta={
         // Sin suscripción activa ni créditos API (con el plan gratis sí puede emitir)
         empresa && !empresa.suscripcion_activa && empresa.balance_api === 0 && !empresa.emision_gratis && (
