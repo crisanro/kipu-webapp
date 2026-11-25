@@ -3,7 +3,7 @@ import { useRef, useEffect, useCallback, useState } from "react";
 import { validarIdentificacion } from "@/lib/identificacion";
 import api from "@/lib/api";
 import { Search, User, X, Check, AlertCircle, Loader2 } from "lucide-react";
-import { lookupIdentificacion } from "@/lib/identificacion-lookup";
+import { lookupIdentificacion, useBuscaNombres, textoNombreAMano } from "@/lib/identificacion-lookup";
 import { tecladoIdentificacion } from "@/lib/teclado";
 
 interface Cliente {
@@ -59,8 +59,12 @@ export default function ClienteSelector({
     !!clienteNuevo?.razon_social.trim() &&
     (validacion.ok || clienteNuevo?.identificacion === "");
 
+  // Buscar nombres de terceros es de las cuentas que pagan (lib/identificacion-lookup.ts)
+  const buscaNombres = useBuscaNombres();
+
   // Solo cédula o RUC natural son buscables
   const puedeBuscar =
+    buscaNombres &&
     !!clienteNuevo &&
     ["04", "05"].includes(clienteNuevo.tipo_identificacion_sri) &&
     validacion.ok &&
@@ -423,8 +427,8 @@ export default function ClienteSelector({
                 )}
               </div>
 
-              {/* Botón buscar nombre */}
-              {["04", "05"].includes(clienteNuevo.tipo_identificacion_sri) && (
+              {/* Botón buscar nombre (solo cuentas que pagan) */}
+              {buscaNombres && ["04", "05"].includes(clienteNuevo.tipo_identificacion_sri) && (
                 <button
                   type="button"
                   onClick={handleLookup}
@@ -478,6 +482,11 @@ export default function ClienteSelector({
             >
               {lookupMsg}
             </p>
+          )}
+
+          {/* Sin buscador: el nombre se escribe a mano */}
+          {!buscaNombres && ["04", "05"].includes(clienteNuevo.tipo_identificacion_sri) && validacion.ok && (
+            <p className="text-xs text-sutil">{textoNombreAMano()}</p>
           )}
 
           <input

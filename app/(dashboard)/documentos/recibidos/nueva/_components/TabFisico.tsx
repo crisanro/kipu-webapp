@@ -1,9 +1,13 @@
 "use client";
 import { useState, useRef } from "react";
 import api from "@/lib/api";
+import Link from "next/link";
 import {
-  Camera, ImageIcon, X, AlertTriangle, Plus, Trash2,
+  Camera, ImageIcon, X, AlertTriangle, Plus, Trash2, Lock,
 } from "lucide-react";
+import { useAuthStore } from "@/store/auth.store";
+import { ES_APP_NATIVA } from "@/lib/plataforma";
+import SoloWeb from "@/components/SoloWeb";
 import { hoyEC } from "@/lib/fecha";
 import { formatoNumeroDoc } from "@/lib/teclado";
 
@@ -78,7 +82,9 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
     { tipo: "1", base_imponible: "", porcentaje: "", valor_retenido: "" },
   ]);
 
-  // Imagen
+  // Imagen: solo con suscripción vigente (Kipu Pro o Kipu Al Día). El plan gratis
+  // registra el documento escribiendo los datos (suscripcionActiva incluye el gratis).
+  const conFoto = useAuthStore((s) => !!s.empresa?.suscripcion_activa);
   const [imagenFile,    setImagenFile]    = useState<File | null>(null);
   const [imagenPreview, setImagenPreview] = useState<string | null>(null);
   const imagenRef = useRef<HTMLInputElement>(null);
@@ -188,7 +194,7 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
         formData.append("importe_total", importeTotal);
       }
 
-      if (imagenFile) formData.append("imagen", imagenFile);
+      if (imagenFile && conFoto) formData.append("imagen", imagenFile);
 
       await api.post("/api/v1/app/recibidos/fisico", formData, {
         headers: { "Content-Type": "multipart/form-data" },
@@ -683,9 +689,27 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
       >
         <div className="flex items-center justify-between">
           <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--kipu-subtle)" }}>Foto del documento</h2>
-          <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>opcional · se optimiza automáticamente</span>
+          {conFoto && <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>opcional · se optimiza automáticamente</span>}
         </div>
-        {imagenPreview ? (
+        {!conFoto ? (
+          // Guardar la foto cuesta almacenamiento: es de Kipu Pro y Kipu Al Día (el
+          // backend también la rechaza). En la app no se nombra el plan: las
+          // tiendas no permiten invitar a comprar fuera de ellas.
+          <div className="flex items-start gap-3 rounded-xl border border-dashed border-borde px-4 py-4">
+            <Lock size={18} className="mt-0.5 shrink-0 text-sutil" aria-hidden />
+            <div className="min-w-0 space-y-1">
+              <p className="text-sm font-medium text-texto">
+                {ES_APP_NATIVA ? "No incluido en tu plan actual" : "Adjuntar la foto es de Kipu Pro y Kipu Al Día"}
+              </p>
+              <p className="text-xs text-tenue">Puedes registrar el documento igual, escribiendo sus datos, sin la foto.</p>
+              <SoloWeb>
+                <Link href="/planes" className="inline-block text-xs font-medium text-acento underline underline-offset-2">
+                  Ver planes
+                </Link>
+              </SoloWeb>
+            </div>
+          </div>
+        ) : imagenPreview ? (
           <div className="relative">
             <img src={imagenPreview} alt="Vista previa" className="w-full rounded-lg max-h-48 object-cover" />
             <button

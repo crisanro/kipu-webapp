@@ -1,5 +1,5 @@
 "use client";
-import { Puzzle, Play, ArrowRight, Download, Globe, Monitor, Send } from "lucide-react";
+import { Puzzle, Play, ArrowRight, Download, Globe, Monitor, Share2 } from "lucide-react";
 import { ES_APP_NATIVA } from "@/lib/plataforma";
 import { compartir } from "@/lib/nativo";
 import { useAvisos } from "@/components/ui/Avisos";
@@ -224,23 +224,29 @@ function SoloDesdeLaCompu() {
         <li>2. Ve a Documentos → Recibidos → Registrar → SRI masivo.</li>
         <li>3. Instala la extensión y sigue los pasos.</li>
       </ol>
-      <Boton variante="secundario" onClick={enviarEnlace} icono={<Send size={16} />} anchoCompleto>
-        Enviarme el enlace
-      </Boton>
+      {/* Abre el menú Compartir del teléfono: uno mismo elige su WhatsApp o su correo */}
+      <div className="space-y-1">
+        <Boton variante="secundario" onClick={enviarEnlace} icono={<Share2 size={16} />} anchoCompleto>
+          Compartir el enlace
+        </Boton>
+        <p className="text-xs text-sutil">Mándatelo por WhatsApp o correo y ábrelo en la compu.</p>
+      </div>
       <p className="text-xs text-sutil">
-        Desde aquí puedes registrar una compra subiendo su XML o una foto del comprobante.
+        Desde aquí puedes registrar una compra subiendo su XML o escribiendo sus datos.
       </p>
     </div>
   );
 }
 
 export default function TabSRI(props: Props) {
-  // App de las tiendas: nunca. Web: solo en pantallas de computadora.
+  // App de las tiendas: nunca. Web: según el dispositivo, no el ancho: en un
+  // teléfono o tablet (pantalla táctil) se explica; en la compu, aunque la
+  // ventana sea angosta, se usa normal (la extensión sí funciona ahí).
   if (ES_APP_NATIVA) return <SoloDesdeLaCompu />;
   return (
     <>
-      <div className="lg:hidden"><SoloDesdeLaCompu /></div>
-      <div className="hidden lg:block"><ContenidoSRI {...props} /></div>
+      <div className="hidden tactil:block"><SoloDesdeLaCompu /></div>
+      <div className="tactil:hidden"><ContenidoSRI {...props} /></div>
     </>
   );
 }
