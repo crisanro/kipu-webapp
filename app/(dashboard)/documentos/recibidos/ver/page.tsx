@@ -13,6 +13,7 @@ import { rutaFueraDelPlan } from "@/lib/plataforma";
 import { aplicaALaEmpresa, bloqueadoPorPlan } from "@/components/dashboard/DashboardNav";
 import Hoja from "@/components/ui/Hoja";
 import Boton from "@/components/ui/Boton";
+import { guardarYCompartir } from "@/lib/nativo";
 
 // "Emitir retención": misma regla que el menú (DashboardNav). Sin retenciones activadas no
 // aparece; sin Kipu Pro / Al Día va con candado y lleva a planes (en la app no aparece).
@@ -274,14 +275,8 @@ function BotonArchivoOriginal({ doc }: { doc: DocConArchivo }) {
     setDescargando(true);
     try {
       const res = await api.get(`/api/v1/app/recibidos/${doc.id}/archivo`, { responseType: "blob" });
-      const url = URL.createObjectURL(res.data);
-      const a   = document.createElement("a");
-      a.href     = url;
-      a.download = `${doc.clave_acceso || doc.numero_doc || doc.id}.${ext}`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      // Web: descarga; app: hoja de compartir (lib/nativo.ts)
+      await guardarYCompartir(res.data, `${doc.clave_acceso || doc.numero_doc || doc.id}.${ext}`);
     } catch (e) {
       // Con responseType "blob" el detalle del error también llega como blob
       let detalle = "";

@@ -12,6 +12,7 @@ import { useRouter } from "next/navigation";
 import { signOut } from "firebase/auth";
 import { AlertTriangle, Building2, Download, Loader2, LogOut, Trash2, UserCheck } from "lucide-react";
 import api from "@/lib/api";
+import { guardarYCompartir } from "@/lib/nativo";
 import { auth } from "@/lib/firebase";
 import { useAuthStore } from "@/store/auth.store";
 import { ES_APP_NATIVA } from "@/lib/plataforma";
@@ -139,14 +140,8 @@ export default function EliminarCuenta({ onCancelar }: { onCancelar?: () => void
     const r = await api.get("/api/v1/app/auth/exportar-facturas", {
       params: { pin }, responseType: "blob", timeout: 120000,
     }).catch(conDetalle);
-    const url = URL.createObjectURL(r.data);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `comprobantes_${exportable?.ruc ?? "kipu"}.zip`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
+    // Web: descarga; app: hoja de compartir para guardarlo (lib/nativo.ts)
+    await guardarYCompartir(r.data, `comprobantes_${exportable?.ruc ?? "kipu"}.zip`, { titulo: "Tus comprobantes" });
     setPaso("revisar");
   };
 

@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { notFound, useRouter, useSearchParams } from "next/navigation";
 import api from "@/lib/api";
+import { guardarYCompartir } from "@/lib/nativo";
 import {
   ArrowLeft, RefreshCw, AlertTriangle,
   FileText, ChevronDown, ChevronUp, Download, Info,
@@ -222,12 +223,8 @@ function ReporteATS({ periodo }: { periodo: string }) {
       const res = await api.post(`/api/v1/app/declaraciones/ats/generar?periodo=${periodo}`);
       const url = res.data?.download_url;
       if (!url) throw new Error("sin url");
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = res.data?.nombre_zip ?? `ATS-${periodo}.zip`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
+      // Web: descarga; app: hoja de compartir para guardarlo o enviarlo (lib/nativo.ts)
+      await guardarYCompartir({ url }, res.data?.nombre_zip ?? `ATS-${periodo}.zip`, { titulo: `ATS ${periodo}` });
     } catch (e: any) {
       setError(e?.response?.data?.detail ?? "No se pudo generar el archivo del ATS.");
     } finally {
