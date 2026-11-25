@@ -20,6 +20,7 @@ import Boton from "@/components/ui/Boton";
 import BotonIcono from "@/components/ui/BotonIcono";
 import HojaAcciones, { type Accion } from "@/components/ui/HojaAcciones";
 import Seccion from "@/components/ui/Seccion";
+import Interruptor from "@/components/ui/Interruptor";
 import FilaLista from "@/components/ui/FilaLista";
 import Vacio from "@/components/ui/Vacio";
 import TirarParaRefrescar from "@/components/ui/TirarParaRefrescar";
@@ -42,33 +43,6 @@ function Dato({ etiqueta, valor }: { etiqueta: string; valor: React.ReactNode })
       <span className="shrink-0 text-tenue">{etiqueta}</span>
       <span className="min-w-0 break-words text-right text-texto">{valor || "—"}</span>
     </div>
-  );
-}
-
-/** Interruptor (el mismo de la pantalla Más): un checkbox con role="switch". */
-function Interruptor({ etiqueta, descripcion, activo, onCambio, deshabilitado, tono = "acento" }: {
-  etiqueta: string; descripcion?: string; activo: boolean; onCambio: (v: boolean) => void;
-  deshabilitado?: boolean; tono?: "acento" | "exito";
-}) {
-  return (
-    <label className={cn("flex min-h-11 cursor-pointer items-center justify-between gap-3", deshabilitado && "cursor-not-allowed opacity-50")}>
-      <span className="min-w-0">
-        <span className="block text-sm text-texto">{etiqueta}</span>
-        {descripcion && <span className="block text-xs text-sutil">{descripcion}</span>}
-      </span>
-      <input type="checkbox" role="switch" checked={activo} disabled={deshabilitado}
-             onChange={e => onCambio(e.target.checked)} className="peer sr-only" />
-      <span aria-hidden className={cn(
-        "relative h-7 w-12 shrink-0 rounded-full transition-colors duration-(--duracion-base)",
-        "peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-acento",
-        activo ? (tono === "exito" ? "bg-exito" : "bg-acento") : "bg-borde",
-      )}>
-        <span className={cn(
-          "absolute top-0.5 size-6 rounded-full bg-white shadow transition-[left] duration-(--duracion-base) ease-estandar",
-          activo ? "left-[22px]" : "left-0.5",
-        )} />
-      </span>
-    </label>
   );
 }
 

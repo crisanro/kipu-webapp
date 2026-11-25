@@ -15,6 +15,7 @@ import { tienePermiso } from "@/components/dashboard/DashboardNav";
 import { EVENTO_CERRAR_SESION, EVENTO_SELECTOR_EMPRESA } from "@/components/shell/BarraSuperior";
 import { useEsCliente } from "@/components/ui/Hoja";
 import { cn } from "@/components/ui/cn";
+import Interruptor from "@/components/ui/Interruptor";
 import { ES_APP_NATIVA, esRutaSoloWeb, rutaFueraDelPlan } from "@/lib/plataforma";
 import { useAuthStore } from "@/store/auth.store";
 import { useSandboxStore } from "@/store/sandbox.store";
@@ -143,35 +144,20 @@ export default function MasPage() {
       <Grupo titulo="Preferencias">
         {/* Sandbox: mismas reglas que el menú lateral */}
         {firmaOk && (
-          <label className={cn("flex min-h-13 items-center gap-3 px-4 text-sm", !puedeProduccion && "opacity-60")}>
-            <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg bg-sandbox-suave text-sandbox">
-              <FlaskConical size={17} aria-hidden />
-            </span>
-            <span className="flex-1 py-3 text-texto">
-              Modo sandbox
-              <span className="block text-xs text-sutil">
-                {puedeProduccion ? "Comprobantes de prueba, sin validez tributaria" : "Tu empresa aún está en pruebas"}
+          <Interruptor
+            className="min-h-13 px-4"
+            tono="sandbox"
+            inicio={
+              <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg bg-sandbox-suave text-sandbox">
+                <FlaskConical size={17} aria-hidden />
               </span>
-            </span>
-            <input
-              type="checkbox"
-              role="switch"
-              checked={sandbox}
-              disabled={!puedeProduccion}
-              onChange={e => setSandbox(e.target.checked)}
-              className="peer sr-only"
-            />
-            <span aria-hidden className={cn(
-              "relative h-7 w-12 shrink-0 rounded-full transition-colors duration-(--duracion-base)",
-              "peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-acento",
-              sandbox ? "bg-sandbox" : "bg-borde",
-            )}>
-              <span className={cn(
-                "absolute top-0.5 size-6 rounded-full bg-white shadow transition-[left] duration-(--duracion-base) ease-estandar",
-                sandbox ? "left-[22px]" : "left-0.5",
-              )} />
-            </span>
-          </label>
+            }
+            etiqueta="Modo sandbox"
+            descripcion={puedeProduccion ? "Comprobantes de prueba, sin validez tributaria" : "Tu empresa aún está en pruebas"}
+            activo={sandbox}
+            deshabilitado={!puedeProduccion}
+            onCambio={setSandbox}
+          />
         )}
         {/* Tema */}
         <div className="flex min-h-13 items-center gap-3 px-4 py-2 text-sm">
