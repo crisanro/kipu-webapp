@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import api from "@/lib/api";
 import { rutas } from "@/lib/rutas";
+import { vibrar } from "@/lib/nativo";
 import AvisoColchon, { type AvisoUsoJusto } from "@/components/uso-justo/AvisoColchon";
 import ErroresSRI from "../../ver/components/detalle/ErroresSRI";
 
@@ -141,6 +142,12 @@ export default function PantallaResultado({
   const vista  = vistaDe(nombre, estado, agotado, resultado.mensaje);
   const Icono  = vista.icono;
   const esFinalConError = estado === "DEVUELTA" || estado === "RECHAZADO";
+
+  // En el teléfono se siente el resultado del SRI (lib/nativo.ts; en la web no hace nada)
+  useEffect(() => {
+    if (estado === "AUTORIZADO") void vibrar("exito");
+    else if (estado === "DEVUELTA" || estado === "RECHAZADO") void vibrar("error");
+  }, [estado]);
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6" style={{ background: "var(--kipu-bg)" }}>

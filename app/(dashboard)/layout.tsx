@@ -27,6 +27,7 @@ import { Sidebar } from "@/components/dashboard/Sidebar";
 import { MobileHeader } from "@/components/dashboard/MobileHeader";
 import { ModalLogout, SelectorEmpresa } from "@/components/dashboard/DashboardModals";
 import { useVerificacionCorreo } from "@/hooks/useVerificacionCorreo";
+import { useCapaAtras } from "@/lib/botonAtras";
 
 // "Ahora no" en el aviso de notificaciones: no volver a mostrarlo por 7 días
 const NOTIF_POSPUESTAS = "kipu-notif-pospuestas";
@@ -54,6 +55,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [cerrandoSesion,  setCerrandoSesion]  = useState(false);
   const [showSelectorEmp, setShowSelectorEmp] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  // Botón atrás de Android: cierra el menú o las notificaciones antes de navegar
+  useCapaAtras(sidebarOpen, () => setSidebarOpen(false));
+  useCapaAtras(drawerOpen,  () => setDrawerOpen(false));
   // Cuentas antiguas que ya tienen empresa pero nunca verificaron el correo
   const correo = useVerificacionCorreo();
 
