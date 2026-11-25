@@ -30,6 +30,7 @@ import { ModalLogout, SelectorEmpresa } from "@/components/dashboard/DashboardMo
 import { useVerificacionCorreo } from "@/hooks/useVerificacionCorreo";
 import { useCapaAtras } from "@/lib/botonAtras";
 import { abrirExterno } from "@/lib/nativo";
+import { useRestaurarScroll } from "@/lib/useRestaurarScroll";
 import { useAvisos } from "@/components/ui/Avisos";
 
 // "Ahora no" en el aviso de notificaciones: no volver a mostrarlo por 7 días
@@ -64,6 +65,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // Cuentas antiguas que ya tienen empresa pero nunca verificaron el correo
   const correo = useVerificacionCorreo();
   const avisos = useAvisos();
+  // Al volver con "atrás", la pantalla queda donde estaba (el desplazamiento vive en <main>)
+  const [mainEl, setMainEl] = useState<HTMLElement | null>(null);
+  useRestaurarScroll(mainEl);
 
   useEffect(() => setMounted(true), []);
 
@@ -257,7 +261,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         />
 
         {/* Abajo deja el alto de la barra de pestañas (--alto-barra-inferior, globals.css) */}
-        <main className="flex-1 overflow-y-auto pb-[var(--alto-barra-inferior,0px)]">
+        <main ref={setMainEl} className="flex-1 overflow-y-auto pb-[var(--alto-barra-inferior,0px)]">
           {/* Un solo lugar para los avisos: sin conexión, SRI, correo, notificaciones,
               sandbox y Kipu Pro (el más importante en una línea; "+N" despliega el resto) */}
           <AvisoShell

@@ -2,16 +2,28 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  ArrowLeft, RefreshCw, RotateCcw, ShieldCheck, ChevronDown, ChevronUp,
+  ArrowLeft, RefreshCw, RotateCcw, ShieldCheck, ChevronDown, ChevronUp, Share2, FileText,
+  MoreVertical, Copy, ExternalLink, Clock,
 } from "lucide-react";
 import api from "@/lib/api";
-import { type FacturaBase, ESTADO_CONFIG, TIPO_LABEL, MOTIVO_LABEL, formatearFechaHora } from "./utils";
-import AccionesArchivo from "./AccionesArchivo";
+import { abrirExterno } from "@/lib/nativo";
+import { useAvisos } from "@/components/ui/Avisos";
+import Boton from "@/components/ui/Boton";
+import BotonIcono from "@/components/ui/BotonIcono";
+import HojaAcciones, { type Accion } from "@/components/ui/HojaAcciones";
+import { InsigniaSri, InsigniaEstado } from "@/components/ui/InsigniaEstado";
+import { type FacturaBase, TIPO_LABEL, MOTIVO_LABEL, formatearFechaHora, fmt } from "./utils";
+import { useAccionesArchivo } from "./AccionesArchivo";
+import { useAccionesRelacionadas } from "./ComprobantesRelacionados";
 
 // Estados en los que tiene sentido preguntarle al SRI cómo está el comprobante
 const CONSULTABLES = ["FIRMADO", "RECIBIDA", "EN_REVISION", "DEVUELTA", "RECHAZADO"];
 // Estados en los que se puede pedir un reenvío (el backend consulta antes de reenviar)
 const REINTENTABLES = ["FIRMADO", "EN_REVISION", "DEVUELTA", "RECHAZADO"];
+// Estados que cambian solos en unos segundos: vale la pena "Actualizar"
+const EN_CAMINO = ["POR_FIRMAR", "RECIBIDA", "FIRMADO"];
+
+const URL_VALIDEZ_SRI = "https://srienlinea.sri.gob.ec/comprobantes-electronicos-internet/publico/validezComprobantes.jsf";
 
 const DESCRIPCION: Record<string, string> = {
   DEVUELTA:    "El SRI devolvió el comprobante — revisa los errores abajo",
@@ -23,31 +35,63 @@ const DESCRIPCION: Record<string, string> = {
   EN_REVISION: "No pudimos confirmar el estado con el SRI. Lo seguimos verificando automáticamente: no es un rechazo.",
 };
 
-type Aviso = { tipo: "ok" | "error"; texto: string } | null;
+/** Con quién es el comprobante: comprador, proveedor (LIQ) o sujeto retenido (RET). */
+function contraparte(f: FacturaBase): string {
+  const d = f.datos ?? {};
+  return d.infoFactura?.razonSocialComprador
+    || d.infoLiquidacionCompra?.razonSocialProveedor
+    || d.infoNotaCredito?.razonSocialComprador
+    || d.infoNotaDebito?.razonSocialComprador
+    || d.infoCompRetencion?.razonSocialSujetoRetenido
+    || d.legacy_razon_comprador
+    || f.cliente?.razon_social
+    || "";
+}
 
-// Encabezado (número y fecha) y bloque de estado SRI con sus acciones.
-export default function EstadoDocumento({ factura, onRecargar }: { factura: FacturaBase; onRecargar: () => void }) {
+function fechaEmision(f: FacturaBase): string {
+  const d = f.datos ?? {};
+  return d.infoFactura?.fechaEmision || d.infoLiquidacionCompra?.fechaEmision || d.infoNotaCredito?.fechaEmision
+    || d.infoNotaDebito?.fechaEmision || d.infoCompRetencion?.fechaEmision || f.fecha_emision;
+}
+
+type Menu = "pdf" | "compartir" | "mas" | null;
+
+/**
+ * Tarjeta de arriba del comprobante: tipo, número, con quién, el monto en grande
+ * y el estado en el SRI. Debajo, lo que más se hace (Compartir, PDF, o Consultar
+ * y Reintentar si está en proceso) y el resto en el menú ⋮.
+ */
+export default function EstadoDocumento({ factura, onRecargar, consumidorFinal, enPanel = false }: {
+  factura: FacturaBase; onRecargar: () => void; consumidorFinal: boolean; enPanel?: boolean;
+}) {
   const router = useRouter();
-  const [accion,      setAccion]      = useState<"consultar" | "reintentar" | null>(null);
-  const [aviso,       setAviso]       = useState<Aviso>(null);
-  const [verDetalle,  setVerDetalle]  = useState(false);
+  const avisos = useAvisos();
+  const [accion,     setAccion]     = useState<"consultar" | "reintentar" | null>(null);
+  const [verDetalle, setVerDetalle] = useState(false);
+  const [menu,       setMenu]       = useState<Menu>(null);
 
-  const estado = ESTADO_CONFIG[factura.estado_sri] ?? ESTADO_CONFIG.FIRMADO;
-  const Icon   = estado.icon;
+  const archivo      = useAccionesArchivo(factura);
+  const relacionadas = useAccionesRelacionadas(factura, consumidorFinal);
 
   const ejecutar = async (tipo: "consultar" | "reintentar") => {
     setAccion(tipo);
-    setAviso(null);
     try {
       const ruta = tipo === "consultar" ? "sincronizar" : "reintentar";
       const res  = await api.post(`/api/v1/app/documentos/${factura.id}/${ruta}`);
-      setAviso({ tipo: "ok", texto: res.data?.mensaje || "Listo." });
+      avisos.exito(res.data?.mensaje || "Listo.");
       onRecargar();
     } catch (e: any) {
-      setAviso({ tipo: "error", texto: e?.response?.data?.detail ?? "No pudimos completar la acción. Intenta de nuevo." });
+      const detalle = e?.response?.data?.detail;
+      avisos.error(typeof detalle === "string" ? detalle : "No pudimos completar la acción. Intenta de nuevo.");
     } finally {
       setAccion(null);
     }
+  };
+
+  const copiarClave = async () => {
+    if (!factura.clave_acceso) return;
+    try { await navigator.clipboard.writeText(factura.clave_acceso); avisos.exito("Clave de acceso copiada"); }
+    catch { avisos.info(factura.clave_acceso); }
   };
 
   const descripcion =
@@ -63,185 +107,127 @@ export default function EstadoDocumento({ factura, onRecargar }: { factura: Fact
         ].filter(Boolean).join(" · ")
       : DESCRIPCION[factura.estado_sri] ?? DESCRIPCION.RECIBIDA;
 
-  const Spinner = ({ claro = false }: { claro?: boolean }) => (
-    <div
-      className="w-3.5 h-3.5 border-2 border-t-transparent rounded-full animate-spin"
-      style={{ borderColor: claro ? "#FFFFFF" : "currentColor", borderTopColor: "transparent" }}
-    />
-  );
+  const consultable = CONSULTABLES.includes(factura.estado_sri);
+  const reintentable = REINTENTABLES.includes(factura.estado_sri);
+
+  // ⋮: lo que no está a la vista. Consultar/Reintentar ya son botones si aplican.
+  const mas: Accion[] = [
+    ...(archivo.xml ? [archivo.xml] : []),
+    ...relacionadas,
+    ...(EN_CAMINO.includes(factura.estado_sri)
+      ? [{ etiqueta: "Actualizar", descripcion: "Ver si ya cambió el estado", icono: RefreshCw, onClick: onRecargar }] : []),
+    ...(factura.clave_acceso
+      ? [{ etiqueta: "Copiar clave de acceso", icono: Copy, onClick: () => void copiarClave() }] : []),
+    ...(["AUTORIZADO", "ANULADO"].includes(factura.estado_sri)
+      ? [{ etiqueta: "Verificar en el portal del SRI", icono: ExternalLink, onClick: () => void abrirExterno(URL_VALIDEZ_SRI) }] : []),
+  ];
+
+  const hoja = {
+    pdf: {
+      titulo: archivo.esProvisional ? "PDF provisional" : "PDF",
+      descripcion: archivo.esProvisional
+        ? "Pendiente de autorización del SRI. El PDF definitivo estará disponible una vez autorizado."
+        : "Elige el formato de impresión",
+      acciones: archivo.pdf,
+    },
+    compartir: { titulo: "Compartir con tu cliente", descripcion: "Un enlace donde ve y descarga el comprobante", acciones: archivo.compartir },
+    mas:       { titulo: `${TIPO_LABEL[factura.tipo_doc] ?? "Comprobante"} ${factura.numero_doc}`, descripcion: undefined, acciones: mas },
+  } as const;
+
+  const nombre = contraparte(factura);
 
   return (
-    <>
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <button
-          onClick={() => router.back()}
-          aria-label="Volver"
-          className="p-2 rounded-lg transition-colors"
-          style={{ color: "var(--kipu-muted)" }}
-          onMouseEnter={e => {
-            e.currentTarget.style.color = "var(--kipu-text)";
-            e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 5%, transparent)";
-          }}
-          onMouseLeave={e => {
-            e.currentTarget.style.color = "var(--kipu-muted)";
-            e.currentTarget.style.background = "transparent";
-          }}
-        >
-          <ArrowLeft size={18} />
-        </button>
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold" style={{ color: "var(--kipu-text)" }}>{factura.numero_doc}</h1>
-            {factura.tipo_doc !== "FAC" && (
-              <span
-                className="text-xs px-2 py-0.5 rounded-full font-medium"
-                style={{
-                  background: "color-mix(in srgb, var(--kipu-muted) 20%, transparent)",
-                  color: "var(--kipu-muted)",
-                }}
-              >
-                {TIPO_LABEL[factura.tipo_doc] ?? factura.tipo_doc}
-              </span>
-            )}
-          </div>
-          <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>
-            {factura.datos?.infoFactura?.fechaEmision ||
-             factura.datos?.infoLiquidacionCompra?.fechaEmision ||
-             factura.datos?.infoNotaCredito?.fechaEmision ||
-             factura.datos?.infoNotaDebito?.fechaEmision ||
-             factura.datos?.infoCompRetencion?.fechaEmision ||
-             factura.fecha_emision}
+    <section className="rounded-2xl border border-borde bg-superficie p-4 sm:p-5">
+      {/* Tipo, número y con quién; el estado arriba a la derecha */}
+      <div className="flex items-start gap-2">
+        {/* En el celular la flecha atrás ya está en la barra superior; en el panel, la X del panel */}
+        {!enPanel && (
+          <BotonIcono etiqueta="Volver" icono={<ArrowLeft size={18} />} onClick={() => router.back()}
+                      className="-ml-2 -mt-1 hidden lg:inline-flex" />
+        )}
+        <div className="min-w-0 flex-1">
+          <p className="text-xs text-sutil">
+            {TIPO_LABEL[factura.tipo_doc] ?? factura.tipo_doc} · {fechaEmision(factura)}
           </p>
+          <h1 className="font-mono text-base font-semibold text-texto sm:text-lg">{factura.numero_doc}</h1>
+          {nombre && <p className="truncate text-sm text-tenue">{nombre}</p>}
+        </div>
+        <div className="flex shrink-0 flex-col items-end gap-1">
+          <InsigniaSri estado={factura.estado_sri} />
+          {factura.es_sandbox && <InsigniaEstado tono="sandbox">Prueba</InsigniaEstado>}
         </div>
       </div>
 
-      {/* Estado SRI */}
-      <div
-        className="rounded-xl p-4 space-y-3"
-        style={{
-          background: estado.bg,
-          border: `1px solid ${estado.border}`,
-        }}
-      >
-        <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap">
-          <div
-            className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
-            style={{ background: estado.bg }}
-          >
-            <Icon size={20} style={{ color: estado.color }} />
-          </div>
-          <div className="flex-1 min-w-[200px]">
-            <p className="font-semibold" style={{ color: estado.color }}>{estado.label}</p>
-            <p className="text-xs" style={{ color: "var(--kipu-muted)" }}>{descripcion}</p>
-            {factura.sri_verificado_at && CONSULTABLES.includes(factura.estado_sri) && (
-              <p className="text-[11px] mt-0.5" style={{ color: "var(--kipu-subtle)" }}>
-                Última consulta al SRI: {formatearFechaHora(factura.sri_verificado_at)}
-              </p>
-            )}
-          </div>
+      {/* El monto, en grande */}
+      <p className="mt-4 text-3xl font-bold tabular-nums text-texto">${fmt(factura.importe_total)}</p>
+      <p className="mt-1 text-xs leading-relaxed text-tenue">{descripcion}</p>
+      {factura.sri_verificado_at && consultable && (
+        <p className="mt-0.5 text-[11px] text-sutil">
+          Última consulta al SRI: {formatearFechaHora(factura.sri_verificado_at)}
+        </p>
+      )}
 
-          <div className="flex gap-2 ml-auto w-full sm:w-auto justify-end flex-wrap">
-            <AccionesArchivo factura={factura} />
-
-            {CONSULTABLES.includes(factura.estado_sri) && (
-              <button
-                onClick={() => ejecutar("consultar")}
-                disabled={accion !== null}
-                title="Preguntarle al SRI el estado real de este comprobante"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
-                style={{
-                  border: "1px solid var(--kipu-border)",
-                  color: "var(--kipu-text)",
-                  background: "var(--kipu-surface)",
-                }}
-              >
-                {accion === "consultar" ? <Spinner /> : <ShieldCheck size={13} />}
-                Consultar en el SRI
-              </button>
-            )}
-
-            {REINTENTABLES.includes(factura.estado_sri) && (
-              <button
-                onClick={() => ejecutar("reintentar")}
-                disabled={accion !== null}
-                title="Primero se consulta al SRI; solo se reenvía si el SRI no lo tiene"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs transition-colors disabled:opacity-50"
-                style={{ background: "var(--kipu-accent)" }}
-                onMouseEnter={e => {
-                  if (!accion) e.currentTarget.style.background = "var(--kipu-accent-h)";
-                }}
-                onMouseLeave={e => {
-                  if (!accion) e.currentTarget.style.background = "var(--kipu-accent)";
-                }}
-              >
-                {accion === "reintentar" ? <Spinner claro /> : <RotateCcw size={13} />}
-                Reintentar
-              </button>
-            )}
-
-            {["POR_FIRMAR", "RECIBIDA", "FIRMADO"].includes(factura.estado_sri) && (
-              <button
-                onClick={onRecargar}
-                aria-label="Actualizar"
-                className="p-2 rounded-lg transition-colors"
-                style={{ color: "var(--kipu-subtle)" }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.color = "var(--kipu-text)";
-                  e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 5%, transparent)";
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.color = "var(--kipu-subtle)";
-                  e.currentTarget.style.background = "transparent";
-                }}
-              >
-                <RefreshCw size={15} />
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Resultado de la acción */}
-        {aviso && (
-          <p
-            className="text-xs rounded-lg px-3 py-2"
-            style={{
-              background: aviso.tipo === "ok"
-                ? "color-mix(in srgb, var(--kipu-success) 10%, transparent)"
-                : "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
-              color: aviso.tipo === "ok" ? "var(--kipu-success)" : "var(--kipu-danger)",
-            }}
-          >
-            {aviso.texto}
-          </p>
+      {/* Lo que más se hace; el resto en ⋮ */}
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        {archivo.puedeCompartir && (
+          <Boton onClick={() => setMenu("compartir")} cargando={archivo.preparando === "compartir"}
+                 icono={<Share2 size={16} />} className="flex-1 sm:flex-none">
+            Compartir
+          </Boton>
         )}
-
-        {/* Detalle técnico (para soporte) */}
-        {factura.ultimo_error_tecnico && CONSULTABLES.includes(factura.estado_sri) && (
-          <div>
-            <button
-              type="button"
-              onClick={() => setVerDetalle(v => !v)}
-              className="flex items-center gap-1 text-[11px]"
-              style={{ color: "var(--kipu-subtle)" }}
-            >
-              {verDetalle ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-              Detalle técnico
-            </button>
-            {verDetalle && (
-              <pre
-                className="mt-1 text-[11px] whitespace-pre-wrap break-words rounded-lg px-3 py-2"
-                style={{
-                  background: "color-mix(in srgb, var(--kipu-text) 5%, transparent)",
-                  color: "var(--kipu-muted)",
-                }}
-              >
-                {factura.ultimo_error_tecnico}
-              </pre>
-            )}
-          </div>
+        {archivo.puedePdf && (
+          <Boton variante="secundario" onClick={() => setMenu("pdf")} cargando={archivo.preparando === "pdf"}
+                 icono={archivo.esProvisional ? <Clock size={16} /> : <FileText size={16} />} className="flex-1 sm:flex-none">
+            {archivo.esProvisional ? "PDF provisional" : "PDF"}
+          </Boton>
+        )}
+        {consultable && (
+          <Boton variante="secundario" onClick={() => ejecutar("consultar")} cargando={accion === "consultar"}
+                 disabled={accion !== null} icono={<ShieldCheck size={16} />}
+                 title="Preguntarle al SRI el estado real de este comprobante" className="flex-1 sm:flex-none">
+            Consultar en el SRI
+          </Boton>
+        )}
+        {reintentable && (
+          <Boton onClick={() => ejecutar("reintentar")} cargando={accion === "reintentar"}
+                 disabled={accion !== null} icono={<RotateCcw size={16} />}
+                 title="Primero se consulta al SRI; solo se reenvía si el SRI no lo tiene" className="flex-1 sm:flex-none">
+            Reintentar
+          </Boton>
+        )}
+        {mas.length > 0 && (
+          <BotonIcono etiqueta="Más acciones" icono={<MoreVertical size={20} />} variante="secundario"
+                      onClick={() => setMenu("mas")} disabled={archivo.preparando === "xml"} />
         )}
       </div>
-    </>
+
+      {/* Detalle técnico (para soporte) */}
+      {factura.ultimo_error_tecnico && consultable && (
+        <div className="mt-3">
+          <button
+            type="button"
+            onClick={() => setVerDetalle(v => !v)}
+            aria-expanded={verDetalle}
+            className="flex items-center gap-1 text-[11px] text-sutil"
+          >
+            {verDetalle ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+            Detalle técnico
+          </button>
+          {verDetalle && (
+            <pre className="mt-1 whitespace-pre-wrap break-words rounded-lg bg-presionado px-3 py-2 text-[11px] text-tenue">
+              {factura.ultimo_error_tecnico}
+            </pre>
+          )}
+        </div>
+      )}
+
+      <HojaAcciones
+        abierta={menu !== null}
+        onCerrar={() => setMenu(null)}
+        titulo={menu ? hoja[menu].titulo : ""}
+        descripcion={menu ? hoja[menu].descripcion : undefined}
+        acciones={menu ? [...hoja[menu].acciones] : []}
+      />
+    </section>
   );
 }

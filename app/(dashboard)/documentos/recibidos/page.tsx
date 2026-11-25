@@ -1,9 +1,9 @@
 "use client";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { rutas } from "@/lib/rutas";
 import Link from "next/link";
-import api from "@/lib/api";
+import { useLista, useFiltrosUrl } from "@/lib/useLista";
 import { SegmentosDocumentos } from "@/components/shell/BarraPestanas";
 import { hoyEC, inicioMesEC } from "@/lib/fecha";
 import { usePermiso } from "@/hooks/usePermiso";
@@ -18,6 +18,23 @@ import {
   Receipt, ExternalLink, ChevronLeft, ChevronRight,
   AlertTriangle, CreditCard
 } from "lucide-react";
+import FilaLista, { GrupoFilas } from "@/components/ui/FilaLista";
+import { InsigniaEstado } from "@/components/ui/InsigniaEstado";
+import { EsqueletoFilas } from "@/components/ui/Esqueleto";
+import Vacio from "@/components/ui/Vacio";
+import BotonFlotante from "@/components/ui/BotonFlotante";
+import PeriodoFechas, { etiquetaPeriodo } from "@/components/ui/PeriodoFechas";
+import TirarParaRefrescar from "@/components/ui/TirarParaRefrescar";
+import { Entrada } from "@/components/ui/Campo";
+import Boton from "@/components/ui/Boton";
+import { ESTADOS_PAGO, tipoComprobante } from "@/lib/estados";
+import PanelDetalle from "@/components/ui/PanelDetalle";
+import { cn } from "@/components/ui/cn";
+import { useAtajos } from "@/lib/useAtajos";
+import DetalleRecibido from "./ver/components/DetalleRecibido";
+
+// Lista y detalle lado a lado desde este ancho (components/ui/PanelDetalle.tsx)
+const ANCHO_PANEL = "(min-width: 1280px)";
 
 // ── Tipos ──────────────────────────────────────────────────────────────────────
 interface DocRecibido {
@@ -300,34 +317,25 @@ export default function FacturasRecibidasPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Estados temporales para los inputs de fecha (no disparan consulta)
-  const [tempFechaInicio, setTempFechaInicio] = useState<string>(() => {
-    return searchParams.get("fecha_inicio") || leerFecha(SS_KEY_INICIO, inicioMesEC());
-  });
-  const [tempFechaFin, setTempFechaFin] = useState<string>(() => {
-    return searchParams.get("fecha_fin") || leerFecha(SS_KEY_FIN, hoyEC());
-  });
+  // Período: el de la URL (?fecha_inicio=), el de la sesión o el mes en curso
+  const [fechaInicio, setFechaInicio] = useState<string>(() =>
+    searchParams.get("fecha_inicio") || leerFecha(SS_KEY_INICIO, inicioMesEC()));
+  const [fechaFin, setFechaFin] = useState<string>(() =>
+    searchParams.get("fecha_fin") || leerFecha(SS_KEY_FIN, hoyEC()));
 
-  // Fechas activas para la API
-  const [fechaInicio, setFechaInicio] = useState<string>(tempFechaInicio);
-  const [fechaFin, setFechaFin]       = useState<string>(tempFechaFin);
-
-  // Búsqueda remota con debounce
-  const [query, setQuery]             = useState("");
-  const [queryActivo, setQueryActivo] = useState("");
+  // Búsqueda y página en la URL: al volver de un comprobante la lista queda igual
+  // sel: la compra abierta en el panel de la derecha (compu, 1280 px o más)
+  const [filtros, cambiarFiltros] = useFiltrosUrl({ q: "", page: "1", sel: "" });
+  const queryActivo = filtros.q;
+  const page        = Math.max(1, Number(filtros.page) || 1);
+  const irAPagina   = (n: number) => cambiarFiltros({ page: String(n) });
+  const [query, setQuery]             = useState(filtros.q);   // lo que se escribe (se busca 400 ms después)
   const debounceRef                   = useRef<NodeJS.Timeout | null>(null);
 
   // Con Plan Pro, o con el plan gratis encendido (importar recibidas es para todos)
   const tieneSub = useAuthStore((s) => !!(s.empresa?.suscripcion_activa || s.empresa?.emision_gratis));
-  const [docs, setDocs]               = useState<DocRecibido[]>([]);
-  const [resumen, setResumen]         = useState<Resumen | null>(null);
-  const [loading, setLoading]         = useState(true);
   const [expandido, setExpandido]     = useState<string | null>(null);
   const [resumenOpen, setResumenOpen] = useState(false);
-
-  // Paginación
-  const [page, setPage]               = useState(1);
-  const [pagination, setPagination]   = useState<PaginationInfo | null>(null);
 
   const diasRango = fechaInicio && fechaFin
     ? Math.ceil((new Date(fechaFin).getTime() - new Date(fechaInicio).getTime()) / (1000 * 60 * 60 * 24))
@@ -336,45 +344,69 @@ export default function FacturasRecibidasPage() {
   const handleQueryChange = (val: string) => {
     setQuery(val);
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      setPage(1);
-      setQueryActivo(val.trim());
-    }, 400);
+    debounceRef.current = setTimeout(() => cambiarFiltros({ q: val.trim(), page: "1" }), 400);
   };
+  useEffect(() => () => { if (debounceRef.current) clearTimeout(debounceRef.current); }, []);
 
-  const cargar = useCallback(async () => {
-    if (diasRango > 365) return;
-    setLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (fechaInicio) params.append("fecha_inicio", fechaInicio);
-      if (fechaFin)    params.append("fecha_fin",    fechaFin);
-      if (queryActivo) params.append("q",            queryActivo);
-      params.append("page", String(page));
-      params.append("limit", "25");
+  // Lista paginada (25) con su resumen: con caché, al volver aparece al instante
+  // y se actualiza por detrás (lib/useLista.ts)
+  const params = new URLSearchParams();
+  if (fechaInicio) params.append("fecha_inicio", fechaInicio);
+  if (fechaFin)    params.append("fecha_fin",    fechaFin);
+  if (queryActivo) params.append("q",            queryActivo);
+  params.append("page", String(page));
+  params.append("limit", "25");
+  const lista = useLista<{ data?: DocRecibido[]; resumen?: Resumen | null; pagination?: PaginationInfo | null }>(
+    diasRango <= 365 ? `/api/v1/app/recibidos?${params}` : null);
+  const docs       = lista.datos?.data ?? [];
+  const resumen    = lista.datos?.resumen ?? null;
+  const pagination = lista.datos?.pagination ?? null;
+  const loading    = lista.cargando;
 
-      const res = await api.get(`/api/v1/app/recibidos?${params}`);
-      setDocs(res.data.data ?? []);
-      setResumen(res.data.resumen ?? null);
-      setPagination(res.data.pagination ?? null);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  }, [fechaInicio, fechaFin, diasRango, page, queryActivo]);
-
-  useEffect(() => {
-    cargar();
-  }, [cargar]);
-
-  const handleBuscar = () => {
-    setPage(1); // Reset a primera página
-    guardarFecha(SS_KEY_INICIO, tempFechaInicio);
-    guardarFecha(SS_KEY_FIN, tempFechaFin);
-    setFechaInicio(tempFechaInicio);
-    setFechaFin(tempFechaFin);
+  // Nuevo período (PeriodoFechas): se recuerda en la sesión y vuelve a la página 1
+  const cambiarPeriodo = (inicio: string, fin: string) => {
+    guardarFecha(SS_KEY_INICIO, inicio);
+    guardarFecha(SS_KEY_FIN, fin);
+    setFechaInicio(inicio);
+    setFechaFin(fin);
+    irAPagina(1);
   };
+  const irARegistrar = () => router.push("/documentos/recibidos/nueva");
+
+  // ── Compu: panel de detalle y atajos de teclado ──────────────────────────────
+  // (con los ejemplos del plan no hay panel ni atajos: docs viene vacío)
+  const sel = filtros.sel;
+  const buscadorRef = useRef<HTMLInputElement>(null);
+  const filasRef    = useRef<Map<string, HTMLDivElement>>(new Map());
+  const [marcada, setMarcada] = useState(-1);   // fila marcada con j/k (-1: ninguna)
+  const enPanel = () => window.matchMedia(ANCHO_PANEL).matches;
+
+  const mover = (paso: number) => {
+    if (docs.length === 0) return;
+    const actual = marcada >= 0 ? marcada : docs.findIndex(d => d.id === sel);
+    const nueva  = Math.min(docs.length - 1, Math.max(0, actual + paso));
+    setMarcada(nueva);
+    const doc = docs[nueva];
+    filasRef.current.get(doc.id)?.scrollIntoView({ block: "nearest" });
+    // Con el panel abierto, el detalle sigue a la fila marcada
+    if (sel && enPanel()) cambiarFiltros({ sel: doc.id });
+  };
+  useAtajos({
+    "/":         () => buscadorRef.current?.focus(),
+    "n":         irARegistrar,
+    "j":         () => mover(1),  "ArrowDown": () => mover(1),
+    "k":         () => mover(-1), "ArrowUp":   () => mover(-1),
+    "Enter":     () => {
+      const d = docs[marcada];
+      if (!d) return;
+      if (enPanel()) cambiarFiltros({ sel: d.id }); else router.push(rutas.recibido(d.id));
+    },
+    "Escape":    () => {
+      if (sel) cambiarFiltros({ sel: "" });
+      else if (expandido) setExpandido(null);
+      else setMarcada(-1);
+    },
+  });
 
   if (!puedeVer) return <SinAcceso />;
 
@@ -384,93 +416,44 @@ export default function FacturasRecibidasPage() {
   const resumenV: Resumen | null = esDemo ? resumenRecibidos(demoRecibidos()) : resumen;
   const verDetalle = (id: string) => { if (esDemo && ES_APP_NATIVA) return; router.push(esDemo ? "/planes" : rutas.recibido(id)); };
 
+  const docSel = docs.find(d => d.id === sel);
+
   return (
-    <div className="p-4 md:p-6 space-y-5">
+    <div className={cn(sel && "xl:flex xl:items-start")}>
+    <div className="min-w-0 flex-1 space-y-5 p-4 md:p-6">
       <SegmentosDocumentos />
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold" style={{ color: "var(--kipu-text)" }}>Documentos Recibidos</h1>
-          <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>
-            {resumenV ? `${resumenV.total_documentos} en el período` : "—"}
-          </p>
+      {/* Encabezado: en el celular el título ya está en la barra superior */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="mr-auto hidden lg:block">
+          <h1 className="text-xl font-bold text-texto">Documentos recibidos</h1>
+          <p className="text-sm text-sutil">{resumenV ? `${resumenV.total_documentos} en el período` : "—"}</p>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={cargar}
-            disabled={diasRango > 365}
-            className="p-2 rounded-lg transition-colors disabled:opacity-40"
-            style={{
-              background: "var(--kipu-surface)",
-              border: "1px solid var(--kipu-border)",
-              color: "var(--kipu-muted)",
-            }}
-          >
-            <RefreshCw size={16} />
-          </button>
-          <button
-            onClick={() => router.push("/documentos/recibidos/nueva")}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors"
-            style={{ background: "var(--kipu-accent)" }}
-          >
-            <Plus size={15} /> Registrar
-          </button>
-        </div>
+        <PeriodoFechas inicio={fechaInicio} fin={fechaFin} onCambio={cambiarPeriodo} className="mr-auto lg:mr-0" />
+        <button
+          onClick={() => void lista.recargar()}
+          disabled={diasRango > 365}
+          aria-label="Actualizar"
+          title="Actualizar"
+          className="inline-flex size-9 items-center justify-center rounded-full border border-borde bg-superficie text-tenue transition-colors hover:text-texto disabled:opacity-40 tactil:size-10"
+        >
+          {/* Gira mientras se actualiza por detrás (la lista guardada sigue a la vista) */}
+          <RefreshCw size={16} className={lista.actualizando ? "animate-spin" : undefined} />
+        </button>
+        <Boton onClick={irARegistrar} icono={<Plus size={16} />} className="hidden lg:inline-flex">Registrar</Boton>
       </div>
 
-      {/* Filtros de Búsqueda y Rango de Fechas */}
-      <div className="flex flex-col md:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--kipu-subtle)" }} />
-          <input
-            value={query}
-            onChange={e => handleQueryChange(e.target.value)}
-            placeholder="Buscar por proveedor o número..."
-            className="w-full pl-9 pr-4 py-2.5 rounded-lg text-sm transition-colors focus:outline-none"
-            style={{
-              background: "var(--kipu-surface)",
-              border: "1px solid var(--kipu-border)",
-              color: "var(--kipu-text)",
-            }}
-          />
-        </div>
-        <div className="flex gap-2 items-center shrink-0">
-          <input
-            type="date"
-            value={tempFechaInicio}
-            onChange={e => setTempFechaInicio(e.target.value)}
-            className="px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none"
-            style={{
-              background: "var(--kipu-surface)",
-              border: "1px solid var(--kipu-border)",
-              color: "var(--kipu-text)",
-            }}
-          />
-          <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>—</span>
-          <input
-            type="date"
-            value={tempFechaFin}
-            onChange={e => setTempFechaFin(e.target.value)}
-            className="px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none"
-            style={{
-              background: "var(--kipu-surface)",
-              border: "1px solid var(--kipu-border)",
-              color: "var(--kipu-text)",
-            }}
-          />
-          <button
-            type="button"
-            onClick={handleBuscar}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors"
-            style={{ background: "var(--kipu-accent)" }}
-          >
-            <Search size={13} /> Buscar
-          </button>
-        </div>
-      </div>
+      <Entrada
+        teclado="buscar"
+        value={query}
+        onChange={e => handleQueryChange(e.target.value)}
+        placeholder="Buscar por proveedor o número…"
+        aria-label="Buscar compras"
+        prefijo={<Search size={16} />}
+        ref={buscadorRef}
+      />
 
       {diasRango > 365 && (
-        <p className="text-xs font-medium" style={{ color: "var(--kipu-warning)" }}>
+        <p className="text-xs font-medium text-alerta-texto">
           El rango máximo de consulta es de 365 días (1 año).
         </p>
       )}
@@ -607,36 +590,46 @@ export default function FacturasRecibidasPage() {
 
       {/* Lista */}
       {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <div
-            className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin"
-            style={{ borderColor: "var(--kipu-accent)", borderTopColor: "transparent" }}
-          />
-        </div>
+        <EsqueletoFilas filas={8} />
       ) : filtrados.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <FileText size={40} className="mb-3" style={{ color: "var(--kipu-subtle)" }} />
-          <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>
-            {queryActivo ? "No hay documentos que coincidan en esta página." : "Sin documentos recibidos en este período."}
-          </p>
-          {!queryActivo && (
-            <button
-              onClick={() => router.push("/documentos/recibidos/nueva")}
-              className="mt-4 px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors"
-              style={{ background: "var(--kipu-accent)" }}
-            >
-              Registrar primer documento
-            </button>
-          )}
-        </div>
+        queryActivo ? (
+          <Vacio icono={Search} titulo="Nada coincide con la búsqueda"
+                 descripcion="Prueba con otro proveedor, número u otro período." />
+        ) : (
+          <Vacio icono={FileText} titulo="Sin compras en este período"
+                 descripcion="Registra las facturas de tus proveedores para llevar tu IVA y tus gastos."
+                 accion={<Boton onClick={irARegistrar} icono={<Plus size={16} />}>Registrar compra</Boton>} />
+        )
       ) : (
-        <div
-          className="rounded-xl overflow-hidden"
-          style={{
-            background: "var(--kipu-surface)",
-            border: "1px solid var(--kipu-border)",
-          }}
-        >
+        <>
+        {/* Celular: tocar la fila abre el comprobante; deslizar hacia abajo actualiza */}
+        <TirarParaRefrescar alRefrescar={lista.recargar} className="md:hidden">
+          <GrupoFilas>
+            {filtrados.map(doc => {
+              const pago = doc.estado_pago && ["FAC", "LIQ"].includes(doc.tipo_doc) ? ESTADOS_PAGO[doc.estado_pago] : undefined;
+              return (
+                <FilaLista
+                  key={doc.id}
+                  onClick={() => verDetalle(doc.id)}
+                  titulo={<>{doc.razon_social_proveedor}{esDemo && <> <EtiquetaEjemplo /></>}</>}
+                  subtitulo={`${tipoComprobante(doc.tipo_doc).corta} ${doc.numero_doc} · ${etiquetaPeriodo(doc.fecha_emision, doc.fecha_emision)}`}
+                  fin={`$${fmt(doc.importe_total)}`}
+                  finAbajo={
+                    <span className="flex flex-wrap justify-end gap-1">
+                      {doc.deducible_renta && <InsigniaEstado tono="exito">Deducible</InsigniaEstado>}
+                      {doc.credito_tributario_iva && <InsigniaEstado tono="info">Crédito IVA</InsigniaEstado>}
+                      {pago && <InsigniaEstado tono={pago.tono}>{pago.etiqueta}</InsigniaEstado>}
+                    </span>
+                  }
+                />
+              );
+            })}
+          </GrupoFilas>
+        </TirarParaRefrescar>
+
+        {/* Escritorio: desde 1280 px la fila abre la compra en el panel de la derecha;
+            más angosto se despliega el resumen. La flecha abre la pantalla completa. */}
+        <div className="hidden overflow-hidden rounded-xl border border-borde bg-superficie md:block">
           <div>
             {filtrados.map((doc, index) => {
               const isOpen = expandido === doc.id;
@@ -644,15 +637,23 @@ export default function FacturasRecibidasPage() {
               return (
                 <div
                   key={doc.id}
+                  ref={el => { if (el) filasRef.current.set(doc.id, el); else filasRef.current.delete(doc.id); }}
                   style={{
                     borderTop: index > 0 ? "1px solid var(--kipu-border)" : "none",
                   }}
                 >
                   <div
-                    onClick={() => setExpandido(isOpen ? null : doc.id)}
-                    className="flex items-center gap-3 px-4 py-3 transition-colors cursor-pointer select-none"
-                    onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 4%, transparent)"}
-                    onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                    onClick={() => {
+                      setMarcada(index);
+                      if (!esDemo && enPanel()) cambiarFiltros({ sel: doc.id });
+                      else setExpandido(isOpen ? null : doc.id);
+                    }}
+                    aria-selected={doc.id === sel || undefined}
+                    className={cn(
+                      "flex cursor-pointer select-none items-center gap-3 px-4 py-3 transition-colors hover:bg-presionado",
+                      doc.id === sel && "bg-acento-suave hover:bg-acento-suave",
+                      index === marcada && "outline-2 -outline-offset-2 outline-acento/50",
+                    )}
                   >
                     <span
                       className="text-[10px] px-1.5 py-0.5 rounded font-bold shrink-0"
@@ -717,14 +718,16 @@ export default function FacturasRecibidasPage() {
                       className="p-1.5 rounded-lg transition-colors shrink-0"
                       style={{ color: "var(--kipu-subtle)" }}
                       title="Ver detalle completo"
+                      aria-label="Ver detalle completo"
                     >
                       <ArrowUpRight size={15} />
                     </button>
-                    <div className="shrink-0" style={{ color: "var(--kipu-subtle)" }}>
+                    {/* Desde 1280 px la fila abre el panel en vez de desplegarse (salvo los ejemplos) */}
+                    <div className={`shrink-0 ${esDemo ? "" : "xl:hidden"}`} style={{ color: "var(--kipu-subtle)" }}>
                       {isOpen ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
                     </div>
                   </div>
-                  {isOpen && (
+                  {isOpen && !sel && (
                     <DocExpandido
                       doc={doc}
                       onVerDetalle={() => verDetalle(doc.id)}
@@ -735,7 +738,11 @@ export default function FacturasRecibidasPage() {
             })}
           </div>
         </div>
+        </>
       )}
+
+      {/* Celular: registrar una compra (el + de la barra es para emitir) */}
+      {!esDemo && <BotonFlotante onClick={irARegistrar} etiqueta="Registrar compra" />}
 
       {/* Controles de Paginación */}
       {pagination && pagination.total_pages > 1 && (
@@ -753,7 +760,7 @@ export default function FacturasRecibidasPage() {
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => setPage(p => Math.max(p - 1, 1))}
+              onClick={() => irAPagina(Math.max(page - 1, 1))}
               disabled={!pagination.has_prev || loading}
               className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors disabled:opacity-40"
               style={{
@@ -769,7 +776,7 @@ export default function FacturasRecibidasPage() {
             </span>
             <button
               type="button"
-              onClick={() => setPage(p => Math.min(p + 1, pagination.total_pages))}
+              onClick={() => irAPagina(Math.min(page + 1, pagination.total_pages))}
               disabled={!pagination.has_next || loading}
               className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors disabled:opacity-40"
               style={{
@@ -783,6 +790,25 @@ export default function FacturasRecibidasPage() {
           </div>
         </div>
       )}
+
+      {/* Compu con mouse: los atajos, a la vista */}
+      <p className="hidden text-center text-[11px] text-sutil raton:lg:block">
+        Atajos: <kbd className="font-mono">/</kbd> buscar · <kbd className="font-mono">n</kbd> registrar compra ·{" "}
+        <kbd className="font-mono">j</kbd> <kbd className="font-mono">k</kbd> moverse · <kbd className="font-mono">Enter</kbd> abrir ·{" "}
+        <kbd className="font-mono">Esc</kbd> cerrar
+      </p>
+    </div>
+
+    {/* Compu (1280 px o más): la compra elegida, a la derecha */}
+    {sel && (
+      <PanelDetalle
+        titulo={docSel ? `${tipoComprobante(docSel.tipo_doc).etiqueta} ${docSel.numero_doc}` : "Comprobante recibido"}
+        hrefCompleto={rutas.recibido(sel)}
+        onCerrar={() => cambiarFiltros({ sel: "" })}
+      >
+        <DetalleRecibido key={sel} id={sel} enPanel />
+      </PanelDetalle>
+    )}
     </div>
   );
 }

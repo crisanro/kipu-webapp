@@ -2,12 +2,25 @@
 import { useConfirmar } from "@/components/ui/Confirmar";
 import { rutas } from "@/lib/rutas";
 import { useState, useEffect, useCallback } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useAtajos } from "@/lib/useAtajos";
 import api from "@/lib/api";
 import { usePermiso } from "@/hooks/usePermiso";
 import SinAcceso from "@/components/SinAcceso";
+import { compartir, abrirExterno } from "@/lib/nativo";
+import { useAvisos } from "@/components/ui/Avisos";
+import FilaLista, { GrupoFilas } from "@/components/ui/FilaLista";
+import { InsigniaEstado } from "@/components/ui/InsigniaEstado";
+import type { TonoEstado } from "@/lib/estados";
+import { EsqueletoFilas } from "@/components/ui/Esqueleto";
+import Vacio from "@/components/ui/Vacio";
+import BotonFlotante from "@/components/ui/BotonFlotante";
+import TirarParaRefrescar from "@/components/ui/TirarParaRefrescar";
+import HojaAcciones, { type Accion } from "@/components/ui/HojaAcciones";
+import ChipsFiltro from "@/components/ui/ChipsFiltro";
+import Boton from "@/components/ui/Boton";
 import {
-  Link2, Plus, Copy, CheckCircle2, MessageCircle, RefreshCw, Ban, FileText, AlertTriangle, Loader2,
+  Link2, Plus, Copy, MessageCircle, RefreshCw, Ban, FileText, Share2, Loader2,
 } from "lucide-react";
 
 // "Facturar cuando el cliente pague": la factura ya armada espera el pago del link
@@ -26,28 +39,38 @@ interface Cobro {
   link: { url: string; nombre_pasarela: string; estado: string; expira_at: string | null } | null;
 }
 
-const ESTADOS: Record<Cobro["estado"], { label: string; color: string }> = {
-  PENDIENTE: { label: "Esperando pago",       color: "var(--kipu-warning)" },
-  PAGADO:    { label: "Pagado · facturando",  color: "var(--kipu-accent)" },
-  FACTURADO: { label: "Pagado y facturado",   color: "var(--kipu-success)" },
-  ERROR:     { label: "Pagado · sin factura", color: "var(--kipu-danger)" },
-  REVISAR:   { label: "Revisar",              color: "var(--kipu-danger)" },
-  ANULADO:   { label: "Anulado",              color: "var(--kipu-subtle)" },
-  EXPIRADO:  { label: "Venció",               color: "var(--kipu-subtle)" },
+const ESTADOS: Record<Cobro["estado"], { etiqueta: string; tono: TonoEstado }> = {
+  PENDIENTE: { etiqueta: "Esperando pago",       tono: "alerta" },
+  PAGADO:    { etiqueta: "Pagado · facturando",  tono: "info" },
+  FACTURADO: { etiqueta: "Pagado y facturado",   tono: "exito" },
+  ERROR:     { etiqueta: "Pagado · sin factura", tono: "peligro" },
+  REVISAR:   { etiqueta: "Revisar",              tono: "peligro" },
+  ANULADO:   { etiqueta: "Anulado",              tono: "neutro" },
+  EXPIRADO:  { etiqueta: "Venció",               tono: "neutro" },
 };
 
-const FILTROS: { valor: string; label: string }[] = [
-  { valor: "",          label: "Todos" },
-  { valor: "PENDIENTE", label: "Esperando pago" },
-  { valor: "FACTURADO", label: "Facturados" },
-  { valor: "ERROR",     label: "Sin factura" },
-  { valor: "REVISAR",   label: "Revisar" },
+const FILTROS = [
+  { valor: "",          etiqueta: "Todos" },
+  { valor: "PENDIENTE", etiqueta: "Esperando pago" },
+  { valor: "FACTURADO", etiqueta: "Facturados" },
+  { valor: "ERROR",     etiqueta: "Sin factura" },
+  { valor: "REVISAR",   etiqueta: "Revisar" },
 ];
 
+const NUEVO_LINK = "/documentos/emitir/fac?cuando=al_pagar";
 const LIMITE = 50;
 const fmt = (n: number) => `$${n.toFixed(2)}`;
 const fecha = (s: string | null) =>
   s ? new Date(s).toLocaleDateString("es-EC", { day: "2-digit", month: "short", year: "numeric" }) : "";
+const textoPago = (url: string) => `Hola, te comparto el link para tu pago: ${url}`;
+
+// Lo que hay que saber de un cobro sin abrirlo (va debajo del cliente)
+function nota(c: Cobro): string | undefined {
+  if (c.estado === "REVISAR" && !c.error) return "Te pagaron un link que habías anulado. Si corresponde, emite la factura.";
+  if (c.estado === "ERROR" || c.estado === "REVISAR") return c.error ?? undefined;
+  if (c.estado === "EXPIRADO") return "Venció sin pago. Si todavía quieres cobrar, crea uno nuevo.";
+  return undefined;
+}
 
 export default function CobrosPage() {
   const puedeVer = usePermiso("emitir");
@@ -56,17 +79,20 @@ export default function CobrosPage() {
 }
 
 function CobrosContenido() {
+  const router    = useRouter();
   const confirmar = useConfirmar();
-  const [cobros,   setCobros]   = useState<Cobro[]>([]);
-  const [total,    setTotal]    = useState(0);
-  const [filtro,   setFiltro]   = useState("");
-  const [loading,  setLoading]  = useState(true);
-  const [ocupado,  setOcupado]  = useState<string | null>(null);   // id del cobro con una acción en curso
-  const [copiado,  setCopiado]  = useState<string | null>(null);
-  const [mensaje,  setMensaje]  = useState<{ id: string; texto: string; error?: boolean } | null>(null);
+  const avisos    = useAvisos();
+  const [cobros,     setCobros]     = useState<Cobro[]>([]);
+  const [total,      setTotal]      = useState(0);
+  const [filtro,     setFiltro]     = useState("");
+  const [loading,    setLoading]    = useState(true);
+  const [cargandoMas, setCargandoMas] = useState(false);
+  const [ocupado,    setOcupado]    = useState<string | null>(null);   // id del cobro con una acción en curso
+  // Tocar un cobro abre su menú (compartir, ¿ya pagó?, emitir, anular…)
+  const [menuDe,     setMenuDe]     = useState<Cobro | null>(null);
 
   const cargar = useCallback(async (append = false, offset = 0) => {
-    if (!append) setLoading(true);
+    if (append) setCargandoMas(true); else setLoading(true);
     try {
       const qs = new URLSearchParams({ limit: String(LIMITE), offset: String(offset) });
       if (filtro) qs.set("estado", filtro);
@@ -78,10 +104,14 @@ function CobrosContenido() {
       console.error(e);
     } finally {
       setLoading(false);
+      setCargandoMas(false);
     }
   }, [filtro]);
 
   useEffect(() => { cargar(); }, [cargar]);
+
+  // Compu: "n" crea un link de cobro (lib/useAtajos.ts)
+  useAtajos({ "n": () => router.push(NUEVO_LINK) });
 
   const reemplazar = (c: Cobro) => setCobros(prev => prev.map(x => x.id === c.id ? c : x));
 
@@ -92,193 +122,149 @@ function CobrosContenido() {
       textoConfirmar: "Anular link", peligro: true,
     }))) return;
     setOcupado(c.id);
-    setMensaje(null);
     try {
       const res = await api.post(`/api/v1/app/cobros-en-linea/cobros/${c.id}/${ruta}`);
       const nuevo: Cobro = res.data.data;
       reemplazar(nuevo);
       if (ruta === "verificar") {
-        setMensaje({ id: c.id, texto: nuevo.estado === "FACTURADO" ? "¡Pagó! La factura ya se emitió."
-          : nuevo.estado === "PENDIENTE" ? "Todavía no hay un pago aprobado." : ESTADOS[nuevo.estado].label });
+        if (nuevo.estado === "FACTURADO") avisos.exito("¡Pagó! La factura ya se emitió.");
+        else if (nuevo.estado === "PENDIENTE") avisos.info("Todavía no hay un pago aprobado.");
+        else avisos.info(ESTADOS[nuevo.estado].etiqueta);
+      } else if (ruta === "facturar" && nuevo.estado === "FACTURADO") {
+        avisos.exito("Factura emitida.");
+      } else if (ruta === "anular") {
+        avisos.info("Link anulado.");
       }
     } catch (err: unknown) {
       const detalle = (err as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail;
-      setMensaje({ id: c.id, texto: typeof detalle === "string" ? detalle : "No se pudo completar la acción.",
-                   error: true });
+      avisos.error(typeof detalle === "string" ? detalle : "No se pudo completar la acción.");
     } finally {
       setOcupado(null);
     }
   };
 
-  const copiar = async (c: Cobro) => {
-    if (!c.link?.url) return;
-    await navigator.clipboard.writeText(c.link.url);
-    setCopiado(c.id);
-    setTimeout(() => setCopiado(null), 2000);
+  const copiar = async (url: string) => {
+    try { await navigator.clipboard.writeText(url); avisos.exito("Link copiado"); }
+    catch { avisos.info(url); }
   };
 
-  const boton = "inline-flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg transition-colors disabled:opacity-50";
-  const estiloBoton = { border: "1px solid var(--kipu-border)", color: "var(--kipu-muted)" };
+  // Hoja del sistema (app/celular): el cliente elige WhatsApp, correo, etc.
+  const compartirLink = async (url: string) => {
+    const ok = await compartir({ titulo: "Link de pago", texto: textoPago(url), url });
+    if (!ok) await copiar(url);
+  };
+
+  const accionesDe = (c: Cobro): Accion[] => {
+    const lista: Accion[] = [];
+    const url = c.link?.url;
+    if (c.estado === "PENDIENTE" && url) {
+      lista.push(
+        { etiqueta: "Compartir link", descripcion: "Por WhatsApp, correo o donde quieras", icono: Share2, onClick: () => void compartirLink(url) },
+        { etiqueta: "Enviar por WhatsApp", icono: MessageCircle,
+          onClick: () => void abrirExterno(`https://wa.me/?text=${encodeURIComponent(textoPago(url))}`) },
+        { etiqueta: "Copiar link", icono: Copy, onClick: () => void copiar(url) },
+      );
+    }
+    if (c.estado === "PENDIENTE" || c.estado === "PAGADO") {
+      lista.push({ etiqueta: "¿Ya pagó?", descripcion: "Consultar el pago ahora", icono: RefreshCw, onClick: () => void accion(c, "verificar") });
+    }
+    if (c.estado === "ERROR" || c.estado === "REVISAR") {
+      lista.push({ etiqueta: "Emitir factura", icono: FileText, onClick: () => void accion(c, "facturar") });
+    }
+    if (c.estado === "FACTURADO" && c.documento_id) {
+      const id = c.documento_id;
+      lista.push({ etiqueta: `Ver factura${c.numero_doc ? ` ${c.numero_doc}` : ""}`, icono: FileText, onClick: () => router.push(rutas.documento(id)) });
+    }
+    if (c.estado === "PENDIENTE" || c.estado === "EXPIRADO") {
+      lista.push({ etiqueta: "Anular", descripcion: "El link deja de aceptar pagos", icono: Ban, peligro: true, onClick: () => void accion(c, "anular") });
+    }
+    return lista;
+  };
 
   return (
-    <div className="p-4 md:p-6 max-w-4xl mx-auto">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-3 mb-4">
+    <div className="mx-auto max-w-4xl p-4 md:p-6">
+      {/* Encabezado: en el celular el título ya está en la barra superior */}
+      <div className="mb-4 flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-xl font-bold" style={{ color: "var(--kipu-text)" }}>Links de cobro</h1>
-          <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>
-            Cobra primero: la factura se emite sola cuando tu cliente paga.
-          </p>
+          <h1 className="hidden text-xl font-bold text-texto lg:block">Links de cobro</h1>
+          <p className="text-sm text-sutil">Cobra primero: la factura se emite sola cuando tu cliente paga.</p>
         </div>
-        <Link
-          href="/documentos/emitir/fac?cuando=al_pagar"
-          className="shrink-0 flex items-center gap-2 px-4 py-2 rounded-lg text-white text-sm font-medium"
-          style={{ background: "var(--kipu-accent)" }}
-        >
-          <Plus size={15} />
-          <span className="hidden sm:inline">Nuevo link de cobro</span>
-          <span className="sm:hidden">Nuevo</span>
-        </Link>
+        <Boton onClick={() => router.push(NUEVO_LINK)} icono={<Plus size={16} />} className="hidden shrink-0 lg:inline-flex">
+          Nuevo link de cobro
+        </Boton>
       </div>
 
-      {/* Filtros */}
-      <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
-        {FILTROS.map(f => (
-          <button
-            key={f.valor}
-            type="button"
-            onClick={() => setFiltro(f.valor)}
-            className="shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors"
-            style={{
-              border: "1px solid var(--kipu-border)",
-              background: filtro === f.valor ? "var(--kipu-accent)" : "transparent",
-              color: filtro === f.valor ? "#FFFFFF" : "var(--kipu-muted)",
-            }}
-          >
-            {f.label}
-          </button>
-        ))}
-      </div>
+      <ChipsFiltro opciones={FILTROS} valor={filtro} onCambio={setFiltro} etiqueta="Estado del cobro" className="mb-4" />
 
       {loading ? (
-        <div className="flex justify-center py-20">
-          <Loader2 size={24} className="animate-spin" style={{ color: "var(--kipu-accent)" }} />
-        </div>
+        <EsqueletoFilas filas={6} />
       ) : cobros.length === 0 ? (
-        <div className="flex flex-col items-center text-center py-16 px-4">
-          <Link2 size={36} className="mb-3" style={{ color: "var(--kipu-subtle)" }} />
-          <p className="text-sm max-w-sm" style={{ color: "var(--kipu-muted)" }}>
-            {filtro ? "No hay links de cobro con este estado." :
-              "Arma la factura como siempre, elige “Pendiente de cobro” → “Cobrar con link de pago” → “Emitir la factura cuando pague”. Tu cliente paga y la factura sale sola."}
-          </p>
-        </div>
+        filtro ? (
+          <Vacio icono={Link2} titulo="No hay links de cobro con este estado" />
+        ) : (
+          <Vacio
+            icono={Link2}
+            titulo="Aún no tienes links de cobro"
+            descripcion="Arma la factura como siempre, elige “Pendiente de cobro” → “Cobrar con link de pago” → “Emitir la factura cuando pague”. Tu cliente paga y la factura sale sola."
+            accion={<Boton onClick={() => router.push(NUEVO_LINK)} icono={<Plus size={16} />}>Crear link de cobro</Boton>}
+          />
+        )
       ) : (
-        <div className="space-y-3">
-          {cobros.map(c => {
-            const est = ESTADOS[c.estado];
-            const trabajando = ocupado === c.id;
-            return (
-              <div key={c.id} className="rounded-xl p-4 space-y-3"
-                   style={{ background: "var(--kipu-surface)", border: "1px solid var(--kipu-border)" }}>
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium truncate" style={{ color: "var(--kipu-text)" }}>
-                      {c.cliente_nombre || "Cliente"}
-                    </p>
-                    <p className="text-xs truncate" style={{ color: "var(--kipu-subtle)" }}>
-                      {[c.cliente_identificacion, c.descripcion, fecha(c.created_at)].filter(Boolean).join(" · ")}
-                    </p>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <p className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>{fmt(c.monto)}</p>
-                    <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[11px] font-medium"
-                          style={{ color: est.color, background: `color-mix(in srgb, ${est.color} 12%, transparent)` }}>
-                      {est.label}
-                    </span>
-                  </div>
-                </div>
-
-                {(c.estado === "ERROR" || c.estado === "REVISAR") && (
-                  <p className="flex items-start gap-1.5 text-xs rounded-lg px-3 py-2"
-                     style={{ color: "var(--kipu-danger)", background: "color-mix(in srgb, var(--kipu-danger) 8%, transparent)" }}>
-                    <AlertTriangle size={13} className="mt-0.5 shrink-0" />
-                    <span>
-                      {c.estado === "REVISAR" && !c.error
-                        ? "Te pagaron un link que habías anulado. Si corresponde, emite la factura."
-                        : c.error}
-                    </span>
-                  </p>
-                )}
-                {c.estado === "EXPIRADO" && (
-                  <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
-                    El link venció sin pago. Si todavía quieres cobrar, crea uno nuevo.
-                  </p>
-                )}
-
-                <div className="flex flex-wrap gap-2">
-                  {c.estado === "PENDIENTE" && c.link?.url && (
-                    <>
-                      <button type="button" onClick={() => copiar(c)} className={boton} style={estiloBoton}>
-                        {copiado === c.id ? <CheckCircle2 size={12} style={{ color: "var(--kipu-success)" }} /> : <Copy size={12} />}
-                        {copiado === c.id ? "Copiado" : "Copiar link"}
-                      </button>
-                      <a
-                        href={`https://wa.me/?text=${encodeURIComponent(`Hola, te comparto el link para tu pago: ${c.link.url}`)}`}
-                        target="_blank" rel="noopener noreferrer" className={boton} style={estiloBoton}
-                      >
-                        <MessageCircle size={12} /> WhatsApp
-                      </a>
-                    </>
-                  )}
-                  {(c.estado === "PENDIENTE" || c.estado === "PAGADO") && (
-                    <button type="button" disabled={trabajando} onClick={() => accion(c, "verificar")}
-                            className={boton} style={estiloBoton}>
-                      <RefreshCw size={12} className={trabajando ? "animate-spin" : ""} /> ¿Ya pagó?
-                    </button>
-                  )}
-                  {(c.estado === "ERROR" || c.estado === "REVISAR") && (
-                    <button type="button" disabled={trabajando} onClick={() => accion(c, "facturar")}
-                            className={boton} style={{ background: "var(--kipu-accent)", color: "#FFFFFF" }}>
-                      {trabajando ? <Loader2 size={12} className="animate-spin" /> : <FileText size={12} />}
-                      Emitir factura
-                    </button>
-                  )}
-                  {c.estado === "FACTURADO" && c.documento_id && (
-                    <Link href={rutas.documento(c.documento_id)} className={boton} style={estiloBoton}>
-                      <FileText size={12} /> Ver factura{c.numero_doc ? ` ${c.numero_doc}` : ""}
-                    </Link>
-                  )}
-                  {(c.estado === "PENDIENTE" || c.estado === "EXPIRADO") && (
-                    <button type="button" disabled={trabajando} onClick={() => accion(c, "anular")}
-                            className={boton} style={estiloBoton}>
-                      <Ban size={12} /> Anular
-                    </button>
-                  )}
-                </div>
-
-                {mensaje?.id === c.id && (
-                  <p className="text-xs" style={{ color: mensaje.error ? "var(--kipu-danger)" : "var(--kipu-muted)" }}>
-                    {mensaje.texto}
-                  </p>
-                )}
-              </div>
-            );
-          })}
+        <>
+          <TirarParaRefrescar alRefrescar={() => cargar()}>
+            <GrupoFilas>
+              {cobros.map(c => {
+                const est = ESTADOS[c.estado];
+                const trabajando = ocupado === c.id;
+                const aviso = nota(c);
+                return (
+                  <FilaLista
+                    key={c.id}
+                    onClick={accionesDe(c).length > 0 ? () => setMenuDe(c) : undefined}
+                    apagada={c.estado === "ANULADO"}
+                    titulo={c.cliente_nombre || "Cliente"}
+                    subtitulo={[c.descripcion, fecha(c.created_at)].filter(Boolean).join(" · ")}
+                    detalle={aviso && (
+                      <span className={c.estado === "EXPIRADO" ? undefined : "text-peligro-texto"}>{aviso}</span>
+                    )}
+                    fin={fmt(c.monto)}
+                    finAbajo={trabajando
+                      ? <InsigniaEstado tono="info" icono={Loader2} className="[&_svg]:animate-spin">Consultando…</InsigniaEstado>
+                      : <InsigniaEstado tono={est.tono}>{est.etiqueta}</InsigniaEstado>}
+                  />
+                );
+              })}
+            </GrupoFilas>
+          </TirarParaRefrescar>
 
           {cobros.length < total && (
-            <div className="flex justify-center pt-2">
-              <button
-                type="button"
-                onClick={() => cargar(true, cobros.length)}
-                className="px-6 py-2.5 rounded-lg text-sm font-medium"
-                style={{ border: "1px solid var(--kipu-border)", color: "var(--kipu-accent)" }}
-              >
+            <div className="mt-4 flex justify-center">
+              <Boton variante="secundario" onClick={() => cargar(true, cobros.length)} cargando={cargandoMas} className="w-full sm:w-auto">
                 Cargar más ({cobros.length} de {total})
-              </button>
+              </Boton>
             </div>
           )}
-        </div>
+        </>
       )}
+
+      {/* Celular: nuevo link de cobro */}
+      <BotonFlotante href={NUEVO_LINK} etiqueta="Nuevo link de cobro" />
+
+      <HojaAcciones
+        abierta={!!menuDe}
+        onCerrar={() => setMenuDe(null)}
+        titulo={menuDe ? `${menuDe.cliente_nombre || "Cliente"} · ${fmt(menuDe.monto)}` : ""}
+        descripcion={menuDe ? (
+          <>
+            {[ESTADOS[menuDe.estado].etiqueta, menuDe.cliente_identificacion, menuDe.link?.nombre_pasarela].filter(Boolean).join(" · ")}
+            {/* En la fila el aviso se corta: aquí completo */}
+            {nota(menuDe) && (
+              <span className={`mt-1 block ${menuDe.estado === "EXPIRADO" ? "" : "text-peligro-texto"}`}>{nota(menuDe)}</span>
+            )}
+          </>
+        ) : undefined}
+        acciones={menuDe ? accionesDe(menuDe) : []}
+      />
     </div>
   );
 }

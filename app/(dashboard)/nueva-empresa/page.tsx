@@ -162,7 +162,7 @@ export default function NuevaEmpresaPage() {
         <button
           type="button"
           onClick={() => router.back()}
-          className="p-2 rounded-lg transition-colors"
+          className="hidden p-2 rounded-lg transition-colors lg:inline-flex"
           style={{ color: "var(--kipu-subtle)", background: "transparent" }}
           onMouseEnter={e => {
             e.currentTarget.style.color = "var(--kipu-text)";

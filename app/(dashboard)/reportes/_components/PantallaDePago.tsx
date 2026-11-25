@@ -38,7 +38,7 @@ export default function PantallaDePago({ periodoFmt, enCurso, total, alertasCant
       <button
         type="button"
         onClick={onVolver}
-        className="flex items-center gap-1.5 text-xs transition-colors hover:underline"
+        className="hidden items-center gap-1.5 text-xs transition-colors hover:underline lg:flex"
         style={{ color: "var(--kipu-subtle)" }}
       >
         <ArrowLeft size={14} /> Volver a reportes

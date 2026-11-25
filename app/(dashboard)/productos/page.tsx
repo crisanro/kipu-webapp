@@ -3,7 +3,17 @@
 import { useConfirmar } from "@/components/ui/Confirmar";
 import Hoja from "@/components/ui/Hoja";
 import Boton from "@/components/ui/Boton";
+import FilaLista, { GrupoFilas } from "@/components/ui/FilaLista";
+import { InsigniaEstado } from "@/components/ui/InsigniaEstado";
+import { EsqueletoFilas } from "@/components/ui/Esqueleto";
+import Vacio from "@/components/ui/Vacio";
+import BotonFlotante from "@/components/ui/BotonFlotante";
+import TirarParaRefrescar from "@/components/ui/TirarParaRefrescar";
+import HojaAcciones from "@/components/ui/HojaAcciones";
+import BotonIcono from "@/components/ui/BotonIcono";
+import { Entrada } from "@/components/ui/Campo";
 import { useState, useEffect, useCallback, useRef, lazy, Suspense } from "react";
+import { useAtajos } from "@/lib/useAtajos";
 import { etiquetaIva, opcionesIva } from "@/lib/iva";
 import { baseDesdeTotal, tarifaPct } from "@/lib/precios";
 import { r2 } from "@/lib/dinero";
@@ -85,6 +95,8 @@ export default function ProductosPage() {
   const [verInactivos, setVerInactivos] = useState(false);
   const [showScanner,  setShowScanner]  = useState(false);
   const [scanMode,     setScanMode]     = useState<ScanMode>("buscar");
+  // Celular: tocar un producto abre su menú (editar, desactivar/reactivar)
+  const [menuDe,       setMenuDe]       = useState<Producto | null>(null);
 
   const cargar = useCallback(async (append = false) => {
     const pedido = ++pedidoRef.current;
@@ -121,6 +133,13 @@ export default function ProductosPage() {
     debounceRef.current = setTimeout(() => setQueryActivo(val.trim()), 400);
   };
   useEffect(() => () => { if (debounceRef.current) clearTimeout(debounceRef.current); }, []);
+
+  // Compu: "/" busca y "n" crea un producto (lib/useAtajos.ts); sin permiso, nada
+  const buscadorRef = useRef<HTMLInputElement>(null);
+  useAtajos({
+    "/": () => buscadorRef.current?.focus(),
+    "n": () => abrirCrear(),
+  }, puedeVer);
 
   if (!puedeVer) return <SinAcceso />;
 
@@ -256,109 +275,81 @@ export default function ProductosPage() {
   return (
     <div className="p-4 md:p-6">
       <SegmentosPersonas />
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6 mt-4 lg:mt-0">
+      {/* Encabezado: en el celular el título ya está en la barra superior */}
+      <div className="mb-4 mt-4 hidden items-center justify-between lg:mt-0 lg:flex">
         <div>
-          <h1 className="text-xl font-bold" style={{ color: "var(--kipu-text)" }}>Productos y Servicios</h1>
-          <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>
-            {total > 0 ? `${total} producto${total !== 1 ? "s" : ""}` : "0 productos"}
-          </p>
+          <h1 className="text-xl font-bold text-texto">Productos y servicios</h1>
+          <p className="text-sm text-sutil">{total > 0 ? `${total} producto${total !== 1 ? "s" : ""}` : "0 productos"}</p>
         </div>
-        <button
-          type="button"
-          onClick={abrirCrear}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors"
-          style={{ background: "var(--kipu-accent)" }}
-          onMouseEnter={e => e.currentTarget.style.background = "var(--kipu-accent-h)"}
-          onMouseLeave={e => e.currentTarget.style.background = "var(--kipu-accent)"}
-        >
-          <Plus size={15} />
-          Nuevo
-        </button>
+        <Boton onClick={abrirCrear} icono={<Plus size={16} />}>Nuevo</Boton>
       </div>
 
-      {/* Filtros — con botón de scanner */}
-      <div className="flex gap-3 mb-4">
-        <div className="relative flex-1">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--kipu-subtle)" }} />
-          <input
-            type="search"
-            enterKeyHint="search"
-            value={query}
-            onChange={(e) => cambiarQuery(e.target.value)}
-            placeholder="Buscar por descripción o código..."
-            className="w-full pl-9 pr-10 py-2.5 rounded-lg text-sm transition-colors focus:outline-none"
-            style={{
-              background: "var(--kipu-surface)",
-              border: "1px solid var(--kipu-border)",
-              color: "var(--kipu-text)",
-            }}
-            onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-            onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
-          />
-          <button
-            type="button"
-            onClick={abrirScannerBuscar}
-            className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded transition-colors"
-            style={{ color: "var(--kipu-subtle)" }}
-            onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent)"}
-            onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-subtle)"}
-            title="Escanear código de barras para buscar"
-          >
-            <Camera size={16} />
-          </button>
-        </div>
+      {/* Búsqueda (con escáner de código de barras) e inactivos */}
+      <div className="mb-4 mt-4 flex items-center gap-2 lg:mt-0">
+        <Entrada
+          teclado="buscar"
+          value={query}
+          onChange={(e) => cambiarQuery(e.target.value)}
+          placeholder="Buscar por descripción o código…"
+          aria-label="Buscar productos"
+          prefijo={<Search size={16} />}
+          ref={buscadorRef}
+          sufijo={<BotonIcono etiqueta="Escanear código de barras para buscar" icono={<Camera size={18} />}
+                              tamano="sm" onClick={abrirScannerBuscar} className="-mr-2" />}
+          className="flex-1"
+        />
         <button
           type="button"
           onClick={() => setVerInactivos(!verInactivos)}
-          className="px-3 py-2 rounded-lg text-xs font-medium transition-colors"
-          style={{
-            background: verInactivos ? "color-mix(in srgb, var(--kipu-text) 15%, transparent)" : "var(--kipu-surface)",
-            border: verInactivos ? "1px solid color-mix(in srgb, var(--kipu-text) 30%, transparent)" : "1px solid var(--kipu-border)",
-            color: verInactivos ? "var(--kipu-text)" : "var(--kipu-subtle)",
-          }}
-          onMouseEnter={e => {
-            if (!verInactivos) e.currentTarget.style.color = "var(--kipu-text)";
-          }}
-          onMouseLeave={e => {
-            if (!verInactivos) e.currentTarget.style.color = "var(--kipu-subtle)";
-          }}
+          aria-pressed={verInactivos}
+          className={`inline-flex h-9 shrink-0 items-center rounded-full border px-3 text-xs font-medium transition-colors tactil:h-11 ${
+            verInactivos ? "border-texto bg-texto text-superficie" : "border-borde bg-superficie text-tenue hover:text-texto"}`}
         >
-          {verInactivos ? "Ocultar inactivos" : "Ver inactivos"}
+          Inactivos
         </button>
       </div>
 
       {/* Lista */}
       {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <div
-            className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin"
-            style={{ borderColor: "var(--kipu-accent)", borderTopColor: "transparent" }}
-          />
-        </div>
+        <EsqueletoFilas filas={8} />
       ) : productos.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <Package size={40} className="mb-3" style={{ color: "var(--kipu-subtle)" }} />
-          <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>
-            {queryActivo ? "No hay productos que coincidan." : "Aún no tienes productos en el catálogo."}
-          </p>
-          {!queryActivo && (
-            <button
-              type="button"
-              onClick={abrirCrear}
-              className="mt-4 px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors"
-              style={{ background: "var(--kipu-accent)" }}
-              onMouseEnter={e => e.currentTarget.style.background = "var(--kipu-accent-h)"}
-              onMouseLeave={e => e.currentTarget.style.background = "var(--kipu-accent)"}
-            >
-              Agregar primer producto
-            </button>
-          )}
-        </div>
+        queryActivo ? (
+          <Vacio icono={Search} titulo="Ningún producto coincide" descripcion="Prueba con otra descripción o código." />
+        ) : (
+          <Vacio icono={Package} titulo="Aún no tienes productos en el catálogo"
+                 descripcion="Guárdalos para facturarlos en segundos, con su precio y su IVA."
+                 accion={<Boton onClick={abrirCrear} icono={<Plus size={16} />}>Agregar producto</Boton>} />
+        )
       ) : (
         <>
+          {/* Celular: tocar el producto abre su menú; deslizar hacia abajo actualiza */}
+          <TirarParaRefrescar alRefrescar={() => cargar()} className="md:hidden">
+            <GrupoFilas>
+              {productos.map(p => (
+                <FilaLista
+                  key={p.id}
+                  onClick={() => setMenuDe(p)}
+                  apagada={!p.activo}
+                  titulo={p.descripcion}
+                  subtitulo={`${p.codigo || "Sin código"} · IVA ${etiquetaIva(p.tipo_iva)} · ${p.unidad}`}
+                  fin={`$${fmt(precioVisible(p))}`}
+                  finAbajo={
+                    <span className="flex flex-wrap justify-end gap-1">
+                      {!p.activo && <InsigniaEstado tono="neutro">Inactivo</InsigniaEstado>}
+                      {p.stock === 0 ? <InsigniaEstado tono="peligro">Sin stock</InsigniaEstado>
+                        : p.stock > 0 && p.stock_minimo > 0 && p.stock <= p.stock_minimo ? <InsigniaEstado tono="peligro">Stock {p.stock}</InsigniaEstado>
+                        : p.stock > 0 ? <InsigniaEstado tono={p.stock <= 5 ? "alerta" : "neutro"}>Stock {p.stock}</InsigniaEstado>
+                        : tarifaPct(p.tipo_iva) > 0 && <span className="text-[11px] text-sutil">{p.precio_incluye_iva ? "IVA incluido" : "+ IVA"}</span>}
+                    </span>
+                  }
+                />
+              ))}
+            </GrupoFilas>
+          </TirarParaRefrescar>
+
+          {/* Escritorio: tabla con las acciones en cada fila */}
           <div
-            className="rounded-xl overflow-hidden"
+            className="hidden rounded-xl overflow-hidden md:block"
             style={{
               background: "var(--kipu-surface)",
               border: "1px solid var(--kipu-border)",
@@ -516,23 +507,31 @@ export default function ProductosPage() {
 
           {/* Cargar más */}
           {!loading && productos.length < total && (
-            <div className="flex justify-center mt-4">
-              <button
-                type="button"
-                onClick={() => cargar(true)}
-                disabled={loadingMore}
-                className="px-6 py-2.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
-                style={{
-                  border: "1px solid var(--kipu-border)",
-                  color: "var(--kipu-accent)",
-                }}
-              >
-                {loadingMore ? "Cargando..." : `Cargar más (${productos.length} de ${total})`}
-              </button>
+            <div className="mt-4 flex justify-center">
+              <Boton variante="secundario" onClick={() => cargar(true)} cargando={loadingMore} className="w-full sm:w-auto">
+                Cargar más ({productos.length} de {total})
+              </Boton>
             </div>
           )}
         </>
       )}
+
+      {/* Celular: nuevo producto */}
+      <BotonFlotante onClick={abrirCrear} etiqueta="Nuevo producto" />
+
+      {/* Celular: menú del producto */}
+      <HojaAcciones
+        abierta={!!menuDe}
+        onCerrar={() => setMenuDe(null)}
+        titulo={menuDe?.descripcion ?? ""}
+        descripcion={menuDe ? `${menuDe.codigo || "Sin código"} · $${fmt(precioVisible(menuDe))}` : undefined}
+        acciones={menuDe ? [
+          { etiqueta: "Editar", icono: Pencil, onClick: () => abrirEditar(menuDe) },
+          menuDe.activo
+            ? { etiqueta: "Desactivar", descripcion: "Ya no aparecerá al facturar", icono: PowerOff, peligro: true, onClick: () => desactivar(menuDe.id) }
+            : { etiqueta: "Reactivar", icono: Power, onClick: () => reactivar(menuDe.id) },
+        ] : []}
+      />
 
       {/* Crear/editar: Hoja (en el celular sube desde abajo, con los botones fijos abajo) */}
       <Hoja
