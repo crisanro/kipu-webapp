@@ -1,52 +1,79 @@
 "use client";
 import { rutas } from "@/lib/rutas";
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import { notFound, useRouter, useSearchParams } from "next/navigation";
 import {
-  ArrowLeft, FileText, Download, Pencil,
-  CheckCircle2, Save,
-  Link2, Shield, Receipt, Lock, Loader2
+  ArrowLeft, FileText, Download, Pencil, Save, MoreVertical,
+  Link2, Shield, Receipt, Lock, Building2, ListChecks,
 } from "lucide-react";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
 import { rutaFueraDelPlan } from "@/lib/plataforma";
 import { aplicaALaEmpresa, bloqueadoPorPlan } from "@/components/dashboard/DashboardNav";
+import { useLista } from "@/lib/useLista";
+import { ESTADOS_PAGO, tipoComprobante } from "@/lib/estados";
+import { guardarYCompartir } from "@/lib/nativo";
+import { useAvisos } from "@/components/ui/Avisos";
 import Hoja from "@/components/ui/Hoja";
 import Boton from "@/components/ui/Boton";
-import { guardarYCompartir } from "@/lib/nativo";
+import BotonIcono from "@/components/ui/BotonIcono";
+import HojaAcciones, { type Accion } from "@/components/ui/HojaAcciones";
+import Seccion from "@/components/ui/Seccion";
+import FilaLista from "@/components/ui/FilaLista";
+import Vacio from "@/components/ui/Vacio";
+import TirarParaRefrescar from "@/components/ui/TirarParaRefrescar";
+import { Esqueleto, EsqueletoFilas } from "@/components/ui/Esqueleto";
+import { InsigniaEstado, InsigniaSri } from "@/components/ui/InsigniaEstado";
+import { etiquetaPeriodo } from "@/components/ui/PeriodoFechas";
+import { cn } from "@/components/ui/cn";
 
 // "Emitir retención": misma regla que el menú (DashboardNav). Sin retenciones activadas no
 // aparece; sin Kipu Pro / Al Día va con candado y lleva a planes (en la app no aparece).
 const RET = { href: "/documentos/emitir/ret", requierePro: true, requiereRetenciones: true };
 
 const fmt = (n: any) => parseFloat(String(n ?? 0)).toFixed(2);
+const fecha = (f?: string | null) => (f && /^\d{4}-\d{2}-\d{2}$/.test(f) ? etiquetaPeriodo(f, f) : f || "—");
 
-const TIPO_LABEL: Record<string, string> = {
-  FAC: "Factura",
-  NVE: "Nota de venta",
-  LIQ: "Liquidación de Compra",
-  NCR: "Nota de Crédito",
-  NDB: "Nota de Débito",
-  RET: "Retención",
-};
+/** Fila etiqueta → valor de las secciones. */
+function Dato({ etiqueta, valor }: { etiqueta: string; valor: React.ReactNode }) {
+  return (
+    <div className="flex justify-between gap-4 py-1 text-sm">
+      <span className="shrink-0 text-tenue">{etiqueta}</span>
+      <span className="min-w-0 break-words text-right text-texto">{valor || "—"}</span>
+    </div>
+  );
+}
 
-const TIPO_COLOR: Record<string, { color: string; bg: string }> = {
-  FAC: { color: "var(--kipu-muted)", bg: "color-mix(in srgb, var(--kipu-muted) 10%, transparent)" },
-  NVE: { color: "var(--kipu-muted)", bg: "color-mix(in srgb, var(--kipu-muted) 10%, transparent)" },
-  LIQ: { color: "#22d3ee", bg: "color-mix(in srgb, #22d3ee 10%, transparent)" },
-  NCR: { color: "var(--kipu-muted)", bg: "color-mix(in srgb, var(--kipu-muted) 10%, transparent)" },
-  NDB: { color: "var(--kipu-warning)", bg: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)" },
-  RET: { color: "var(--kipu-info)", bg: "color-mix(in srgb, var(--kipu-info) 10%, transparent)" },
-};
+/** Interruptor (el mismo de la pantalla Más): un checkbox con role="switch". */
+function Interruptor({ etiqueta, descripcion, activo, onCambio, deshabilitado, tono = "acento" }: {
+  etiqueta: string; descripcion?: string; activo: boolean; onCambio: (v: boolean) => void;
+  deshabilitado?: boolean; tono?: "acento" | "exito";
+}) {
+  return (
+    <label className={cn("flex min-h-11 cursor-pointer items-center justify-between gap-3", deshabilitado && "cursor-not-allowed opacity-50")}>
+      <span className="min-w-0">
+        <span className="block text-sm text-texto">{etiqueta}</span>
+        {descripcion && <span className="block text-xs text-sutil">{descripcion}</span>}
+      </span>
+      <input type="checkbox" role="switch" checked={activo} disabled={deshabilitado}
+             onChange={e => onCambio(e.target.checked)} className="peer sr-only" />
+      <span aria-hidden className={cn(
+        "relative h-7 w-12 shrink-0 rounded-full transition-colors duration-(--duracion-base)",
+        "peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-acento",
+        activo ? (tono === "exito" ? "bg-exito" : "bg-acento") : "bg-borde",
+      )}>
+        <span className={cn(
+          "absolute top-0.5 size-6 rounded-full bg-white shadow transition-[left] duration-(--duracion-base) ease-estandar",
+          activo ? "left-[22px]" : "left-0.5",
+        )} />
+      </span>
+    </label>
+  );
+}
 
-const PAGO_CONFIG: Record<string, { label: string; color: string }> = {
-  PENDIENTE: { label: "Por pagar", color: "var(--kipu-warning)" },
-  PAGADO:    { label: "Pagado",    color: "var(--kipu-success)" },
-  PARCIAL:   { label: "Parcial",   color: "var(--kipu-info)" },
-  ANULADO:   { label: "Anulado",   color: "var(--kipu-danger)" },
-};
-
-// ── Modal edición clasificación ───────────────────────────────────────────────
+// ── Hoja: editar la clasificación fiscal ──────────────────────────────────────
+// Cada ítem es una tarjeta con sus dos interruptores (antes una tabla de 5
+// columnas que en el celular no cabía).
 function ModalClasificacion({ doc, onClose, onSaved }: {
   doc:     any;
   onClose: () => void;
@@ -75,7 +102,8 @@ function ModalClasificacion({ doc, onClose, onSaved }: {
       onSaved();
       onClose();
     } catch (err: any) {
-      setError(err?.response?.data?.detail ?? "Error al guardar.");
+      const detalle = err?.response?.data?.detail;
+      setError(typeof detalle === "string" ? detalle : "Error al guardar.");
     } finally { setSaving(false); }
   };
 
@@ -94,161 +122,73 @@ function ModalClasificacion({ doc, onClose, onSaved }: {
         <Boton onClick={guardar} cargando={saving} icono={<Save size={16} />}>Guardar</Boton>
       </>}
     >
-        <div className="space-y-4">
-          {/* Ítems — misma estructura que ReviewXML */}
-          {items.length > 0 ? (
-            <div
-              className="rounded-xl overflow-hidden"
-              style={{ border: "1px solid var(--kipu-border)" }}
-            >
-              {/* Header columnas */}
-              <div
-                className="grid grid-cols-12 gap-2 px-4 py-2 text-[10px] uppercase font-semibold tracking-wider"
-                style={{
-                  color: "var(--kipu-subtle)",
-                  background: "color-mix(in srgb, var(--kipu-text) 4%, transparent)",
-                }}
-              >
-                <div className="col-span-4">Descripción</div>
-                <div className="col-span-2 text-right">Subtotal</div>
-                <div className="col-span-2 text-right">IVA</div>
-                <div className="col-span-2 text-center">Deducible</div>
-                <div className="col-span-2 text-center">Crédito IVA</div>
-              </div>
-
-              {/* Filas */}
-              <div>
-                {items.map((item, idx) => (
-                  <div
-                    key={idx}
-                    className="grid grid-cols-12 gap-2 px-4 py-2.5 items-center transition-colors"
-                    style={{
-                      borderTop: idx > 0 ? "1px solid var(--kipu-border)" : "none",
-                    }}
-                    onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 3%, transparent)"}
-                    onMouseLeave={e => e.currentTarget.style.background = "transparent"}
-                  >
-                    <div className="col-span-4">
-                      <p className="text-xs truncate" style={{ color: "var(--kipu-text)" }}>{item.descripcion}</p>
-                      <p className="text-[10px]" style={{ color: "var(--kipu-subtle)" }}>
-                        {item.cantidad} × ${fmt(item.precio_unitario)}
-                      </p>
-                    </div>
-                    <div className="col-span-2 text-right text-xs" style={{ color: "var(--kipu-muted)" }}>
-                      ${fmt(item.subtotal)}
-                    </div>
-                    <div className="col-span-2 text-right text-xs" style={{ color: "var(--kipu-muted)" }}>
-                      {item.tarifa_iva > 0 ? `${item.tarifa_iva}% $${fmt(item.valor_iva)}` : "—"}
-                    </div>
-                    <div className="col-span-2 flex justify-center">
-                      <button
-                        type="button"
-                        onClick={() => editItem(idx, "deducible_renta", !item.deducible_renta)}
-                        className="w-8 h-4 rounded-full transition-colors relative"
-                        style={{
-                          background: item.deducible_renta
-                            ? "var(--kipu-success)"
-                            : "color-mix(in srgb, var(--kipu-text) 15%, transparent)",
-                        }}
-                      >
-                        <span
-                          className="absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all"
-                          style={{ left: item.deducible_renta ? "16px" : "2px" }}
-                        />
-                      </button>
-                    </div>
-                    <div className="col-span-2 flex justify-center">
-                      {item.tarifa_iva > 0 ? (
-                        <button
-                          type="button"
-                          onClick={() => editItem(idx, "credito_tributario_iva", !item.credito_tributario_iva)}
-                          className="w-8 h-4 rounded-full transition-colors relative"
-                          style={{
-                            background: item.credito_tributario_iva
-                              ? "var(--kipu-accent)"
-                              : "color-mix(in srgb, var(--kipu-text) 15%, transparent)",
-                          }}
-                        >
-                          <span
-                            className="absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all"
-                            style={{ left: item.credito_tributario_iva ? "16px" : "2px" }}
-                          />
-                        </button>
-                      ) : (
-                        <span className="text-[10px]" style={{ color: "var(--kipu-subtle)" }}>N/A</span>
-                      )}
-                    </div>
+      <div className="space-y-4">
+        {items.length > 0 ? (
+          <div className="divide-y divide-borde overflow-hidden rounded-xl border border-borde">
+            {items.map((item, idx) => (
+              <div key={idx} className="space-y-1 px-4 py-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm text-texto">{item.descripcion}</p>
+                    <p className="text-xs text-sutil">{item.cantidad} × ${fmt(item.precio_unitario)}</p>
                   </div>
-                ))}
+                  <div className="shrink-0 text-right text-xs tabular-nums">
+                    <p className="font-medium text-texto">${fmt(item.subtotal)}</p>
+                    <p className="text-sutil">{item.tarifa_iva > 0 ? `IVA ${item.tarifa_iva}% $${fmt(item.valor_iva)}` : "Sin IVA"}</p>
+                  </div>
+                </div>
+                {doc.tipo_doc !== "RET" && (
+                  <Interruptor etiqueta="Deducible de renta" tono="exito" activo={!!item.deducible_renta}
+                               onCambio={v => editItem(idx, "deducible_renta", v)} />
+                )}
+                <Interruptor etiqueta="Crédito tributario de IVA" activo={!!item.credito_tributario_iva}
+                             deshabilitado={!(item.tarifa_iva > 0)}
+                             descripcion={item.tarifa_iva > 0 ? undefined : "No aplica: el ítem no tiene IVA"}
+                             onCambio={v => editItem(idx, "credito_tributario_iva", v)} />
               </div>
-            </div>
-          ) : (
-            <p className="text-sm text-center py-4" style={{ color: "var(--kipu-subtle)" }}>
-              Sin ítems registrados.
-            </p>
-          )}
-
-          {/* Resumen fiscal */}
-          <div
-            className="rounded-xl p-4 space-y-2 text-sm"
-            style={{ background: "color-mix(in srgb, var(--kipu-text) 4%, transparent)" }}
-          >
-            <h3 className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "var(--kipu-subtle)" }}>
-              Resumen fiscal
-            </h3>
-            <div className="flex justify-between" style={{ color: "var(--kipu-muted)" }}>
-              <span>Total documento</span>
-              <span className="font-bold" style={{ color: "var(--kipu-text)" }}>${fmt(doc.importe_total)}</span>
-            </div>
-            {doc.tipo_doc !== "RET" && (
-              <div className="flex justify-between" style={{ color: "var(--kipu-muted)" }}>
-                <span>Deducible renta</span>
-                <span style={{ color: "var(--kipu-success)" }}>${fmt(totalDeducible)}</span>
-              </div>
-            )}
-            <div className="flex justify-between" style={{ color: "var(--kipu-muted)" }}>
-              <span>Crédito tributario IVA</span>
-              <span style={{ color: "var(--kipu-accent)" }}>${fmt(totalCredito)}</span>
-            </div>
+            ))}
           </div>
+        ) : (
+          <p className="py-4 text-center text-sm text-sutil">Sin ítems registrados.</p>
+        )}
 
-          {/* Notas */}
-          <div>
-            <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Notas</label>
-            <textarea
-              value={notas}
-              onChange={e => setNotas(e.target.value)}
-              rows={2}
-              placeholder="Observaciones internas..."
-              className="w-full px-3 py-2 rounded-lg text-sm resize-none transition-colors focus:outline-none"
-              style={{
-                background: "var(--kipu-surface)",
-                border: "1px solid var(--kipu-border)",
-                color: "var(--kipu-text)",
-              }}
-              onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-              onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
-            />
+        {/* Resumen fiscal */}
+        <div className="space-y-1.5 rounded-xl bg-presionado p-4 text-sm tabular-nums">
+          <div className="flex justify-between text-tenue">
+            <span>Total documento</span>
+            <span className="font-bold text-texto">${fmt(doc.importe_total)}</span>
           </div>
-
-          {error && (
-            <p
-              className="text-xs px-3 py-2 rounded-lg"
-              style={{
-                color: "var(--kipu-danger)",
-                background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
-              }}
-            >
-              {error}
-            </p>
+          {doc.tipo_doc !== "RET" && (
+            <div className="flex justify-between text-tenue">
+              <span>Deducible renta</span>
+              <span className="font-medium text-exito-texto">${fmt(totalDeducible)}</span>
+            </div>
           )}
+          <div className="flex justify-between text-tenue">
+            <span>Crédito tributario IVA</span>
+            <span className="font-medium text-info">${fmt(totalCredito)}</span>
+          </div>
         </div>
+
+        {/* Notas */}
+        <div>
+          <label htmlFor="notas-recibido" className="mb-1.5 block text-xs text-sutil">Notas</label>
+          <textarea
+            id="notas-recibido"
+            value={notas}
+            onChange={e => setNotas(e.target.value)}
+            rows={2}
+            placeholder="Observaciones internas…"
+            className="w-full resize-none rounded-lg border border-borde bg-superficie px-3 py-2 text-base text-texto focus:border-acento focus:outline-none sm:text-sm"
+          />
+        </div>
+
+        {error && <p className="rounded-lg bg-peligro-suave px-3 py-2 text-xs text-peligro-texto">{error}</p>}
+      </div>
     </Hoja>
   );
 }
 
-// ── Página principal ──────────────────────────────────────────────────────────
-// /documentos/recibidos/ver?id=… (antes /documentos/recibidos/[id]; ver lib/rutas.ts)
 // ── Archivo original ──────────────────────────────────────────────────────────
 // GET /recibidos/{id}/archivo devuelve lo que se guardó: el XML subido o la foto
 // del físico. Los importados del SRI o a mano solo guardan datos (.json): sin botón.
@@ -262,16 +202,15 @@ interface DocConArchivo {
   id: string; xml_path?: string | null; clave_acceso?: string | null; numero_doc?: string | null;
 }
 
-function BotonArchivoOriginal({ doc }: { doc: DocConArchivo }) {
+/** La acción "Descargar XML / imagen" para el menú ⋮, o null si no hay archivo guardado. */
+function useArchivoOriginal(doc: DocConArchivo | undefined): { accion: Accion | null; descargando: boolean } {
   const [descargando, setDescargando] = useState(false);
-  const [error,       setError]       = useState("");
-
-  const ext   = String(doc.xml_path ?? "").split(".").pop()?.toLowerCase() ?? "";
+  const avisos = useAvisos();
+  const ext   = String(doc?.xml_path ?? "").split(".").pop()?.toLowerCase() ?? "";
   const texto = ARCHIVO_ORIGINAL[ext];
-  if (!texto) return null;
+  if (!doc || !texto) return { accion: null, descargando };
 
   const descargar = async () => {
-    setError("");
     setDescargando(true);
     try {
       const res = await api.get(`/api/v1/app/recibidos/${doc.id}/archivo`, { responseType: "blob" });
@@ -282,33 +221,20 @@ function BotonArchivoOriginal({ doc }: { doc: DocConArchivo }) {
       let detalle = "";
       const blob = (e as { response?: { data?: Blob } })?.response?.data;
       try { detalle = blob ? JSON.parse(await blob.text())?.detail ?? "" : ""; } catch {}
-      setError(typeof detalle === "string" && detalle ? detalle : "No pudimos descargar el archivo. Intenta de nuevo.");
+      avisos.error(typeof detalle === "string" && detalle ? detalle : "No pudimos descargar el archivo. Intenta de nuevo.");
     } finally {
       setDescargando(false);
     }
   };
 
-  return (
-    <div className="flex flex-col gap-1">
-      <button
-        onClick={descargar}
-        disabled={descargando}
-        className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs transition-colors disabled:opacity-60"
-        style={{
-          background: "var(--kipu-surface)",
-          color: "var(--kipu-text)",
-          border: "1px solid var(--kipu-border)",
-        }}
-        onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 5%, transparent)"}
-        onMouseLeave={e => e.currentTarget.style.background = "var(--kipu-surface)"}
-      >
-        {descargando ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />} {texto}
-      </button>
-      {error && <p className="text-xs" style={{ color: "var(--kipu-danger)" }}>{error}</p>}
-    </div>
-  );
+  return {
+    accion: { etiqueta: texto, descripcion: "El archivo con el que se registró", icono: Download, onClick: () => void descargar() },
+    descargando,
+  };
 }
 
+// ── Página ────────────────────────────────────────────────────────────────────
+// /documentos/recibidos/ver?id=… (antes /documentos/recibidos/[id]; ver lib/rutas.ts)
 export default function DetalleRecibidoPage() {
   const id = useSearchParams().get("id");
   if (!id) notFound();
@@ -317,439 +243,233 @@ export default function DetalleRecibidoPage() {
 
 function DetalleRecibido({ id }: { id: string }) {
   const router  = useRouter();
+  const avisos  = useAvisos();
   const empresa = useAuthStore((s) => s.empresa);
   const verRet  = aplicaALaEmpresa(RET, empresa) && !rutaFueraDelPlan(RET.href, empresa);
   const retSinPlan = bloqueadoPorPlan(RET, empresa);
 
-  const [doc,      setDoc]      = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [editando, setEditando] = useState(false);
+  // Con caché: al volver de la retención el documento aparece al instante (lib/useLista.ts)
+  const res = useLista<{ data?: any }>(`/api/v1/app/recibidos/${id}`);
+  const doc = res.datos?.data;
+  const cargar = res.recargar;
+
+  const [editando,    setEditando]    = useState(false);
   const [guardandoAf, setGuardandoAf] = useState(false);
+  const [menu,        setMenu]        = useState(false);
+  const archivo = useArchivoOriginal(doc);
 
-  const cargar = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await api.get(`/api/v1/app/recibidos/${id}`);
-      setDoc(res.data.data);
-    } catch (e) { console.error(e); }
-    finally { setLoading(false); }
-  }, [id]);
+  if (res.cargando) return (
+    <div className="mx-auto max-w-3xl space-y-4 p-4 md:p-6" aria-busy="true">
+      <Esqueleto className="h-48 rounded-2xl" />
+      <EsqueletoFilas filas={4} />
+    </div>
+  );
 
-  useEffect(() => { cargar(); }, [cargar]);
-
-  if (loading) return (
-    <div className="flex items-center justify-center h-64">
-      <div
-        className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin"
-        style={{ borderColor: "var(--kipu-accent)", borderTopColor: "transparent" }}
+  if (!doc) {
+    // 404/403: no existe o es de otra empresa. Otro error: la conexión, se puede reintentar.
+    const estado = (res.error as { response?: { status?: number } } | undefined)?.response?.status;
+    const deRed  = !!res.error && estado !== 404 && estado !== 403;
+    return (
+      <Vacio
+        icono={FileText}
+        titulo={deRed ? "No pudimos cargar el documento" : "Documento no encontrado"}
+        descripcion={deRed ? "Revisa tu conexión e intenta de nuevo." : "Puede que sea de otra empresa o que ya no exista."}
+        accion={deRed
+          ? <Boton onClick={() => void cargar()}>Reintentar</Boton>
+          : <Boton variante="secundario" onClick={() => router.push("/documentos/recibidos")}>Ir a Recibidos</Boton>}
+        className="py-20"
       />
-    </div>
-  );
+    );
+  }
 
-  if (!doc) return (
-    <div className="p-6 text-center">
-      <FileText size={40} className="mx-auto mb-3" style={{ color: "var(--kipu-subtle)" }} />
-      <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>Documento no encontrado.</p>
-      <button
-        onClick={() => router.back()}
-        className="mt-4 text-sm transition-colors"
-        style={{ color: "var(--kipu-accent)" }}
-        onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent-h)"}
-        onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-accent)"}
-      >
-        Volver
-      </button>
-    </div>
-  );
+  const items          = (doc.items_detalle ?? []) as any[];
+  const pago           = doc.estado_pago && ["FAC", "LIQ"].includes(doc.tipo_doc) ? ESTADOS_PAGO[doc.estado_pago] : undefined;
+  const totalDeducible = items.filter(i => i.deducible_renta).reduce((s, i) => s + i.subtotal, 0);
+  const totalCredito   = items.filter(i => i.credito_tributario_iva).reduce((s, i) => s + i.valor_iva, 0);
+  const puedeRetener   = ["FAC", "LIQ"].includes(doc.tipo_doc) && !doc.retencion_emitida && verRet;
+  const vinculos       = (doc.doc_origen_recibido_id ? 1 : 0) + (doc.doc_origen_emitido_id ? 1 : 0) + (doc.retencion_emitida ? 1 : 0);
 
-  const pago           = doc.estado_pago ? PAGO_CONFIG[doc.estado_pago] : null;
-  const totalDeducible = (doc.items_detalle ?? []).filter((i: any) => i.deducible_renta).reduce((s: number, i: any) => s + i.subtotal, 0);
-  const totalCredito   = (doc.items_detalle ?? []).filter((i: any) => i.credito_tributario_iva).reduce((s: number, i: any) => s + i.valor_iva, 0);
-  const tColor        = TIPO_COLOR[doc.tipo_doc] ?? TIPO_COLOR.FAC;
+  const cambiarActivoFijo = async (valor: boolean) => {
+    setGuardandoAf(true);
+    try {
+      await api.patch(`/api/v1/app/recibidos/${doc.id}`, { activo_fijo: valor });
+      await cargar();
+    } catch {
+      avisos.error("No se pudo guardar. Intenta de nuevo.");
+    } finally { setGuardandoAf(false); }
+  };
+
+  const acciones: Accion[] = archivo.accion ? [archivo.accion] : [];
 
   return (
-    <div className="p-4 md:p-6 max-w-3xl mx-auto space-y-4">
+    <TirarParaRefrescar alRefrescar={cargar}>
+      <div className="mx-auto max-w-3xl space-y-4 p-4 md:p-6">
 
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <button
-          onClick={() => router.back()}
-          className="hidden p-2 rounded-lg transition-colors lg:inline-flex"
-          style={{ color: "var(--kipu-muted)" }}
-          onMouseEnter={e => {
-            e.currentTarget.style.color = "var(--kipu-text)";
-            e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 5%, transparent)";
-          }}
-          onMouseLeave={e => {
-            e.currentTarget.style.color = "var(--kipu-muted)";
-            e.currentTarget.style.background = "transparent";
-          }}
-        >
-          <ArrowLeft size={18} />
-        </button>
-        <div className="flex-1">
-          <div className="flex items-center gap-2">
-            <span
-              className="text-xs px-2 py-0.5 rounded-full font-bold"
-              style={{ color: tColor.color, background: tColor.bg }}
-            >
-              {doc.tipo_doc}
-            </span>
-            <h1 className="text-xl font-bold font-mono" style={{ color: "var(--kipu-text)" }}>{doc.numero_doc}</h1>
-          </div>
-          <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>{doc.razon_social_proveedor}</p>
-        </div>
-        <div className="text-right">
-          <p className="text-xl font-bold" style={{ color: "var(--kipu-text)" }}>${fmt(doc.importe_total)}</p>
-          <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>{doc.fecha_emision}</p>
-        </div>
-      </div>
-
-      {/* Proveedor */}
-      <div
-        className="rounded-xl p-4"
-        style={{
-          background: "var(--kipu-surface)",
-          border: "1px solid var(--kipu-border)",
-        }}
-      >
-        <h2 className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "var(--kipu-subtle)" }}>Proveedor</h2>
-        <div className="grid grid-cols-2 gap-3 text-sm">
-          {[
-            { label: "Razón social", value: doc.razon_social_proveedor },
-            { label: "RUC",          value: doc.ruc_proveedor },
-            { label: "N° documento", value: doc.numero_doc },
-            { label: "Fecha",        value: doc.fecha_emision },
-            { label: "Fuente",       value: doc.fuente },
-            { label: "Autorización", value: doc.fecha_autorizacion ? new Date(doc.fecha_autorizacion).toLocaleDateString("es-EC") : "—" },
-          ].map(({ label, value }) => (
-            <div key={label}>
-              <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>{label}</p>
-              <p className="font-medium truncate" style={{ color: "var(--kipu-text)" }}>{value || "—"}</p>
+        {/* Arriba: tipo, número, proveedor y el monto en grande */}
+        <section className="rounded-2xl border border-borde bg-superficie p-4 sm:p-5">
+          <div className="flex items-start gap-2">
+            {/* En el celular la flecha atrás ya está en la barra superior */}
+            <BotonIcono etiqueta="Volver" icono={<ArrowLeft size={18} />} onClick={() => router.back()}
+                        className="-ml-2 -mt-1 hidden lg:inline-flex" />
+            <div className="min-w-0 flex-1">
+              <p className="text-xs text-sutil">{tipoComprobante(doc.tipo_doc).etiqueta} · {fecha(doc.fecha_emision)}</p>
+              <h1 className="font-mono text-base font-semibold text-texto sm:text-lg">{doc.numero_doc}</h1>
+              <p className="truncate text-sm text-tenue">{doc.razon_social_proveedor}</p>
             </div>
-          ))}
-        </div>
-      </div>
+            {pago && <InsigniaEstado tono={pago.tono} className="shrink-0">{pago.etiqueta}</InsigniaEstado>}
+          </div>
 
-      {/* Clasificación fiscal */}
-      <div
-        className="rounded-xl p-4"
-        style={{
-          background: "var(--kipu-surface)",
-          border: "1px solid var(--kipu-border)",
-        }}
-      >
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <Shield size={14} style={{ color: "var(--kipu-accent)" }} />
-            <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--kipu-subtle)" }}>Clasificación fiscal</h2>
-          </div>
-          <button
-            onClick={() => setEditando(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors"
-            style={{
-              background: "var(--kipu-surface)",
-              color: "var(--kipu-text)",
-              border: "1px solid var(--kipu-border)",
-            }}
-            onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 5%, transparent)"}
-            onMouseLeave={e => e.currentTarget.style.background = "var(--kipu-surface)"}
-          >
-            <Pencil size={12} /> Editar
-          </button>
-        </div>
+          <p className="mt-4 text-3xl font-bold tabular-nums text-texto">${fmt(doc.importe_total)}</p>
 
-        <div className="grid grid-cols-3 gap-3">
-          <div
-            className="rounded-lg p-3 text-center"
-            style={{ background: "color-mix(in srgb, var(--kipu-text) 4%, transparent)" }}
-          >
-            <p className="text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>Total</p>
-            <p className="text-base font-bold" style={{ color: "var(--kipu-text)" }}>${fmt(doc.importe_total)}</p>
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            {puedeRetener && (
+              <Boton
+                onClick={() => router.push(retSinPlan ? "/planes" : `/documentos/emitir/ret?doc_origen_recibido_id=${doc.id}`)}
+                title={retSinPlan ? "Disponible en Kipu Pro" : undefined}
+                icono={retSinPlan ? <Lock size={16} /> : <Receipt size={16} />}
+                className="flex-1 sm:flex-none"
+              >
+                Emitir retención
+              </Boton>
+            )}
+            <Boton variante="secundario" onClick={() => setEditando(true)} icono={<Pencil size={16} />} className="flex-1 sm:flex-none">
+              Clasificación
+            </Boton>
+            {acciones.length > 0 && (
+              <BotonIcono etiqueta="Más acciones" icono={<MoreVertical size={20} />} variante="secundario"
+                          onClick={() => setMenu(true)} disabled={archivo.descargando} />
+            )}
           </div>
-          <div
-            className="rounded-lg p-3 text-center"
-            style={{
-              background: "color-mix(in srgb, var(--kipu-success) 5%, transparent)",
-              border: "1px solid color-mix(in srgb, var(--kipu-success) 20%, transparent)",
-            }}
-          >
-            <p className="text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>Deducible renta</p>
-            <p className="text-base font-bold" style={{ color: "var(--kipu-success)" }}>${fmt(totalDeducible)}</p>
-          </div>
-          <div
-            className="rounded-lg p-3 text-center"
-            style={{
-              background: "color-mix(in srgb, var(--kipu-accent) 5%, transparent)",
-              border: "1px solid color-mix(in srgb, var(--kipu-accent) 20%, transparent)",
-            }}
-          >
-            <p className="text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>Crédito trib. IVA</p>
-            <p className="text-base font-bold" style={{ color: "var(--kipu-accent)" }}>${fmt(totalCredito)}</p>
-          </div>
-        </div>
+        </section>
 
-        {/* Activo fijo: computador, vehículo, maquinaria… (104: 501/511/521) */}
-        {["FAC", "NDB", "NCR"].includes(doc.tipo_doc) && (
-          <div className="mt-3 flex items-center justify-between gap-3">
-            <div>
-              <p className="text-sm" style={{ color: "var(--kipu-text)" }}>Es un activo fijo</p>
-              <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
-                Equipos, vehículos o maquinaria que usarás más de un año. Se declara en el casillero 501.
-              </p>
+        {/* Clasificación fiscal: lo que importa de una compra, a la vista */}
+        <section className="rounded-xl border border-borde bg-superficie p-4">
+          <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-texto">
+            <Shield size={16} className="text-acento" aria-hidden /> Clasificación fiscal
+          </h2>
+          <div className={cn("grid gap-2", doc.tipo_doc !== "RET" ? "grid-cols-2" : "grid-cols-1")}>
+            {doc.tipo_doc !== "RET" && (
+              <div className="rounded-lg bg-exito-suave p-3">
+                <p className="text-xs text-tenue">Deducible renta</p>
+                <p className="text-base font-bold tabular-nums text-exito-texto">${fmt(totalDeducible)}</p>
+              </div>
+            )}
+            <div className="rounded-lg bg-info-suave p-3">
+              <p className="text-xs text-tenue">Crédito tributario IVA</p>
+              <p className="text-base font-bold tabular-nums text-info">${fmt(totalCredito)}</p>
             </div>
-            <button
-              type="button"
-              aria-pressed={!!doc.datos?.activo_fijo}
-              disabled={guardandoAf}
-              onClick={async () => {
-                setGuardandoAf(true);
-                try {
-                  await api.patch(`/api/v1/app/recibidos/${doc.id}`, { activo_fijo: !doc.datos?.activo_fijo });
-                  await cargar();
-                } catch (e) { console.error(e); }
-                finally { setGuardandoAf(false); }
-              }}
-              className="w-10 h-5 rounded-full transition-colors relative shrink-0 disabled:opacity-50"
-              style={{
-                background: doc.datos?.activo_fijo
-                  ? "var(--kipu-accent)"
-                  : "color-mix(in srgb, var(--kipu-text) 15%, transparent)",
-              }}
-            >
-              <span
-                className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all"
-                style={{ left: doc.datos?.activo_fijo ? "20px" : "2px" }}
+          </div>
+
+          {/* Activo fijo: computador, vehículo, maquinaria… (104: 501/511/521) */}
+          {["FAC", "NDB", "NCR"].includes(doc.tipo_doc) && (
+            <div className="mt-3 border-t border-borde pt-2">
+              <Interruptor
+                etiqueta="Es un activo fijo"
+                descripcion="Equipos, vehículos o maquinaria que usarás más de un año. Se declara en el casillero 501."
+                activo={!!doc.datos?.activo_fijo}
+                deshabilitado={guardandoAf}
+                onCambio={cambiarActivoFijo}
               />
-            </button>
-          </div>
-        )}
-
-        {/* Ítems */}
-        {(doc.items_detalle ?? []).length > 0 && (
-          <div
-            className="mt-3 pt-3 space-y-2"
-            style={{ borderTop: "1px solid var(--kipu-border)" }}
-          >
-            {doc.items_detalle.map((item: any, idx: number) => (
-              <div key={idx} className="flex items-center gap-3 text-xs">
-                <div className="flex-1 min-w-0">
-                  <p className="truncate" style={{ color: "var(--kipu-text)" }}>{item.descripcion}</p>
-                  <p style={{ color: "var(--kipu-subtle)" }}>{item.cantidad} × ${fmt(item.precio_unitario)}</p>
-                </div>
-                <div className="text-right shrink-0">
-                  <p style={{ color: "var(--kipu-muted)" }}>${fmt(item.subtotal)}</p>
-                  {item.tarifa_iva > 0 && (
-                    <p style={{ color: "var(--kipu-subtle)" }}>IVA {item.tarifa_iva}% ${fmt(item.valor_iva)}</p>
-                  )}
-                </div>
-                <div className="flex gap-1.5 shrink-0">
-                  {item.deducible_renta && (
-                    <span
-                      className="text-[10px] px-1.5 py-0.5 rounded"
-                      style={{
-                        background: "color-mix(in srgb, var(--kipu-success) 10%, transparent)",
-                        color: "var(--kipu-success)",
-                      }}
-                    >
-                      Ded.
-                    </span>
-                  )}
-                  {item.credito_tributario_iva && (
-                    <span
-                      className="text-[10px] px-1.5 py-0.5 rounded"
-                      style={{
-                        background: "color-mix(in srgb, var(--kipu-accent) 10%, transparent)",
-                        color: "var(--kipu-accent)",
-                      }}
-                    >
-                      CT
-                    </span>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {doc.notas && (
-          <p
-            className="mt-3 pt-3 text-xs"
-            style={{
-              borderTop: "1px solid var(--kipu-border)",
-              color: "var(--kipu-subtle)",
-            }}
-          >
-            {doc.notas}
-          </p>
-        )}
-      </div>
-
-      {/* Estado de pago al proveedor — solo FAC/LIQ */}
-      {["FAC", "LIQ"].includes(doc.tipo_doc) && (
-        <div
-          className="rounded-xl p-4"
-          style={{
-            background: "var(--kipu-surface)",
-            border: "1px solid var(--kipu-border)",
-          }}
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Receipt size={14} style={{ color: "var(--kipu-subtle)" }} />
-              <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--kipu-subtle)" }}>Pago al proveedor</h2>
-            </div>
-            {pago && <span className="text-sm font-semibold" style={{ color: pago.color }}>{pago.label}</span>}
-          </div>
-          {doc.forma_pago && (
-            <div className="mt-3 space-y-1.5 text-sm">
-              <div className="flex justify-between">
-                <span style={{ color: "var(--kipu-subtle)" }}>Forma de pago</span>
-                <span style={{ color: "var(--kipu-text)" }}>{doc.forma_pago}</span>
-              </div>
-              {doc.numero_comprobante_pago && (
-                <div className="flex justify-between">
-                  <span style={{ color: "var(--kipu-subtle)" }}>N° comprobante</span>
-                  <span className="font-mono text-xs" style={{ color: "var(--kipu-text)" }}>{doc.numero_comprobante_pago}</span>
-                </div>
-              )}
-              {doc.fecha_pago && (
-                <div className="flex justify-between">
-                  <span style={{ color: "var(--kipu-subtle)" }}>Fecha de pago</span>
-                  <span style={{ color: "var(--kipu-text)" }}>{doc.fecha_pago}</span>
-                </div>
-              )}
             </div>
           )}
-        </div>
-      )}
 
-      {/* Documento origen — NCR/NDB vinculada a FAC recibida */}
-      {doc.doc_origen_recibido_id && (
-        <div
-          className="rounded-xl p-4"
-          style={{
-            background: "color-mix(in srgb, var(--kipu-muted) 5%, transparent)",
-            border: "1px solid color-mix(in srgb, var(--kipu-muted) 20%, transparent)",
-          }}
-        >
-          <div className="flex items-center gap-2 mb-2">
-            <Link2 size={13} style={{ color: "var(--kipu-muted)" }} />
-            <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--kipu-muted)" }}>
-              Documento que modifica
+          {doc.notas && <p className="mt-3 border-t border-borde pt-3 text-xs text-tenue">{doc.notas}</p>}
+        </section>
+
+        {/* Ítems */}
+        {items.length > 0 && (
+          <section className="overflow-hidden rounded-xl border border-borde bg-superficie">
+            <h2 className="flex items-center gap-2 border-b border-borde px-4 py-3 text-sm font-semibold text-texto">
+              <ListChecks size={16} className="text-sutil" aria-hidden />
+              {items.length === 1 ? "1 ítem" : `${items.length} ítems`}
             </h2>
-          </div>
-          <button
-            onClick={() => router.push(rutas.recibido(doc.doc_origen_recibido_id))}
-            className="text-sm transition-colors"
-            style={{ color: "var(--kipu-accent)" }}
-            onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent-h)"}
-            onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-accent)"}
-          >
-            Ver documento recibido →
-          </button>
-        </div>
-      )}
-
-      {/* RET recibida → FAC/LIQ emitida */}
-      {doc.doc_origen_emitido_id && (
-        <div
-          className="rounded-xl p-4"
-          style={{
-            background: "color-mix(in srgb, var(--kipu-info) 5%, transparent)",
-            border: "1px solid color-mix(in srgb, var(--kipu-info) 20%, transparent)",
-          }}
-        >
-          <div className="flex items-center gap-2 mb-2">
-            <Link2 size={13} style={{ color: "var(--kipu-info)" }} />
-            <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--kipu-info)" }}>
-              Documento retenido
-            </h2>
-          </div>
-          <button
-            onClick={() => router.push(rutas.documento(doc.doc_origen_emitido_id))}
-            className="text-sm transition-colors"
-            style={{ color: "var(--kipu-accent)" }}
-            onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent-h)"}
-            onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-accent)"}
-          >
-            Ver comprobante emitido →
-          </button>
-        </div>
-      )}
-
-      {/* RET emitida desde este documento */}
-      {doc.retencion_emitida && (
-        <div
-          className="rounded-xl p-4"
-          style={{
-            background: "color-mix(in srgb, var(--kipu-warning) 5%, transparent)",
-            border: "1px solid color-mix(in srgb, var(--kipu-warning) 20%, transparent)",
-          }}
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 size={13} style={{ color: "var(--kipu-warning)" }} />
-              <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--kipu-warning)" }}>
-                Retención emitida
-              </h2>
+            <div className="divide-y divide-borde">
+              {items.map((item, idx) => (
+                <div key={idx} className="flex items-start justify-between gap-3 px-4 py-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm text-texto">{item.descripcion}</p>
+                    <p className="text-xs text-sutil">{item.cantidad} × ${fmt(item.precio_unitario)}</p>
+                    {(item.deducible_renta || item.credito_tributario_iva) && (
+                      <span className="mt-1 flex flex-wrap gap-1">
+                        {item.deducible_renta && <InsigniaEstado tono="exito">Deducible</InsigniaEstado>}
+                        {item.credito_tributario_iva && <InsigniaEstado tono="info">Crédito IVA</InsigniaEstado>}
+                      </span>
+                    )}
+                  </div>
+                  <div className="shrink-0 text-right text-sm tabular-nums">
+                    <p className="font-semibold text-texto">${fmt(item.subtotal)}</p>
+                    {item.tarifa_iva > 0 && <p className="text-xs text-sutil">IVA {item.tarifa_iva}% ${fmt(item.valor_iva)}</p>}
+                  </div>
+                </div>
+              ))}
             </div>
-            <button
-              onClick={() => router.push(rutas.documento(doc.retencion_emitida.id))}
-              className="text-xs transition-colors"
-              style={{ color: "var(--kipu-accent)" }}
-              onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent-h)"}
-              onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-accent)"}
-            >
-              Ver →
-            </button>
-          </div>
-          <p className="text-sm font-mono mt-2" style={{ color: "var(--kipu-text)" }}>{doc.retencion_emitida.numero_doc}</p>
-          <p
-            className="text-xs mt-0.5"
-            style={{
-              color: doc.retencion_emitida.estado_sri === "AUTORIZADO"
-                ? "var(--kipu-success)"
-                : "var(--kipu-warning)",
-            }}
-          >
-            {doc.retencion_emitida.estado_sri}
-          </p>
-        </div>
-      )}
+          </section>
+        )}
 
-      {/* Acciones */}
-      <div className="flex gap-2 flex-wrap">
-        {/* Archivo original: XML subido o foto del físico */}
-        <BotonArchivoOriginal doc={doc} />
-        {/* Emitir RET — solo FAC/LIQ sin retención */}
-        {["FAC", "LIQ"].includes(doc.tipo_doc) && !doc.retencion_emitida && verRet && (
-          <button
-            onClick={() => router.push(retSinPlan ? "/planes" : `/documentos/emitir/ret?doc_origen_recibido_id=${doc.id}`)}
-            title={retSinPlan ? "Disponible en Kipu Pro" : undefined}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs transition-colors"
-            style={{
-              background: "color-mix(in srgb, var(--kipu-info) 10%, transparent)",
-              color: "var(--kipu-info)",
-              border: "1px solid color-mix(in srgb, var(--kipu-info) 20%, transparent)",
-            }}
-            onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-info) 20%, transparent)"}
-            onMouseLeave={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-info) 10%, transparent)"}
-          >
-            {retSinPlan && <Lock size={12} aria-hidden />}
-            RET · Emitir retención
-          </button>
+        {/* Pago al proveedor — solo FAC/LIQ */}
+        {["FAC", "LIQ"].includes(doc.tipo_doc) && (
+          <Seccion titulo="Pago al proveedor" icono={Receipt} resumen={pago?.etiqueta}>
+            {doc.forma_pago ? (
+              <>
+                <Dato etiqueta="Forma de pago" valor={doc.forma_pago} />
+                {doc.numero_comprobante_pago && <Dato etiqueta="N° comprobante" valor={<span className="font-mono">{doc.numero_comprobante_pago}</span>} />}
+                {doc.fecha_pago && <Dato etiqueta="Fecha de pago" valor={fecha(doc.fecha_pago)} />}
+              </>
+            ) : (
+              <p className="text-sm text-sutil">Sin pago registrado.</p>
+            )}
+          </Seccion>
+        )}
+
+        {/* Documentos relacionados: el que modifica, el retenido y la retención emitida */}
+        {vinculos > 0 && (
+          <Seccion titulo="Documentos relacionados" icono={Link2}
+                   resumen={doc.retencion_emitida ? "Retención emitida" : vinculos === 1 ? "1 documento" : `${vinculos} documentos`}>
+            <div className="-my-3 divide-y divide-borde">
+              {doc.doc_origen_recibido_id && (
+                <FilaLista className="-mx-4 w-auto" href={rutas.recibido(doc.doc_origen_recibido_id)}
+                           titulo="Documento que modifica" subtitulo="Comprobante recibido" chevron />
+              )}
+              {doc.doc_origen_emitido_id && (
+                <FilaLista className="-mx-4 w-auto" href={rutas.documento(doc.doc_origen_emitido_id)}
+                           titulo="Documento retenido" subtitulo="Comprobante emitido" chevron />
+              )}
+              {doc.retencion_emitida && (
+                <FilaLista className="-mx-4 w-auto" href={rutas.documento(doc.retencion_emitida.id)}
+                           titulo={<span className="font-mono">{doc.retencion_emitida.numero_doc}</span>}
+                           subtitulo="Retención emitida"
+                           finAbajo={<InsigniaSri estado={doc.retencion_emitida.estado_sri} conIcono={false} />} />
+              )}
+            </div>
+          </Seccion>
+        )}
+
+        {/* Proveedor */}
+        <Seccion titulo="Proveedor" icono={Building2} resumen={doc.ruc_proveedor}>
+          <Dato etiqueta="Razón social" valor={doc.razon_social_proveedor} />
+          <Dato etiqueta="RUC"          valor={doc.ruc_proveedor} />
+          <Dato etiqueta="N° documento" valor={<span className="font-mono">{doc.numero_doc}</span>} />
+          <Dato etiqueta="Fecha"        valor={fecha(doc.fecha_emision)} />
+          <Dato etiqueta="Fuente"       valor={doc.fuente} />
+          <Dato etiqueta="Autorización" valor={doc.fecha_autorizacion ? new Date(doc.fecha_autorizacion).toLocaleDateString("es-EC") : "—"} />
+        </Seccion>
+
+        <HojaAcciones
+          abierta={menu}
+          onCerrar={() => setMenu(false)}
+          titulo={`${tipoComprobante(doc.tipo_doc).etiqueta} ${doc.numero_doc}`}
+          acciones={acciones}
+        />
+
+        {/* Editar clasificación */}
+        {editando && (
+          <ModalClasificacion
+            doc={doc}
+            onClose={() => setEditando(false)}
+            onSaved={() => void cargar()}
+          />
         )}
       </div>
-
-      {/* Modal clasificación */}
-      {editando && (
-        <ModalClasificacion
-          doc={doc}
-          onClose={() => setEditando(false)}
-          onSaved={cargar}
-        />
-      )}
-    </div>
+    </TirarParaRefrescar>
   );
 }
