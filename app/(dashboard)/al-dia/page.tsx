@@ -12,15 +12,16 @@ import TextoTerminos from "@/components/al-dia/TextoTerminos";
 import OfertaRenta from "@/components/renta/OfertaRenta";
 import { HeroAlDia, DemoAlDia, ComoFunciona, QueIncluye, Confianza, Preguntas } from "@/components/al-dia/Venta";
 import SoloWeb from "@/components/SoloWeb";
+import SelectorPeriodo, { periodoDisponible, type Periodo, type PreciosPlan } from "@/components/SelectorPeriodo";
 import { ES_APP_NATIVA } from "@/lib/plataforma";
 
 // Contacto de ventas (transferencia, cambio de plan): el mismo número configurado
 import { WHATSAPP_SOPORTE as SOPORTE_WA } from "@/lib/soporte";
 
-interface Precio { total: number; base: number; iva: number }
 interface Estado {
   disponible:           boolean;
-  precio:               Precio | null;
+  precios:              PreciosPlan;   // mensual y anual, de Stripe (null = no se ofrece)
+  precio_renta:         { total: number } | null;   // Kipu Renta (Stripe), para quien no llega a 6 meses
   motivo_no_elegible:   string | null;
   version_terminos:     string;
   aceptado:             boolean;
@@ -56,6 +57,11 @@ export default function KipuAlDiaPage() {
   const [autoriza,  setAutoriza]  = useState(false);
   const [enviando,  setEnviando]  = useState(false);
   const [error,     setError]     = useState("");
+  // Mensual / Anual (anual por defecto). Desde /planes llega con ?periodo= (lo que eligió allá).
+  // Leerlo aquí no descuadra la hidratación: el primer render es el de "cargando".
+  const [periodoElegido, setPeriodo] = useState<Periodo>(() =>
+    typeof window !== "undefined" && new URLSearchParams(window.location.search).get("periodo") === "MENSUAL"
+      ? "MENSUAL" : "ANUAL");
 
   const traer = () => Promise.all([
     api.get("/api/v1/app/al-dia/estado"),
@@ -112,7 +118,8 @@ export default function KipuAlDiaPage() {
           version: terminos.version, hash: terminos.hash, acepta_terminos: true, autoriza_clave_sri: true,
         });
       }
-      const r = await api.post("/api/v1/app/al-dia/checkout");
+      // Siempre con el periodo explícito (sin cuerpo el backend asume mensual)
+      const r = await api.post("/api/v1/app/al-dia/checkout", { periodo });
       // Web: el pago en esta pestaña (Stripe vuelve aquí). App: navegador dentro de
       // la app; al cerrarlo se vuelve a consultar si el pago entró
       await abrirExterno(r.data.checkout_url, { mismaPestana: true, alCerrar: () => void cargar() });
@@ -134,8 +141,10 @@ export default function KipuAlDiaPage() {
   };
 
   const caja = { background: "var(--kipu-surface)", border: "1px solid var(--kipu-border)" };
-  // Sin el precio de Stripe no se muestra un monto (se ve al pagar)
-  const precio = estado?.precio?.total ?? null;
+  // Si el elegido no se ofrece, el otro. Sin el precio de Stripe no se muestra un monto (se ve al pagar).
+  const periodo = periodoDisponible(estado?.precios, periodoElegido);
+  const precio  = estado?.precios?.[periodo]?.total ?? null;
+  const unidad  = periodo === "ANUAL" ? "al año" : "al mes";
 
   if (cargando) {
     return (
@@ -158,8 +167,8 @@ export default function KipuAlDiaPage() {
       </div>
     ) : estado?.otra_suscripcion && !estado?.cambio_desde_pro ? (
       <div className="rounded-xl p-4 text-sm space-y-2" style={{ ...caja, color: "var(--kipu-muted)" }}>
-        <p>Ya tienes Kipu Pro activo. Escríbenos y te pasamos a Kipu Al Día sin perder lo que ya pagaste.</p>
-        <a href={`https://wa.me/${SOPORTE_WA}?text=${encodeURIComponent("Hola, tengo Kipu Pro y quiero pasarme a Kipu Al Día.")}`}
+        <p>Ya tienes {ES_APP_NATIVA ? "un plan activo" : "Kipu Pro activo"}. Escríbenos y te pasamos a Kipu Al Día sin perder lo que ya pagaste.</p>
+        <a href={`https://wa.me/${SOPORTE_WA}?text=${encodeURIComponent(`Hola, tengo ${ES_APP_NATIVA ? "un plan activo" : "Kipu Pro"} y quiero pasarme a Kipu Al Día.`)}`}
            target="_blank" rel="noopener noreferrer"
            className="inline-flex items-center gap-1.5 font-medium" style={{ color: "var(--kipu-accent)" }}>
           <MessageCircle size={14} /> Escribir por WhatsApp
@@ -199,25 +208,38 @@ export default function KipuAlDiaPage() {
           (declaraciones, descarga de comprobantes y consultas).
         </label>
 
+        <div className="flex flex-col items-center gap-1.5 pt-1">
+          <SelectorPeriodo valor={periodo} onCambio={setPeriodo} precios={estado?.precios} />
+          {precio !== null && periodo === "ANUAL" && (
+            <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+              equivale a ${(precio / 12).toFixed(2)} al mes
+            </p>
+          )}
+        </div>
+
         {/* Tiene Pro: qué pasa con lo que ya pagó */}
         {estado?.cambio_desde_pro && (() => {
           const c = estado.cambio_desde_pro;
           const dias = c.dias_no_usados ?? 0;
+          // En la app no se nombra Kipu Pro (reglas de las tiendas): "tu plan actual"
+          const tuPlan = ES_APP_NATIVA ? "tu plan actual" : "tu Kipu Pro";
           return (
             <div className="rounded-lg px-4 py-3 text-sm space-y-1"
                  style={{ background: "color-mix(in srgb, var(--kipu-accent) 8%, transparent)",
                           border: "1px solid color-mix(in srgb, var(--kipu-accent) 25%, transparent)",
                           color: "var(--kipu-text)" }}>
-              <p className="font-semibold">Tienes Kipu Pro: no pierdes lo que ya pagaste</p>
+              <p className="font-semibold">
+                {ES_APP_NATIVA ? "Ya tienes un plan activo" : "Tienes Kipu Pro"}: no pierdes lo que ya pagaste
+              </p>
               <p className="text-xs" style={{ color: "var(--kipu-muted)" }}>
                 {c.sin_devolucion
-                  ? `A tu Kipu Pro le quedan ${dias} día${dias === 1 ? "" : "s"}: es menos de $${c.minimo.toFixed(2)}, así que no hay devolución.`
+                  ? `A ${tuPlan} le quedan ${dias} día${dias === 1 ? "" : "s"}: es menos de $${c.minimo.toFixed(2)}, así que no hay devolución.`
                   : c.monto_estimado !== null
-                    ? <>Cuando se confirme el pago de Al Día cancelamos tu Pro y te devolvemos <b>unos ${c.monto_estimado.toFixed(2)}</b> por
+                    ? <>Cuando se confirme el pago de Al Día cancelamos {tuPlan} y te devolvemos <b>unos ${c.monto_estimado.toFixed(2)}</b> por
                         los {dias} días que no vas a usar{c.metodo === "TARJETA"
                           ? ", a la tarjeta con la que pagaste (se ve en 5 a 10 días hábiles)."
                           : ": te pediremos tu cuenta bancaria y te lo transferimos."}</>
-                    : "Cuando se confirme el pago de Al Día cancelamos tu Pro y te devolvemos los días que no vas a usar; te confirmamos el monto por correo."}
+                    : `Cuando se confirme el pago de Al Día cancelamos ${tuPlan} y te devolvemos los días que no vas a usar; te confirmamos el monto por correo.`}
                 {ES_APP_NATIVA ? "" : " Kipu Al Día incluye todo lo de Kipu Pro."}
               </p>
             </div>
@@ -233,7 +255,7 @@ export default function KipuAlDiaPage() {
         >
           {enviando
             ? <><Loader2 size={16} className="animate-spin" /> Abriendo el pago...</>
-            : precio !== null ? `Contratar por $${precio.toFixed(0)} al mes` : "Continuar al pago"}
+            : precio !== null ? `Contratar por $${precio.toFixed(2)} ${unidad}` : "Continuar al pago"}
         </button>
         <p className="text-xs text-center" style={{ color: "var(--kipu-subtle)" }}>
           Pagas con tarjeta en Stripe. Te enviamos por correo una copia de los términos que aceptaste.
@@ -262,10 +284,10 @@ export default function KipuAlDiaPage() {
         )}
         {/* Si tuvo el servicio, su historial se sigue viendo */}
         <PanelCliente soloHistorial />
-        <HeroAlDia precio={precio} onContratar={irAContratar} />
+        <HeroAlDia precio={precio} periodo={periodo} onContratar={irAContratar} />
         <DemoAlDia ruc={empresa?.ruc} semestral={empresa?.periodo_iva === "SEMESTRAL"} enProduccion={enProduccion} />
         <ComoFunciona />
-        <QueIncluye />
+        <QueIncluye precioRenta={estado?.precio_renta?.total ?? null} />
         <Confianza />
         <Preguntas />
 

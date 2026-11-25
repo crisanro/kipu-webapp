@@ -15,7 +15,9 @@ import {
   permisoNotificaciones,
 } from "@/lib/notifications";
 import { useTheme } from "next-themes";
-import { rutaFueraDelPlan } from "@/lib/plataforma";
+import { ES_APP_NATIVA, rutaFueraDelPlan } from "@/lib/plataforma";
+import api from "@/lib/api";
+import { detalleError } from "@/lib/errores";
 import {
   useNotificaciones,
   NotificacionesDrawer,
@@ -27,6 +29,8 @@ import BarraPestanas from "@/components/shell/BarraPestanas";
 import { ModalLogout, SelectorEmpresa } from "@/components/dashboard/DashboardModals";
 import { useVerificacionCorreo } from "@/hooks/useVerificacionCorreo";
 import { useCapaAtras } from "@/lib/botonAtras";
+import { abrirExterno } from "@/lib/nativo";
+import { useAvisos } from "@/components/ui/Avisos";
 
 // "Ahora no" en el aviso de notificaciones: no volver a mostrarlo por 7 días
 const NOTIF_POSPUESTAS = "kipu-notif-pospuestas";
@@ -59,6 +63,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useCapaAtras(drawerOpen,  () => setDrawerOpen(false));
   // Cuentas antiguas que ya tienen empresa pero nunca verificaron el correo
   const correo = useVerificacionCorreo();
+  const avisos = useAvisos();
 
   useEffect(() => setMounted(true), []);
 
@@ -165,6 +170,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   };
 
+  // Pago fallido: Stripe reintenta y el plan sigue activo. En la web, enlace al
+  // Customer Portal para los dos planes. En la app solo Al Día lo lleva (es un
+  // servicio); el Pro no tiene enlaces de pago en la app (reglas de las tiendas).
+  const pagoFallido   = !!empresa?.suscripcion?.pago_fallido;
+  const subEsAlDia    = empresa?.suscripcion?.plan === "AL_DIA";
+  const avisoConPago  = !ES_APP_NATIVA || subEsAlDia;
+  const adminDelPlan  = empresa?.rol === "admin";      // solo el administrador gestiona el pago
+  const actualizarTarjeta = async () => {
+    try {
+      const r = await api.post(`/api/v1/app/suscripcion/portal?volver=${subEsAlDia ? "al-dia" : "planes"}`);
+      // Web: el portal en esta pestaña; app: navegador dentro de la app (lib/nativo.ts)
+      await abrirExterno(r.data.portal_url, { mismaPestana: true });
+    } catch (err) {
+      avisos.error(detalleError(err, "No pudimos abrir la gestión del pago. Intenta de nuevo."));
+    }
+  };
+
   if (!empresa) {
     return (
       <div className="h-screen flex items-center justify-center" style={{ background: "var(--kipu-bg)" }}>
@@ -247,6 +269,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             pedirNotificaciones={botonNotif}
             onActivarNotificaciones={activarNotificaciones}
             onPosponerNotificaciones={posponerNotificaciones}
+            pagoFallido={pagoFallido ? {
+              texto: !avisoConPago
+                ? "Hubo un problema con tu pago. Revisa tu correo."
+                : adminDelPlan
+                  ? "Tu pago falló, actualiza tu tarjeta."
+                  : "El pago del plan falló. Avísale al administrador de la empresa para que actualice la tarjeta.",
+              onActualizar: avisoConPago && adminDelPlan ? actualizarTarjeta : undefined,
+            } : null}
           />
 
           {fueraDelPlan ? null : children}

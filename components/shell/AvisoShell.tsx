@@ -2,7 +2,7 @@
 // Un solo lugar para los avisos de arriba del panel. Antes eran hasta 5 franjas
 // apiladas (SRI, correo, notificaciones, sandbox, Kipu Pro) que en el celular se
 // comían media pantalla. Ahora se ve el más importante en una línea; si hay más,
-// "+N" los despliega. Orden: sin conexión > SRI > correo > notificaciones >
+// "+N" los despliega. Orden: sin conexión > pago fallido > SRI > correo > notificaciones >
 // sandbox (solo en la compu: en el celular está el chip de la barra superior) > Kipu Pro.
 
 "use client";
@@ -11,7 +11,7 @@ import { useEffect, useState, useSyncExternalStore, type ReactNode } from "react
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  AlertTriangle, ArrowRight, Bell, ChevronDown, CloudOff, FlaskConical, Sparkles, WifiOff, X,
+  AlertTriangle, ArrowRight, Bell, ChevronDown, CloudOff, CreditCard, FlaskConical, Sparkles, WifiOff, X,
   type LucideIcon,
 } from "lucide-react";
 import api from "@/lib/api";
@@ -88,11 +88,13 @@ export interface AvisoShellProps {
   pedirNotificaciones: boolean;
   onActivarNotificaciones: () => void;
   onPosponerNotificaciones: () => void;
+  /** Pago del plan fallido: qué decir y, si quien mira puede, cómo actualizar la tarjeta. */
+  pagoFallido?: { texto: string; onActualizar?: () => void } | null;
 }
 
 export default function AvisoShell({
   sandbox, puedeProduccion, onSalirSandbox, correo, email,
-  pedirNotificaciones, onActivarNotificaciones, onPosponerNotificaciones,
+  pedirNotificaciones, onActivarNotificaciones, onPosponerNotificaciones, pagoFallido,
 }: AvisoShellProps) {
   const pathname  = usePathname() ?? "";
   const empresa   = useAuthStore((s) => s.empresa);
@@ -110,6 +112,17 @@ export default function AvisoShell({
     id: "red", tono: "peligro", icono: WifiOff,
     texto: "Sin conexión a internet.",
     detalle: "Revisa tu red: hasta que vuelva no se puede emitir ni actualizar la información.",
+  });
+
+  // Pago fallido (Stripe reintentando): el plan sigue activo hasta que Stripe se rinda
+  if (pagoFallido) avisos.push({
+    id: "pago", tono: "peligro", icono: CreditCard,
+    texto: pagoFallido.texto,
+    acciones: pagoFallido.onActualizar ? (
+      <button type="button" onClick={pagoFallido.onActualizar} className="whitespace-nowrap rounded-md px-2 py-1 text-xs font-semibold text-peligro underline-offset-2 hover:underline">
+        Actualizar tarjeta
+      </button>
+    ) : undefined,
   });
 
   const ambiente = sandbox ? "1" : "2";
