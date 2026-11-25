@@ -193,6 +193,19 @@ export default function AdminDiagnosticoPage() {
                       : `${config.dominio_from} ≠ ${config.dominio_user}`}
                 </span>
               </Fila>
+              {/* Cupo diario del proveedor (CORREO_CUPO_DIARIO): aviso desde el 70 % */}
+              {config.cupo && (
+                <Fila label="Correos hoy">
+                  <span className="inline-flex items-center gap-1"
+                        style={{ color: config.cupo.aviso ? "var(--kipu-warning)" : undefined }}>
+                    <Estado ok={!config.cupo.aviso} />
+                    {config.cupo.enviados} de {config.cupo.diario}
+                    {config.cupo.porcentaje !== null && ` (${config.cupo.porcentaje} %)`}
+                    {config.cupo.normales !== undefined && ` · normales hasta ${config.cupo.normales}`}
+                    {config.cupo.en_cola > 0 && ` · ${config.cupo.en_cola} en cola para mañana`}
+                  </span>
+                </Fila>
+              )}
             </div>
 
             {config.alineado === false && (
