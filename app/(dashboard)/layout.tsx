@@ -25,6 +25,7 @@ import {
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import BarraSuperior, { EVENTO_CERRAR_SESION, EVENTO_SELECTOR_EMPRESA } from "@/components/shell/BarraSuperior";
 import BarraPestanas from "@/components/shell/BarraPestanas";
+import PaletaComandos from "@/components/shell/PaletaComandos";
 import { ModalLogout, SelectorEmpresa } from "@/components/dashboard/DashboardModals";
 import { useVerificacionCorreo } from "@/hooks/useVerificacionCorreo";
 import { useCapaAtras } from "@/lib/botonAtras";
@@ -204,6 +205,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: "var(--kipu-bg)" }}>
+      {/* Ctrl+K / ⌘K: crear, ir a una pantalla o hacer una acción */}
+      <PaletaComandos />
       {showLogoutModal && (
         <ModalLogout
           onConfirm={handleLogout}

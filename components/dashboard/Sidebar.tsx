@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import LogoKipu from "@/components/auth/LogoKipu";
+import { ATAJO_PALETA, EVENTO_PALETA } from "@/components/shell/PaletaComandos";
 import {
   X,
   ChevronUp,
@@ -16,6 +17,7 @@ import {
   LogOut,
   HelpCircle,
   Lock,
+  Search,
 } from "lucide-react";
 import { clsx } from "clsx";
 import { NAV_GROUPS, aplicaALaEmpresa, bloqueadoPorPlan, tienePermiso } from "./DashboardNav";
@@ -145,6 +147,19 @@ export function Sidebar({
           onClick={() => setSidebarOpen(false)}
         >
           <X size={18} />
+        </button>
+      </div>
+
+      {/* Paleta de comandos (Ctrl+K / ⌘K) */}
+      <div className="px-3 pt-3">
+        <button
+          type="button"
+          onClick={() => window.dispatchEvent(new Event(EVENTO_PALETA))}
+          className="flex h-9 w-full items-center gap-2 rounded-lg border border-borde bg-fondo px-3 text-sm text-sutil transition-colors hover:text-texto"
+        >
+          <Search size={15} aria-hidden />
+          <span className="flex-1 text-left">Buscar…</span>
+          <kbd className="rounded border border-borde bg-superficie px-1.5 py-px font-sans text-[10px] text-tenue">{ATAJO_PALETA}</kbd>
         </button>
       </div>
 
