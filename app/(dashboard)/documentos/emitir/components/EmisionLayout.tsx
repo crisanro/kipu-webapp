@@ -7,6 +7,8 @@
 //   - Celular: el panel queda al final del formulario y abajo hay una BARRA FIJA
 //     con el total y el botón, siempre a mano del pulgar. Mientras se escribe se
 //     esconde: el teclado la taparía (igual que en las apps nativas).
+//   - Teclado: Ctrl+Enter (⌘+Enter en Mac) emite desde cualquier campo; Escape
+//     cierra la hoja de arriba (components/ui/Hoja.tsx).
 //
 //   <EmisionLayout titulo="Nueva factura" subtitulo="Mi empresa · Producción"
 //     lateral={<ResumenTotales … conBarraFija />}
@@ -16,7 +18,7 @@
 
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { AlertTriangle, FileClock, X } from "lucide-react";
 import Boton from "@/components/ui/Boton";
@@ -72,6 +74,31 @@ function useEscribiendo(): boolean {
   return escribiendo;
 }
 
+// Mac: ⌘ en vez de Ctrl (solo para el texto de la pista; el atajo acepta los dos)
+const ES_MAC = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent);
+
+/**
+ * Ctrl+Enter (⌘+Enter en Mac) emite desde cualquier campo, sin ir al botón.
+ * No hace nada mientras envía, con el botón deshabilitado o con una hoja
+ * abierta (p. ej. la confirmación de producción: esa se confirma con su botón).
+ */
+function useAtajoEmitir(barra: BarraEmision) {
+  const ref = useRef(barra);
+  useEffect(() => { ref.current = barra; });
+  useEffect(() => {
+    const alPresionar = (e: KeyboardEvent) => {
+      if (e.key !== "Enter" || !(e.ctrlKey || e.metaKey) || e.altKey || e.isComposing) return;
+      if (document.querySelector('[role="dialog"][aria-modal="true"]')) return;
+      const b = ref.current;
+      if (b.enviando || b.deshabilitado) return;
+      e.preventDefault();
+      b.onEmitir();
+    };
+    window.addEventListener("keydown", alPresionar);
+    return () => window.removeEventListener("keydown", alPresionar);
+  }, []);
+}
+
 export interface AvisoBorrador {
   /** "hace 2 h" (lib/borradores.ts). */
   hace:        string;
@@ -98,6 +125,7 @@ export default function EmisionLayout({
   borrador?:  AvisoBorrador | null;
 }) {
   const escribiendo = useEscribiendo();
+  useAtajoEmitir(barra);
   const empresa = useAuthStore((s) => s.empresa);
   const sinAcceso = !!empresa && !empresa.suscripcion_activa && empresa.balance_api === 0 && !empresa.emision_gratis;
   // Al abrir: ¿quedó un envío sin respuesta (se cortó la conexión, se cerró la app)?
@@ -154,7 +182,17 @@ export default function EmisionLayout({
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">{children}</div>
-        <div className="space-y-4">{lateral}</div>
+        <div className="space-y-4">
+          {lateral}
+          {/* Compu con mouse: el atajo, a la vista */}
+          <p className="hidden text-center text-xs text-sutil lg:raton:block" title={`${barra.texto} sin ir al botón`}>
+            Atajo:{" "}
+            <kbd className="rounded border border-borde bg-presionado px-1.5 py-0.5 font-sans text-[11px] text-tenue">
+              {ES_MAC ? "⌘" : "Ctrl"}
+            </kbd>{" + "}
+            <kbd className="rounded border border-borde bg-presionado px-1.5 py-0.5 font-sans text-[11px] text-tenue">Enter</kbd>
+          </p>
+        </div>
       </div>
 
       {/* Celular: el total y el botón, fijos abajo (se esconden mientras se escribe) */}

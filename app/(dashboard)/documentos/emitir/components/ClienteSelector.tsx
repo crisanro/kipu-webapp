@@ -257,8 +257,8 @@ export default function ClienteSelector({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => {
-              // Compu: Enter elige el primer resultado
-              if (e.key === "Enter" && results[0]) { e.preventDefault(); seleccionar(results[0]); }
+              // Compu: Enter elige el primer resultado (Ctrl+Enter es emitir: EmisionLayout)
+              if (e.key === "Enter" && !e.ctrlKey && !e.metaKey && results[0]) { e.preventDefault(); seleccionar(results[0]); }
             }}
             placeholder={proveedor ? "Buscar por nombre o cédula…" : "Buscar por nombre, RUC o cédula…"}
             aria-label={`Buscar ${quien}`}

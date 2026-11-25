@@ -466,7 +466,7 @@ export default function ItemsEditor({ items, onChange }: Props) {
                   data-descripcion={item._id}
                   onChange={(e) => editItem(item._id, "descripcion", e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter" && index === items.length - 1 && item.descripcion.trim()) {
+                    if (e.key === "Enter" && !e.ctrlKey && !e.metaKey && index === items.length - 1 && item.descripcion.trim()) {
                       e.preventDefault();
                       addItem();
                     }

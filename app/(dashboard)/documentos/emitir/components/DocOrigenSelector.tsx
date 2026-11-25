@@ -260,7 +260,7 @@ export default function DocOrigenSelector({
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => {
               // Compu: Enter elige el primero de la lista
-              if (e.key === "Enter" && lista[0]) { e.preventDefault(); seleccionar(lista[0]); }
+              if (e.key === "Enter" && !e.ctrlKey && !e.metaKey && lista[0]) { e.preventDefault(); seleccionar(lista[0]); }
             }}
             placeholder={`Buscar ${queBusca} por número o ${quien}…`}
             aria-label={`Buscar ${queBusca}`}
