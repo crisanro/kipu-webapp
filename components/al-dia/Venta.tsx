@@ -2,7 +2,10 @@
 // components/al-dia/Venta.tsx — página de venta de Kipu Al Día (/al-dia sin contratar).
 // La demo usa la fecha real del SRI según el RUC y, si la empresa ya factura en
 // Kipu, sus ventas reales del mes pasado. Lo demás es ejemplo y se marca así.
-// Los extras y la garantía repiten app/legal/kipu_al_dia_v1.md: mantenerlos iguales.
+// Los extras y la garantía repiten app/legal/kipu_al_dia_v1.md: mantenerlos iguales
+// (la garantía la aprobó el dueño el 2026-11-25).
+// En la app (reglas de las tiendas) Al Día es solo informativo: sin precios ni
+// montos, y un solo botón de WhatsApp; se contrata y se paga por fuera.
 import { useEffect, useState, type ReactNode } from "react";
 import {
   CalendarCheck, CheckCircle2, Clock, FileCheck2, KeyRound, MessageCircle,
@@ -82,8 +85,9 @@ function useVentasMesPasado(enProduccion: boolean): Ventas | null {
 }
 
 // ── Encabezado ────────────────────────────────────────────────────────────────
-export function HeroAlDia({ precio, base = null, periodo = "MENSUAL", onContratar }: {
+export function HeroAlDia({ precio, base = null, periodo = "MENSUAL", onContratar, whatsapp }: {
   precio: number | null; base?: number | null; periodo?: "MENSUAL" | "ANUAL"; onContratar: () => void;
+  whatsapp?: string;   // app: el enlace de "Escríbenos por WhatsApp" (en vez de precio y contratar)
 }) {
   return (
     <div className="rounded-2xl p-6 md:p-8 space-y-4"
@@ -105,8 +109,9 @@ export function HeroAlDia({ precio, base = null, periodo = "MENSUAL", onContrata
             Tú facturas.<br />Tu contador declara.
           </h1>
           <p className="text-sm md:text-base max-w-xl" style={{ color: "var(--kipu-muted)" }}>
-            Un contador del equipo de Kipu revisa cada mes tus ventas y compras, te manda el resumen
-            por WhatsApp y presenta tus declaraciones de IVA y renta al SRI. Tú sigues con tu negocio.
+            Un contador del equipo de Kipu revisa cada mes tus ventas y compras, presenta tus
+            declaraciones de IVA y renta en el SRI, revisa tu buzón del SRI y te responde por WhatsApp.
+            Tú sigues con tu negocio.
           </p>
         </>
       ) : (
@@ -120,6 +125,14 @@ export function HeroAlDia({ precio, base = null, periodo = "MENSUAL", onContrata
           </p>
         </>
       )}
+      {ES_APP_NATIVA ? (
+        // App: sin precio ni compra; un solo botón, al WhatsApp del equipo
+        <a href={whatsapp} target="_blank" rel="noopener noreferrer"
+           className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-white font-semibold text-sm shadow-md
+                      bg-[var(--kipu-accent)] active:scale-[0.97]">
+          <MessageCircle size={16} /> Escríbenos por WhatsApp
+        </a>
+      ) : (
       <div className="flex flex-wrap items-center gap-4 pt-1">
         {precio !== null ? (
           <div>
@@ -143,11 +156,12 @@ export function HeroAlDia({ precio, base = null, periodo = "MENSUAL", onContrata
           Quiero que declaren por mí
         </button>
       </div>
+      )}
       <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
-        {/* En la app se vende el servicio del contador (Apple/Google: servicio
-            profesional, no contenido digital). No se nombra Kipu Pro ni las funciones. */}
+        {/* En la app: el servicio del contador (Apple/Google: servicio profesional,
+            no contenido digital), sin precios ni condiciones de pago */}
         {ES_APP_NATIVA
-          ? "Servicio de contadores del equipo de Kipu, mensual o anual · Tu precio no sube mientras sigas · Cancelas cuando quieras"
+          ? "Servicio de contadores del equipo de Kipu · Te contamos todo por WhatsApp"
           : "Incluye todo Kipu Pro · Tu precio no sube mientras sigas suscrito · Cancelas cuando quieras"}
       </p>
     </div>
@@ -314,12 +328,13 @@ const EXTRAS_COTIZADOS: [string, string][] = [
 
 // precioRenta: el de Kipu Renta, del Price de Stripe (GET /al-dia/estado → precio_renta)
 export function QueIncluye({ precioRenta = null }: { precioRenta?: number | null }) {
-  const extras: [string, string][] = [
-    ["Renta anual si estuviste menos de 6 meses en el plan",
-     // En la app no se nombra Kipu Renta: es un producto que la app no vende
-     precioRenta !== null ? `$${precioRenta.toFixed(2)}` : ES_APP_NATIVA ? "Se cotiza" : "Precio de Kipu Renta"],
-    ...EXTRAS_COTIZADOS,
-  ];
+  // En la app, sin montos: todo "Se cotiza" (y sin nombrar Kipu Renta, que la app no vende)
+  const extras: [string, string][] = ES_APP_NATIVA
+    ? [["Renta anual si estuviste menos de 6 meses en el plan", "Se cotiza"],
+       ...EXTRAS_COTIZADOS.map(([t]) => [t, "Se cotiza"] as [string, string])]
+    : [["Renta anual si estuviste menos de 6 meses en el plan",
+        precioRenta !== null ? `$${precioRenta.toFixed(2)}` : "Precio de Kipu Renta"],
+       ...EXTRAS_COTIZADOS];
   return (
     <section className="grid md:grid-cols-2 gap-3">
       <div className="rounded-xl p-5 space-y-3" style={caja}>
@@ -375,6 +390,8 @@ export function QueIncluye({ precioRenta = null }: { precioRenta?: number | null
 }
 
 // ── Garantía y quién lo hace ─────────────────────────────────────────────────
+// Garantía aprobada por el dueño el 2026-11-25, igual a la sección 7 de
+// app/legal/kipu_al_dia_v1.md (con sus exclusiones y el tope de 12 meses).
 export function Confianza() {
   return (
     <section className="grid md:grid-cols-2 gap-3">
@@ -420,12 +437,25 @@ const PREGUNTAS: [string, string][] = [
    "Para personas naturales no obligadas a llevar contabilidad, en régimen general o RIMPE Emprendedor. Si eres sociedad, obligado a llevar contabilidad o RIMPE Negocio Popular, escríbenos."],
 ];
 
+// En la app: sin montos y sin gestiones de pago dentro de Kipu (todo por WhatsApp)
+const EN_LA_APP: Record<string, string> = {
+  "Si contrato hoy, ¿cuál es la primera declaración que hacen?":
+    "La del mes en que contratas, que se presenta el mes siguiente (si declaras semestral, la del semestre en curso). Las de meses anteriores no están incluidas: las presentas tú o, si nos avisas con tiempo, las hacemos como extra (se cotiza).",
+  "¿El IVA se los pago a ustedes?":
+    "No. El impuesto lo pagas tú al SRI; nosotros te avisamos el valor exacto y la fecha límite.",
+  "¿Puedo cancelar cuando quiera?":
+    "Sí, escribiéndonos por WhatsApp. No hay permanencia ni penalidad; el servicio sigue hasta el final del periodo que ya pagaste.",
+};
+
 export function Preguntas() {
+  const preguntas = ES_APP_NATIVA
+    ? PREGUNTAS.map(([p, r]) => [p, EN_LA_APP[p] ?? r] as [string, string])
+    : PREGUNTAS;
   return (
     <section className="space-y-3">
       <h2 className="text-lg font-bold" style={{ color: "var(--kipu-text)" }}>Preguntas frecuentes</h2>
       <div className="rounded-xl overflow-hidden" style={caja}>
-        {PREGUNTAS.map(([p, r], i) => (
+        {preguntas.map(([p, r], i) => (
           <details key={p} className="group px-4 py-3" style={{ borderTop: i ? "1px solid var(--kipu-border)" : "none" }}>
             <summary className="text-sm font-medium list-none flex items-center justify-between gap-3"
                      style={{ color: "var(--kipu-text)" }}>

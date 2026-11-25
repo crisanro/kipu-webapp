@@ -88,8 +88,9 @@ export interface AvisoShellProps {
   pedirNotificaciones: boolean;
   onActivarNotificaciones: () => void;
   onPosponerNotificaciones: () => void;
-  /** Pago del plan fallido: qué decir y, si quien mira puede, cómo actualizar la tarjeta. */
-  pagoFallido?: { texto: string; onActualizar?: () => void } | null;
+  /** Pago del plan fallido: qué decir y, si quien mira puede, cómo resolverlo
+   *  (por defecto "Actualizar tarjeta"; en la app con Al Día, WhatsApp). */
+  pagoFallido?: { texto: string; onActualizar?: () => void; etiqueta?: string } | null;
 }
 
 export default function AvisoShell({
@@ -120,7 +121,7 @@ export default function AvisoShell({
     texto: pagoFallido.texto,
     acciones: pagoFallido.onActualizar ? (
       <button type="button" onClick={pagoFallido.onActualizar} className="whitespace-nowrap rounded-md px-2 py-1 text-xs font-semibold text-peligro underline-offset-2 hover:underline">
-        Actualizar tarjeta
+        {pagoFallido.etiqueta ?? "Actualizar tarjeta"}
       </button>
     ) : undefined,
   });
