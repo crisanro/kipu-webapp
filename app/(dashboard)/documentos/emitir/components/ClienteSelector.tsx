@@ -1,10 +1,23 @@
 "use client";
-import { useRef, useEffect, useCallback, useState } from "react";
+// Cliente del comprobante (factura y proforma).
+//   - Sin elegir: buscador; debajo "Consumidor final" y "Nuevo cliente", y los
+//     clientes recientes de este dispositivo cuando no se ha escrito nada.
+//   - Resultados como filas táctiles dentro de la tarjeta (en la compu, Enter
+//     elige el primero).
+//   - Nuevo cliente: en una hoja con campos grandes y el teclado correcto; si en
+//     el buscador se escribió una cédula/RUC o un nombre, la hoja ya lo trae.
+import { useRef, useEffect, useCallback, useMemo, useState } from "react";
 import { validarIdentificacion } from "@/lib/identificacion";
 import api from "@/lib/api";
-import { Search, User, X, Check, AlertCircle, Loader2 } from "lucide-react";
+import { Search, User, X, Loader2, Plus, Clock } from "lucide-react";
 import { lookupIdentificacion, useBuscaNombres, textoNombreAMano } from "@/lib/identificacion-lookup";
-import { tecladoIdentificacion } from "@/lib/teclado";
+import { useAuthStore } from "@/store/auth.store";
+import Hoja from "@/components/ui/Hoja";
+import Boton from "@/components/ui/Boton";
+import BotonIcono from "@/components/ui/BotonIcono";
+import ChipsFiltro from "@/components/ui/ChipsFiltro";
+import { Campo, Entrada, type Teclado } from "@/components/ui/Campo";
+import { cn } from "@/components/ui/cn";
 
 interface Cliente {
   id:                      string;
@@ -30,6 +43,40 @@ interface Props {
   onClear:                   () => void;
 }
 
+const TIPOS_ID = [
+  { valor: "05", etiqueta: "Cédula" },
+  { valor: "04", etiqueta: "RUC" },
+  { valor: "06", etiqueta: "Pasaporte" },
+  { valor: "08", etiqueta: "Exterior" },
+];
+const TECLADO_ID: Record<string, Teclado> = { "04": "ruc", "05": "cedula", "06": "pasaporte", "08": "pasaporte" };
+const EMAIL_OK = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// ── Clientes recientes (en este dispositivo, por empresa) ─────────────────────
+const MAX_RECIENTES = 5;
+const claveRecientes = (empresaId: number | string | undefined) => `kipu:clientes-recientes:${empresaId ?? "x"}`;
+
+function leerRecientes(empresaId: number | string | undefined): Cliente[] {
+  try { return JSON.parse(localStorage.getItem(claveRecientes(empresaId)) ?? "[]") as Cliente[]; }
+  catch { return []; }
+}
+function recordarCliente(empresaId: number | string | undefined, c: Cliente) {
+  try {
+    const lista = [c, ...leerRecientes(empresaId).filter(r => r.id !== c.id)].slice(0, MAX_RECIENTES);
+    localStorage.setItem(claveRecientes(empresaId), JSON.stringify(lista));
+  } catch {}
+}
+
+/** Lo escrito en el buscador, como punto de partida del cliente nuevo. */
+function borradorDesde(query: string): ClienteNuevo {
+  const q = query.trim();
+  const digitos = q.replace(/\D/g, "");
+  if (digitos && digitos === q.replace(/[\s-]/g, "")) {
+    return { tipo_identificacion_sri: digitos.length === 13 ? "04" : "05", identificacion: digitos, razon_social: "", email: "" };
+  }
+  return { tipo_identificacion_sri: "05", identificacion: "", razon_social: q.toUpperCase(), email: "" };
+}
+
 // ── Componente ───────────────────────────────────────────────────────────────
 export default function ClienteSelector({
   clienteSelected,
@@ -40,51 +87,42 @@ export default function ClienteSelector({
   onClienteNuevo,
   onClear,
 }: Props) {
-  const [query,         setQuery]         = useState("");
-  const [results,       setResults]       = useState<Cliente[]>([]);
-  const [loading,       setLoading]       = useState(false);
-  const [showDrop,      setShowDrop]      = useState(false);
-  const [confirmado,    setConfirmado]    = useState(false);
+  const empresaId = useAuthStore((s) => s.empresa?.id);
+  const [query,     setQuery]     = useState("");
+  const [results,   setResults]   = useState<Cliente[]>([]);
+  const [loading,   setLoading]   = useState(false);
+  // Recientes de este dispositivo: se vuelven a leer al elegir un cliente
+  const [versionRecientes, setVersionRecientes] = useState(0);
+  const recientes = useMemo(() => leerRecientes(empresaId),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [empresaId, versionRecientes]);
+
+  // Hoja "Nuevo cliente": se edita un borrador y se entrega al confirmar
+  const [borrador,      setBorrador]      = useState<ClienteNuevo | null>(null);
   const [lookupLoading, setLookupLoading] = useState(false);
   const [lookupMsg,     setLookupMsg]     = useState("");
 
-  const timer   = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const wrapRef = useRef<HTMLDivElement>(null);
-
-  const validacion = clienteNuevo
-    ? validarIdentificacion(clienteNuevo.tipo_identificacion_sri, clienteNuevo.identificacion)
-    : { ok: false, error: "" };
-
-  const puedeConfirmar =
-    !!clienteNuevo?.razon_social.trim() &&
-    (validacion.ok || clienteNuevo?.identificacion === "");
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Buscar nombres de terceros es de las cuentas que pagan (lib/identificacion-lookup.ts)
   const buscaNombres = useBuscaNombres();
 
+  const validacion = borrador
+    ? validarIdentificacion(borrador.tipo_identificacion_sri, borrador.identificacion)
+    : { ok: false, error: "" };
+  const emailInvalido = !!borrador?.email && !EMAIL_OK.test(borrador.email);
+  const puedeConfirmar =
+    !!borrador?.razon_social.trim() &&
+    (validacion.ok || borrador?.identificacion === "") &&
+    !emailInvalido;
+
   // Solo cédula o RUC natural son buscables
   const puedeBuscar =
     buscaNombres &&
-    !!clienteNuevo &&
-    ["04", "05"].includes(clienteNuevo.tipo_identificacion_sri) &&
+    !!borrador &&
+    ["04", "05"].includes(borrador.tipo_identificacion_sri) &&
     validacion.ok &&
     !lookupLoading;
-
-  // ── Sync query ───────────────────────────────────────────────────────────
-  useEffect(() => {
-    if (esConsumidorFinal) { setQuery("CONSUMIDOR FINAL"); return; }
-    if (clienteSelected)   { setQuery(clienteSelected.razon_social); return; }
-    if (!clienteNuevo)     { setQuery(""); }
-  }, [clienteSelected, esConsumidorFinal, clienteNuevo]);
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node))
-        setShowDrop(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
 
   // ── Búsqueda clientes ────────────────────────────────────────────────────
   const buscar = useCallback(async (q: string) => {
@@ -93,7 +131,6 @@ export default function ClienteSelector({
     try {
       const res = await api.get(`/api/v1/app/clientes?q=${encodeURIComponent(q)}`);
       setResults(res.data.data ?? []);
-      setShowDrop(true);
     } catch {
       setResults([]);
     } finally {
@@ -109,43 +146,33 @@ export default function ClienteSelector({
 
   // ── Lookup identificación ────────────────────────────────────────────────
   const handleLookup = async () => {
-    if (!clienteNuevo || !puedeBuscar) return;
-
+    if (!borrador || !puedeBuscar) return;
     setLookupLoading(true);
     setLookupMsg("");
-
-    const result = await lookupIdentificacion(clienteNuevo.identificacion);
-
+    const result = await lookupIdentificacion(borrador.identificacion);
     if (result.error) {
       setLookupMsg(result.error);
     } else if (result.found && result.nombre) {
-      onClienteNuevo({ ...clienteNuevo, razon_social: result.nombre });
+      setBorrador({ ...borrador, razon_social: result.nombre });
       setLookupMsg("✓ Encontrado");
     } else {
-      setLookupMsg("No encontrado — ingresa el nombre manualmente");
+      setLookupMsg("No encontrado — escribe el nombre");
     }
-
     setLookupLoading(false);
   };
 
   // ── Handlers ──────────────────────────────────────────────────────────────
-  const handleInputChange = (val: string) => {
-    setQuery(val);
-    onClear();
-    setShowDrop(true);
-  };
-
   const seleccionar = (c: Cliente) => {
     onSelectCliente(c);
-    setQuery(c.razon_social);
-    setShowDrop(false);
+    recordarCliente(empresaId, c);
+    setVersionRecientes(v => v + 1);
+    setQuery("");
     setResults([]);
   };
 
   const seleccionarConsumidorFinal = () => {
     onSelectConsumidorFinal();
-    setQuery("CONSUMIDOR FINAL");
-    setShowDrop(false);
+    setQuery("");
     setResults([]);
   };
 
@@ -154,416 +181,201 @@ export default function ClienteSelector({
     onClienteNuevo(null);
     setQuery("");
     setResults([]);
-    setShowDrop(false);
-    setConfirmado(false);
-    setLookupMsg("");
   };
 
-  const confirmarClienteNuevo = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!puedeConfirmar) return;
-    setConfirmado(true);
+  const abrirNuevo = () => {
+    setLookupMsg("");
+    setBorrador(borradorDesde(query));
   };
+
+  const confirmarNuevo = () => {
+    if (!borrador || !puedeConfirmar) return;
+    onClienteNuevo({ ...borrador, email: borrador.email.trim().toLowerCase() });
+    setBorrador(null);
+    setQuery("");
+    setResults([]);
+  };
+
+  const elegido = clienteSelected || esConsumidorFinal || clienteNuevo;
+  const buscando = query.trim().length >= 2;
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div
-      className="rounded-xl p-4"
-      style={{
-        background: "var(--kipu-surface)",
-        border: "1px solid var(--kipu-border)",
-      }}
-    >
-      <div className="flex items-center gap-2 mb-3">
-        <User size={15} style={{ color: "var(--kipu-accent)" }} />
-        <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>Cliente</h2>
-      </div>
+    <section className="rounded-xl border border-borde bg-superficie p-4">
+      <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-texto">
+        <User size={16} className="text-acento" aria-hidden /> Cliente
+      </h2>
 
-      {/* ── Chip cliente confirmado ── */}
-      {(clienteSelected || esConsumidorFinal || (clienteNuevo && confirmado)) ? (
-        <div
-          className="flex items-center gap-3 rounded-lg px-3 py-2.5"
-          style={{
-            background: "color-mix(in srgb, var(--kipu-text) 5%, transparent)",
-          }}
-        >
-          <div
-            className="w-7 h-7 rounded-full flex items-center justify-center shrink-0"
-            style={{
-              background: "color-mix(in srgb, var(--kipu-accent) 20%, transparent)",
-            }}
-          >
-            <User size={13} style={{ color: "var(--kipu-accent)" }} />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate" style={{ color: "var(--kipu-text)" }}>
-              {esConsumidorFinal
-                ? "CONSUMIDOR FINAL"
-                : clienteSelected
-                  ? clienteSelected.razon_social
-                  : clienteNuevo?.razon_social.toUpperCase()}
+      {elegido ? (
+        /* ── Cliente elegido ── */
+        <div className="flex items-center gap-3 rounded-lg bg-presionado px-3 py-2.5">
+          <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-acento-suave text-sm font-bold text-acento">
+            {esConsumidorFinal ? <User size={16} aria-hidden />
+              : (clienteSelected?.razon_social ?? clienteNuevo?.razon_social ?? "?")[0]?.toUpperCase()}
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-medium text-texto">
+              {esConsumidorFinal ? "CONSUMIDOR FINAL"
+                : clienteSelected ? clienteSelected.razon_social
+                : clienteNuevo?.razon_social.toUpperCase()}
             </p>
-            <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
-              {esConsumidorFinal
-                ? "9999999999999"
-                : clienteSelected
-                  ? clienteSelected.identificacion
-                  : clienteNuevo?.identificacion || "Sin identificación"}
-              {clienteNuevo && confirmado && !clienteSelected && !esConsumidorFinal && (
-                <span className="ml-2" style={{ color: "var(--kipu-accent)" }}>· se creará al emitir</span>
+            <p className="text-xs text-sutil">
+              {esConsumidorFinal ? "9999999999999 · máximo $50"
+                : clienteSelected ? clienteSelected.identificacion
+                : clienteNuevo?.identificacion || "Sin identificación"}
+              {clienteNuevo && !clienteSelected && !esConsumidorFinal && (
+                <span className="text-acento"> · se guarda al emitir</span>
               )}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={limpiar}
-            className="p-1 transition-colors"
-            style={{ color: "var(--kipu-subtle)" }}
-            onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
-            onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-subtle)"}
-          >
-            <X size={16} />
-          </button>
+          <BotonIcono etiqueta="Cambiar cliente" icono={<X size={18} />} onClick={limpiar} />
         </div>
       ) : (
         /* ── Buscador ── */
-        <div className="relative" ref={wrapRef}>
-          <div className="relative">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--kipu-subtle)" }} />
-            <input
-              value={query}
-              onChange={(e) => handleInputChange(e.target.value)}
-              onFocus={(e) => {
-                if (query.length >= 2) setShowDrop(true);
-                e.currentTarget.style.borderColor = "var(--kipu-accent)";
-              }}
-              onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
-              placeholder="Buscar por nombre, RUC o cédula..."
-              className="w-full pl-9 pr-4 py-2.5 rounded-lg text-sm transition-colors focus:outline-none"
-              style={{
-                background: "var(--kipu-surface)",
-                border: "1px solid var(--kipu-border)",
-                color: "var(--kipu-text)",
-              }}
-            />
-            {loading && (
-              <div
-                className="w-3.5 h-3.5 border-2 border-t-transparent rounded-full animate-spin absolute right-3 top-1/2 -translate-y-1/2"
-                style={{ borderColor: "var(--kipu-accent)", borderTopColor: "transparent" }}
-              />
-            )}
-          </div>
+        <div className="space-y-3">
+          <Entrada
+            teclado="buscar"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => {
+              // Compu: Enter elige el primer resultado
+              if (e.key === "Enter" && results[0]) { e.preventDefault(); seleccionar(results[0]); }
+            }}
+            placeholder="Buscar por nombre, RUC o cédula…"
+            aria-label="Buscar cliente"
+            prefijo={<Search size={16} />}
+            sufijo={loading ? <Loader2 size={16} className="animate-spin" aria-hidden /> : undefined}
+          />
 
-          <button
-            type="button"
-            onClick={seleccionarConsumidorFinal}
-            className="mt-2 text-xs transition-colors block"
-            style={{ color: "var(--kipu-subtle)" }}
-            onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
-            onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-subtle)"}
-          >
-            ¿Sin RUC? →{" "}
-            <span className="underline" style={{ color: "var(--kipu-accent)" }}>Consumidor Final</span>
-            <span className="ml-1" style={{ color: "var(--kipu-muted)" }}>(máx. $50)</span>
-          </button>
-
-          {/* Dropdown */}
-          {showDrop && query.length >= 2 && (
-            <div
-              className="absolute z-10 w-full mt-1 rounded-lg shadow-xl overflow-hidden"
-              style={{
-                background: "var(--kipu-surface)",
-                border: "1px solid var(--kipu-border)",
-              }}
-            >
-              <button
-                type="button"
-                onClick={seleccionarConsumidorFinal}
-                className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors"
-                style={{ borderBottom: "1px solid var(--kipu-border)" }}
-                onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 5%, transparent)"}
-                onMouseLeave={e => e.currentTarget.style.background = "transparent"}
-              >
-                <div
-                  className="w-7 h-7 rounded-full flex items-center justify-center shrink-0"
-                  style={{ background: "color-mix(in srgb, var(--kipu-text) 10%, transparent)" }}
-                >
-                  <User size={13} style={{ color: "var(--kipu-subtle)" }} />
-                </div>
-                <div>
-                  <p className="text-sm font-medium" style={{ color: "var(--kipu-text)" }}>Consumidor Final</p>
-                  <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>9999999999999 · Máx. $50</p>
-                </div>
-              </button>
-
-              {results.map((c) => (
-                <button
-                  type="button"
-                  key={c.id}
-                  onClick={() => seleccionar(c)}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors"
-                  style={{ borderBottom: "1px solid var(--kipu-border)" }}
-                  onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 5%, transparent)"}
-                  onMouseLeave={e => e.currentTarget.style.background = "transparent"}
-                >
-                  <div
-                    className="w-7 h-7 rounded-full flex items-center justify-center shrink-0"
-                    style={{ background: "color-mix(in srgb, var(--kipu-accent) 20%, transparent)" }}
-                  >
-                    <span className="text-xs font-bold" style={{ color: "var(--kipu-accent)" }}>{c.razon_social[0]}</span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm truncate" style={{ color: "var(--kipu-text)" }}>{c.razon_social}</p>
-                    <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>{c.identificacion}</p>
-                  </div>
-                </button>
-              ))}
-
-              {/* Registrar nuevo */}
-              <button
-                type="button"
-                onClick={() => {
-                  setShowDrop(false);
-                  setConfirmado(false);
-                  setLookupMsg("");
-                  onClienteNuevo({
-                    tipo_identificacion_sri: "05",
-                    identificacion:          "",
-                    razon_social:            "",
-                    email:                   "",
-                  });
-                }}
-                className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors"
-                style={{ borderTop: "1px solid var(--kipu-border)" }}
-                onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 5%, transparent)"}
-                onMouseLeave={e => e.currentTarget.style.background = "transparent"}
-              >
-                <div
-                  className="w-7 h-7 rounded-full flex items-center justify-center shrink-0"
-                  style={{ background: "color-mix(in srgb, var(--kipu-accent) 20%, transparent)" }}
-                >
-                  <span className="text-xs font-bold" style={{ color: "var(--kipu-accent)" }}>+</span>
-                </div>
-                <div>
-                  <p className="text-sm" style={{ color: "var(--kipu-accent)" }}>Registrar nuevo cliente</p>
-                  <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>"{query}"</p>
-                </div>
-              </button>
+          {/* Resultados (o los recientes, si no se ha escrito nada) */}
+          {buscando ? (
+            results.length > 0 ? (
+              <ul className="-mx-1 divide-y divide-borde">
+                {results.slice(0, 8).map((c) => (
+                  <li key={c.id}>
+                    <FilaCliente cliente={c} onClick={() => seleccionar(c)} />
+                  </li>
+                ))}
+              </ul>
+            ) : !loading && (
+              <p className="px-1 text-xs text-sutil">Ningún cliente coincide. Puedes crearlo como nuevo.</p>
+            )
+          ) : recientes.length > 0 && (
+            <div>
+              <p className="mb-1 flex items-center gap-1.5 px-1 text-xs text-sutil">
+                <Clock size={12} aria-hidden /> Recientes
+              </p>
+              <ul className="-mx-1 divide-y divide-borde">
+                {recientes.map((c) => (
+                  <li key={c.id}>
+                    <FilaCliente cliente={c} onClick={() => seleccionar(c)} />
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
+
+          <div className="flex flex-wrap gap-2">
+            <Boton variante="secundario" tamano="sm" onClick={seleccionarConsumidorFinal} icono={<User size={14} />}>
+              Consumidor final <span className="font-normal text-sutil">· máx. $50</span>
+            </Boton>
+            <Boton variante="secundario" tamano="sm" onClick={abrirNuevo} icono={<Plus size={14} />}>
+              Nuevo cliente
+            </Boton>
+          </div>
         </div>
       )}
 
-      {/* ── Form cliente nuevo (no confirmado aún) ── */}
-      {clienteNuevo && !confirmado && (
-        <div
-          className="mt-3 rounded-lg p-3 space-y-2"
-          style={{
-            background: "color-mix(in srgb, var(--kipu-surface) 60%, transparent)",
-            border: "1px solid color-mix(in srgb, var(--kipu-accent) 30%, transparent)",
-          }}
-        >
-          <p className="text-xs font-medium" style={{ color: "var(--kipu-accent)" }}>Nuevo cliente</p>
-
-          <div className="grid grid-cols-2 gap-2">
-            <select
-              value={clienteNuevo.tipo_identificacion_sri}
-              onChange={(e) => {
-                onClienteNuevo({ ...clienteNuevo, tipo_identificacion_sri: e.target.value, identificacion: "", razon_social: "" });
+      {/* ── Hoja: nuevo cliente ── */}
+      <Hoja
+        abierta={!!borrador}
+        onCerrar={() => setBorrador(null)}
+        titulo="Nuevo cliente"
+        descripcion="Se guarda en tus clientes al emitir."
+        pie={<>
+          <Boton variante="secundario" onClick={() => setBorrador(null)}>Cancelar</Boton>
+          <Boton onClick={confirmarNuevo} disabled={!puedeConfirmar}>Usar este cliente</Boton>
+        </>}
+      >
+        {borrador && (
+          <div className="space-y-3">
+            <ChipsFiltro
+              etiqueta="Tipo de identificación"
+              opciones={TIPOS_ID}
+              valor={borrador.tipo_identificacion_sri}
+              onCambio={(tipo) => {
+                setBorrador({ ...borrador, tipo_identificacion_sri: tipo, identificacion: "" });
                 setLookupMsg("");
               }}
-              className="px-2 py-1.5 rounded-lg text-xs focus:outline-none transition-colors"
-              style={{
-                background: "var(--kipu-surface)",
-                border: "1px solid var(--kipu-border)",
-                color: "var(--kipu-text)",
-              }}
-              onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-              onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+            />
+            <Campo
+              etiqueta={TIPOS_ID.find(t => t.valor === borrador.tipo_identificacion_sri)?.etiqueta ?? "Identificación"}
+              error={validacion.error || null}
+              ayuda={lookupMsg || (!buscaNombres && ["04", "05"].includes(borrador.tipo_identificacion_sri) && validacion.ok
+                ? textoNombreAMano() : undefined)}
             >
-              <option value="04">RUC</option>
-              <option value="05">Cédula</option>
-              <option value="06">Pasaporte</option>
-              <option value="08">Exterior</option>
-            </select>
-
-            {/* Input identificación + botón buscar */}
-            <div className="relative flex gap-1">
-              <div className="relative flex-1">
-                <input
-                  value={clienteNuevo.identificacion}
-                  inputMode={tecladoIdentificacion(clienteNuevo.tipo_identificacion_sri)}
-                  onChange={(e) => {
-                    const val = ["04", "05"].includes(clienteNuevo.tipo_identificacion_sri)
-                      ? e.target.value.replace(/\D/g, "")
-                      : e.target.value.toUpperCase();
-                    onClienteNuevo({ ...clienteNuevo, identificacion: val });
-                    setLookupMsg("");
-                  }}
-                  placeholder={
-                    clienteNuevo.tipo_identificacion_sri === "04" ? "RUC (13 dígitos)" :
-                    clienteNuevo.tipo_identificacion_sri === "05" ? "Cédula (10 dígitos)" :
-                    "Número de pasaporte"
-                  }
-                  maxLength={clienteNuevo.tipo_identificacion_sri === "04" ? 13 : clienteNuevo.tipo_identificacion_sri === "05" ? 10 : 20}
-                  className="w-full px-2 py-1.5 rounded-lg text-xs focus:outline-none transition-colors"
-                  style={{
-                    background: "var(--kipu-surface)",
-                    border: validacion.error
-                      ? "1px solid color-mix(in srgb, var(--kipu-danger) 70%, transparent)"
-                      : "1px solid var(--kipu-border)",
-                    color: "var(--kipu-text)",
-                  }}
-                  onFocus={e => {
-                    if (!validacion.error) e.currentTarget.style.borderColor = "var(--kipu-accent)";
-                  }}
-                  onBlur={e => {
-                    if (!validacion.error) e.currentTarget.style.borderColor = "var(--kipu-border)";
-                  }}
-                />
-                {validacion.ok && clienteNuevo.identificacion && !puedeBuscar && (
-                  <Check size={11} className="absolute right-2 top-1/2 -translate-y-1/2" style={{ color: "var(--kipu-success)" }} />
-                )}
-              </div>
-
-              {/* Botón buscar nombre (solo cuentas que pagan) */}
-              {buscaNombres && ["04", "05"].includes(clienteNuevo.tipo_identificacion_sri) && (
-                <button
-                  type="button"
-                  onClick={handleLookup}
-                  disabled={!puedeBuscar}
-                  className="px-2 rounded-lg transition-colors shrink-0 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center"
-                  style={{
-                    border: "1px solid var(--kipu-border)",
-                    color: "var(--kipu-subtle)",
-                    minWidth: "32px",
-                  }}
-                  onMouseEnter={e => {
-                    if (puedeBuscar) {
-                      e.currentTarget.style.color = "var(--kipu-accent)";
-                      e.currentTarget.style.borderColor = "var(--kipu-accent)";
-                    }
-                  }}
-                  onMouseLeave={e => {
-                    if (puedeBuscar) {
-                      e.currentTarget.style.color = "var(--kipu-subtle)";
-                      e.currentTarget.style.borderColor = "var(--kipu-border)";
-                    }
-                  }}
-                  title="Buscar nombre por cédula/RUC"
-                >
-                  {lookupLoading
-                    ? <Loader2 size={13} className="animate-spin" />
-                    : <Search size={13} />
-                  }
-                </button>
-              )}
-            </div>
+              <Entrada
+                teclado={TECLADO_ID[borrador.tipo_identificacion_sri] ?? "texto"}
+                value={borrador.identificacion}
+                maxLength={borrador.tipo_identificacion_sri === "04" ? 13 : borrador.tipo_identificacion_sri === "05" ? 10 : 20}
+                placeholder={borrador.tipo_identificacion_sri === "04" ? "13 dígitos" : borrador.tipo_identificacion_sri === "05" ? "10 dígitos" : ""}
+                onChange={(e) => {
+                  const val = ["04", "05"].includes(borrador.tipo_identificacion_sri)
+                    ? e.target.value.replace(/\D/g, "")
+                    : e.target.value.toUpperCase();
+                  setBorrador({ ...borrador, identificacion: val });
+                  setLookupMsg("");
+                }}
+                sufijo={buscaNombres && ["04", "05"].includes(borrador.tipo_identificacion_sri) ? (
+                  <BotonIcono
+                    etiqueta="Buscar el nombre"
+                    icono={lookupLoading ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
+                    tamano="sm"
+                    onClick={handleLookup}
+                    disabled={!puedeBuscar}
+                    className="-mr-2"
+                  />
+                ) : undefined}
+              />
+            </Campo>
+            <Campo etiqueta="Nombre o razón social">
+              <Entrada
+                teclado="nombre"
+                value={borrador.razon_social}
+                placeholder="APELLIDOS NOMBRES"
+                onChange={(e) => setBorrador({ ...borrador, razon_social: e.target.value.toUpperCase() })}
+              />
+            </Campo>
+            <Campo etiqueta="Correo" opcional ayuda="Ahí le llega su comprobante." error={emailInvalido ? "Correo inválido." : null}>
+              <Entrada
+                teclado="email"
+                value={borrador.email}
+                placeholder="cliente@correo.com"
+                onChange={(e) => setBorrador({ ...borrador, email: e.target.value.toLowerCase() })}
+              />
+            </Campo>
           </div>
+        )}
+      </Hoja>
+    </section>
+  );
+}
 
-          {/* Error de validación */}
-          {validacion.error && (
-            <div className="flex items-center gap-1.5" style={{ color: "var(--kipu-danger)" }}>
-              <AlertCircle size={11} />
-              <p className="text-xs">{validacion.error}</p>
-            </div>
-          )}
-
-          {/* Mensaje de lookup */}
-          {lookupMsg && (
-            <p
-              className="text-xs"
-              style={{
-                color: lookupMsg.startsWith("✓")
-                  ? "var(--kipu-success)"
-                  : "var(--kipu-subtle)",
-              }}
-            >
-              {lookupMsg}
-            </p>
-          )}
-
-          {/* Sin buscador: el nombre se escribe a mano */}
-          {!buscaNombres && ["04", "05"].includes(clienteNuevo.tipo_identificacion_sri) && validacion.ok && (
-            <p className="text-xs text-sutil">{textoNombreAMano()}</p>
-          )}
-
-          <input
-            value={clienteNuevo.razon_social}
-            onChange={(e) => onClienteNuevo({ ...clienteNuevo, razon_social: e.target.value.toUpperCase() })}
-            placeholder="Nombre / Razón Social *"
-            className="w-full px-2 py-1.5 rounded-lg text-xs focus:outline-none transition-colors"
-            style={{
-              background: "var(--kipu-surface)",
-              border: "1px solid var(--kipu-border)",
-              color: "var(--kipu-text)",
-            }}
-            onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-            onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
-          />
-
-          <input
-            value={clienteNuevo.email}
-            onChange={(e) => onClienteNuevo({ ...clienteNuevo, email: e.target.value.toLowerCase() })}
-            onBlur={(e) => {
-              const val = e.target.value.trim().toLowerCase();
-              onClienteNuevo({ ...clienteNuevo, email: val });
-              e.currentTarget.style.borderColor = "var(--kipu-border)";
-            }}
-            placeholder="Email (opcional)"
-            type="email"
-            className="w-full px-2 py-1.5 rounded-lg text-xs focus:outline-none transition-colors"
-            style={{
-              background: "var(--kipu-surface)",
-              border: clienteNuevo.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clienteNuevo.email)
-                ? "1px solid color-mix(in srgb, var(--kipu-danger) 70%, transparent)"
-                : "1px solid var(--kipu-border)",
-              color: "var(--kipu-text)",
-            }}
-            onFocus={e => {
-              if (!(clienteNuevo.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clienteNuevo.email))) {
-                e.currentTarget.style.borderColor = "var(--kipu-accent)";
-              }
-            }}
-          />
-          {clienteNuevo.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clienteNuevo.email) && (
-            <div className="flex items-center gap-1.5" style={{ color: "var(--kipu-danger)" }}>
-              <AlertCircle size={11} />
-              <p className="text-xs">Email inválido.</p>
-            </div>
-          )}
-
-          <div className="flex items-center gap-2 pt-1">
-            <button
-              type="button"
-              onClick={confirmarClienteNuevo}
-              disabled={!puedeConfirmar}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-              style={{ background: "var(--kipu-accent)" }}
-              onMouseEnter={e => {
-                if (puedeConfirmar) e.currentTarget.style.background = "var(--kipu-accent-h)";
-              }}
-              onMouseLeave={e => {
-                if (puedeConfirmar) e.currentTarget.style.background = "var(--kipu-accent)";
-              }}
-            >
-              <Check size={12} />
-              Confirmar
-            </button>
-            <button
-              type="button"
-              onClick={() => { onClienteNuevo(null); setLookupMsg(""); }}
-              className="text-xs transition-colors"
-              style={{ color: "var(--kipu-subtle)" }}
-              onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
-              onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-subtle)"}
-            >
-              Cancelar
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
+function FilaCliente({ cliente, onClick }: { cliente: Cliente; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn("flex min-h-12 w-full items-center gap-3 rounded-lg px-1 py-2 text-left",
+        "transition-colors hover:bg-presionado active:bg-presionado")}
+    >
+      <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-acento-suave text-xs font-bold text-acento">
+        {cliente.razon_social?.[0] ?? "?"}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm text-texto">{cliente.razon_social}</span>
+        <span className="block text-xs text-sutil">{cliente.identificacion}</span>
+      </span>
+    </button>
   );
 }
