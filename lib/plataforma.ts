@@ -26,8 +26,12 @@ export const esRutaSoloWeb = (ruta: string) =>
 // Mismas reglas que las pantallas usan para decidir los ejemplos.
 type EmpresaPlan = { suscripcion_activa?: boolean | null; emision_gratis?: boolean | null } | null | undefined;
 
-/** Solo con Pro o Al Día (suscripcion_activa). */
-const RUTAS_CON_SUSCRIPCION = ["/cuentas", "/proformas", "/reportes/ats", "/reportes/renta"];
+/** Solo con Pro o Al Día (suscripcion_activa). La liquidación de compra y la
+ *  retención también: el backend las rechaza sin plan (402 PLAN_REQUERIDO). */
+const RUTAS_CON_SUSCRIPCION = [
+  "/cuentas", "/proformas", "/reportes/ats", "/reportes/renta",
+  "/documentos/emitir/liq", "/documentos/emitir/ret",
+];
 /** Con suscripción o con el plan gratis (emision_gratis): en Reportes, solo el IVA. */
 const RUTAS_CON_PLAN = ["/documentos/recibidos", "/reportes"];
 
