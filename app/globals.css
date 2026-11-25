@@ -10,7 +10,9 @@
   --kipu-accent-h: #047857;
   --kipu-text:     #111827;
   --kipu-muted:    #4B5563;
-  --kipu-subtle:   #9CA3AF;
+  /* #6B7280: 4,8:1 sobre blanco (AA). Antes #9CA3AF, 2,5:1: los textos
+     secundarios y las etiquetas no se leían bien al sol */
+  --kipu-subtle:   #6B7280;
   --kipu-success:  #059669;
   --kipu-warning:  #f59e0b;
   --kipu-danger:   #ef4444;
@@ -29,7 +31,8 @@
   --kipu-accent-h: #10b981;
   --kipu-text:     #F0FAF6;
   --kipu-muted:    #9CB8AF;
-  --kipu-subtle:   #4D7A6E;
+  /* #6B9A8D: 4,7:1 sobre la superficie oscura (AA). Antes #4D7A6E, 3,5:1 */
+  --kipu-subtle:   #6B9A8D;
   --kipu-success:  #10b981;
   --kipu-warning:  #f59e0b;
   --kipu-danger:   #ef4444;
@@ -37,8 +40,95 @@
   --kipu-sandbox:  #3b82f6;
 }
 
+/* ── Medidas compartidas (componentes de components/ui) ──────────────────────── */
+:root {
+  --toque-minimo:   44px;   /* área táctil mínima (Apple HIG / Material: 44–48) */
+  --duracion-rapida: 120ms;
+  --duracion-base:   200ms;
+  --duracion-lenta:  300ms;
+  --curva-estandar: cubic-bezier(0.2, 0, 0, 1);
+  --curva-enfasis:  cubic-bezier(0.05, 0.7, 0.1, 1);   /* hojas que suben */
+  /* Capas: barra de navegación < fondo oscuro < hoja/diálogo < avisos */
+  --capa-nav:     30;
+  --capa-fondo:   40;
+  --capa-hoja:    50;
+  --capa-aviso:   60;
+  --sombra-hoja:  0 -8px 32px rgb(0 0 0 / 0.18);
+  --sombra-flotante: 0 8px 24px rgb(0 0 0 / 0.14);
+}
+
+/* Colores como clases de Tailwind: bg-superficie, text-tenue, border-borde,
+   bg-acento, text-peligro, bg-peligro-suave… Siguen al tema claro/oscuro porque
+   apuntan a las variables --kipu-* (por eso "inline"). */
+@theme inline {
+  --color-fondo:        var(--kipu-bg);
+  --color-superficie:   var(--kipu-surface);
+  --color-borde:        var(--kipu-border);
+  --color-acento:       var(--kipu-accent);
+  --color-acento-hover: var(--kipu-accent-h);
+  --color-sobre-acento: #ffffff;
+  --color-texto:        var(--kipu-text);
+  --color-tenue:        var(--kipu-muted);
+  --color-sutil:        var(--kipu-subtle);
+  --color-exito:        var(--kipu-success);
+  --color-alerta:       var(--kipu-warning);
+  --color-peligro:      var(--kipu-danger);
+  --color-info:         var(--kipu-info);
+  --color-sandbox:      var(--kipu-sandbox);
+  /* Fondos tonales (avisos, chips de estado): en vez de repetir color-mix */
+  --color-acento-suave:  color-mix(in srgb, var(--kipu-accent)  12%, transparent);
+  --color-exito-suave:   color-mix(in srgb, var(--kipu-success) 12%, transparent);
+  --color-alerta-suave:  color-mix(in srgb, var(--kipu-warning) 12%, transparent);
+  --color-peligro-suave: color-mix(in srgb, var(--kipu-danger)  10%, transparent);
+  --color-info-suave:    color-mix(in srgb, var(--kipu-info)    12%, transparent);
+  --color-sandbox-suave: color-mix(in srgb, var(--kipu-sandbox) 12%, transparent);
+  --color-presionado:    color-mix(in srgb, var(--kipu-text)     6%, transparent);
+
+  --ease-estandar: var(--curva-estandar);
+  --ease-enfasis:  var(--curva-enfasis);
+}
+
 * {
   box-sizing: border-box;
+}
+
+/* ── Táctil ───────────────────────────────────────────────────────────────────
+   Sin el destello gris al tocar, sin el retardo del doble toque para hacer zoom
+   y sin seleccionar texto por accidente en botones (el contenido —RUC, clave de
+   acceso, montos— se sigue pudiendo seleccionar y copiar). */
+html {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+a, button, [role="button"], label, summary, select, input, textarea {
+  touch-action: manipulation;
+}
+button, [role="button"] {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* App de las tiendas: sin el rebote de toda la página ni el "tirar para
+   recargar" del WebView, y sin el menú de mantener pulsado en enlaces y
+   botones. En el navegador se dejan como el usuario los conoce. */
+[data-plataforma="nativa"] body {
+  overscroll-behavior: none;
+}
+[data-plataforma="nativa"] a,
+[data-plataforma="nativa"] button,
+[data-plataforma="nativa"] img {
+  -webkit-touch-callout: none;
+}
+
+/* Quien pide menos movimiento en el sistema: sin animaciones ni transiciones */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* ── Área segura ─────────────────────────────────────────────────────────────
@@ -61,10 +151,13 @@ body {
   padding: var(--sa-top) var(--sa-right) var(--sa-bottom) var(--sa-left);
 }
 
-/* Las pantallas de alto completo (h-screen / min-h-screen = 100vh) caben en lo
-   que queda dentro del área segura. Fuera de capa: gana a la de Tailwind. */
-.h-screen     { height:     calc(100vh - var(--sa-top) - var(--sa-bottom)); }
-.min-h-screen { min-height: calc(100vh - var(--sa-top) - var(--sa-bottom)); }
+/* Las pantallas de alto completo (h-screen / min-h-screen) caben en lo que queda
+   dentro del área segura. Fuera de capa: gana a la de Tailwind. 100dvh sigue a
+   la barra del navegador móvil (100vh la tapa); 100vh queda para navegadores viejos. */
+.h-screen     { height:     calc(100vh - var(--sa-top) - var(--sa-bottom));
+                height:     calc(100dvh - var(--sa-top) - var(--sa-bottom)); }
+.min-h-screen { min-height: calc(100vh - var(--sa-top) - var(--sa-bottom));
+                min-height: calc(100dvh - var(--sa-top) - var(--sa-bottom)); }
 
 /* Paneles fijos que tocan los bordes (menú lateral en móvil, cajón de
    notificaciones, hojas que suben desde abajo): su contenido dentro del área segura */

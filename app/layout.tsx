@@ -44,7 +44,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es" suppressHydrationWarning>
+    // data-plataforma: estilos solo de la app de las tiendas (app/globals.css)
+    <html lang="es" data-plataforma={ES_APP_NATIVA ? "nativa" : "web"} suppressHydrationWarning>
       <body className={`${inter.className} antialiased`}>
         <AppProviders>
           {children}
