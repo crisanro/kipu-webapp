@@ -1,6 +1,10 @@
 "use client";
 
-import { Plus, Trash2 } from "lucide-react";
+import { Info, Plus, Trash2 } from "lucide-react";
+import Seccion from "@/components/ui/Seccion";
+import Boton from "@/components/ui/Boton";
+import BotonIcono from "@/components/ui/BotonIcono";
+import { Entrada } from "@/components/ui/Campo";
 
 // ── Tipos ──────────────────────────────────────────────────────────────────────
 export interface CampoAdicional {
@@ -14,6 +18,8 @@ interface Props {
 }
 
 // ── Componente ─────────────────────────────────────────────────────────────────
+// Plegable: casi nunca se usa, así que no ocupa pantalla. Plegada dice cuántos
+// campos lleva; con alguno ya escrito (p. ej. el correo de una proforma) se abre.
 export default function CamposAdicionales({ campos, onChange }: Props) {
   const agregar = () => onChange([...campos, { nombre: "", valor: "" }]);
 
@@ -25,79 +31,44 @@ export default function CamposAdicionales({ campos, onChange }: Props) {
     onChange(campos.filter((_, idx) => idx !== i));
   };
 
-  return (
-    <div
-      className="rounded-xl p-4"
-      style={{
-        background: "var(--kipu-surface)",
-        border: "1px solid var(--kipu-border)",
-      }}
-    >
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>
-          Información adicional
-        </h2>
-        <button
-          type="button"
-          onClick={agregar}
-          className="flex items-center gap-1 text-xs transition-colors"
-          style={{ color: "var(--kipu-accent)" }}
-          onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent-h)"}
-          onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-accent)"}
-        >
-          <Plus size={13} />
-          Agregar campo
-        </button>
-      </div>
+  const llenos = campos.filter(c => c.nombre.trim() && c.valor.trim()).length;
+  const resumen = llenos === 0 ? "Ninguno" : llenos === 1 ? "1 campo" : `${llenos} campos`;
 
-      {campos.length === 0 ? (
-        <p className="text-xs text-center py-2" style={{ color: "var(--kipu-subtle)" }}>
-          Opcional — email, teléfono, número de orden, observaciones, etc.
-        </p>
-      ) : (
-        <div className="space-y-2">
-          {campos.map((c, i) => (
-            <div key={i} className="flex gap-2 items-center">
-              <input
-                value={c.nombre}
-                onChange={(e) => editar(i, "nombre", e.target.value)}
-                placeholder="Nombre (ej: Email)"
-                className="flex-1 px-2.5 py-1.5 rounded-lg text-xs transition-colors focus:outline-none"
-                style={{
-                  background: "var(--kipu-surface)",
-                  border: "1px solid var(--kipu-border)",
-                  color: "var(--kipu-text)",
-                }}
-                onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
-              />
-              <input
-                value={c.valor}
-                onChange={(e) => editar(i, "valor", e.target.value)}
-                placeholder="Valor"
-                className="flex-1 px-2.5 py-1.5 rounded-lg text-xs transition-colors focus:outline-none"
-                style={{
-                  background: "var(--kipu-surface)",
-                  border: "1px solid var(--kipu-border)",
-                  color: "var(--kipu-text)",
-                }}
-                onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
-              />
-              <button
-                type="button"
-                onClick={() => eliminar(i)}
-                className="p-1.5 transition-colors"
-                style={{ color: "var(--kipu-subtle)" }}
-                onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-danger)"}
-                onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-subtle)"}
-              >
-                <Trash2 size={13} />
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
+  return (
+    <Seccion titulo="Información adicional" icono={Info} resumen={resumen} abierta={campos.length > 0}>
+      <div className="space-y-3">
+        {campos.length === 0 ? (
+          <p className="text-xs text-sutil">
+            Opcional: email, teléfono, número de orden, observaciones… Sale en el PDF y en el XML.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {campos.map((c, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <Entrada
+                  value={c.nombre}
+                  onChange={(e) => editar(i, "nombre", e.target.value)}
+                  placeholder="Nombre (ej: Email)"
+                  aria-label={`Nombre del campo ${i + 1}`}
+                  className="min-w-0 flex-1"
+                />
+                <Entrada
+                  value={c.valor}
+                  onChange={(e) => editar(i, "valor", e.target.value)}
+                  placeholder="Valor"
+                  aria-label={`Valor del campo ${i + 1}`}
+                  className="min-w-0 flex-1"
+                />
+                <BotonIcono etiqueta={`Quitar el campo ${i + 1}`} icono={<Trash2 size={16} />}
+                            variante="peligro" onClick={() => eliminar(i)} />
+              </div>
+            ))}
+          </div>
+        )}
+        <Boton variante="secundario" tamano="sm" onClick={agregar} icono={<Plus size={14} />}>
+          Agregar campo
+        </Boton>
+      </div>
+    </Seccion>
   );
 }
