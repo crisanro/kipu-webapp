@@ -28,6 +28,13 @@ import TirarParaRefrescar from "@/components/ui/TirarParaRefrescar";
 import { Entrada } from "@/components/ui/Campo";
 import Boton from "@/components/ui/Boton";
 import { ESTADOS_PAGO, tipoComprobante } from "@/lib/estados";
+import PanelDetalle from "@/components/ui/PanelDetalle";
+import { cn } from "@/components/ui/cn";
+import { useAtajos } from "@/lib/useAtajos";
+import DetalleRecibido from "./ver/components/DetalleRecibido";
+
+// Lista y detalle lado a lado desde este ancho (components/ui/PanelDetalle.tsx)
+const ANCHO_PANEL = "(min-width: 1280px)";
 
 // ── Tipos ──────────────────────────────────────────────────────────────────────
 interface DocRecibido {
@@ -317,7 +324,8 @@ export default function FacturasRecibidasPage() {
     searchParams.get("fecha_fin") || leerFecha(SS_KEY_FIN, hoyEC()));
 
   // Búsqueda y página en la URL: al volver de un comprobante la lista queda igual
-  const [filtros, cambiarFiltros] = useFiltrosUrl({ q: "", page: "1" });
+  // sel: la compra abierta en el panel de la derecha (compu, 1280 px o más)
+  const [filtros, cambiarFiltros] = useFiltrosUrl({ q: "", page: "1", sel: "" });
   const queryActivo = filtros.q;
   const page        = Math.max(1, Number(filtros.page) || 1);
   const irAPagina   = (n: number) => cambiarFiltros({ page: String(n) });
@@ -365,6 +373,41 @@ export default function FacturasRecibidasPage() {
   };
   const irARegistrar = () => router.push("/documentos/recibidos/nueva");
 
+  // ── Compu: panel de detalle y atajos de teclado ──────────────────────────────
+  // (con los ejemplos del plan no hay panel ni atajos: docs viene vacío)
+  const sel = filtros.sel;
+  const buscadorRef = useRef<HTMLInputElement>(null);
+  const filasRef    = useRef<Map<string, HTMLDivElement>>(new Map());
+  const [marcada, setMarcada] = useState(-1);   // fila marcada con j/k (-1: ninguna)
+  const enPanel = () => window.matchMedia(ANCHO_PANEL).matches;
+
+  const mover = (paso: number) => {
+    if (docs.length === 0) return;
+    const actual = marcada >= 0 ? marcada : docs.findIndex(d => d.id === sel);
+    const nueva  = Math.min(docs.length - 1, Math.max(0, actual + paso));
+    setMarcada(nueva);
+    const doc = docs[nueva];
+    filasRef.current.get(doc.id)?.scrollIntoView({ block: "nearest" });
+    // Con el panel abierto, el detalle sigue a la fila marcada
+    if (sel && enPanel()) cambiarFiltros({ sel: doc.id });
+  };
+  useAtajos({
+    "/":         () => buscadorRef.current?.focus(),
+    "n":         irARegistrar,
+    "j":         () => mover(1),  "ArrowDown": () => mover(1),
+    "k":         () => mover(-1), "ArrowUp":   () => mover(-1),
+    "Enter":     () => {
+      const d = docs[marcada];
+      if (!d) return;
+      if (enPanel()) cambiarFiltros({ sel: d.id }); else router.push(rutas.recibido(d.id));
+    },
+    "Escape":    () => {
+      if (sel) cambiarFiltros({ sel: "" });
+      else if (expandido) setExpandido(null);
+      else setMarcada(-1);
+    },
+  });
+
   if (!puedeVer) return <SinAcceso />;
 
   // Sin Plan Pro y sin compras propias: ejemplos para ver cómo funciona
@@ -373,8 +416,11 @@ export default function FacturasRecibidasPage() {
   const resumenV: Resumen | null = esDemo ? resumenRecibidos(demoRecibidos()) : resumen;
   const verDetalle = (id: string) => { if (esDemo && ES_APP_NATIVA) return; router.push(esDemo ? "/planes" : rutas.recibido(id)); };
 
+  const docSel = docs.find(d => d.id === sel);
+
   return (
-    <div className="p-4 md:p-6 space-y-5">
+    <div className={cn(sel && "xl:flex xl:items-start")}>
+    <div className="min-w-0 flex-1 space-y-5 p-4 md:p-6">
       <SegmentosDocumentos />
       {/* Encabezado: en el celular el título ya está en la barra superior */}
       <div className="flex flex-wrap items-center gap-2">
@@ -403,6 +449,7 @@ export default function FacturasRecibidasPage() {
         placeholder="Buscar por proveedor o número…"
         aria-label="Buscar compras"
         prefijo={<Search size={16} />}
+        ref={buscadorRef}
       />
 
       {diasRango > 365 && (
@@ -580,7 +627,8 @@ export default function FacturasRecibidasPage() {
           </GrupoFilas>
         </TirarParaRefrescar>
 
-        {/* Escritorio: tocar la fila despliega el resumen; la flecha abre el comprobante */}
+        {/* Escritorio: desde 1280 px la fila abre la compra en el panel de la derecha;
+            más angosto se despliega el resumen. La flecha abre la pantalla completa. */}
         <div className="hidden overflow-hidden rounded-xl border border-borde bg-superficie md:block">
           <div>
             {filtrados.map((doc, index) => {
@@ -589,15 +637,23 @@ export default function FacturasRecibidasPage() {
               return (
                 <div
                   key={doc.id}
+                  ref={el => { if (el) filasRef.current.set(doc.id, el); else filasRef.current.delete(doc.id); }}
                   style={{
                     borderTop: index > 0 ? "1px solid var(--kipu-border)" : "none",
                   }}
                 >
                   <div
-                    onClick={() => setExpandido(isOpen ? null : doc.id)}
-                    className="flex items-center gap-3 px-4 py-3 transition-colors cursor-pointer select-none"
-                    onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 4%, transparent)"}
-                    onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                    onClick={() => {
+                      setMarcada(index);
+                      if (!esDemo && enPanel()) cambiarFiltros({ sel: doc.id });
+                      else setExpandido(isOpen ? null : doc.id);
+                    }}
+                    aria-selected={doc.id === sel || undefined}
+                    className={cn(
+                      "flex cursor-pointer select-none items-center gap-3 px-4 py-3 transition-colors hover:bg-presionado",
+                      doc.id === sel && "bg-acento-suave hover:bg-acento-suave",
+                      index === marcada && "outline-2 -outline-offset-2 outline-acento/50",
+                    )}
                   >
                     <span
                       className="text-[10px] px-1.5 py-0.5 rounded font-bold shrink-0"
@@ -666,11 +722,12 @@ export default function FacturasRecibidasPage() {
                     >
                       <ArrowUpRight size={15} />
                     </button>
-                    <div className="shrink-0" style={{ color: "var(--kipu-subtle)" }}>
+                    {/* Desde 1280 px la fila abre el panel en vez de desplegarse (salvo los ejemplos) */}
+                    <div className={`shrink-0 ${esDemo ? "" : "xl:hidden"}`} style={{ color: "var(--kipu-subtle)" }}>
                       {isOpen ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
                     </div>
                   </div>
-                  {isOpen && (
+                  {isOpen && !sel && (
                     <DocExpandido
                       doc={doc}
                       onVerDetalle={() => verDetalle(doc.id)}
@@ -733,6 +790,25 @@ export default function FacturasRecibidasPage() {
           </div>
         </div>
       )}
+
+      {/* Compu con mouse: los atajos, a la vista */}
+      <p className="hidden text-center text-[11px] text-sutil raton:lg:block">
+        Atajos: <kbd className="font-mono">/</kbd> buscar · <kbd className="font-mono">n</kbd> registrar compra ·{" "}
+        <kbd className="font-mono">j</kbd> <kbd className="font-mono">k</kbd> moverse · <kbd className="font-mono">Enter</kbd> abrir ·{" "}
+        <kbd className="font-mono">Esc</kbd> cerrar
+      </p>
+    </div>
+
+    {/* Compu (1280 px o más): la compra elegida, a la derecha */}
+    {sel && (
+      <PanelDetalle
+        titulo={docSel ? `${tipoComprobante(docSel.tipo_doc).etiqueta} ${docSel.numero_doc}` : "Comprobante recibido"}
+        hrefCompleto={rutas.recibido(sel)}
+        onCerrar={() => cambiarFiltros({ sel: "" })}
+      >
+        <DetalleRecibido key={sel} id={sel} enPanel />
+      </PanelDetalle>
+    )}
     </div>
   );
 }
