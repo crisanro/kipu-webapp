@@ -6,6 +6,7 @@ import { CreditCard, Copy, CheckCircle2, ExternalLink, RefreshCw, MessageCircle 
 import api from "@/lib/api";
 import { detalleError } from "@/lib/errores";
 import { enlaceWhatsAppA } from "@/lib/soporte";
+import { useCopiar } from "@/lib/useCopiar";
 
 interface LinkPagoData {
   id:              string;
@@ -37,7 +38,7 @@ export default function LinkPago({ documentoId, numero, pendiente, onPagado }: P
   const [conectada,  setConectada]  = useState(false);
   const [cargando,   setCargando]   = useState(true);
   const [trabajando, setTrabajando] = useState(false);
-  const [copiado,    setCopiado]    = useState(false);
+  const { copiar: copiarTexto, copiado } = useCopiar();
   const [error,      setError]      = useState("");
   const [aviso,      setAviso]      = useState("");
 
@@ -76,12 +77,7 @@ export default function LinkPago({ documentoId, numero, pendiente, onPagado }: P
     }
   };
 
-  const copiar = async () => {
-    if (!link) return;
-    await navigator.clipboard.writeText(link.url);
-    setCopiado(true);
-    setTimeout(() => setCopiado(false), 2000);
-  };
+  const copiar = () => { if (link) copiarTexto(link.url); };
 
   if (cargando) return null;
 

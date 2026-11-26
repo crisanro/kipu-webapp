@@ -25,6 +25,8 @@ import { detalleError } from "@/lib/errores";
 import { dolares, dosDecimales } from "@/lib/dinero";
 import { NOMBRE_TIPO_ID } from "@/lib/identificacion";
 import { etiquetaIva } from "@/lib/iva";
+import { dejarParaFactura } from "@/lib/prefill";
+import { useCopiar } from "@/lib/useCopiar";
 
 const fecha = (f?: string | null) => (f && /^\d{4}-\d{2}-\d{2}$/.test(f) ? etiquetaPeriodo(f, f) : f || "");
 
@@ -37,6 +39,7 @@ export default function DetalleProformaPage() {
 
 function DetalleProforma({ id }: { id: string }) {
   const avisos    = useAvisos();
+  const { copiar } = useCopiar();
   const confirmar = useConfirmar();
   const router    = useRouter();
 
@@ -78,15 +81,13 @@ function DetalleProforma({ id }: { id: string }) {
     ];
     const texto = lineas.join("\n");
     const ok = await compartir({ titulo: `Proforma ${data.numero}`, texto });
-    if (!ok) {
-      try { await navigator.clipboard.writeText(texto); avisos.exito("Resumen copiado"); }
-      catch { avisos.error("No se pudo compartir."); }
-    }
+    if (!ok) await copiar(texto, "Resumen copiado");
   };
 
   const handleFacturar = () => {
     if (!data) return;
-    const prefill: any = {
+    const cliente = data.cliente;
+    dejarParaFactura({
       items: data.items.map((it: any) => ({
         descripcion:     it.descripcion,
         cantidad:        it.cantidad,
@@ -94,26 +95,17 @@ function DetalleProforma({ id }: { id: string }) {
         tipo_iva:        String(it.tipo_iva),
         descuento:       it.descuento ?? 0,   // la factura debe salir con el mismo total que la proforma
         tipo_descuento:  "$",
-        unidad:          "UNIDAD",
-        codigo:          "",
       })),
-      formaPago:         "01",
-      camposAdicionales: [],
-      esConsumidorFinal: !data.cliente,
-    };
-    if (data.cliente) {
-      prefill.cliente = {
-        id:             data.cliente.id,
-        razon_social:   data.cliente.razon_social,
-        identificacion: data.cliente.identificacion,
-        tipo_id:        data.cliente.tipo_identificacion_sri,
-      };
-      if (data.cliente.email) {
-        prefill.camposAdicionales = [{ nombre: "Email", valor: data.cliente.email }];
-      }
-    }
-    prefill._proforma_id = id;
-    sessionStorage.setItem("kipu:prefill", JSON.stringify(prefill));
+      esConsumidorFinal: !cliente,
+      cliente: cliente ? {
+        id:             cliente.id,
+        razon_social:   cliente.razon_social,
+        identificacion: cliente.identificacion,
+        tipo_id:        cliente.tipo_identificacion_sri,
+      } : null,
+      camposAdicionales: cliente?.email ? [{ nombre: "Email", valor: cliente.email }] : [],
+      proformaId: id,
+    });
     router.push("/documentos/emitir/fac");
   };
 

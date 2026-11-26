@@ -3,7 +3,7 @@
 // esqueleto que emitir (EmisionLayout): en el celular, barra fija con el total
 // y "Guardar"; lo escrito queda como borrador si se sale de la pantalla.
 import { rutas } from "@/lib/rutas";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { dosDecimales } from "@/lib/dinero";
 import { detalleError } from "@/lib/errores";
 import { useRouter } from "next/navigation";
@@ -22,7 +22,6 @@ import ClienteSelector, { type Cliente, type ClienteNuevo } from "../../document
 import ItemsEditor, { Item, calcItem, calcTotales, genId, EMPTY_ITEM } from "../../documentos/emitir/components/ItemsEditor";
 import CamposAdicionales, { CampoAdicional } from "../../documentos/emitir/components/CamposAdicionales";
 import EmisionLayout from "../../documentos/emitir/components/EmisionLayout";
-import { TIPOS_IVA } from "@/lib/iva";
 
 // ── Página ─────────────────────────────────────────────────────────────────────
 export default function NuevaProformaPage() {
@@ -52,16 +51,13 @@ export default function NuevaProformaPage() {
   // ── Totales ──────────────────────────────────────────────────────────────────
   const totales = calcTotales(items);
 
-  // ── Borrador (al clonar llega con datos: no se ofrece el viejo) ──────────────
-  const [conPrefill] = useState(() =>
-    typeof window !== "undefined" && !!sessionStorage.getItem("kipu:prefill"));
+  // ── Borrador ─────────────────────────────────────────────────────────────────
   const datosBorrador = useMemo(() => ({
     clienteSelected, esConsumidorFinal, clienteNuevo, items, camposAdicionales, fechaValidez,
   }), [clienteSelected, esConsumidorFinal, clienteNuevo, items, camposAdicionales, fechaValidez]);
   const borrador = useBorrador("PROFORMA", datosBorrador, {
     vacio: !clienteSelected && !esConsumidorFinal && !clienteNuevo && camposAdicionales.length === 0
       && items.every(i => !i.descripcion?.trim() && !i.codigo?.trim() && !i.precio),
-    desactivado: conPrefill,
   });
   const seguirBorrador = () => {
     const d = borrador.recuperar();
@@ -73,44 +69,6 @@ export default function NuevaProformaPage() {
     setCamposAdicionales(Array.isArray(d.camposAdicionales) ? d.camposAdicionales : []);
     setFechaValidez(d.fechaValidez ?? "");
   };
-
-  // ── Prefill desde proforma existente (si viene de "clonar") ──────────────────
-  useEffect(() => {
-    const prefill = sessionStorage.getItem("kipu:prefill");
-    if (!prefill) return;
-    try {
-      const data = JSON.parse(prefill);
-      if (data.items && Array.isArray(data.items)) {
-        setItems(data.items.map((i: Record<string, unknown>) => ({
-          _id:            genId(),
-          codigo:         String(i.codigo           ?? ""),
-          descripcion:    String(i.descripcion     ?? ""),
-          cantidad:       parseFloat(String(i.cantidad))  || 1,
-          precio:         parseFloat(String(i.precio)) || parseFloat(String(i.precio_unitario)) || 0,
-          descuento:      parseFloat(String(i.descuento)) || 0,
-          tipo_descuento: (i.tipo_descuento === "%" ? "%" : "$") as "$" | "%",
-          // "NA"/"EX" se conservan: antes un ítem no objeto o exento pasaba a 15 %
-          tipo_iva:       TIPOS_IVA.includes(String(i.tipo_iva).toUpperCase()) ? String(i.tipo_iva).toUpperCase() : "15",
-          unidad:         String(i.unidad ?? "UNIDAD"),
-        })));
-      }
-      if (data.camposAdicionales) setCamposAdicionales(data.camposAdicionales);
-      if (data.cliente) {
-        setClienteSelected({
-          id:                      data.cliente.id || "",
-          razon_social:            data.cliente.razon_social || "",
-          identificacion:          data.cliente.identificacion || "",
-          tipo_identificacion_sri: data.cliente.tipo_id || "05",
-          email:                   "",
-          direccion:               "",
-        });
-      }
-    } catch (e) {
-      console.error("Error al procesar prefill", e);
-    } finally {
-      sessionStorage.removeItem("kipu:prefill");
-    }
-  }, []);
 
   // ── Guardar ──────────────────────────────────────────────────────────────────
   const guardar = async () => {

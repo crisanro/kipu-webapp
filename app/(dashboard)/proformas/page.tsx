@@ -8,7 +8,7 @@ import { usePermiso } from "@/hooks/usePermiso";
 import SinAcceso from "@/components/SinAcceso";
 import { useAuthStore } from "@/store/auth.store";
 import { demoProformas } from "@/lib/demos";
-import { BannerEjemplo, EtiquetaEjemplo } from "@/components/EjemploPro";
+import { AvisoFuncionPro, BannerEjemplo, EtiquetaEjemplo } from "@/components/EjemploPro";
 import SoloWeb from "@/components/SoloWeb";
 import { ES_APP_NATIVA } from "@/lib/plataforma";
 import { useLista, useBusquedaUrl } from "@/lib/useLista";
@@ -117,24 +117,11 @@ function ProformasContenido() {
 
       {/* Banner de suscripción */}
       {!tieneSub && !esDemo && (
-        <div className="mb-4 flex items-center gap-3 rounded-xl border border-alerta/20 bg-alerta-suave px-4 py-3">
-          <AlertTriangle size={15} className="shrink-0 text-alerta" />
-          <div className="flex-1">
-            <p className="text-sm font-medium text-alerta-texto">
-              {ES_APP_NATIVA ? "No incluido en tu plan actual" : "Función del Plan Pro"}
-            </p>
-            <p className="text-xs text-tenue">
-              {ES_APP_NATIVA
-                ? "Crear proformas no está incluido en tu plan actual. Las que ya hiciste las sigues viendo y puedes facturarlas."
-                : "Crear proformas es del Plan Pro. Las que ya hiciste las sigues viendo y puedes facturarlas."}
-            </p>
-          </div>
-          <SoloWeb>
-            <Link href="/planes" className="shrink-0 text-xs text-alerta-texto underline underline-offset-2">
-              Ver planes
-            </Link>
-          </SoloWeb>
-        </div>
+        <AvisoFuncionPro
+          titulo className="mb-4"
+          texto="Crear proformas es del Plan Pro. Las que ya hiciste las sigues viendo y puedes facturarlas."
+          textoApp="Crear proformas no está incluido en tu plan actual. Las que ya hiciste las sigues viendo y puedes facturarlas."
+        />
       )}
 
       <Entrada

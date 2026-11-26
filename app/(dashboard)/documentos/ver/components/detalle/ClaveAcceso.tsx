@@ -3,20 +3,17 @@ import { KeyRound, Copy, ExternalLink } from "lucide-react";
 import { type FacturaBase } from "./utils";
 import Seccion from "@/components/ui/Seccion";
 import Boton from "@/components/ui/Boton";
-import { useAvisos } from "@/components/ui/Avisos";
+import { useCopiar } from "@/lib/useCopiar";
 import { abrirExterno } from "@/lib/nativo";
 
 const URL_VALIDEZ_SRI = "https://srienlinea.sri.gob.ec/comprobantes-electronicos-internet/publico/validezComprobantes.jsf";
 
 // Clave de acceso con botón de copiar y enlace de verificación en el SRI.
 export default function ClaveAcceso({ factura }: { factura: FacturaBase }) {
-  const avisos = useAvisos();
+  const { copiar } = useCopiar();
   if (!factura.clave_acceso) return null;
 
-  const copiarClave = async () => {
-    try { await navigator.clipboard.writeText(factura.clave_acceso); avisos.exito("Clave de acceso copiada"); }
-    catch { avisos.info(factura.clave_acceso); }
-  };
+  const copiarClave = () => copiar(factura.clave_acceso, "Clave de acceso copiada");
 
   return (
     <Seccion titulo="Clave de acceso" icono={KeyRound} resumen={`…${factura.clave_acceso.slice(-8)}`}>

@@ -18,6 +18,7 @@ import { useAccionesArchivo } from "./AccionesArchivo";
 import { useAccionesRelacionadas } from "./ComprobantesRelacionados";
 import { detalleError } from "@/lib/errores";
 import { dosDecimales } from "@/lib/dinero";
+import { useCopiar } from "@/lib/useCopiar";
 
 // Estados en los que tiene sentido preguntarle al SRI cómo está el comprobante
 const CONSULTABLES = ["FIRMADO", "RECIBIDA", "EN_REVISION", "DEVUELTA", "RECHAZADO"];
@@ -69,6 +70,7 @@ export default function EstadoDocumento({ factura, onRecargar, consumidorFinal, 
 }) {
   const router = useRouter();
   const avisos = useAvisos();
+  const { copiar } = useCopiar();
   const [accion,     setAccion]     = useState<"consultar" | "reintentar" | null>(null);
   const [verDetalle, setVerDetalle] = useState(false);
   const [menu,       setMenu]       = useState<Menu>(null);
@@ -90,11 +92,7 @@ export default function EstadoDocumento({ factura, onRecargar, consumidorFinal, 
     }
   };
 
-  const copiarClave = async () => {
-    if (!factura.clave_acceso) return;
-    try { await navigator.clipboard.writeText(factura.clave_acceso); avisos.exito("Clave de acceso copiada"); }
-    catch { avisos.info(factura.clave_acceso); }
-  };
+  const copiarClave = () => { if (factura.clave_acceso) copiar(factura.clave_acceso, "Clave de acceso copiada"); };
 
   const descripcion =
     factura.estado_sri === "AUTORIZADO"

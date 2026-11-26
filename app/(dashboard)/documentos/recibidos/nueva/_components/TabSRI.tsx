@@ -2,7 +2,7 @@
 import { Puzzle, Play, ArrowRight, Download, Globe, Monitor, Share2 } from "lucide-react";
 import { ES_APP_NATIVA } from "@/lib/plataforma";
 import { compartir } from "@/lib/nativo";
-import { useAvisos } from "@/components/ui/Avisos";
+import { useCopiar } from "@/lib/useCopiar";
 import Boton from "@/components/ui/Boton";
 
 interface Props {
@@ -195,17 +195,14 @@ function ContenidoSRI({ empresa, onDone }: Props) {
 const URL_PANEL = "https://app.kipu.ec/documentos/recibidos/nueva";
 
 function SoloDesdeLaCompu() {
-  const avisos = useAvisos();
+  const { copiar } = useCopiar();
   const enviarEnlace = async () => {
     const ok = await compartir({
       titulo: "Kipu: importar compras del SRI",
       texto:  "Abre este enlace en tu computadora para importar tus compras del SRI:",
       url:    URL_PANEL,
     });
-    if (!ok) {
-      try { await navigator.clipboard.writeText(URL_PANEL); avisos.exito("Enlace copiado"); }
-      catch { avisos.info(URL_PANEL); }
-    }
+    if (!ok) await copiar(URL_PANEL, "Enlace copiado");
   };
   return (
     <div className="space-y-4 rounded-xl border border-borde bg-superficie p-5 text-center">
