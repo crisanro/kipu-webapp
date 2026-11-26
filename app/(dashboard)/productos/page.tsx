@@ -12,7 +12,8 @@ import BotonFlotante from "@/components/ui/BotonFlotante";
 import TirarParaRefrescar from "@/components/ui/TirarParaRefrescar";
 import HojaAcciones from "@/components/ui/HojaAcciones";
 import BotonIcono from "@/components/ui/BotonIcono";
-import { Entrada } from "@/components/ui/Campo";
+import { Campo, Entrada, Selector } from "@/components/ui/Campo";
+import { cn } from "@/components/ui/cn";
 import { useState, useEffect, useCallback, useRef, lazy, Suspense } from "react";
 import { useAtajos } from "@/lib/useAtajos";
 import { useNuevoDesdePaleta } from "@/lib/comandos";
@@ -360,22 +361,9 @@ export default function ProductosPage() {
             </GrupoFilas>
           </TirarParaRefrescar>
 
-          {/* Escritorio: tabla con las acciones en cada fila */}
-          <div
-            className="hidden rounded-xl overflow-hidden md:block"
-            style={{
-              background: "var(--kipu-surface)",
-              border: "1px solid var(--kipu-border)",
-            }}
-          >
-            {/* Header tabla */}
-            <div
-              className="hidden md:grid grid-cols-12 gap-3 px-4 py-2.5 text-xs"
-              style={{
-                borderBottom: "1px solid var(--kipu-border)",
-                color: "var(--kipu-subtle)",
-              }}
-            >
+          {/* Escritorio: tabla con las acciones en cada fila (el celular usa la lista de arriba) */}
+          <div className="hidden overflow-hidden rounded-xl border border-borde bg-superficie md:block">
+            <div className="grid grid-cols-12 gap-3 border-b border-borde px-4 py-2.5 text-xs text-sutil">
               <span className="col-span-2">Código</span>
               <span className="col-span-4">Descripción</span>
               <span className="col-span-2 text-center">Precio</span>
@@ -383,109 +371,33 @@ export default function ProductosPage() {
               <span className="col-span-1 text-center">Stock</span>
               <span className="col-span-2 text-right">Acciones</span>
             </div>
-            <div>
-              {productos.map((p, idx) => (
-                <div
-                  key={p.id}
-                  className="flex md:grid md:grid-cols-12 gap-3 items-center px-4 py-3 transition-colors"
-                  style={{
-                    borderTop: idx > 0 ? "1px solid var(--kipu-border)" : "none",
-                    opacity: !p.activo ? 0.5 : 1,
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 4%, transparent)"}
-                  onMouseLeave={e => e.currentTarget.style.background = "transparent"}
-                >
-                  <span className="hidden md:block col-span-2 text-xs font-mono truncate" style={{ color: "var(--kipu-subtle)" }}>
-                    {p.codigo || "—"}
-                  </span>
-                  <div className="flex-1 md:col-span-4 min-w-0">
-                    <p className="text-sm truncate" style={{ color: "var(--kipu-text)" }}>{p.descripcion}</p>
-                    <p className="text-xs md:hidden" style={{ color: "var(--kipu-subtle)" }}>
-                      {p.codigo || "Sin código"} · IVA {etiquetaIva(p.tipo_iva)} · {p.unidad}
-                      {p.stock !== -1 && ` · Stock: ${p.stock}`}
-                    </p>
-                  </div>
-                  <span className="hidden md:block col-span-2 text-sm font-semibold text-center" style={{ color: "var(--kipu-text)" }}>
+            <div className="divide-y divide-borde">
+              {productos.map((p) => (
+                <div key={p.id}
+                     className={cn("grid grid-cols-12 items-center gap-3 px-4 py-3 transition-colors hover:bg-presionado", !p.activo && "opacity-50")}>
+                  <span className="col-span-2 truncate font-mono text-xs text-sutil">{p.codigo || "—"}</span>
+                  <p className="col-span-4 min-w-0 truncate text-sm text-texto">{p.descripcion}</p>
+                  <span className="col-span-2 text-center text-sm font-semibold text-texto">
                     ${dosDecimales(precioVisible(p))}
                     {tarifaPct(p.tipo_iva) > 0 && (
-                      <span className="block text-[10px] font-normal" style={{ color: "var(--kipu-subtle)" }}>
+                      <span className="block text-[10px] font-normal text-sutil">
                         {p.precio_incluye_iva ? "IVA incluido" : "+ IVA"}
                       </span>
                     )}
                   </span>
-                  <span className="hidden md:block col-span-1 text-xs text-center" style={{ color: "var(--kipu-muted)" }}>
-                    {etiquetaIva(p.tipo_iva)}
+                  <span className="col-span-1 text-center text-xs text-tenue">{etiquetaIva(p.tipo_iva)}</span>
+                  <span className="col-span-1 text-center text-xs font-medium">
+                    {p.stock < 0
+                      ? <span className="text-sutil">—</span>
+                      : <InsigniaEstado tono={tonoStock(p)}>{p.stock === 0 ? "Sin stock" : p.stock}</InsigniaEstado>}
                   </span>
-                  <span className="hidden md:block col-span-1 text-xs text-center font-medium">
-                    {p.stock < 0 ? (
-                      <span style={{ color: "var(--kipu-subtle)" }}>—</span>
-                    ) : (
-                      <InsigniaEstado tono={tonoStock(p)}>{p.stock === 0 ? "Sin stock" : p.stock}</InsigniaEstado>
-                    )}
-                  </span>
-                  <div className="md:col-span-2 flex items-center justify-end gap-2 shrink-0">
-                    <span className="text-sm font-semibold md:hidden text-right" style={{ color: "var(--kipu-text)" }}>
-                      ${dosDecimales(precioVisible(p))}
-                      {tarifaPct(p.tipo_iva) > 0 && (
-                        <span className="block text-[10px] font-normal" style={{ color: "var(--kipu-subtle)" }}>
-                          {p.precio_incluye_iva ? "IVA incl." : "+ IVA"}
-                        </span>
-                      )}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => abrirEditar(p)}
-                      className="p-1.5 rounded transition-colors"
-                      style={{ color: "var(--kipu-subtle)" }}
-                      onMouseEnter={e => {
-                        e.currentTarget.style.color = "var(--kipu-text)";
-                        e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 10%, transparent)";
-                      }}
-                      onMouseLeave={e => {
-                        e.currentTarget.style.color = "var(--kipu-subtle)";
-                        e.currentTarget.style.background = "transparent";
-                      }}
-                      title="Editar"
-                    >
-                      <Pencil size={14} />
-                    </button>
-                    {p.activo ? (
-                      <button
-                        type="button"
-                        onClick={() => desactivar(p.id)}
-                        className="p-1.5 rounded transition-colors"
-                        style={{ color: "var(--kipu-subtle)" }}
-                        onMouseEnter={e => {
-                          e.currentTarget.style.color = "var(--kipu-danger)";
-                          e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-danger) 10%, transparent)";
-                        }}
-                        onMouseLeave={e => {
-                          e.currentTarget.style.color = "var(--kipu-subtle)";
-                          e.currentTarget.style.background = "transparent";
-                        }}
-                        title="Desactivar"
-                      >
-                        <PowerOff size={14} />
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => reactivar(p.id)}
-                        className="p-1.5 rounded transition-colors"
-                        style={{ color: "var(--kipu-subtle)" }}
-                        onMouseEnter={e => {
-                          e.currentTarget.style.color = "var(--kipu-success)";
-                          e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-success) 10%, transparent)";
-                        }}
-                        onMouseLeave={e => {
-                          e.currentTarget.style.color = "var(--kipu-subtle)";
-                          e.currentTarget.style.background = "transparent";
-                        }}
-                        title="Reactivar"
-                      >
-                        <Power size={14} />
-                      </button>
-                    )}
+                  <div className="col-span-2 flex items-center justify-end gap-1">
+                    <BotonIcono etiqueta="Editar" icono={<Pencil size={14} />} tamano="sm" onClick={() => abrirEditar(p)} />
+                    {p.activo
+                      ? <BotonIcono etiqueta="Desactivar" icono={<PowerOff size={14} />} tamano="sm" variante="peligro"
+                                    onClick={() => desactivar(p.id)} />
+                      : <BotonIcono etiqueta="Reactivar" icono={<Power size={14} />} tamano="sm"
+                                    onClick={() => reactivar(p.id)} />}
                   </div>
                 </div>
               ))}
@@ -535,69 +447,35 @@ export default function ProductosPage() {
       >
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
-                {/* Código */}
-                <div>
-                  <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>
-                    Código <span style={{ color: "var(--kipu-danger)" }}>*</span>
-                  </label>
-                  <input
+                <Campo etiqueta="Código *">
+                  <Entrada
                     value={form.codigo}
                     onChange={(e) => setForm({ ...form, codigo: e.target.value.toUpperCase() })}
                     placeholder="PROD-001"
+                    autoComplete="off"
                     disabled={Boolean(editando)}
-                    className="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none"
-                    style={{
-                      background: "var(--kipu-surface)",
-                      border: "1px solid var(--kipu-border)",
-                      color: "var(--kipu-text)",
-                      opacity: editando ? 0.6 : 1,
-                      cursor: editando ? "not-allowed" : "text",
-                    }}
-                    onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                    onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
                   />
-                  {/* Botón escanear — solo al crear */}
-                  <button
-                    type="button"
-                    onClick={abrirScannerCodigo}
-                    className="mt-1.5 items-center gap-1.5 text-xs transition-colors"
-                    style={{
-                      display: editando ? "none" : "inline-flex",
-                      color: "var(--kipu-subtle)",
-                    }}
-                    onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent)"}
-                    onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-subtle)"}
-                  >
-                    <Camera size={13} />
-                    Escanear
-                  </button>
-                </div>
-                {/* Precio */}
-                <div>
-                  <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Precio *</label>
-                  <input
-                    type="number"
+                  {/* Escanear: solo al crear (el código no se cambia) */}
+                  {!editando && (
+                    <button
+                      type="button"
+                      onClick={abrirScannerCodigo}
+                      className="inline-flex items-center gap-1.5 self-start text-xs text-sutil transition-colors hover:text-acento"
+                    >
+                      <Camera size={13} aria-hidden /> Escanear
+                    </button>
+                  )}
+                </Campo>
+                <Campo etiqueta="Precio *">
+                  <Entrada
+                    teclado="decimal"
                     value={form.precio}
-                    onChange={(e) => setForm({ ...form, precio: e.target.value })}
+                    onChange={(e) => setForm({ ...form, precio: e.target.value.replace(",", ".") })}
                     placeholder="0.00"
-                    min={0}
-                    step={0.01}
-                    className="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none"
-                    style={{
-                      background: "var(--kipu-surface)",
-                      border: "1px solid var(--kipu-border)",
-                      color: "var(--kipu-text)",
-                    }}
-                    onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                    onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
                   />
                   {/* ¿Al precio se le suma el IVA o ya lo incluye? */}
-                  <div
-                    role="radiogroup"
-                    aria-label="El precio que ingreso"
-                    className="mt-1.5 grid grid-cols-2 rounded-lg overflow-hidden text-[11px]"
-                    style={{ border: "1px solid var(--kipu-border)" }}
-                  >
+                  <div role="radiogroup" aria-label="El precio que ingreso"
+                       className="grid grid-cols-2 overflow-hidden rounded-lg border border-borde text-[11px]">
                     {([[false, "+ IVA", "Kipu le suma el IVA"], [true, "IVA incluido", "Kipu desglosa el IVA"]] as const)
                       .map(([valor, etiqueta, ayuda]) => {
                         const activo = form.incluye_iva === valor;
@@ -609,164 +487,91 @@ export default function ProductosPage() {
                             aria-checked={activo}
                             title={ayuda}
                             onClick={() => setForm({ ...form, incluye_iva: valor })}
-                            className="py-1 transition-colors"
-                            style={{
-                              background: activo ? "var(--kipu-accent)" : "transparent",
-                              color:      activo ? "#FFFFFF" : "var(--kipu-muted)",
-                            }}
+                            className={cn("py-1 transition-colors", activo ? "bg-acento text-white" : "text-tenue")}
                           >
                             {etiqueta}
                           </button>
                         );
                       })}
                   </div>
-                </div>
+                </Campo>
               </div>
-              <div>
-                <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Descripción *</label>
-                <input
+
+              <Campo etiqueta="Descripción *">
+                <Entrada
                   value={form.descripcion}
                   onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
                   placeholder="Nombre del producto o servicio"
-                  className="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none"
-                  style={{
-                    background: "var(--kipu-surface)",
-                    border: "1px solid var(--kipu-border)",
-                    color: "var(--kipu-text)",
-                  }}
-                  onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                  onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
                 />
-              </div>
+              </Campo>
+
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>IVA</label>
-                  <select
-                    value={form.tipo_iva}
-                    onChange={(e) => setForm({ ...form, tipo_iva: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none"
-                    style={{
-                      background: "var(--kipu-surface)",
-                      border: "1px solid var(--kipu-border)",
-                      color: "var(--kipu-text)",
-                    }}
-                    onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                    onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
-                  >
+                <Campo etiqueta="IVA">
+                  <Selector value={form.tipo_iva} onChange={(e) => setForm({ ...form, tipo_iva: e.target.value })}>
                     {opcionesIva(editando?.tipo_iva).map(o => (
                       <option key={o.valor} value={o.valor}>{o.etiqueta}</option>
                     ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Unidad</label>
-                  <select
-                    value={form.unidad}
-                    onChange={(e) => setForm({ ...form, unidad: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none"
-                    style={{
-                      background: "var(--kipu-surface)",
-                      border: "1px solid var(--kipu-border)",
-                      color: "var(--kipu-text)",
-                    }}
-                    onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                    onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
-                  >
+                  </Selector>
+                </Campo>
+                <Campo etiqueta="Unidad">
+                  <Selector value={form.unidad} onChange={(e) => setForm({ ...form, unidad: e.target.value })}>
                     {UNIDADES.map(u => <option key={u} value={u}>{u}</option>)}
-                  </select>
-                </div>
+                  </Selector>
+                </Campo>
               </div>
 
               {/* Desglose de lo que se escribió */}
               {parseFloat(form.precio) > 0 && (() => {
                 const d = desglose(parseFloat(form.precio), form.incluye_iva, form.tipo_iva);
                 if (d.pct === 0) return (
-                  <p className="text-[11px]" style={{ color: "var(--kipu-subtle)" }}>
-                    Sin IVA: tu cliente paga ${dosDecimales(d.final)}.
-                  </p>
+                  <p className="text-[11px] text-sutil">Sin IVA: tu cliente paga ${dosDecimales(d.final)}.</p>
                 );
                 const redondeo = form.incluye_iva && d.final !== r2(parseFloat(form.precio));
                 return (
-                  <div className="text-[11px] rounded-lg px-3 py-2 space-y-0.5"
-                       style={{ background: "color-mix(in srgb, var(--kipu-text) 4%, transparent)", color: "var(--kipu-muted)" }}>
+                  <div className="space-y-0.5 rounded-lg bg-presionado px-3 py-2 text-[11px] text-tenue">
                     <p>
                       Base ${dosDecimales(d.base)} · IVA {d.pct}% ${dosDecimales(d.iva)} ·{" "}
-                      <strong style={{ color: "var(--kipu-text)" }}>Tu cliente paga ${dosDecimales(d.final)}</strong>
+                      <strong className="text-texto">Tu cliente paga ${dosDecimales(d.final)}</strong>
                     </p>
-                    <p style={{ color: "var(--kipu-subtle)" }}>
+                    <p className="text-sutil">
                       {form.incluye_iva
                         ? "Si cambia el IVA, el precio final se mantiene y la base se ajusta."
                         : "Si cambia el IVA, la base se mantiene y el precio final se ajusta."}
                     </p>
                     {redondeo && (
-                      <p style={{ color: "var(--kipu-warning)" }}>
+                      <p className="text-alerta-texto">
                         Con el redondeo del SRI no hay una base exacta para ese precio: queda en ${dosDecimales(d.final)}.
                       </p>
                     )}
                   </div>
                 );
               })()}
-              {/* Stock */}
-              <div>
-                <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>
-                  {editando ? "Stock actual" : "Stock inicial"}
-                </label>
-                <input
+
+              {/* -1 = sin control: type number para que el celular deje escribir el signo menos */}
+              <Campo etiqueta={editando ? "Stock actual" : "Stock inicial"} ayuda="-1 = sin control de stock">
+                <Entrada
                   type="number"
                   value={form.stock}
                   onChange={(e) => setForm({ ...form, stock: e.target.value })}
                   placeholder="-1"
                   min={-1}
                   step={1}
-                  className="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none"
-                  style={{
-                    background: "var(--kipu-surface)",
-                    border: "1px solid var(--kipu-border)",
-                    color: "var(--kipu-text)",
-                  }}
-                  onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                  onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
                 />
-                <p className="text-[11px] mt-1" style={{ color: "var(--kipu-subtle)" }}>-1 = sin control de stock</p>
-              </div>
+              </Campo>
 
-              {/* Stock mínimo */}
               {stockValue() !== -1 && (
-                <div>
-                  <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>
-                    Stock mínimo <span style={{ color: "var(--kipu-subtle)" }}>(alerta cuando llegue a este nivel)</span>
-                  </label>
-                  <input
-                    type="number"
+                <Campo etiqueta="Stock mínimo (alerta cuando llegue a este nivel)" ayuda="0 = sin alerta de stock bajo">
+                  <Entrada
+                    teclado="numero"
                     value={form.stock_minimo}
-                    inputMode="numeric"
-                    onChange={(e) => setForm({ ...form, stock_minimo: e.target.value })}
+                    onChange={(e) => setForm({ ...form, stock_minimo: e.target.value.replace(/\D/g, "") })}
                     placeholder="0"
-                    min={0}
-                    step={1}
-                    className="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none"
-                    style={{
-                      background: "var(--kipu-surface)",
-                      border: "1px solid var(--kipu-border)",
-                      color: "var(--kipu-text)",
-                    }}
-                    onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                    onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
                   />
-                  <p className="text-[11px] mt-1" style={{ color: "var(--kipu-subtle)" }}>0 = sin alerta de stock bajo</p>
-                </div>
+                </Campo>
               )}
 
               {error && (
-                <p
-                  className="text-xs px-3 py-2 rounded-lg"
-                  style={{
-                    color: "var(--kipu-danger)",
-                    background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
-                  }}
-                >
-                  {error}
-                </p>
+                <p role="alert" className="rounded-lg bg-peligro-suave px-3 py-2 text-xs text-peligro-texto">{error}</p>
               )}
             </div>
       </Hoja>

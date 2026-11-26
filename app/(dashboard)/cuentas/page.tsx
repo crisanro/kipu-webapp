@@ -25,13 +25,14 @@ import Vacio, { VacioError } from "@/components/ui/Vacio";
 import BotonFlotante from "@/components/ui/BotonFlotante";
 import TirarParaRefrescar from "@/components/ui/TirarParaRefrescar";
 import ChipsFiltro from "@/components/ui/ChipsFiltro";
-import { Entrada } from "@/components/ui/Campo";
+import { AreaTexto, Campo, Entrada } from "@/components/ui/Campo";
+import BotonIcono from "@/components/ui/BotonIcono";
 import { etiquetaPeriodo } from "@/components/ui/PeriodoFechas";
 import { cn } from "@/components/ui/cn";
 import {
   Wallet, Plus, X, Save,
   TrendingUp, TrendingDown, Scale, Search,
-  AlertTriangle,
+  AlertTriangle, Loader2,
 } from "lucide-react";
 import { dolares } from "@/lib/dinero";
 
@@ -386,37 +387,23 @@ function CuentasContent() {
         </>}
       >
             <div className="space-y-3">
-              {/* Tipo */}
-              <div className="grid grid-cols-2 gap-2">
+              {/* Tipo: lo que me deben (verde) o lo que debo (rojo) */}
+              <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Tipo de cuenta">
                 {(["COBRAR", "PAGAR"] as const).map((t) => {
-                  const isSelected = form.tipo === t;
+                  const elegido = form.tipo === t;
                   return (
                     <button
                       key={t}
                       type="button"
+                      role="radio"
+                      aria-checked={elegido}
                       onClick={() => setForm({ ...form, tipo: t })}
-                      className="py-2.5 rounded-lg text-sm font-medium transition-colors"
-                      style={{
-                        background: isSelected
-                          ? (t === "COBRAR"
-                              ? "color-mix(in srgb, var(--kipu-success) 20%, transparent)"
-                              : "color-mix(in srgb, var(--kipu-danger) 20%, transparent)")
-                          : "var(--kipu-surface)",
-                        border: isSelected
-                          ? (t === "COBRAR"
-                              ? "1px solid color-mix(in srgb, var(--kipu-success) 50%, transparent)"
-                              : "1px solid color-mix(in srgb, var(--kipu-danger) 50%, transparent)")
-                          : "1px solid var(--kipu-border)",
-                        color: isSelected
-                          ? (t === "COBRAR" ? "var(--kipu-success)" : "var(--kipu-danger)")
-                          : "var(--kipu-subtle)",
-                      }}
-                      onMouseEnter={e => {
-                        if (!isSelected) e.currentTarget.style.color = "var(--kipu-text)";
-                      }}
-                      onMouseLeave={e => {
-                        if (!isSelected) e.currentTarget.style.color = "var(--kipu-subtle)";
-                      }}
+                      className={cn(
+                        "rounded-lg border py-2.5 text-sm font-medium transition-colors",
+                        !elegido && "border-borde bg-superficie text-sutil hover:text-texto",
+                        elegido && t === "COBRAR" && "border-exito/50 bg-exito-suave text-exito-texto",
+                        elegido && t === "PAGAR" && "border-peligro/50 bg-peligro-suave text-peligro-texto",
+                      )}
                     >
                       {t === "COBRAR" ? "Por cobrar" : "Por pagar"}
                     </button>
@@ -424,74 +411,38 @@ function CuentasContent() {
                 })}
               </div>
 
-              {/* Selector de persona */}
-              <div>
-                <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Persona *</label>
+              <Campo etiqueta="Persona *">
                 {clienteSelec ? (
-                  <div
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg"
-                    style={{
-                      background: "color-mix(in srgb, var(--kipu-text) 5%, transparent)",
-                      border: "1px solid var(--kipu-border)",
-                    }}
-                  >
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm truncate" style={{ color: "var(--kipu-text)" }}>{clienteSelec.razon_social}</p>
-                      <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>{clienteSelec.identificacion}</p>
+                  <div className="flex items-center gap-2 rounded-lg border border-borde bg-presionado px-3 py-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm text-texto">{clienteSelec.razon_social}</p>
+                      <p className="text-xs text-sutil">{clienteSelec.identificacion}</p>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => { setClienteSelec(null); setClienteQuery(""); }}
-                      className="shrink-0 transition-colors"
-                      style={{ color: "var(--kipu-subtle)" }}
-                      onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
-                      onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-subtle)"}
-                    >
-                      <X size={14} />
-                    </button>
+                    <BotonIcono etiqueta="Quitar la persona" icono={<X size={14} />} tamano="sm"
+                                onClick={() => { setClienteSelec(null); setClienteQuery(""); }} />
                   </div>
                 ) : (
                   <div className="relative">
-                    <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--kipu-subtle)" }} />
-                    <input
+                    <Entrada
+                      teclado="buscar"
                       value={clienteQuery}
                       onChange={(e) => setClienteQuery(e.target.value)}
                       placeholder="Buscar por nombre o identificación..."
-                      className="w-full pl-9 pr-4 py-2 rounded-lg text-sm transition-colors focus:outline-none"
-                      style={{
-                        background: "var(--kipu-surface)",
-                        border: "1px solid var(--kipu-border)",
-                        color: "var(--kipu-text)",
-                      }}
-                      onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                      onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+                      prefijo={<Search size={14} />}
+                      sufijo={buscandoCliente ? <Loader2 size={14} className="animate-spin text-acento" aria-hidden /> : undefined}
                     />
-                    {buscandoCliente && (
-                      <div
-                        className="w-3.5 h-3.5 border-2 border-t-transparent rounded-full animate-spin absolute right-3 top-1/2 -translate-y-1/2"
-                        style={{ borderColor: "var(--kipu-accent)", borderTopColor: "transparent" }}
-                      />
-                    )}
                     {clientesBusq.length > 0 && (
-                      <div
-                        className="absolute top-full left-0 right-0 mt-1 rounded-lg overflow-hidden z-10 shadow-xl"
-                        style={{
-                          background: "var(--kipu-surface)",
-                          border: "1px solid var(--kipu-border)",
-                        }}
-                      >
+                      <div className="absolute inset-x-0 top-full z-10 mt-1 overflow-hidden rounded-lg border border-borde bg-superficie shadow-xl">
                         {clientesBusq.map((cl) => (
                           <button
                             type="button"
                             key={cl.uid ?? cl.id}
                             onClick={() => { setClienteSelec(cl); setClienteQuery(""); setClientesBusq([]); }}
-                            className="w-full flex items-start gap-2 px-3 py-2.5 text-left transition-colors"
-                            onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 5%, transparent)"}
-                            onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                            className="flex w-full items-start gap-2 px-3 py-2.5 text-left transition-colors hover:bg-presionado"
                           >
                             <div>
-                              <p className="text-sm" style={{ color: "var(--kipu-text)" }}>{cl.razon_social}</p>
-                              <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>{cl.identificacion}</p>
+                              <p className="text-sm text-texto">{cl.razon_social}</p>
+                              <p className="text-xs text-sutil">{cl.identificacion}</p>
                             </div>
                           </button>
                         ))}
@@ -499,115 +450,48 @@ function CuentasContent() {
                     )}
                   </div>
                 )}
-              </div>
+              </Campo>
 
-              {/* Concepto */}
-              <div>
-                <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Concepto *</label>
-                <input
+              <Campo etiqueta="Concepto *">
+                <Entrada
                   value={form.concepto}
                   onChange={(e) => setForm({ ...form, concepto: e.target.value })}
                   placeholder="Descripción de la deuda..."
-                  className="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none"
-                  style={{
-                    background: "var(--kipu-surface)",
-                    border: "1px solid var(--kipu-border)",
-                    color: "var(--kipu-text)",
-                  }}
-                  onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                  onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
                 />
-              </div>
+              </Campo>
 
-              {/* Monto */}
-              <div>
-                <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Monto total *</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm" style={{ color: "var(--kipu-subtle)" }}>$</span>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={form.monto_total}
-                    onChange={(e) => setForm({ ...form, monto_total: e.target.value })}
-                    placeholder="0.00"
-                    className="w-full pl-7 pr-4 py-2 rounded-lg text-sm transition-colors focus:outline-none"
-                    style={{
-                      background: "var(--kipu-surface)",
-                      border: "1px solid var(--kipu-border)",
-                      color: "var(--kipu-text)",
-                    }}
-                    onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                    onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
-                  />
-                </div>
-              </div>
+              <Campo etiqueta="Monto total *">
+                <Entrada
+                  teclado="decimal"
+                  value={form.monto_total}
+                  onChange={(e) => setForm({ ...form, monto_total: e.target.value.replace(",", ".") })}
+                  placeholder="0.00"
+                  prefijo="$"
+                />
+              </Campo>
 
-              {/* Fechas */}
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Fecha</label>
-                  <input
-                    type="date"
-                    value={form.fecha_emision}
-                    onChange={(e) => setForm({ ...form, fecha_emision: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none"
-                    style={{
-                      background: "var(--kipu-surface)",
-                      border: "1px solid var(--kipu-border)",
-                      color: "var(--kipu-text)",
-                    }}
-                    onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                    onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Vencimiento</label>
-                  <input
-                    type="date"
-                    value={form.fecha_vencimiento}
-                    onChange={(e) => setForm({ ...form, fecha_vencimiento: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none"
-                    style={{
-                      background: "var(--kipu-surface)",
-                      border: "1px solid var(--kipu-border)",
-                      color: "var(--kipu-text)",
-                    }}
-                    onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                    onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
-                  />
-                </div>
+                <Campo etiqueta="Fecha">
+                  <Entrada type="date" value={form.fecha_emision}
+                           onChange={(e) => setForm({ ...form, fecha_emision: e.target.value })} />
+                </Campo>
+                <Campo etiqueta="Vencimiento">
+                  <Entrada type="date" value={form.fecha_vencimiento}
+                           onChange={(e) => setForm({ ...form, fecha_vencimiento: e.target.value })} />
+                </Campo>
               </div>
 
-              {/* Notas */}
-              <div>
-                <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Notas</label>
-                <textarea
+              <Campo etiqueta="Notas" opcional>
+                <AreaTexto
                   value={form.notas}
                   onChange={(e) => setForm({ ...form, notas: e.target.value })}
-                  placeholder="Notas adicionales (opcional)..."
+                  placeholder="Notas adicionales..."
                   rows={2}
-                  className="w-full px-3 py-2 rounded-lg text-sm resize-none transition-colors focus:outline-none"
-                  style={{
-                    background: "var(--kipu-surface)",
-                    border: "1px solid var(--kipu-border)",
-                    color: "var(--kipu-text)",
-                  }}
-                  onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                  onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
                 />
-              </div>
+              </Campo>
 
               {error && (
-                <p
-                  className="text-xs px-3 py-2 rounded-lg"
-                  style={{
-                    color: "var(--kipu-danger)",
-                    background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
-                  }}
-                >
-                  {error}
-                </p>
+                <p role="alert" className="rounded-lg bg-peligro-suave px-3 py-2 text-xs text-peligro-texto">{error}</p>
               )}
             </div>
       </Hoja>

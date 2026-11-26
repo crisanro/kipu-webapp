@@ -14,11 +14,13 @@ import { EsqueletoFilas } from "@/components/ui/Esqueleto";
 import Vacio, { VacioError } from "@/components/ui/Vacio";
 import BotonFlotante from "@/components/ui/BotonFlotante";
 import TirarParaRefrescar from "@/components/ui/TirarParaRefrescar";
-import { Entrada } from "@/components/ui/Campo";
+import { Campo, Entrada, Selector } from "@/components/ui/Campo";
+import BotonIcono from "@/components/ui/BotonIcono";
+import { cn } from "@/components/ui/cn";
 import { useLista } from "@/lib/useLista";
 import {
   Search, Plus, Users,
-  ChevronDown, Save, AlertCircle, Check, Loader2
+  Save, AlertCircle, Check, Loader2
 } from "lucide-react";
 import { lookupIdentificacion, useBuscaNombres, textoNombreAMano } from "@/lib/identificacion-lookup";
 import { NOMBRE_TIPO_ID, validarIdentificacion } from "@/lib/identificacion";
@@ -248,232 +250,103 @@ function PersonasContenido() {
             <div className="space-y-3">
               {/* Tipo + Identificación + Buscar */}
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Tipo ID</label>
-                  <div className="relative">
-                    <select
-                      value={form.tipo_identificacion_sri}
-                      onChange={(e) => handleTipoChange(e.target.value)}
-                      className="w-full px-3 py-2 rounded-lg text-sm appearance-none transition-colors focus:outline-none"
-                      style={{
-                        background: "var(--kipu-surface)",
-                        border: "1px solid var(--kipu-border)",
-                        color: "var(--kipu-text)",
-                      }}
-                      onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                      onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
-                    >
-                      {TIPO_ID.map(t => (
-                        <option key={t.value} value={t.value}>{t.label}</option>
-                      ))}
-                    </select>
-                    <ChevronDown
-                      size={13}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none"
-                      style={{ color: "var(--kipu-subtle)" }}
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Identificación *</label>
+                <Campo etiqueta="Tipo ID">
+                  <Selector value={form.tipo_identificacion_sri} onChange={(e) => handleTipoChange(e.target.value)}>
+                    {TIPO_ID.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                  </Selector>
+                </Campo>
+                <Campo etiqueta="Identificación *" error={valId.error || null}>
                   <div className="flex gap-1">
-                    <div className="relative flex-1">
-                      <input
-                        value={form.identificacion}
-                        inputMode={tecladoIdentificacion(form.tipo_identificacion_sri)}
-                        onChange={(e) => {
-                          const val = ["04", "05"].includes(form.tipo_identificacion_sri)
-                            ? e.target.value.replace(/\D/g, "")
-                            : e.target.value.toUpperCase();
-                          setForm({ ...form, identificacion: val });
-                          setLookupMsg("");
-                        }}
-                        placeholder={
-                          form.tipo_identificacion_sri === "04" ? "RUC 13 dígitos" :
-                          form.tipo_identificacion_sri === "05" ? "Cédula 10 dígitos" :
-                          "Número"
-                        }
-                        maxLength={
-                          form.tipo_identificacion_sri === "04" ? 13 :
-                          form.tipo_identificacion_sri === "05" ? 10 : 20
-                        }
-                        className="w-full px-3 py-2 rounded-lg text-sm pr-7 transition-colors focus:outline-none"
-                        style={{
-                          background: "var(--kipu-surface)",
-                          border: valId.error
-                            ? "1px solid color-mix(in srgb, var(--kipu-danger) 70%, transparent)"
-                            : "1px solid var(--kipu-border)",
-                          color: "var(--kipu-text)",
-                        }}
-                        onFocus={e => {
-                          if (!valId.error) e.currentTarget.style.borderColor = "var(--kipu-accent)";
-                        }}
-                        onBlur={e => {
-                          if (!valId.error) e.currentTarget.style.borderColor = "var(--kipu-border)";
-                        }}
-                      />
-                      {valId.ok && form.identificacion && (!buscaNombres || !["04", "05"].includes(form.tipo_identificacion_sri)) && (
-                        <Check size={12} className="absolute right-2.5 top-1/2 -translate-y-1/2" style={{ color: "var(--kipu-success)" }} />
-                      )}
-                    </div>
-
-                    {/* Botón buscar (solo cuentas que pagan) */}
+                    <Entrada
+                      value={form.identificacion}
+                      inputMode={tecladoIdentificacion(form.tipo_identificacion_sri)}
+                      autoComplete="off"
+                      onChange={(e) => {
+                        const val = ["04", "05"].includes(form.tipo_identificacion_sri)
+                          ? e.target.value.replace(/\D/g, "")
+                          : e.target.value.toUpperCase();
+                        setForm({ ...form, identificacion: val });
+                        setLookupMsg("");
+                      }}
+                      placeholder={
+                        form.tipo_identificacion_sri === "04" ? "RUC 13 dígitos" :
+                        form.tipo_identificacion_sri === "05" ? "Cédula 10 dígitos" :
+                        "Número"
+                      }
+                      maxLength={
+                        form.tipo_identificacion_sri === "04" ? 13 :
+                        form.tipo_identificacion_sri === "05" ? 10 : 20
+                      }
+                      sufijo={valId.ok && form.identificacion && (!buscaNombres || !["04", "05"].includes(form.tipo_identificacion_sri))
+                        ? <Check size={14} className="text-exito" aria-hidden /> : undefined}
+                      className="min-w-0 flex-1"
+                    />
+                    {/* Buscar el nombre (solo cuentas que pagan) */}
                     {buscaNombres && ["04", "05"].includes(form.tipo_identificacion_sri) && (
-                      <button
-                        type="button"
+                      <BotonIcono
+                        variante="secundario"
+                        etiqueta="Buscar nombre por cédula/RUC"
+                        icono={lookupLoading ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
                         onClick={handleLookup}
                         disabled={!puedeBuscar}
-                        className="px-2 rounded-lg transition-colors shrink-0 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center"
-                        style={{
-                          border: "1px solid var(--kipu-border)",
-                          color: "var(--kipu-subtle)",
-                          minWidth: "32px",
-                        }}
-                        onMouseEnter={e => {
-                          if (puedeBuscar) {
-                            e.currentTarget.style.color = "var(--kipu-accent)";
-                            e.currentTarget.style.borderColor = "var(--kipu-accent)";
-                          }
-                        }}
-                        onMouseLeave={e => {
-                          if (puedeBuscar) {
-                            e.currentTarget.style.color = "var(--kipu-subtle)";
-                            e.currentTarget.style.borderColor = "var(--kipu-border)";
-                          }
-                        }}
-                        title="Buscar nombre por cédula/RUC"
-                      >
-                        {lookupLoading
-                          ? <Loader2 size={13} className="animate-spin" />
-                          : <Search size={13} />
-                        }
-                      </button>
+                      />
                     )}
                   </div>
-                  {valId.error && (
-                    <p className="flex items-center gap-1 mt-1 text-xs" style={{ color: "var(--kipu-danger)" }}>
-                      <AlertCircle size={10} /> {valId.error}
-                    </p>
-                  )}
                   {lookupMsg && (
-                    <p
-                      className="text-xs mt-1"
-                      style={{
-                        color: lookupMsg.startsWith("✓")
-                          ? "var(--kipu-success)"
-                          : lookupMsg.includes("Demasiadas")
-                            ? "var(--kipu-danger)"
-                            : "var(--kipu-subtle)",
-                      }}
-                    >
+                    <p className={cn("text-xs",
+                      lookupMsg.startsWith("✓") ? "text-exito"
+                        : lookupMsg.includes("Demasiadas") ? "text-peligro" : "text-sutil")}>
                       {lookupMsg}
                     </p>
                   )}
                   {/* Sin buscador: el nombre se escribe a mano */}
                   {!buscaNombres && ["04", "05"].includes(form.tipo_identificacion_sri) && valId.ok && (
-                    <p className="mt-1 text-xs text-sutil">{textoNombreAMano()}</p>
+                    <p className="text-xs text-sutil">{textoNombreAMano()}</p>
                   )}
-                </div>
+                </Campo>
               </div>
 
-              {/* Razón social */}
-              <div>
-                <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Razón Social / Nombre *</label>
-                <input
+              <Campo etiqueta="Razón Social / Nombre *">
+                <Entrada
+                  teclado="nombre"
                   value={form.razon_social}
                   onChange={(e) => setForm({ ...form, razon_social: e.target.value.toUpperCase() })}
                   placeholder="APELLIDOS NOMBRES o EMPRESA S.A."
-                  className="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none"
-                  style={{
-                    background: "var(--kipu-surface)",
-                    border: "1px solid var(--kipu-border)",
-                    color: "var(--kipu-text)",
-                  }}
-                  onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                  onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
                 />
-              </div>
+              </Campo>
 
-              {/* Email */}
-              <div>
-                <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Email</label>
-                <input
-                  type="email"
+              <Campo etiqueta="Email" error={form.email && !emailOk ? "Email inválido." : null}>
+                <Entrada
+                  teclado="email"
                   value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value.toLowerCase() })}
                   placeholder="persona@email.com"
-                  className="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none"
-                  style={{
-                    background: "var(--kipu-surface)",
-                    border: form.email && !emailOk
-                      ? "1px solid color-mix(in srgb, var(--kipu-danger) 70%, transparent)"
-                      : "1px solid var(--kipu-border)",
-                    color: "var(--kipu-text)",
-                  }}
-                  onFocus={e => {
-                    if (!(form.email && !emailOk)) e.currentTarget.style.borderColor = "var(--kipu-accent)";
-                  }}
-                  onBlur={e => {
-                    if (!(form.email && !emailOk)) e.currentTarget.style.borderColor = "var(--kipu-border)";
-                  }}
                 />
-                {form.email && !emailOk && (
-                  <p className="flex items-center gap-1 mt-1 text-xs" style={{ color: "var(--kipu-danger)" }}>
-                    <AlertCircle size={10} /> Email inválido.
-                  </p>
-                )}
-              </div>
+              </Campo>
 
-              {/* Teléfono + Dirección */}
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Teléfono</label>
-                  <input
+                <Campo etiqueta="Teléfono">
+                  <Entrada
+                    teclado="telefono"
                     value={form.telefono}
-                    type="tel"
                     onChange={(e) => setForm({ ...form, telefono: e.target.value.replace(/\D/g, "") })}
                     placeholder="0999999999"
                     maxLength={15}
-                    className="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none"
-                    style={{
-                      background: "var(--kipu-surface)",
-                      border: "1px solid var(--kipu-border)",
-                      color: "var(--kipu-text)",
-                    }}
-                    onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                    onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
                   />
-                </div>
-                <div>
-                  <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Dirección</label>
-                  <input
+                </Campo>
+                <Campo etiqueta="Dirección">
+                  <Entrada
                     value={form.direccion}
                     onChange={(e) => setForm({ ...form, direccion: e.target.value.toUpperCase() })}
                     placeholder="AV. PRINCIPAL 123"
-                    className="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none"
-                    style={{
-                      background: "var(--kipu-surface)",
-                      border: "1px solid var(--kipu-border)",
-                      color: "var(--kipu-text)",
-                    }}
-                    onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                    onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
                   />
-                </div>
+                </Campo>
               </div>
 
-              {/* Error general */}
               {error && (
-                <div
-                  className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg"
-                  style={{
-                    color: "var(--kipu-danger)",
-                    background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
-                  }}
-                >
-                  <AlertCircle size={12} />
-                  {error}
-                </div>
+                <p role="alert" className="flex items-center gap-2 rounded-lg bg-peligro-suave px-3 py-2 text-xs text-peligro-texto">
+                  <AlertCircle size={12} aria-hidden /> {error}
+                </p>
               )}
             </div>
       </Hoja>
