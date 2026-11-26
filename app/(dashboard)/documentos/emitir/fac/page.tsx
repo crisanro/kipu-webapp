@@ -7,6 +7,7 @@ import { r2, dosDecimales } from "@/lib/dinero";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
+import { useSandboxStore } from "@/store/sandbox.store";
 import { CheckCircle2, AlertTriangle, CreditCard, Copy, MessageCircle } from "lucide-react";
 
 // ── Componentes ────────────────────────────────────────────────────────────────
@@ -91,6 +92,11 @@ export default function NuevaFacturaPage() {
   const { copiar, copiado: linkCopiado } = useCopiar();
   const [momento, setMomento] = useState<MomentoFactura>("ahora");   // "al_pagar": se factura cuando pague
   const [cobroCreado, setCobroCreado] = useState<CobroCreado | null>(null);
+  // En pruebas no hay links: el pago sería real y la factura de prueba (el servidor
+  // también lo rechaza; antes un link de cobro creado en sandbox facturaba en producción)
+  const sandbox   = useSandboxStore((s) => s.activo);
+  const enPruebas = sandbox || empresa?.ambiente !== 2;
+  const conLink   = linkPago && !!pasarela?.conectada && !enPruebas;
   useEffect(() => {
     api.get("/api/v1/app/cobros-en-linea/estado")
       .then(r => {
@@ -318,11 +324,11 @@ export default function NuevaFacturaPage() {
                                  ? cobro.referencia.trim()
                                  : null,
       // Link de pago: solo si quien emite lo pidió y la factura queda por cobrar
-      ...(cobro.estado === "PENDIENTE" && linkPago && pasarela?.conectada ? { link_pago: true } : {}),
+      ...(cobro.estado === "PENDIENTE" && conLink ? { link_pago: true } : {}),
     };
 
     // "Emitir cuando pague": solo el link; la factura se emite sola al confirmarse el pago
-    if (cobro.estado === "PENDIENTE" && linkPago && pasarela?.conectada && momento === "al_pagar") {
+    if (cobro.estado === "PENDIENTE" && conLink && momento === "al_pagar") {
       const factura = { ...payload };
       for (const campo of ["estado_cobro", "forma_pago_cobro", "fecha_pago", "numero_comprobante_pago",
                            "link_pago", "proforma_id"]) delete factura[campo];
@@ -437,7 +443,7 @@ export default function NuevaFacturaPage() {
 
   // ── Formulario ───────────────────────────────────────────────────────────────
   // "Emitir cuando pague": el botón crea el link de cobro en vez de la factura
-  const soloLink = cobro.estado === "PENDIENTE" && linkPago && !!pasarela?.conectada && momento === "al_pagar";
+  const soloLink = cobro.estado === "PENDIENTE" && conLink && momento === "al_pagar";
   const puedeEmitir = tieneAccesoAEmitir(empresa);
 
   return (
@@ -529,6 +535,7 @@ export default function NuevaFacturaPage() {
           aviso:    avisoLinkPago(pasarela, esConsumidorFinal, clienteSelected?.email || clienteNuevo?.email || ""),
           momento,
           onMomento: setMomento,
+          enPruebas,
         }}
       />
 

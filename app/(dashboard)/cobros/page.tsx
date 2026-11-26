@@ -26,6 +26,9 @@ import { detalleError } from "@/lib/errores";
 import { dolares } from "@/lib/dinero";
 import { enlaceWhatsAppA } from "@/lib/soporte";
 import { useCopiar } from "@/lib/useCopiar";
+import { useAuthStore } from "@/store/auth.store";
+import { useSandboxStore } from "@/store/sandbox.store";
+import { SIN_LINKS_EN_PRUEBAS } from "../documentos/emitir/components/EstadoCobro";
 
 // "Facturar cuando el cliente pague": la factura ya armada espera el pago del link
 interface Cobro {
@@ -116,8 +119,13 @@ function CobrosContenido() {
 
   useEffect(() => { cargar(); }, [cargar]);
 
+  // En pruebas no se crean links: el pago sería real y la factura de prueba
+  const sandbox   = useSandboxStore((s) => s.activo);
+  const ambiente  = useAuthStore((s) => s.empresa?.ambiente);
+  const enPruebas = sandbox || ambiente !== 2;
+
   // Compu: "n" crea un link de cobro (lib/useAtajos.ts)
-  useAtajos({ "n": () => router.push(NUEVO_LINK) }, true, { n: "Nuevo link de cobro" });
+  useAtajos({ "n": () => router.push(NUEVO_LINK) }, !enPruebas, { n: "Nuevo link de cobro" });
 
   const reemplazar = (c: Cobro) => setCobros(prev => prev.map(x => x.id === c.id ? c : x));
 
@@ -192,10 +200,16 @@ function CobrosContenido() {
           <h1 className="hidden text-xl font-bold text-texto lg:block">Links de cobro</h1>
           <p className="text-sm text-sutil">Cobra primero: la factura se emite sola cuando tu cliente paga.</p>
         </div>
-        <Boton onClick={() => router.push(NUEVO_LINK)} icono={<Plus size={16} />} className="hidden shrink-0 lg:inline-flex">
-          Nuevo link de cobro
-        </Boton>
+        {!enPruebas && (
+          <Boton onClick={() => router.push(NUEVO_LINK)} icono={<Plus size={16} />} className="hidden shrink-0 lg:inline-flex">
+            Nuevo link de cobro
+          </Boton>
+        )}
       </div>
+
+      {enPruebas && (
+        <p className="mb-4 rounded-lg bg-sandbox-suave px-3 py-2 text-sm text-sandbox">{SIN_LINKS_EN_PRUEBAS}</p>
+      )}
 
       <ChipsFiltro opciones={FILTROS} valor={filtro} onCambio={setFiltro} etiqueta="Estado del cobro" className="mb-4" />
 
@@ -211,7 +225,8 @@ function CobrosContenido() {
             icono={Link2}
             titulo="Aún no tienes links de cobro"
             descripcion="Arma la factura como siempre, elige “Pendiente de cobro” → “Cobrar con link de pago” → “Emitir la factura cuando pague”. Tu cliente paga y la factura sale sola."
-            accion={<Boton onClick={() => router.push(NUEVO_LINK)} icono={<Plus size={16} />}>Crear link de cobro</Boton>}
+            accion={enPruebas ? undefined
+              : <Boton onClick={() => router.push(NUEVO_LINK)} icono={<Plus size={16} />}>Crear link de cobro</Boton>}
           />
         )
       ) : (
@@ -253,7 +268,7 @@ function CobrosContenido() {
       )}
 
       {/* Celular: nuevo link de cobro */}
-      <BotonFlotante href={NUEVO_LINK} etiqueta="Nuevo link de cobro" />
+      {!enPruebas && <BotonFlotante href={NUEVO_LINK} etiqueta="Nuevo link de cobro" />}
 
       <HojaAcciones
         abierta={!!menuDe}

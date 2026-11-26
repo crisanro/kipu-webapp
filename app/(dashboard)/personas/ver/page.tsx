@@ -263,7 +263,14 @@ function DetallePersona({ id }: { id: string }) {
           <Dato icono={Mail}     etiqueta="Email"          valor={cliente.email} />
           <Dato icono={Phone}    etiqueta="Teléfono"       valor={cliente.telefono} />
           <Dato icono={MapPin}   etiqueta="Dirección"      valor={cliente.direccion} />
-          <Dato icono={Key}      etiqueta="UID"            valor={<code className="font-mono text-xs">{uid}</code>} />
+          <Dato icono={Key}      etiqueta="UID"            valor={
+            // Tocarlo lo copia (antes solo estaba en el menú ⋮ y no se veía)
+            <button type="button" onClick={() => void copiarUid()} aria-label="Copiar UID"
+                    className="inline-flex max-w-full items-center gap-1.5 rounded text-right hover:text-acento">
+              <code className="min-w-0 break-all font-mono text-xs">{uid}</code>
+              <Copy size={13} className="shrink-0 text-sutil" aria-hidden />
+            </button>
+          } />
         </section>
 
         {/* Historial de facturas */}

@@ -36,7 +36,13 @@ export interface OpcionLinkPago {
   aviso?:   string | null;        // p. ej. cliente sin correo
   momento?:   MomentoFactura;     // si viene, se ofrece "facturar cuando pague"
   onMomento?: (m: MomentoFactura) => void;
+  /** Sandbox prendido o empresa en pruebas: no hay links (el pago sería real y la factura no). */
+  enPruebas?: boolean;
 }
+
+/** Mismo criterio que el servidor (SIN_LINKS_* en cobros_en_linea.py). */
+export const SIN_LINKS_EN_PRUEBAS =
+  "En modo de pruebas no se crean links de pago: el pago sería real y la factura de prueba.";
 
 interface Props {
   cobro:     DatosCobro;
@@ -71,7 +77,7 @@ export default function EstadoCobro({ cobro, onChange, linkPago, conForma = fals
   };
 
   // Plegada se ve cómo queda; por cobrar se abre sola (hay que decidir el link)
-  const conLink = !esPagado && !!linkPago?.activo && !!linkPago.pasarela?.conectada;
+  const conLink = !esPagado && !!linkPago?.activo && !!linkPago.pasarela?.conectada && !linkPago.enPruebas;
   const etiquetaForma = FORMAS_COBRO.find(f => f.valor === forma)?.etiqueta ?? forma;
   const resumen = esPagado ? (conForma ? `Cobrada · ${etiquetaForma}` : "Cobrada")
     : conLink ? (linkPago?.momento === "al_pagar" ? "Por cobrar · factura al pagar" : "Por cobrar · con link")
@@ -147,8 +153,14 @@ export default function EstadoCobro({ cobro, onChange, linkPago, conForma = fals
         </p>
       )}
 
-      {/* Link de pago: opcional, factura por factura */}
-      {!esPagado && linkPago?.pasarela?.conectada && (
+      {/* Link de pago: opcional, factura por factura (en pruebas, no: el pago sería real) */}
+      {!esPagado && linkPago?.pasarela?.conectada && linkPago.enPruebas && (
+        <p className="flex items-start gap-1.5 text-xs text-sutil">
+          <CreditCard size={13} className="mt-0.5 shrink-0" />
+          {SIN_LINKS_EN_PRUEBAS}
+        </p>
+      )}
+      {!esPagado && linkPago?.pasarela?.conectada && !linkPago.enPruebas && (
         <div className="rounded-lg p-3 space-y-2 border border-borde">
           <label className="flex items-start gap-2.5 cursor-pointer">
             <input
