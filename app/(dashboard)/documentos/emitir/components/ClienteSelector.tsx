@@ -21,7 +21,7 @@ import ChipsFiltro from "@/components/ui/ChipsFiltro";
 import { Campo, Entrada, type Teclado } from "@/components/ui/Campo";
 import { cn } from "@/components/ui/cn";
 
-interface Cliente {
+export interface Cliente {
   id:                      string;
   razon_social:            string;
   identificacion:          string;
@@ -29,7 +29,7 @@ interface Cliente {
   email:                   string;
   direccion:               string;
 }
-interface ClienteNuevo {
+export interface ClienteNuevo {
   tipo_identificacion_sri: string;
   identificacion:          string;
   razon_social:            string;

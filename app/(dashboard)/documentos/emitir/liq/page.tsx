@@ -4,40 +4,19 @@
 
 import { useState, useMemo } from "react";
 import { errorIdentificacion } from "@/lib/identificacion";
-import { r2, dosDecimales } from "@/lib/dinero";
 import { useBorrador } from "@/lib/borradores";
 import BloqueoPlanPro from "@/components/dashboard/BloqueoPlanPro";
 import { useAuthStore } from "@/store/auth.store";
 import PuntoEmision from "../components/PuntoEmision";
 import PantallaResultado from "../components/PantallaResultado";
 import { usePuntoEmision } from "../components/usePuntoEmision";
-import ClienteSelector from "../components/ClienteSelector";
-import ItemsEditor, { Item, calcItem, calcTotales, genId, EMPTY_ITEM } from "../components/ItemsEditor";
-import PagosMixtos, { PagoItem, PAGO_INICIAL } from "../components/PagosMixtos";
+import ClienteSelector, { type Cliente, type ClienteNuevo } from "../components/ClienteSelector";
+import ItemsEditor, { Item, calcTotales, genId, itemsParaEnviar, EMPTY_ITEM } from "../components/ItemsEditor";
+import PagosMixtos, { PagoItem, errorPagos, pagoInicial } from "../components/PagosMixtos";
 import CamposAdicionales, { CampoAdicional } from "../components/CamposAdicionales";
 import ResumenTotales from "../components/ResumenTotales";
 import EmisionLayout from "../components/EmisionLayout";
 import { useEmision } from "../components/useEmision";
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-// ── Tipos ─────────────────────────────────────────────────────────────────────
-interface Proveedor {
-  id:                      string;
-  razon_social:            string;
-  identificacion:          string;
-  tipo_identificacion_sri: string;
-  email:                   string;
-  direccion:               string;
-}
-
-interface ProveedorNuevo {
-  tipo_identificacion_sri: string;
-  identificacion:          string;
-  razon_social:            string;
-  email:                   string;
-  direccion?:              string;
-}
 
 const ITEMS_VACIOS = (): Item[] => [{ _id: genId(), ...EMPTY_ITEM }];
 
@@ -50,14 +29,14 @@ export default function NuevaLiqPage() {
   const { enviando: submitting, error, setError, resultado } = em;
 
   // Proveedor (persona natural: sin RUC ni consumidor final)
-  const [proveedorSelected, setProveedorSelected] = useState<Proveedor | null>(null);
-  const [proveedorNuevo,    setProveedorNuevo]    = useState<ProveedorNuevo | null>(null);
+  const [proveedorSelected, setProveedorSelected] = useState<Cliente | null>(null);
+  const [proveedorNuevo,    setProveedorNuevo]    = useState<ClienteNuevo | null>(null);
 
   // Items
   const [items, setItems] = useState<Item[]>(ITEMS_VACIOS);
 
   // Pagos
-  const [pagos, setPagos] = useState<PagoItem[]>([{ ...PAGO_INICIAL }]);
+  const [pagos, setPagos] = useState<PagoItem[]>(() => [pagoInicial()]);
 
   // Campos adicionales
   const [camposAdicionales, setCamposAdicionales] = useState<CampoAdicional[]>([]);
@@ -91,7 +70,7 @@ export default function NuevaLiqPage() {
     setProveedorSelected(null);
     setProveedorNuevo(null);
     setItems(ITEMS_VACIOS());
-    setPagos([{ ...PAGO_INICIAL, _id: Math.random().toString(36).slice(2) }]);
+    setPagos([pagoInicial()]);
     setCamposAdicionales([]);
   };
 
@@ -118,11 +97,8 @@ export default function NuevaLiqPage() {
       setError("Todos los ítems deben tener descripción."); return;
     }
 
-    // Redondeado: 1.10 + 2.20 en coma flotante da 3.3000000000000003 > 3.30
-    const totalCubierto = r2(pagos.reduce((s, p) => s + (p.total ?? 0), 0));
-    if (totalCubierto > totales.total) {
-      setError(`Los pagos ($${dosDecimales(totalCubierto)}) superan el total ($${dosDecimales(totales.total)}).`); return;
-    }
+    const errPagos = errorPagos(pagos, totales.total);
+    if (errPagos) { setError(errPagos); return; }
 
     const payload = {
       establecimiento: estabSelected,
@@ -135,18 +111,7 @@ export default function NuevaLiqPage() {
         email:          proveedorNuevo.email,
         direccion:      proveedorNuevo.direccion ?? "",
       } : undefined,
-      items: items.map(i => {
-        const c = calcItem(i);
-        return {
-          codigo:          i.codigo || undefined,
-          descripcion:     i.descripcion,
-          cantidad:        i.cantidad,
-          precio_unitario: i.precio,
-          descuento:       c.descuento,
-          tipo_iva:        i.tipo_iva,
-          unidad_medida:   i.unidad,
-        };
-      }),
+      items: itemsParaEnviar(items),
       pagos: pagos.map(p => ({
         forma_pago: p.forma_pago,
         ...(p.total !== null ? { total: p.total } : {}),
@@ -176,15 +141,13 @@ export default function NuevaLiqPage() {
   return (
     <EmisionLayout
       titulo="Nueva liquidación de compra"
+      puntoEmision={<PuntoEmision {...pe} />}
       tiposEmision={["LIQ"]}
       borrador={borrador.pendiente && {
         hace: borrador.pendiente.hace, que: "una liquidación de compra",
         onSeguir: seguirBorrador, onDescartar: borrador.descartar,
       }}
-      lateral={<>
-        <div className="hidden lg:block">
-          <PuntoEmision {...pe} />
-        </div>
+      lateral={
         <ResumenTotales
           serie={pe.serie}
           totales={totales}
@@ -197,7 +160,7 @@ export default function NuevaLiqPage() {
           onEmitir={emitir}
           conBarraFija
         />
-      </>}
+      }
       barra={{
         total:    totales.total,
         texto:    `Emitir${pe.serie ? ` desde ${pe.serie}` : ""}`,
@@ -206,10 +169,6 @@ export default function NuevaLiqPage() {
         error,
       }}
     >
-      <div className="lg:hidden">
-        <PuntoEmision {...pe} />
-      </div>
-
       <ClienteSelector
         proveedor
         clienteSelected={proveedorSelected}

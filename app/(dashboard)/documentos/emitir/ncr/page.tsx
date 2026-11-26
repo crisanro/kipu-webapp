@@ -15,7 +15,7 @@ import PuntoEmision from "../components/PuntoEmision";
 import PantallaResultado from "../components/PantallaResultado";
 import { usePuntoEmision } from "../components/usePuntoEmision";
 import CamposAdicionales, { CampoAdicional } from "../components/CamposAdicionales";
-import ItemsEditor, { Item, calcItem, calcTotales, genId, EMPTY_ITEM } from "../components/ItemsEditor";
+import ItemsEditor, { Item, calcTotales, genId, itemsParaEnviar, EMPTY_ITEM } from "../components/ItemsEditor";
 import ResumenTotales from "../components/ResumenTotales";
 import DocOrigenSelector, {
   DocOrigen, AvisoOrigenConsumidorFinal, docOrigenDeDocumento, esConsumidorFinal, numeroDocOrigen, payloadDocOrigen,
@@ -145,18 +145,7 @@ export default function NuevaNcrPage() {
       establecimiento: estabSelected,
       punto_emision:   ptoSelected,
       motivo:          motivoFinal,
-      items: items.map(i => {
-        const c = calcItem(i);
-        return {
-          codigo:          i.codigo || undefined,
-          descripcion:     i.descripcion,
-          cantidad:        i.cantidad,
-          precio_unitario: i.precio,
-          descuento:       c.descuento,
-          tipo_iva:        i.tipo_iva,
-          unidad_medida:   i.unidad,
-        };
-      }),
+      items: itemsParaEnviar(items),
       campos_adicionales: camposAdicionales.filter(c => c.nombre && c.valor),
       ...payloadDocOrigen(docOrigen),
     };

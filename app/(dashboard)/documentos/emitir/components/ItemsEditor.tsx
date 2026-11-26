@@ -56,6 +56,27 @@ export function calcItem(item: Item) {
   return calcularLinea(item);
 }
 
+/**
+ * Ítems como los espera el backend (descuento en dólares sin IVA, aunque se haya
+ * escrito en %). Con `catalogo` (factura) va también "guardar en el catálogo".
+ */
+export function itemsParaEnviar(items: Item[], { catalogo = false } = {}) {
+  return items.map(i => ({
+    codigo:          i.codigo || undefined,
+    descripcion:     i.descripcion,
+    cantidad:        i.cantidad,
+    precio_unitario: i.precio,
+    descuento:       calcItem(i).descuento,
+    tipo_iva:        i.tipo_iva,
+    unidad_medida:   i.unidad,
+    ...(catalogo ? {
+      guardar_catalogo: !!i.guardar_catalogo,
+      // Al guardarlo en el catálogo, conserva el precio final que se escribió
+      ...(i.guardar_catalogo && i.precio_iva !== undefined ? { precio_con_iva: i.precio_iva } : {}),
+    } : {}),
+  }));
+}
+
 /** Totales del comprobante por tarifa (factura, liquidación, nota de crédito). Propina: 10 % del subtotal. */
 export function calcTotales(items: Item[], incluirPropina = false) {
   const base = items.reduce(
