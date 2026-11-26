@@ -143,7 +143,7 @@ export default function PagoExitosoPage() {
                   ? "Créditos para emitir comprobantes"
                   : esAlDia
                     ? "Facturación sin límite · Declaraciones de IVA y renta"
-                    : "Emisión ilimitada · Sistema contable · Soporte"
+                    : "Facturación sin límite · Reportes para el SRI · Soporte"
                 }
               </p>
             </div>
@@ -219,7 +219,7 @@ export default function PagoExitosoPage() {
             <div className="space-y-2 pt-1">
               {/* Las mismas listas que la página de Planes (lib/planes.ts) */}
               {(esAlDia
-                // TODO(usuario): confirmar el horario de soporte; ninguna otra pantalla lo promete
+                // El horario es el de los términos de Al Día (app/legal/kipu_al_dia_v1.md, en el backend)
                 ? [...INCLUYE_AL_DIA, "Soporte de lunes a viernes, de 8:00 a 17:00"]
                 : INCLUYE_PRO
               ).map((item, i) => (
