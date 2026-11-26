@@ -5,9 +5,9 @@ import Boton from "@/components/ui/Boton";
 import BotonIcono from "@/components/ui/BotonIcono";
 import HojaAcciones, { type Accion } from "@/components/ui/HojaAcciones";
 import Seccion from "@/components/ui/Seccion";
-import Vacio from "@/components/ui/Vacio";
+import { DetalleNoDisponible } from "@/components/ui/Vacio";
 import TirarParaRefrescar from "@/components/ui/TirarParaRefrescar";
-import { Esqueleto, EsqueletoFilas } from "@/components/ui/Esqueleto";
+import { EsqueletoDetalle } from "@/components/ui/Esqueleto";
 import { InsigniaEstado } from "@/components/ui/InsigniaEstado";
 import { etiquetaPeriodo } from "@/components/ui/PeriodoFechas";
 import { rutas } from "@/lib/rutas";
@@ -155,28 +155,13 @@ function DetalleProforma({ id }: { id: string }) {
     setTimeout(() => { ventana.print(); }, 400);
   };
 
-  if (res.cargando) return (
-    <div className="mx-auto max-w-3xl space-y-4 p-4 md:p-6" aria-busy="true">
-      <Esqueleto className="h-48 rounded-2xl" />
-      <EsqueletoFilas filas={4} />
-    </div>
-  );
+  if (res.cargando) return <EsqueletoDetalle />;
 
-  if (!data) {
-    const estado = (res.error as { response?: { status?: number } } | undefined)?.response?.status;
-    const deRed  = !!res.error && estado !== 404 && estado !== 403;
-    return (
-      <Vacio
-        icono={FileText}
-        titulo={deRed ? "No pudimos cargar la proforma" : "Proforma no encontrada"}
-        descripcion={deRed ? "Revisa tu conexión e intenta de nuevo." : "Puede que sea de otra empresa o que ya no exista."}
-        accion={deRed
-          ? <Boton onClick={() => void res.recargar()}>Reintentar</Boton>
-          : <Boton variante="secundario" onClick={() => router.push("/proformas")}>Ir a Proformas</Boton>}
-        className="py-20"
-      />
-    );
-  }
+  if (!data) return (
+    <DetalleNoDisponible error={res.error} icono={FileText} que="la proforma"
+      noEncontrado="Proforma no encontrada" onReintentar={() => void res.recargar()}
+      volver={{ texto: "Ir a Proformas", onClick: () => router.push("/proformas") }} />
+  );
 
   const vencida   = data.vencida && data.estado === "VIGENTE";
   const facturada = data.estado === "FACTURADA";

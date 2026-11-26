@@ -15,9 +15,9 @@ import Boton from "@/components/ui/Boton";
 import BotonIcono from "@/components/ui/BotonIcono";
 import HojaAcciones from "@/components/ui/HojaAcciones";
 import FilaLista from "@/components/ui/FilaLista";
-import Vacio from "@/components/ui/Vacio";
+import { DetalleNoDisponible } from "@/components/ui/Vacio";
 import TirarParaRefrescar from "@/components/ui/TirarParaRefrescar";
-import { Esqueleto, EsqueletoFilas } from "@/components/ui/Esqueleto";
+import { EsqueletoDetalle } from "@/components/ui/Esqueleto";
 import { InsigniaEstado } from "@/components/ui/InsigniaEstado";
 import { Campo, Entrada, Selector } from "@/components/ui/Campo";
 import { useConfirmar } from "@/components/ui/Confirmar";
@@ -153,27 +153,12 @@ function DetalleCuenta({ id }: { id: string }) {
   };
 
   // ── Loading / error ──────────────────────────────────────────────────────────
-  if (res.cargando) return (
-    <div className="mx-auto max-w-2xl space-y-4 p-4 md:p-6" aria-busy="true">
-      <Esqueleto className="h-56 rounded-2xl" />
-      <EsqueletoFilas filas={3} />
-    </div>
+  if (res.cargando) return <EsqueletoDetalle alto="h-56" filas={3} ancho="max-w-2xl" />;
+  if (!data?.cuenta) return (
+    <DetalleNoDisponible error={res.error} icono={Wallet} que="la cuenta"
+      noEncontrado="Cuenta no encontrada" onReintentar={() => void cargar()}
+      volver={{ texto: "Ir a Cuentas", onClick: () => router.push("/cuentas") }} />
   );
-  if (!data?.cuenta) {
-    const estado = (res.error as { response?: { status?: number } } | undefined)?.response?.status;
-    const deRed  = !!res.error && estado !== 404 && estado !== 403;
-    return (
-      <Vacio
-        icono={Wallet}
-        titulo={deRed ? "No pudimos cargar la cuenta" : "Cuenta no encontrada"}
-        descripcion={deRed ? "Revisa tu conexión e intenta de nuevo." : "Puede que sea de otra empresa o que ya no exista."}
-        accion={deRed
-          ? <Boton onClick={() => void cargar()}>Reintentar</Boton>
-          : <Boton variante="secundario" onClick={() => router.push("/cuentas")}>Ir a Cuentas</Boton>}
-        className="py-20"
-      />
-    );
-  }
 
   const { cuenta, movimientos = [] } = data;
   const est        = ESTADOS[cuenta.estado] ?? ESTADOS.PENDIENTE;
