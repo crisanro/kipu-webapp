@@ -13,7 +13,7 @@ import FilaLista, { GrupoFilas } from "@/components/ui/FilaLista";
 import { InsigniaEstado } from "@/components/ui/InsigniaEstado";
 import type { TonoEstado } from "@/lib/estados";
 import { EsqueletoFilas } from "@/components/ui/Esqueleto";
-import Vacio from "@/components/ui/Vacio";
+import Vacio, { VacioError } from "@/components/ui/Vacio";
 import BotonFlotante from "@/components/ui/BotonFlotante";
 import TirarParaRefrescar from "@/components/ui/TirarParaRefrescar";
 import HojaAcciones, { type Accion } from "@/components/ui/HojaAcciones";
@@ -88,6 +88,7 @@ function CobrosContenido() {
   const [filtro,     setFiltro]     = useState("");
   const [loading,    setLoading]    = useState(true);
   const [cargandoMas, setCargandoMas] = useState(false);
+  const [fallo,      setFallo]      = useState(false);   // no se pudo cargar (no es "no hay cobros")
   const [ocupado,    setOcupado]    = useState<string | null>(null);   // id del cobro con una acción en curso
   // Tocar un cobro abre su menú (compartir, ¿ya pagó?, emitir, anular…)
   const [menuDe,     setMenuDe]     = useState<Cobro | null>(null);
@@ -101,8 +102,10 @@ function CobrosContenido() {
       const nuevos: Cobro[] = res.data.data ?? [];
       setTotal(res.data.total ?? 0);
       setCobros(prev => append ? [...prev, ...nuevos] : nuevos);
+      setFallo(false);
     } catch (e) {
       console.error(e);
+      if (!append) setFallo(true);
     } finally {
       setLoading(false);
       setCargandoMas(false);
@@ -198,6 +201,8 @@ function CobrosContenido() {
 
       {loading ? (
         <EsqueletoFilas filas={6} />
+      ) : fallo ? (
+        <VacioError que="tus links de cobro" onReintentar={() => void cargar()} />
       ) : cobros.length === 0 ? (
         filtro ? (
           <Vacio icono={Link2} titulo="No hay links de cobro con este estado" />

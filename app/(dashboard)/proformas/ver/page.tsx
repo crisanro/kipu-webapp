@@ -23,16 +23,9 @@ import {
 } from "lucide-react";
 import { detalleError } from "@/lib/errores";
 import { dolares, dosDecimales } from "@/lib/dinero";
+import { NOMBRE_TIPO_ID } from "@/lib/identificacion";
 
 const fecha = (f?: string | null) => (f && /^\d{4}-\d{2}-\d{2}$/.test(f) ? etiquetaPeriodo(f, f) : f || "");
-
-const TIPO_ID: Record<string, string> = {
-  "04": "RUC",
-  "05": "Cédula",
-  "06": "Pasaporte",
-  "07": "Consumidor Final",
-  "08": "Exterior",
-};
 
 // /proformas/ver?id=… (antes /proformas/[id]; ver lib/rutas.ts)
 export default function DetalleProformaPage() {
@@ -298,7 +291,7 @@ function DetalleProforma({ id }: { id: string }) {
         <Seccion titulo="Cliente" icono={User} resumen={data.cliente.identificacion}>
           {[
             { label: "Nombre",         value: data.cliente.razon_social },
-            { label: "Identificación", value: `${TIPO_ID[data.cliente.tipo_identificacion_sri] ?? "ID"}: ${data.cliente.identificacion}` },
+            { label: "Identificación", value: `${NOMBRE_TIPO_ID[data.cliente.tipo_identificacion_sri] ?? "ID"}: ${data.cliente.identificacion}` },
             ...(data.cliente.email    ? [{ label: "Email",    value: data.cliente.email    }] : []),
             ...(data.cliente.telefono ? [{ label: "Teléfono", value: data.cliente.telefono }] : []),
             ...(data.cliente.direccion && data.cliente.direccion !== "S/N"
@@ -351,7 +344,7 @@ function DetalleProforma({ id }: { id: string }) {
                 <div style={{ fontSize: "9px", textTransform: "uppercase", color: "#888", fontWeight: "bold", letterSpacing: "0.5px", marginBottom: "6px" }}>Cliente</div>
                 <div style={{ fontSize: "13px", fontWeight: "bold", color: "#111" }}>{data.cliente.razon_social}</div>
                 <div style={{ fontSize: "10px", color: "#555", marginTop: "3px", lineHeight: "1.6" }}>
-                  <span>{TIPO_ID[data.cliente.tipo_identificacion_sri] ?? "ID"}: {data.cliente.identificacion}</span>
+                  <span>{NOMBRE_TIPO_ID[data.cliente.tipo_identificacion_sri] ?? "ID"}: {data.cliente.identificacion}</span>
                   {data.cliente.email    && <span style={{ marginLeft: "12px" }}>{data.cliente.email}</span>}
                   {data.cliente.telefono && <span style={{ marginLeft: "12px" }}>{data.cliente.telefono}</span>}
                   {data.cliente.direccion && data.cliente.direccion !== "S/N" && <div>{data.cliente.direccion}</div>}

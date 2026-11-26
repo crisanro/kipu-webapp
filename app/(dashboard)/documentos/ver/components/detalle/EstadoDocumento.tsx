@@ -12,7 +12,8 @@ import Boton from "@/components/ui/Boton";
 import BotonIcono from "@/components/ui/BotonIcono";
 import HojaAcciones, { type Accion } from "@/components/ui/HojaAcciones";
 import { InsigniaSri, InsigniaEstado } from "@/components/ui/InsigniaEstado";
-import { type FacturaBase, TIPO_LABEL, MOTIVO_LABEL, formatearFechaHora } from "./utils";
+import { type FacturaBase, MOTIVO_LABEL, formatearFechaHora } from "./utils";
+import { tipoComprobante } from "@/lib/estados";
 import { useAccionesArchivo } from "./AccionesArchivo";
 import { useAccionesRelacionadas } from "./ComprobantesRelacionados";
 import { detalleError } from "@/lib/errores";
@@ -132,7 +133,7 @@ export default function EstadoDocumento({ factura, onRecargar, consumidorFinal, 
       acciones: archivo.pdf,
     },
     compartir: { titulo: "Compartir con tu cliente", descripcion: "Un enlace donde ve y descarga el comprobante", acciones: archivo.compartir },
-    mas:       { titulo: `${TIPO_LABEL[factura.tipo_doc] ?? "Comprobante"} ${factura.numero_doc}`, descripcion: undefined, acciones: mas },
+    mas:       { titulo: `${tipoComprobante(factura.tipo_doc).etiqueta} ${factura.numero_doc}`, descripcion: undefined, acciones: mas },
   } as const;
 
   const nombre = contraparte(factura);
@@ -148,7 +149,7 @@ export default function EstadoDocumento({ factura, onRecargar, consumidorFinal, 
         )}
         <div className="min-w-0 flex-1">
           <p className="text-xs text-sutil">
-            {TIPO_LABEL[factura.tipo_doc] ?? factura.tipo_doc} · {fechaEmision(factura)}
+            {tipoComprobante(factura.tipo_doc).etiqueta} · {fechaEmision(factura)}
           </p>
           <h1 className="font-mono text-base font-semibold text-texto sm:text-lg">{factura.numero_doc}</h1>
           {nombre && <p className="truncate text-sm text-tenue">{nombre}</p>}

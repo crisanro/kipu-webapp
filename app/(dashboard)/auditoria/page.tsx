@@ -1,7 +1,6 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import api from "@/lib/api";
-import { useAuthStore } from "@/store/auth.store";
 import {
   Shield, RefreshCw, ChevronDown, ChevronRight,
   Search, X, Filter,
@@ -64,8 +63,6 @@ function resumirDetalle(detalle: Record<string, any> | null): string {
 // PÁGINA
 // =============================================================================
 export default function AuditoriaPage() {
-  const empresa = useAuthStore((s) => s.empresa);
-
   // Data
   const [items,   setItems]   = useState<AuditEntry[]>([]);
   const [total,   setTotal]   = useState(0);
@@ -84,36 +81,55 @@ export default function AuditoriaPage() {
   // Expandido
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
+  // La búsqueda se pide al dejar de escribir (antes, una petición por tecla)
+  const [busquedaActiva, setBusquedaActiva] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => setBusquedaActiva(busqueda.trim()), 350);
+    return () => clearTimeout(t);
+  }, [busqueda]);
+
+  // Otro filtro: a la primera página en este mismo render. Con un efecto se
+  // pedía dos veces (primero con la página vieja).
+  const claveFiltros = [accion, entidad, fechaInicio, fechaFin, busquedaActiva].join("|");
+  const [filtrosVistos, setFiltrosVistos] = useState(claveFiltros);
+  if (filtrosVistos !== claveFiltros) {
+    setFiltrosVistos(claveFiltros);
+    setPage(0);
+  }
+
   // ── Fetch ─────────────────────────────────────────────────────────────
+  const pedidoRef = useRef(0);   // descarta respuestas de filtros viejos
   const cargar = useCallback(async () => {
+    const pedido = ++pedidoRef.current;
     setLoading(true);
     setError(null);
     try {
       const params = new URLSearchParams();
-      if (accion)      params.set("accion", accion);
-      if (entidad)     params.set("entidad", entidad);
-      if (fechaInicio) params.set("fecha_inicio", fechaInicio);
-      if (fechaFin)    params.set("fecha_fin", fechaFin);
-      if (busqueda)    params.set("q", busqueda);
+      if (accion)         params.set("accion", accion);
+      if (entidad)        params.set("entidad", entidad);
+      if (fechaInicio)    params.set("fecha_inicio", fechaInicio);
+      if (fechaFin)       params.set("fecha_fin", fechaFin);
+      if (busquedaActiva) params.set("q", busquedaActiva);
       params.set("limit",  String(PAGE_SIZE));
       params.set("offset", String(page * PAGE_SIZE));
 
       const res = await api.get(`/api/v1/app/audit?${params.toString()}`);
+      if (pedido !== pedidoRef.current) return;
       setItems(res.data.data ?? []);
       setTotal(res.data.total ?? 0);
     } catch (err: any) {
+      if (pedido !== pedidoRef.current) return;
       if (err?.response?.status === 403) {
         setError("No tienes permisos para ver el log de auditoría.");
       } else {
         setError(detalleError(err, "Error al cargar el historial."));
       }
     } finally {
-      setLoading(false);
+      if (pedido === pedidoRef.current) setLoading(false);
     }
-  }, [accion, entidad, fechaInicio, fechaFin, busqueda, page]);
+  }, [accion, entidad, fechaInicio, fechaFin, busquedaActiva, page]);
 
   useEffect(() => { cargar(); }, [cargar]);
-  useEffect(() => { setPage(0); }, [accion, entidad, fechaInicio, fechaFin, busqueda]);
 
   const totalPages    = Math.ceil(total / PAGE_SIZE);
   const hayFiltros    = !!(accion || entidad || fechaInicio || fechaFin || busqueda);

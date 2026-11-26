@@ -1,8 +1,5 @@
 // Tipos, configuración y helpers compartidos del detalle de documentos.
 // Sin JSX: se puede importar desde cualquier lado.
-import {
-  CheckCircle2, Clock, XCircle, AlertTriangle, Ban, SearchCheck,
-} from "lucide-react";
 import { API_BASE_URL } from "@/lib/config";
 
 // =============================================================================
@@ -65,35 +62,6 @@ export interface FacturaBase {
 // =============================================================================
 // CONFIGURACIÓN
 // =============================================================================
-export const ESTADO_CONFIG: Record<string, {
-  label: string; color: string; bg: string; border: string; icon: any
-}> = {
-  AUTORIZADO: { label: "Autorizado",         color: "var(--kipu-success)", bg: "color-mix(in srgb, var(--kipu-success) 20%, transparent)", border: "color-mix(in srgb, var(--kipu-success) 20%, transparent)", icon: CheckCircle2 },
-  RECIBIDA:   { label: "Recibido por SRI",   color: "var(--kipu-info)",           bg: "color-mix(in srgb, var(--kipu-info) 20%, transparent)",           border: "color-mix(in srgb, var(--kipu-info) 20%, transparent)",           icon: Clock },
-  POR_FIRMAR: { label: "Firmando",           color: "var(--kipu-info)",           bg: "color-mix(in srgb, var(--kipu-info) 20%, transparent)",           border: "color-mix(in srgb, var(--kipu-info) 20%, transparent)",           icon: Clock },
-  FIRMADO:    { label: "En cola",            color: "var(--kipu-info)",           bg: "color-mix(in srgb, var(--kipu-info) 20%, transparent)",           border: "color-mix(in srgb, var(--kipu-info) 20%, transparent)",           icon: Clock },
-  ERROR_FIRMA:{ label: "Error de firma",     color: "var(--kipu-danger)",  bg: "color-mix(in srgb, var(--kipu-danger) 20%, transparent)",  border: "color-mix(in srgb, var(--kipu-danger) 20%, transparent)",  icon: AlertTriangle },
-  DEVUELTA:   { label: "Devuelto por SRI",   color: "var(--kipu-warning)", bg: "color-mix(in srgb, var(--kipu-warning) 20%, transparent)", border: "color-mix(in srgb, var(--kipu-warning) 20%, transparent)", icon: AlertTriangle },
-  RECHAZADO:  { label: "Rechazado por SRI",  color: "var(--kipu-danger)",  bg: "color-mix(in srgb, var(--kipu-danger) 20%, transparent)",  border: "color-mix(in srgb, var(--kipu-danger) 20%, transparent)",  icon: XCircle },
-  EN_REVISION:{ label: "En revisión",        color: "#f59e0b",           bg: "color-mix(in srgb, #f59e0b 15%, transparent)",           border: "color-mix(in srgb, #f59e0b 25%, transparent)",           icon: SearchCheck },
-  ANULADO:    { label: "Anulado",            color: "var(--kipu-subtle)",  bg: "color-mix(in srgb, var(--kipu-subtle) 20%, transparent)",  border: "color-mix(in srgb, var(--kipu-subtle) 20%, transparent)",  icon: Ban },
-};
-
-export const TIPO_LABEL: Record<string, string> = {
-  FAC: "Factura",
-  LIQ: "Liquidación de Compra",
-  NCR: "Nota de Crédito",
-  NDB: "Nota de Débito",
-  RET: "Comprobante de Retención",
-};
-
-export const COBRO_CONFIG: Record<string, { label: string; color: string }> = {
-  PENDIENTE: { label: "Por cobrar", color: "var(--kipu-warning)" },
-  PAGADO:    { label: "Cobrado",    color: "var(--kipu-success)" },
-  PARCIAL:   { label: "Parcial",    color: "var(--kipu-info)" },
-  ANULADO:   { label: "Anulado",    color: "var(--kipu-danger)" },
-};
-
 export const FORMA_PAGO: Record<string, string> = {
   "01": "Sin utilización del sistema financiero",
   "15": "Compensación de deudas",
@@ -105,13 +73,8 @@ export const FORMA_PAGO: Record<string, string> = {
   "21": "Endoso de títulos",
 };
 
-export const TIPO_ID: Record<string, string> = {
-  "04": "RUC",
-  "05": "Cédula",
-  "06": "Pasaporte",
-  "07": "Consumidor Final",
-  "08": "Identificación del Exterior",
-};
+// Los detalles lo importan como TIPO_ID (una sola tabla para toda la app)
+export { NOMBRE_TIPO_ID as TIPO_ID } from "@/lib/identificacion";
 
 // Portal donde el usuario ingresa la solicitud de anulación
 export const SRI_EN_LINEA_URL = "https://srienlinea.sri.gob.ec";

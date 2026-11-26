@@ -4,20 +4,11 @@ import { useRouter } from "next/navigation";
 import { Building2, CreditCard, Info, User } from "lucide-react";
 import Seccion from "@/components/ui/Seccion";
 import Boton from "@/components/ui/Boton";
-import { TIPO_ID, type FacturaBase } from "./DetalleShared";
+import { FORMA_PAGO, TIPO_ID, type FacturaBase } from "./DetalleShared";
 import { Dato } from "./DetalleFactura";
 import { dosDecimales } from "@/lib/dinero";
 
 interface Props { factura: FacturaBase; }
-
-const FORMA_PAGO: Record<string, string> = {
-  "01": "Sin utilización del sistema financiero",
-  "16": "Tarjeta de débito",
-  "17": "Dinero electrónico",
-  "19": "Tarjeta de crédito",
-  "20": "Transferencia bancaria",
-  "15": "Compensación de deudas",
-};
 
 export default function DetalleNDB({ factura }: Props) {
   const router  = useRouter();

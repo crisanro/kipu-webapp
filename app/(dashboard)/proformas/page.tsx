@@ -15,7 +15,7 @@ import { useLista } from "@/lib/useLista";
 import FilaLista, { GrupoFilas } from "@/components/ui/FilaLista";
 import { InsigniaEstado } from "@/components/ui/InsigniaEstado";
 import { EsqueletoFilas } from "@/components/ui/Esqueleto";
-import Vacio from "@/components/ui/Vacio";
+import Vacio, { VacioError } from "@/components/ui/Vacio";
 import BotonFlotante from "@/components/ui/BotonFlotante";
 import TirarParaRefrescar from "@/components/ui/TirarParaRefrescar";
 import Boton, { clasesBoton } from "@/components/ui/Boton";
@@ -67,7 +67,7 @@ function ProformasContenido() {
   const loading   = datos.cargando;
 
   // Sin Plan Pro y sin proformas propias: ejemplos para ver cómo funciona
-  const esDemo = !loading && !tieneSub && proformas.length === 0;
+  const esDemo = !loading && !datos.fallo && !tieneSub && proformas.length === 0;
   const lista  = esDemo ? demoProformas() : proformas;
 
   const filtradas = lista.filter((p) => {
@@ -150,6 +150,8 @@ function ProformasContenido() {
       {/* Lista */}
       {loading ? (
         <EsqueletoFilas filas={6} />
+      ) : datos.fallo ? (
+        <VacioError que="tus proformas" onReintentar={datos.recargar} />
       ) : filtradas.length === 0 ? (
         query ? (
           <Vacio icono={Search} titulo="Ninguna proforma coincide" descripcion="Prueba con otro número o cliente." />

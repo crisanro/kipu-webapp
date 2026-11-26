@@ -16,7 +16,7 @@ import {
 import FilaLista, { GrupoFilas } from "@/components/ui/FilaLista";
 import { InsigniaSri, InsigniaCobro } from "@/components/ui/InsigniaEstado";
 import { EsqueletoFilas } from "@/components/ui/Esqueleto";
-import Vacio from "@/components/ui/Vacio";
+import Vacio, { VacioError } from "@/components/ui/Vacio";
 import ChipsFiltro from "@/components/ui/ChipsFiltro";
 import PeriodoFechas, { etiquetaPeriodo } from "@/components/ui/PeriodoFechas";
 import TirarParaRefrescar from "@/components/ui/TirarParaRefrescar";
@@ -431,6 +431,8 @@ export default function HistorialPage() {
       {/* Lista */}
       {loading ? (
         <EsqueletoFilas filas={8} />
+      ) : lista.fallo ? (
+        <VacioError que="tus comprobantes" onReintentar={lista.recargar} />
       ) : documentos.length === 0 ? (
         queryActivo || filtroEstado !== "TODOS" || filtroTipo !== "TODOS" ? (
           <Vacio icono={Search} titulo="Nada coincide con la búsqueda"

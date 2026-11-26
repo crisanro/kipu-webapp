@@ -6,8 +6,27 @@
 //          descripcion="Emite tu primera factura." accion={<Boton …>Emitir</Boton>} />
 
 import type { ReactNode } from "react";
-import type { LucideIcon } from "lucide-react";
+import { WifiOff, type LucideIcon } from "lucide-react";
+import Boton from "./Boton";
 import { cn } from "./cn";
+
+/**
+ * No se pudo cargar (sin conexión, error del servidor). Distinto de "no hay
+ * nada": si no, una caída se ve como "emite tu primera factura".
+ *   <VacioError que="tus comprobantes" onReintentar={lista.recargar} />
+ */
+export function VacioError({ que, onReintentar, className }: {
+  que:          string;
+  onReintentar: () => void;
+  className?:   string;
+}) {
+  return (
+    <Vacio icono={WifiOff} titulo={`No pudimos cargar ${que}`}
+           descripcion="Revisa tu conexión e intenta de nuevo."
+           accion={<Boton variante="secundario" onClick={onReintentar}>Reintentar</Boton>}
+           className={className} />
+  );
+}
 
 export default function Vacio({ icono: Icono, titulo, descripcion, accion, className }: {
   icono:        LucideIcon;

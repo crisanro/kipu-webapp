@@ -1,67 +1,15 @@
 "use client";
 import { rutas } from "@/lib/rutas";
 import Link from "next/link";
-import { ArrowRight, CheckCircle2, Clock, AlertTriangle, XCircle, Ban } from "lucide-react";
+import { ArrowRight } from "lucide-react";
+import { estadoSri, tipoComprobante } from "@/lib/estados";
+import { CLASES_TONO, InsigniaSri } from "@/components/ui/InsigniaEstado";
+import { cn } from "@/components/ui/cn";
 import { dosDecimales } from "@/lib/dinero";
 
 interface Props {
   documentos: any[];
 }
-
-const ESTADO_CONFIG: Record<string, { label: string; color: string; bg: string; icon: any }> = {
-  AUTORIZADO: {
-    label: "Autorizado",
-    color: "var(--kipu-success)",
-    bg: "color-mix(in srgb, var(--kipu-success) 10%, transparent)",
-    icon: CheckCircle2,
-  },
-  RECIBIDA: {
-    label: "En proceso",
-    color: "var(--kipu-info)",
-    bg: "color-mix(in srgb, var(--kipu-info) 10%, transparent)",
-    icon: Clock,
-  },
-  EN_REVISION: {
-    label: "En revisión",
-    color: "var(--kipu-info)",
-    bg: "color-mix(in srgb, var(--kipu-info) 10%, transparent)",
-    icon: Clock,
-  },
-  FIRMADO: {
-    label: "En cola",
-    color: "var(--kipu-info)",
-    bg: "color-mix(in srgb, var(--kipu-info) 10%, transparent)",
-    icon: Clock,
-  },
-  DEVUELTA: {
-    label: "Devuelto",
-    color: "var(--kipu-warning)",
-    bg: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)",
-    icon: AlertTriangle,
-  },
-  RECHAZADO: {
-    label: "Rechazado",
-    color: "var(--kipu-danger)",
-    bg: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
-    icon: XCircle,
-  },
-  ANULADO: {
-    label: "Anulado",
-    color: "var(--kipu-muted)",
-    bg: "color-mix(in srgb, var(--kipu-muted) 10%, transparent)",
-    icon: Ban,
-  },
-  PENDIENTE: {
-    label: "Pendiente",
-    color: "var(--kipu-subtle)",
-    bg: "color-mix(in srgb, var(--kipu-subtle) 10%, transparent)",
-    icon: Clock,
-  },
-};
-
-const TIPO_LABEL: Record<string, string> = {
-  FAC: "FAC", LIQ: "LIQ", NCR: "NC", NDB: "ND", RET: "RET",
-};
 
 export default function UltimosDocumentos({ documentos }: Props) {
   const recientes = documentos.slice(0, 6);
@@ -116,8 +64,8 @@ export default function UltimosDocumentos({ documentos }: Props) {
       ) : (
         <div>
           {recientes.map((d: any, index: number) => {
-            const estado = ESTADO_CONFIG[d.estado] ?? ESTADO_CONFIG.PENDIENTE;
-            const Icon   = estado.icon;
+            const estado = estadoSri(d.estado);
+            const Icon   = estado.icono;
             return (
               <Link
                 key={d.id}
@@ -132,11 +80,8 @@ export default function UltimosDocumentos({ documentos }: Props) {
                 }
                 onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
               >
-                <div
-                  className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-                  style={{ background: estado.bg }}
-                >
-                  <Icon size={14} style={{ color: estado.color }} />
+                <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", CLASES_TONO[estado.tono])}>
+                  <Icon size={14} aria-hidden />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
@@ -154,7 +99,7 @@ export default function UltimosDocumentos({ documentos }: Props) {
                           color: "var(--kipu-muted)",
                         }}
                       >
-                        {TIPO_LABEL[d.tipo_doc] ?? d.tipo_doc}
+                        {tipoComprobante(d.tipo_doc).corta}
                       </span>
                     )}
                   </div>
@@ -172,9 +117,7 @@ export default function UltimosDocumentos({ documentos }: Props) {
                   >
                     ${dosDecimales(d.total)}
                   </p>
-                  <p className="text-xs" style={{ color: estado.color }}>
-                    {estado.label}
-                  </p>
+                  <InsigniaSri estado={d.estado} conIcono={false} className="mt-0.5" />
                 </div>
               </Link>
             );
