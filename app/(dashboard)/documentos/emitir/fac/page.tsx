@@ -481,6 +481,14 @@ export default function NuevaFacturaPage() {
         error,
       }}
     >
+      {/* Desde una proforma, en pruebas: el servidor no la marca como facturada
+          (una factura de prueba no vale; así se puede facturar de verdad después) */}
+      {proformaId && enPruebas && (
+        <p className="rounded-lg bg-sandbox-suave px-3 py-2 text-sm text-sandbox">
+          En modo de pruebas la proforma no se marca como facturada: así la puedes facturar de verdad después.
+        </p>
+      )}
+
       {/* Cliente */}
       <ClienteSelector
         clienteSelected={clienteSelected}
