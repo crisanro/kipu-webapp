@@ -5,7 +5,8 @@
 //     pedido o a otro) o rechazar con una nota que ve el cliente.
 //   - Nivel de una empresa (se busca por RUC o nombre): ver su uso y sus
 //     criterios, y ponerle el nivel a mano.
-// Niveles: 1 = 300/100, 2 = 600/200, 3 = 1.000/330 (mes / día).
+// Los niveles y sus límites vienen del backend (GET /admin/uso-justo/niveles, del
+// .env USO_JUSTO_*): aquí no se repiten números que pueden cambiar.
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
@@ -71,7 +72,9 @@ type Estado = Solicitud["estado"];
 const FILTROS: { v: Estado; t: string }[] = [
   { v: "PENDIENTE", t: "Pendientes" }, { v: "APROBADA", t: "Aprobadas" }, { v: "RECHAZADA", t: "Rechazadas" },
 ];
-const LIMITES: Record<number, string> = { 1: "300 / 100", 2: "600 / 200", 3: "1.000 / 330" };
+interface NivelUsoJusto { nivel: number; mes: number; dia: number }
+const cifra = (n: number) => n.toLocaleString("es-EC");
+const limitesDe = (t: NivelUsoJusto) => `${cifra(t.mes)} / ${cifra(t.dia)}`;
 
 const fecha = (iso: string) =>
   new Date(iso).toLocaleDateString("es-EC", { day: "numeric", month: "short", year: "numeric" });
@@ -135,6 +138,15 @@ export default function AdminUsoJustoPage() {
   const [manual,    setManual]    = useState(true);
   const [notaNivel, setNotaNivel] = useState("");
   const [guardando, setGuardando] = useState(false);
+  const [tabla,     setTabla]     = useState<NivelUsoJusto[]>([]);
+
+  useEffect(() => {
+    let vivo = true;
+    api.get("/api/v1/admin/uso-justo/niveles")
+      .then((r) => { if (vivo) setTabla(r.data.data ?? []); })
+      .catch(() => { /* sin la tabla solo falta la leyenda; el resto funciona */ });
+    return () => { vivo = false; };
+  }, []);
 
   const aplicar = useCallback((r: Lectura) => {
     if (r.prohibido) { router.replace("/dashboard"); return; }
@@ -227,7 +239,8 @@ export default function AdminUsoJustoPage() {
             <Gauge size={16} style={{ color: "var(--kipu-accent)" }} /> Uso justo del plan gratis
           </h2>
           <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
-            Nivel 1: 300/100 · nivel 2: 600/200 · nivel 3: 1.000/330 (mes / día). Las que cumplen suben solas;
+            {tabla.length > 0 && `${tabla.map((t) => `Nivel ${t.nivel}: ${limitesDe(t)}`).join(" · ")} (mes / día). `}
+            Las que cumplen suben solas;
             aquí quedan las que no.
           </p>
         </div>
@@ -333,9 +346,8 @@ export default function AdminUsoJustoPage() {
                         style={inputStyle}
                         aria-label="Nivel al aprobar"
                       >
-                        {[2, 3].filter((n) => n > s.nivel_actual).map((n) => (
-                          <option key={n} value={n}>Nivel {n}</option>
-                        ))}
+                        {(tabla.length ? tabla.map((t) => t.nivel).filter((n) => n > s.nivel_actual) : [s.nivel_pedido])
+                          .map((n) => <option key={n} value={n}>Nivel {n}</option>)}
                       </select>
                       <button
                         type="button"
@@ -443,7 +455,9 @@ export default function AdminUsoJustoPage() {
                 style={inputStyle}
                 aria-label="Nuevo nivel"
               >
-                {[1, 2, 3].map((n) => <option key={n} value={n}>Nivel {n} ({LIMITES[n]})</option>)}
+                {(tabla.length ? tabla : [{ nivel: nuevoNivel, mes: 0, dia: 0 }]).map((t) => (
+                  <option key={t.nivel} value={t.nivel}>Nivel {t.nivel}{t.mes ? ` (${limitesDe(t)})` : ""}</option>
+                ))}
               </select>
               <label className="flex items-center gap-1.5 text-xs" style={{ color: "var(--kipu-muted)" }}>
                 <input type="checkbox" checked={manual} onChange={(ev) => setManual(ev.target.checked)} />
