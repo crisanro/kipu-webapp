@@ -12,6 +12,7 @@ import {
   CheckCircle2, AlertTriangle, TrendingDown, Star, ArrowRight, Info, CalendarCheck, MinusCircle
 } from "lucide-react";
 import { dosDecimales } from "@/lib/dinero";
+import { INCLUYE_PRO, INCLUYE_AL_DIA, SISTEMA_AL_DIA, GRATIS_INCLUYE, GRATIS_NO_INCLUYE } from "@/lib/planes";
 
 interface EstadoSub {
   plan:                 string;
@@ -52,47 +53,12 @@ interface EstadoAlDia {
   motivo_no_elegible: string | null;
 }
 
-const FEATURES_AL_DIA = [
-  "Declaramos tu IVA, mensual o semestral",
-  "Declaramos tu renta anual",
-  "Revisamos tus compras cada mes",
-  "Te avisamos por WhatsApp cuánto pagar y hasta cuándo",
-  "Respondemos al SRI por las declaraciones que presentamos",
-];
-const SISTEMA_AL_DIA = [
-  "Facturas sin límite",
-  "Tus compras del SRI importadas con un clic",
-  "Reportes de IVA, renta y ATS",
-  "Cuentas por cobrar y pagar, y proformas",
-  "Hasta 5 usuarios",
-];
-
-// Plan gratis (solo se muestra con el interruptor EMISION_GRATIS encendido)
-const GRATIS_INCLUYE = [
-  "Facturas desde el panel web, con uso justo",
-  "Importa tus compras y mira el IVA a pagar de cada mes",
-];
-const GRATIS_NO_INCLUYE = [
-  "Formulario 104 casillero por casillero y alertas",
-  "API, WooCommerce y varios usuarios",
-];
-
 const ESTADO_COLOR: Record<string, { color: string; bg: string; border: string }> = {
   ACTIVO:    { color: "var(--kipu-success)", bg: "color-mix(in srgb, var(--kipu-success) 10%, transparent)", border: "color-mix(in srgb, var(--kipu-success) 20%, transparent)" },
   TRIAL:     { color: "var(--kipu-info)",            bg: "color-mix(in srgb, var(--kipu-info) 10%, transparent)",            border: "color-mix(in srgb, var(--kipu-info) 20%, transparent)" },
   CANCELADO: { color: "var(--kipu-warning)", bg: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)", border: "color-mix(in srgb, var(--kipu-warning) 20%, transparent)" },
   VENCIDO:   { color: "var(--kipu-danger)",  bg: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",  border: "color-mix(in srgb, var(--kipu-danger) 20%, transparent)" },
 };
-
-const FEATURES: { texto: string; destacado?: boolean }[] = [
-  { texto: "Facturas, liquidaciones, notas y retenciones sin límite" },
-  { texto: "Tus compras del SRI importadas con un clic (extensión para Chrome y Firefox)" },
-  { texto: "Reportes de IVA (104), renta y ATS" },
-  { texto: "Cuentas por cobrar y pagar, y proformas en PDF" },
-  { texto: "Alertas de errores antes de declarar y facturas sin la marca de Kipu" },
-  { texto: "API: 300 comprobantes al mes incluidos" },
-  { texto: "Hasta 5 usuarios · soporte por WhatsApp" },
-];
 
 export default function PlanesPage() {
   const confirmar = useConfirmar();
@@ -665,18 +631,10 @@ export default function PlanesPage() {
                   </div>
 
                   <div className="space-y-2.5 mb-6 flex-1">
-                    {FEATURES.map((f, i) => (
-                      <div key={i} className="flex items-start gap-2.5">
+                    {INCLUYE_PRO.map((t) => (
+                      <div key={t} className="flex items-start gap-2.5">
                         <CheckCircle2 size={14} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-success)" }} />
-                        <p
-                          className="text-sm"
-                          style={{
-                            color: f.destacado ? "var(--kipu-accent)" : "var(--kipu-text)",
-                            fontWeight: f.destacado ? 500 : 400,
-                          }}
-                        >
-                          {f.texto}
-                        </p>
+                        <p className="text-sm" style={{ color: "var(--kipu-text)" }}>{t}</p>
                       </div>
                     ))}
                     <p className="text-xs pt-1" style={{ color: "var(--kipu-subtle)" }}>
@@ -1017,7 +975,7 @@ function TarjetaAlDia({ estado, precios, periodo: pedido, enProduccion, esAdmin,
       </div>
 
       <div className="space-y-2.5 mb-5 flex-1">
-        {FEATURES_AL_DIA.map((t) => (
+        {INCLUYE_AL_DIA.map((t) => (
           <div key={t} className="flex items-start gap-2.5">
             <CheckCircle2 size={14} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-success)" }} />
             <p className="text-sm font-medium" style={{ color: "var(--kipu-text)" }}>{t}</p>
