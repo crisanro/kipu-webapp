@@ -9,9 +9,10 @@ import { detalleError } from "@/lib/errores";
 import SelectorPeriodo, { ahorroAnual, periodoDisponible, type Periodo, type PreciosPlan } from "@/components/SelectorPeriodo";
 import {
   CreditCard, Zap, RefreshCw,
-  CheckCircle2, AlertTriangle, TrendingDown, Star, ArrowRight, Info, CalendarCheck, MinusCircle
+  CheckCircle2, AlertTriangle, TrendingDown, Star, ArrowRight, Info, CalendarCheck, MinusCircle, ShieldCheck
 } from "lucide-react";
 import { dosDecimales } from "@/lib/dinero";
+import { URL_TERMINOS } from "@/lib/config";
 import { INCLUYE_PRO, INCLUYE_AL_DIA, SISTEMA_AL_DIA, GRATIS_INCLUYE, GRATIS_NO_INCLUYE } from "@/lib/planes";
 
 interface EstadoSub {
@@ -659,6 +660,18 @@ export default function PlanesPage() {
                     {pagando === "pro" ? "Redirigiendo..." : "Contratar Kipu Pro"}
                   </button>
 
+                  {/* Política de devolución (términos, sección 7): solo la primera compra */}
+                  <p className="flex items-start justify-center gap-1.5 text-center text-xs mt-3" style={{ color: "var(--kipu-subtle)" }}>
+                    <ShieldCheck size={14} className="shrink-0 mt-px" style={{ color: "var(--kipu-success)" }} aria-hidden />
+                    <span>
+                      Si no te convence, te devolvemos el 100% dentro de los 7 días de tu primera compra, sin preguntas.{" "}
+                      <a href={URL_TERMINOS} target="_blank" rel="noopener noreferrer"
+                         className="underline underline-offset-2" style={{ color: "var(--kipu-accent)" }}>
+                        Ver términos
+                      </a>
+                    </span>
+                  </p>
+
                   {(!enProduccion || !esAdmin) && (
                     <p className="text-center text-xs mt-2" style={{ color: "var(--kipu-subtle)" }}>
                       {!enProduccion ? "Disponible solo en producción" : "Solo el administrador de la empresa puede contratarlo"}
@@ -1026,6 +1039,11 @@ function TarjetaAlDia({ estado, precios, periodo: pedido, enProduccion, esAdmin,
           Te devolvemos los días de Kipu Pro que no uses.
         </p>
       )}
+      {/* Términos de Al Día v3, sección 9: solo la primera contratación */}
+      <p className="flex items-start justify-center gap-1.5 text-center text-xs mt-2" style={{ color: "var(--kipu-subtle)" }}>
+        <ShieldCheck size={14} className="shrink-0 mt-px" style={{ color: "var(--kipu-success)" }} aria-hidden />
+        <span>La primera vez, si todavía no empezamos a trabajar en tu cuenta, te devolvemos el 100%, sin preguntas.</span>
+      </p>
       <Link
         href="/al-dia"
         className="mt-3 text-center text-sm font-medium flex items-center justify-center gap-1 hover:underline underline-offset-2"
