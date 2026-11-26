@@ -198,9 +198,7 @@ export default function NuevaRecibidaPage() {
         <button
           type="button"
           onClick={() => router.push("/documentos/recibidos")}
-          className="text-xs transition-colors text-acento"
-          onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent-h)"}
-          onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-accent)"}
+          className="text-xs transition-colors text-acento hover:text-acento-hover"
         >
           Ver historial →
         </button>

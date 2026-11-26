@@ -34,15 +34,7 @@ export function ThemeToggle({ compact = false }: { compact?: boolean }) {
   return (
     <button
       onClick={() => setTheme(isDark ? "light" : "dark")}
-      className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm transition-colors text-tenue"
-      onMouseEnter={(e) => {
-        e.currentTarget.style.color = "var(--kipu-text)";
-        e.currentTarget.style.background = "var(--kipu-border)";
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.color = "var(--kipu-muted)";
-        e.currentTarget.style.background = "transparent";
-      }}
+      className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm transition-colors text-tenue hover:text-texto hover:bg-borde"
     >
       {isDark ? <Sun size={16} /> : <Moon size={16} />}
       {isDark ? "Modo claro" : "Modo oscuro"}

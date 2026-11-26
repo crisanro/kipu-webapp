@@ -31,9 +31,7 @@ export default function UltimosDocumentos({ documentos }: Props) {
         </div>
         <Link
           href="/documentos"
-          className="flex items-center gap-1 text-xs transition-colors text-acento"
-          onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent-h)"}
-          onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-accent)"}
+          className="flex items-center gap-1 text-xs transition-colors text-acento hover:text-acento-hover"
         >
           Ver todos <ArrowRight size={12} />
         </Link>
@@ -47,9 +45,7 @@ export default function UltimosDocumentos({ documentos }: Props) {
           </p>
           <Link
             href="/documentos/emitir/fac"
-            className="mt-3 text-xs transition-colors text-acento"
-            onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent-h)"}
-            onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-accent)"}
+            className="mt-3 text-xs transition-colors text-acento hover:text-acento-hover"
           >
             Emitir primero →
           </Link>
@@ -63,15 +59,10 @@ export default function UltimosDocumentos({ documentos }: Props) {
               <Link
                 key={d.id}
                 href={rutas.documento(d.id)}
-                className="flex items-center gap-3 px-5 py-3.5 transition-colors group"
+                className="flex items-center gap-3 px-5 py-3.5 transition-colors group hover:bg-texto/4"
                 style={{
                   borderTop: index > 0 ? "1px solid var(--kipu-border)" : "none",
                 }}
-                onMouseEnter={e =>
-                  (e.currentTarget.style.background =
-                    "color-mix(in srgb, var(--kipu-text) 4%, transparent)")
-                }
-                onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
               >
                 <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", CLASES_TONO[estado.tono])}>
                   <Icon size={14} aria-hidden />

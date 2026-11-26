@@ -108,9 +108,7 @@ export default function DashboardPage() {
         </div>
         <Link
           href="/documentos/emitir/fac"
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-white text-sm font-semibold transition-colors bg-acento"
-          onMouseEnter={e => e.currentTarget.style.background = "var(--kipu-accent-h)"}
-          onMouseLeave={e => e.currentTarget.style.background = "var(--kipu-accent)"}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-white text-sm font-semibold transition-colors bg-acento hover:bg-acento-hover"
         >
           <span className="text-base">+</span>
           <span className="hidden sm:inline">Nueva Factura</span>

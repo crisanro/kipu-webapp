@@ -38,18 +38,14 @@ export default function DoneScreen({ titulo, subtitulo, onOtro }: Props) {
           <button
             type="button"
             onClick={onOtro}
-            className="flex-1 py-2.5 rounded-lg text-sm transition-colors border border-borde text-tenue"
-            onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
-            onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-muted)"}
+            className="flex-1 py-2.5 rounded-lg text-sm transition-colors border border-borde text-tenue hover:text-texto"
           >
             Registrar otro
           </button>
           <button
             type="button"
             onClick={() => router.push("/documentos/recibidos")}
-            className="flex-1 py-2.5 rounded-lg text-white text-sm font-medium transition-colors bg-acento"
-            onMouseEnter={e => e.currentTarget.style.background = "var(--kipu-accent-h)"}
-            onMouseLeave={e => e.currentTarget.style.background = "var(--kipu-accent)"}
+            className="flex-1 py-2.5 rounded-lg text-white text-sm font-medium transition-colors bg-acento hover:bg-acento-hover"
           >
             Ver historial
           </button>

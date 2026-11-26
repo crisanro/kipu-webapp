@@ -228,9 +228,7 @@ export default function TabUsuarios({ empresaId }: Props) {
           <select
             value={invRol}
             onChange={(e) => setInvRol(e.target.value)}
-            className="px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none bg-superficie border border-borde text-texto"
-            onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-            onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+            className="px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none bg-superficie border border-borde text-texto focus:border-acento"
           >
             <option value="emisor">Emisor</option>
             <option value="contador">Contador</option>
@@ -338,15 +336,7 @@ export default function TabUsuarios({ empresaId }: Props) {
                       <button
                         type="button"
                         onClick={() => setExpandido(abierto ? null : u.profile_id)}
-                        className="p-1.5 rounded-lg transition-colors shrink-0 text-sutil"
-                        onMouseEnter={e => {
-                          e.currentTarget.style.color = "var(--kipu-text)";
-                          e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 5%, transparent)";
-                        }}
-                        onMouseLeave={e => {
-                          e.currentTarget.style.color = "var(--kipu-subtle)";
-                          e.currentTarget.style.background = "transparent";
-                        }}
+                        className="p-1.5 rounded-lg transition-colors shrink-0 text-sutil hover:text-texto hover:bg-texto/5"
                         title="Ver permisos"
                       >
                         {abierto ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
@@ -356,15 +346,7 @@ export default function TabUsuarios({ empresaId }: Props) {
                       type="button"
                       onClick={() => remover(u.profile_id, u.nombre || u.email)}
                       disabled={removiendo === u.profile_id}
-                      className="p-1.5 rounded-lg transition-colors disabled:opacity-40 shrink-0 text-sutil"
-                      onMouseEnter={e => {
-                        e.currentTarget.style.color = "var(--kipu-danger)";
-                        e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-danger) 10%, transparent)";
-                      }}
-                      onMouseLeave={e => {
-                        e.currentTarget.style.color = "var(--kipu-subtle)";
-                        e.currentTarget.style.background = "transparent";
-                      }}
+                      className="p-1.5 rounded-lg transition-colors disabled:opacity-40 shrink-0 text-sutil enabled:hover:text-peligro enabled:hover:bg-peligro-suave"
                       title="Remover usuario"
                     >
                       {removiendo === u.profile_id ? (
@@ -389,15 +371,7 @@ export default function TabUsuarios({ empresaId }: Props) {
                             key={rol}
                             type="button"
                             onClick={() => aplicarPlantilla(u.profile_id, rol)}
-                            className="text-xs px-2 py-1 rounded-lg transition-colors capitalize bg-texto/10 text-tenue"
-                            onMouseEnter={e => {
-                              e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 15%, transparent)";
-                              e.currentTarget.style.color = "var(--kipu-text)";
-                            }}
-                            onMouseLeave={e => {
-                              e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 10%, transparent)";
-                              e.currentTarget.style.color = "var(--kipu-muted)";
-                            }}
+                            className="text-xs px-2 py-1 rounded-lg transition-colors capitalize bg-texto/10 text-tenue hover:bg-texto/15 hover:text-texto"
                           >
                             {rol.charAt(0).toUpperCase() + rol.slice(1)}
                           </button>
@@ -458,9 +432,7 @@ export default function TabUsuarios({ empresaId }: Props) {
                               delete next[u.profile_id];
                               return next;
                             })}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors border border-borde text-tenue"
-                            onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
-                            onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-muted)"}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors border border-borde text-tenue hover:text-texto"
                           >
                             <X size={12} /> Descartar
                           </button>

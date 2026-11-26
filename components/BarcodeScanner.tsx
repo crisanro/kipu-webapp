@@ -169,15 +169,7 @@ export default function BarcodeScanner({ onScan, onClose }: Props) {
               <button
                 type="button"
                 onClick={switchCamera}
-                className="p-1.5 rounded-lg transition-colors text-sutil"
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.color = "var(--kipu-text)";
-                  e.currentTarget.style.background = "var(--kipu-bg)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.color = "var(--kipu-subtle)";
-                  e.currentTarget.style.background = "transparent";
-                }}
+                className="p-1.5 rounded-lg transition-colors text-sutil hover:text-texto hover:bg-fondo"
                 title="Cambiar cámara"
               >
                 <SwitchCamera size={16} />
@@ -186,10 +178,8 @@ export default function BarcodeScanner({ onScan, onClose }: Props) {
             <button
               type="button"
               onClick={toggleTorch}
-              className="p-1.5 rounded-lg transition-colors"
+              className="p-1.5 rounded-lg transition-colors hover:bg-fondo"
               style={{ color: torch ? "var(--kipu-warning)" : "var(--kipu-subtle)" }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "var(--kipu-bg)")}
-              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
               title="Linterna"
             >
               <Zap size={16} />
@@ -197,16 +187,7 @@ export default function BarcodeScanner({ onScan, onClose }: Props) {
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 rounded-lg transition-colors text-sutil"
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = "var(--kipu-danger)";
-                e.currentTarget.style.background =
-                  "color-mix(in srgb, var(--kipu-danger) 10%, transparent)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = "var(--kipu-subtle)";
-                e.currentTarget.style.background = "transparent";
-              }}
+              className="p-1.5 rounded-lg transition-colors text-sutil hover:text-peligro hover:bg-peligro-suave"
             >
               <X size={16} />
             </button>

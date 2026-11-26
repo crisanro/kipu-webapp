@@ -47,15 +47,7 @@ function ContenidoSRI({ empresa, onDone }: Props) {
           href={CHROME_EXT_URL}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-3 w-full px-4 py-3 rounded-xl transition-colors group bg-superficie border border-borde"
-          onMouseEnter={e => {
-            e.currentTarget.style.borderColor = "color-mix(in srgb, var(--kipu-accent) 40%, transparent)";
-            e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-accent) 5%, transparent)";
-          }}
-          onMouseLeave={e => {
-            e.currentTarget.style.borderColor = "var(--kipu-border)";
-            e.currentTarget.style.background = "var(--kipu-surface)";
-          }}
+          className="flex items-center gap-3 w-full px-4 py-3 rounded-xl transition-colors group bg-superficie border border-borde hover:border-acento/40 hover:bg-acento/5"
         >
           <Globe size={20} className="transition-colors shrink-0 text-sutil" />
           <div className="flex-1 text-left">
@@ -145,9 +137,7 @@ function ContenidoSRI({ empresa, onDone }: Props) {
         <button
           type="button"
           onClick={onDone}
-          className="text-xs transition-colors font-medium shrink-0 flex items-center gap-1 text-acento"
-          onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent-h)"}
-          onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-accent)"}
+          className="text-xs transition-colors font-medium shrink-0 flex items-center gap-1 text-acento hover:text-acento-hover"
         >
           Ver historial <ArrowRight size={11} />
         </button>

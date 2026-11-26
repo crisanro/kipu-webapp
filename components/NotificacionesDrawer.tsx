@@ -211,19 +211,7 @@ export function NotificacionesDrawer({
                 type="button"
                 onClick={onMarcarTodas}
                 disabled={loading}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-colors disabled:opacity-40 text-sutil"
-                onMouseEnter={e => {
-                  if (!loading) {
-                    e.currentTarget.style.color = "var(--kipu-text)";
-                    e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 5%, transparent)";
-                  }
-                }}
-                onMouseLeave={e => {
-                  if (!loading) {
-                    e.currentTarget.style.color = "var(--kipu-subtle)";
-                    e.currentTarget.style.background = "transparent";
-                  }
-                }}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-colors disabled:opacity-40 text-sutil enabled:hover:text-texto enabled:hover:bg-texto/5"
                 title="Marcar todas como leídas"
               >
                 {loading ? (
@@ -240,15 +228,7 @@ export function NotificacionesDrawer({
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 rounded-lg transition-colors text-sutil"
-              onMouseEnter={e => {
-                e.currentTarget.style.color = "var(--kipu-text)";
-                e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 5%, transparent)";
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.color = "var(--kipu-subtle)";
-                e.currentTarget.style.background = "transparent";
-              }}
+              className="p-1.5 rounded-lg transition-colors text-sutil hover:text-texto hover:bg-texto/5"
             >
               <X size={16} />
             </button>

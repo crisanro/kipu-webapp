@@ -143,9 +143,7 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
           <button
             type="button"
             onClick={() => { setEstabForm({ codigo: "001", nombre_comercial: "", direccion: "" }); setModal({ tipo: "crearEstab" }); }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-medium transition-colors bg-acento"
-            onMouseEnter={e => e.currentTarget.style.background = "var(--kipu-accent-h)"}
-            onMouseLeave={e => e.currentTarget.style.background = "var(--kipu-accent)"}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-medium transition-colors bg-acento hover:bg-acento-hover"
           >
             <Plus size={13} /> Agregar
           </button>
@@ -312,9 +310,7 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
                       setPuntoForm({ establecimiento_codigo: estab.codigo, codigo: "001", nombre: "" });
                       setModal({ tipo: "crearPunto", estabCodigo: estab.codigo });
                     }}
-                    className="flex items-center gap-1.5 text-xs transition-colors mt-1 font-medium text-acento"
-                    onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent-h)"}
-                    onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-accent)"}
+                    className="flex items-center gap-1.5 text-xs transition-colors mt-1 font-medium text-acento hover:text-acento-hover"
                   >
                     <Plus size={12} /> Agregar punto de emisión
                   </button>
@@ -377,9 +373,7 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
             <button
               type="button"
               onClick={cerrar}
-              className="flex-1 py-2.5 rounded-lg text-sm transition-colors border border-borde text-tenue"
-              onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
-              onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-muted)"}
+              className="flex-1 py-2.5 rounded-lg text-sm transition-colors border border-borde text-tenue hover:text-texto"
             >
               Cancelar
             </button>
@@ -387,13 +381,7 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
               type="button"
               onClick={crearEstab}
               disabled={saving}
-              className="flex-1 py-2.5 rounded-lg text-white text-sm font-medium flex items-center justify-center gap-2 transition-colors disabled:opacity-50 bg-acento"
-              onMouseEnter={e => {
-                if (!saving) e.currentTarget.style.background = "var(--kipu-accent-h)";
-              }}
-              onMouseLeave={e => {
-                if (!saving) e.currentTarget.style.background = "var(--kipu-accent)";
-              }}
+              className="flex-1 py-2.5 rounded-lg text-white text-sm font-medium flex items-center justify-center gap-2 transition-colors disabled:opacity-50 bg-acento enabled:hover:bg-acento-hover"
             >
               {saving ? (
                 <div
@@ -448,9 +436,7 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
             <button
               type="button"
               onClick={cerrar}
-              className="flex-1 py-2.5 rounded-lg text-sm transition-colors border border-borde text-tenue"
-              onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
-              onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-muted)"}
+              className="flex-1 py-2.5 rounded-lg text-sm transition-colors border border-borde text-tenue hover:text-texto"
             >
               Cancelar
             </button>
@@ -458,13 +444,7 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
               type="button"
               onClick={() => guardarEstab(modal.estab.id)}
               disabled={saving}
-              className="flex-1 py-2.5 rounded-lg text-white text-sm font-medium flex items-center justify-center gap-2 transition-colors disabled:opacity-50 bg-acento"
-              onMouseEnter={e => {
-                if (!saving) e.currentTarget.style.background = "var(--kipu-accent-h)";
-              }}
-              onMouseLeave={e => {
-                if (!saving) e.currentTarget.style.background = "var(--kipu-accent)";
-              }}
+              className="flex-1 py-2.5 rounded-lg text-white text-sm font-medium flex items-center justify-center gap-2 transition-colors disabled:opacity-50 bg-acento enabled:hover:bg-acento-hover"
             >
               {saving ? (
                 <div
@@ -521,9 +501,7 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
             <button
               type="button"
               onClick={cerrar}
-              className="flex-1 py-2.5 rounded-lg text-sm transition-colors border border-borde text-tenue"
-              onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
-              onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-muted)"}
+              className="flex-1 py-2.5 rounded-lg text-sm transition-colors border border-borde text-tenue hover:text-texto"
             >
               Cancelar
             </button>
@@ -531,13 +509,7 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
               type="button"
               onClick={crearPunto}
               disabled={saving}
-              className="flex-1 py-2.5 rounded-lg text-white text-sm font-medium flex items-center justify-center gap-2 transition-colors disabled:opacity-50 bg-acento"
-              onMouseEnter={e => {
-                if (!saving) e.currentTarget.style.background = "var(--kipu-accent-h)";
-              }}
-              onMouseLeave={e => {
-                if (!saving) e.currentTarget.style.background = "var(--kipu-accent)";
-              }}
+              className="flex-1 py-2.5 rounded-lg text-white text-sm font-medium flex items-center justify-center gap-2 transition-colors disabled:opacity-50 bg-acento enabled:hover:bg-acento-hover"
             >
               {saving ? (
                 <div
@@ -581,9 +553,7 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
             <button
               type="button"
               onClick={cerrar}
-              className="flex-1 py-2.5 rounded-lg text-sm transition-colors border border-borde text-tenue"
-              onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
-              onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-muted)"}
+              className="flex-1 py-2.5 rounded-lg text-sm transition-colors border border-borde text-tenue hover:text-texto"
             >
               Cancelar
             </button>
@@ -591,13 +561,7 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
               type="button"
               onClick={() => guardarPunto(modal.punto.id)}
               disabled={saving}
-              className="flex-1 py-2.5 rounded-lg text-white text-sm font-medium flex items-center justify-center gap-2 transition-colors disabled:opacity-50 bg-acento"
-              onMouseEnter={e => {
-                if (!saving) e.currentTarget.style.background = "var(--kipu-accent-h)";
-              }}
-              onMouseLeave={e => {
-                if (!saving) e.currentTarget.style.background = "var(--kipu-accent)";
-              }}
+              className="flex-1 py-2.5 rounded-lg text-white text-sm font-medium flex items-center justify-center gap-2 transition-colors disabled:opacity-50 bg-acento enabled:hover:bg-acento-hover"
             >
               {saving ? (
                 <div
@@ -686,9 +650,7 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
             <button
               type="button"
               onClick={cerrar}
-              className="flex-1 py-2.5 rounded-lg text-sm transition-colors border border-borde text-tenue"
-              onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
-              onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-muted)"}
+              className="flex-1 py-2.5 rounded-lg text-sm transition-colors border border-borde text-tenue hover:text-texto"
             >
               Cancelar
             </button>

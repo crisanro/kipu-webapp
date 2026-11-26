@@ -166,9 +166,7 @@ export default function DocumentosIncluidos({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <Link
                 href={`/documentos?fecha_inicio=${fechaInicio}&fecha_fin=${fechaFin}`}
-                className="flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg transition-colors group bg-texto/5"
-                onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 10%, transparent)"}
-                onMouseLeave={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 5%, transparent)"}
+                className="flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg transition-colors group bg-texto/5 hover:bg-texto/10"
               >
                 <div className="flex items-center gap-2">
                   <FileText className="text-acento" size={13} />
@@ -180,9 +178,7 @@ export default function DocumentosIncluidos({
               </Link>
               <Link
                 href={`/documentos/recibidos?fecha_inicio=${fechaInicio}&fecha_fin=${fechaFin}`}
-                className="flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg transition-colors group bg-texto/5"
-                onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 10%, transparent)"}
-                onMouseLeave={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 5%, transparent)"}
+                className="flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg transition-colors group bg-texto/5 hover:bg-texto/10"
               >
                 <div className="flex items-center gap-2">
                   <FileText className="text-exito" size={13} />

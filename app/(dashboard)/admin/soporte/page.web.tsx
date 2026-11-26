@@ -291,9 +291,7 @@ export default function AdminSoportePage() {
               onChange={(e) => setTermino(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") buscar(); }}
               placeholder="Correo completo, parte del correo o nombre"
-              className="w-full pl-9 pr-4 py-2.5 rounded-lg text-sm focus:outline-none transition-colors bg-superficie border border-borde text-texto"
-              onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-              onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+              className="w-full pl-9 pr-4 py-2.5 rounded-lg text-sm focus:outline-none transition-colors bg-superficie border border-borde text-texto focus:border-acento"
             />
           </div>
           <button
@@ -615,9 +613,7 @@ export default function AdminSoportePage() {
                         onChange={(e) => setNuevoEmail(e.target.value)}
                         placeholder="nuevo@correo.com"
                         type="email"
-                        className="w-full px-3 py-2 rounded-lg text-xs focus:outline-none bg-superficie border border-borde text-texto"
-                        onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                        onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+                        className="w-full px-3 py-2 rounded-lg text-xs focus:outline-none bg-superficie border border-borde text-texto focus:border-acento"
                       />
                     </div>
                     <div>

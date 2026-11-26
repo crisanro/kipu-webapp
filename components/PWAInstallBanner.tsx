@@ -91,9 +91,7 @@ export default function PWAInstallBanner() {
           <button
             type="button"
             onClick={descartar}
-            className="transition-colors shrink-0 text-sutil"
-            onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
-            onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-subtle)"}
+            className="transition-colors shrink-0 text-sutil hover:text-texto"
           >
             <X size={16} />
           </button>
@@ -105,18 +103,14 @@ export default function PWAInstallBanner() {
             <button
               type="button"
               onClick={descartar}
-              className="flex-1 py-2 rounded-lg text-xs transition-colors border border-borde text-tenue"
-              onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
-              onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-muted)"}
+              className="flex-1 py-2 rounded-lg text-xs transition-colors border border-borde text-tenue hover:text-texto"
             >
               Ahora no
             </button>
             <button
               type="button"
               onClick={instalar}
-              className="flex-1 py-2 rounded-lg text-white text-xs font-medium transition-colors flex items-center justify-center gap-1.5 bg-acento"
-              onMouseEnter={e => e.currentTarget.style.background = "var(--kipu-accent-h)"}
-              onMouseLeave={e => e.currentTarget.style.background = "var(--kipu-accent)"}
+              className="flex-1 py-2 rounded-lg text-white text-xs font-medium transition-colors flex items-center justify-center gap-1.5 bg-acento hover:bg-acento-hover"
             >
               <Download size={13} />
               Instalar

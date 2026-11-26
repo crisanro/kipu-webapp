@@ -252,9 +252,7 @@ export default function Checklist({ health, compact = false, onUpdate }: Props) 
               value={p12Pass}
               onChange={e => { setP12Pass(e.target.value); setFirmaError(""); }}
               placeholder="••••••••"
-              className="w-full px-3 py-2.5 rounded-xl text-sm focus:outline-none bg-fondo border border-borde text-texto"
-              onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-              onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+              className="w-full px-3 py-2.5 rounded-xl text-sm focus:outline-none bg-fondo border border-borde text-texto focus:border-acento"
               onKeyDown={e => { if (e.key === "Enter" && p12File && p12Pass) subirFirma(); }}
             />
           </div>

@@ -144,15 +144,7 @@ export default function ReviewXML({ parsed, xmlFile, onBack, onDone, suscripcion
         <button
           type="button"
           onClick={onBack}
-          className="p-2 rounded-lg transition-colors border border-borde text-sutil"
-          onMouseEnter={e => {
-            e.currentTarget.style.color = "var(--kipu-text)";
-            e.currentTarget.style.borderColor = "color-mix(in srgb, var(--kipu-text) 30%, transparent)";
-          }}
-          onMouseLeave={e => {
-            e.currentTarget.style.color = "var(--kipu-subtle)";
-            e.currentTarget.style.borderColor = "var(--kipu-border)";
-          }}
+          className="p-2 rounded-lg transition-colors border border-borde text-sutil hover:text-texto hover:border-texto/30"
         >
           <X size={16} />
         </button>
@@ -219,9 +211,7 @@ export default function ReviewXML({ parsed, xmlFile, onBack, onDone, suscripcion
               <button
                 type="button"
                 onClick={() => setVinculoSelected(null)}
-                className="p-1 transition-colors text-sutil"
-                onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
-                onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-subtle)"}
+                className="p-1 transition-colors text-sutil hover:text-texto"
               >
                 <X size={14} />
               </button>
@@ -232,9 +222,7 @@ export default function ReviewXML({ parsed, xmlFile, onBack, onDone, suscripcion
                 value={vinculoQuery}
                 onChange={e => { setVinculoQuery(e.target.value); buscarVinculo(e.target.value, parsed.tipo_doc); }}
                 placeholder="Buscar por número o proveedor..."
-                className="w-full px-3 py-2.5 rounded-lg text-sm transition-colors focus:outline-none bg-superficie border border-borde text-texto"
-                onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+                className="w-full px-3 py-2.5 rounded-lg text-sm transition-colors focus:outline-none bg-superficie border border-borde text-texto focus:border-acento"
               />
               {vinculoLoading && (
                 <div
@@ -253,9 +241,7 @@ export default function ReviewXML({ parsed, xmlFile, onBack, onDone, suscripcion
                         type="button"
                         key={d.id}
                         onClick={() => { setVinculoSelected(d); setVinculoQuery(""); setVinculoResults([]); }}
-                        className="w-full flex items-center justify-between gap-3 px-4 py-2.5 text-left transition-colors border-b border-borde"
-                        onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 5%, transparent)"}
-                        onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                        className="w-full flex items-center justify-between gap-3 px-4 py-2.5 text-left transition-colors border-b border-borde hover:bg-texto/5"
                       >
                         <div className="flex items-center gap-2 min-w-0">
                           <span
@@ -287,9 +273,7 @@ export default function ReviewXML({ parsed, xmlFile, onBack, onDone, suscripcion
         <button
           type="button"
           onClick={() => setShowItems(!showItems)}
-          className="w-full flex items-center justify-between px-4 py-3 transition-colors"
-          onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 4%, transparent)"}
-          onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+          className="w-full flex items-center justify-between px-4 py-3 transition-colors hover:bg-texto/4"
         >
           <div className="flex items-center gap-2">
             <FileText className="text-sutil" size={14} />
@@ -313,10 +297,8 @@ export default function ReviewXML({ parsed, xmlFile, onBack, onDone, suscripcion
             {items.map((item, idx) => (
               <div
                 key={idx}
-                className="grid grid-cols-12 gap-2 px-4 py-2.5 items-center transition-colors"
+                className="grid grid-cols-12 gap-2 px-4 py-2.5 items-center transition-colors hover:bg-texto/3"
                 style={{ borderTop: idx > 0 ? "1px solid var(--kipu-border)" : "none" }}
-                onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 3%, transparent)"}
-                onMouseLeave={e => e.currentTarget.style.background = "transparent"}
               >
                 <div className="col-span-4">
                   <p className="text-xs truncate text-texto">{item.descripcion}</p>
@@ -396,9 +378,7 @@ export default function ReviewXML({ parsed, xmlFile, onBack, onDone, suscripcion
             onChange={e => setNotas(e.target.value)}
             placeholder="Observaciones, referencia interna, etc."
             rows={2}
-            className="w-full px-3 py-2 rounded-lg text-sm resize-none transition-colors focus:outline-none bg-superficie border border-borde text-texto"
-            onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-            onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+            className="w-full px-3 py-2 rounded-lg text-sm resize-none transition-colors focus:outline-none bg-superficie border border-borde text-texto focus:border-acento"
           />
         </div>
       </div>

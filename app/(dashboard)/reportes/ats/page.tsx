@@ -75,10 +75,8 @@ function TablaDetalle({ titulo, rows, columnas, color = "indigo" }: {
             {visibles.map((row, idx) => (
               <tr
                 key={idx}
-                className="transition-colors"
+                className="transition-colors hover:bg-texto/4"
                 style={{ borderBottom: idx < visibles.length - 1 ? "1px solid var(--kipu-border)" : "none" }}
-                onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 4%, transparent)"}
-                onMouseLeave={e => e.currentTarget.style.background = "transparent"}
               >
                 {columnas.map(c => (
                   <td key={c.key} className={`px-4 py-2.5 ${c.right ? "text-right" : ""} ${c.mono ? "font-mono" : ""}`}>

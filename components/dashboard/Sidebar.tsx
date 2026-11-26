@@ -38,12 +38,7 @@ function EnlacePlan({ children }: { children: React.ReactNode }) {
   return (
     <Link
       href="/planes"
-      className="block rounded-lg px-3 py-2.5 transition-colors bg-fondo"
-      onMouseEnter={(e) =>
-        (e.currentTarget.style.background =
-          "color-mix(in srgb, var(--kipu-border) 60%, transparent)")
-      }
-      onMouseLeave={(e) => (e.currentTarget.style.background = "var(--kipu-bg)")}
+      className="block rounded-lg px-3 py-2.5 transition-colors bg-fondo hover:bg-borde/60"
     >
       {children}
     </Link>
@@ -160,9 +155,7 @@ export function Sidebar({
       {/* Selector empresa */}
       <button
         onClick={onOpenSelectorEmp}
-        className="px-4 py-3 text-left transition-colors w-full group border-b-2 border-borde"
-        onMouseEnter={(e) => (e.currentTarget.style.background = "var(--kipu-bg)")}
-        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+        className="px-4 py-3 text-left transition-colors w-full group border-b-2 border-borde hover:bg-fondo"
       >
         <p className="text-xs mb-0.5 text-sutil">
           Empresa activa
@@ -470,15 +463,7 @@ export function Sidebar({
           {/* Notificaciones */}
           <button
             onClick={onOpenDrawer}
-            className="relative p-2 rounded-lg transition-colors text-tenue"
-            onMouseEnter={(e) => {
-              e.currentTarget.style.color = "var(--kipu-text)";
-              e.currentTarget.style.background = "var(--kipu-border)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.color = "var(--kipu-muted)";
-              e.currentTarget.style.background = "transparent";
-            }}
+            className="relative p-2 rounded-lg transition-colors text-tenue hover:text-texto hover:bg-borde"
             title="Notificaciones"
           >
             <Bell size={18} />
@@ -518,16 +503,7 @@ export function Sidebar({
           {/* Cerrar sesión */}
           <button
             onClick={onOpenLogoutModal}
-            className="p-2 rounded-lg transition-colors text-tenue"
-            onMouseEnter={(e) => {
-              e.currentTarget.style.color = "var(--kipu-danger)";
-              e.currentTarget.style.background =
-                "color-mix(in srgb, var(--kipu-danger) 10%, transparent)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.color = "var(--kipu-muted)";
-              e.currentTarget.style.background = "transparent";
-            }}
+            className="p-2 rounded-lg transition-colors text-tenue hover:text-peligro hover:bg-peligro-suave"
             title="Cerrar sesión"
           >
             <LogOut size={18} />
