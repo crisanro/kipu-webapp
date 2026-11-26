@@ -11,6 +11,26 @@ export function Esqueleto({ className }: { className?: string }) {
   return <span aria-hidden className={cn("block animate-pulse rounded-md bg-presionado", className)} />;
 }
 
+/**
+ * Pantalla de detalle cargando: la tarjeta de arriba y unas filas. En el panel
+ * lateral (enPanel) sin el ancho máximo de página.
+ *   if (res.cargando) return <EsqueletoDetalle enPanel={enPanel} />;
+ */
+export function EsqueletoDetalle({ enPanel = false, alto = "h-48", filas = 4, ancho = "max-w-3xl" }: {
+  enPanel?: boolean;
+  /** Alto de la tarjeta de arriba (clase de Tailwind), según lo que llega. */
+  alto?:    string;
+  filas?:   number;
+  ancho?:   string;
+}) {
+  return (
+    <div className={enPanel ? "space-y-4 p-4" : cn("mx-auto space-y-4 p-4 md:p-6", ancho)} aria-busy="true">
+      <Esqueleto className={cn(alto, "rounded-2xl")} />
+      <EsqueletoFilas filas={filas} />
+    </div>
+  );
+}
+
 /** Filas con la forma de FilaLista (título, subtítulo, monto y estado). */
 export function EsqueletoFilas({ filas = 6, className }: { filas?: number; className?: string }) {
   return (

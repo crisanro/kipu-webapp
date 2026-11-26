@@ -28,6 +28,39 @@ export function VacioError({ que, onReintentar, className }: {
   );
 }
 
+/**
+ * Un detalle que no se puede mostrar. Si el backend dijo 404 o 403 (no existe o
+ * es de otra empresa), "no encontrado" y un botón a la lista; si fue otra cosa
+ * (la conexión, el servidor), "no pudimos cargar" y Reintentar.
+ *   if (!data) return <DetalleNoDisponible error={res.error} icono={Wallet} que="la cuenta"
+ *     noEncontrado="Cuenta no encontrada" onReintentar={res.recargar}
+ *     volver={{ texto: "Ir a Cuentas", onClick: () => router.push("/cuentas") }} />;
+ */
+export function DetalleNoDisponible({ error, icono, que, noEncontrado, onReintentar, volver }: {
+  error:        unknown;
+  icono:        LucideIcon;
+  /** "la cuenta", "el comprobante": va en "No pudimos cargar …". */
+  que:          string;
+  noEncontrado: string;
+  onReintentar: () => void;
+  /** Sin esto (p. ej. en el panel lateral) no hay botón para ir a la lista. */
+  volver?:      { texto: string; onClick: () => void };
+}) {
+  const estado = (error as { response?: { status?: number } } | undefined)?.response?.status;
+  const deRed  = !!error && estado !== 404 && estado !== 403;
+  return (
+    <Vacio
+      icono={icono}
+      titulo={deRed ? `No pudimos cargar ${que}` : noEncontrado}
+      descripcion={deRed ? "Revisa tu conexión e intenta de nuevo." : "Puede que sea de otra empresa o que ya no exista."}
+      accion={deRed
+        ? <Boton onClick={onReintentar}>Reintentar</Boton>
+        : volver && <Boton variante="secundario" onClick={volver.onClick}>{volver.texto}</Boton>}
+      className="py-20"
+    />
+  );
+}
+
 export default function Vacio({ icono: Icono, titulo, descripcion, accion, className }: {
   icono:        LucideIcon;
   titulo:       ReactNode;

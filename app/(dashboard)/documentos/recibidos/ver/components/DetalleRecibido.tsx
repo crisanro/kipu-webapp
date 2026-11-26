@@ -22,9 +22,9 @@ import HojaAcciones, { type Accion } from "@/components/ui/HojaAcciones";
 import Seccion from "@/components/ui/Seccion";
 import Interruptor from "@/components/ui/Interruptor";
 import FilaLista from "@/components/ui/FilaLista";
-import Vacio from "@/components/ui/Vacio";
+import { DetalleNoDisponible } from "@/components/ui/Vacio";
 import TirarParaRefrescar from "@/components/ui/TirarParaRefrescar";
-import { Esqueleto, EsqueletoFilas } from "@/components/ui/Esqueleto";
+import { EsqueletoDetalle } from "@/components/ui/Esqueleto";
 import { InsigniaEstado, InsigniaSri } from "@/components/ui/InsigniaEstado";
 import { etiquetaPeriodo } from "@/components/ui/PeriodoFechas";
 import { cn } from "@/components/ui/cn";
@@ -228,30 +228,13 @@ export default function DetalleRecibido({ id, enPanel = false }: { id: string; e
   const [menu,        setMenu]        = useState(false);
   const archivo = useArchivoOriginal(doc);
 
-  if (res.cargando) return (
-    <div className={enPanel ? "space-y-4 p-4" : "mx-auto max-w-3xl space-y-4 p-4 md:p-6"} aria-busy="true">
-      <Esqueleto className="h-48 rounded-2xl" />
-      <EsqueletoFilas filas={4} />
-    </div>
-  );
+  if (res.cargando) return <EsqueletoDetalle enPanel={enPanel} />;
 
-  if (!doc) {
-    // 404/403: no existe o es de otra empresa. Otro error: la conexión, se puede reintentar.
-    const estado = (res.error as { response?: { status?: number } } | undefined)?.response?.status;
-    const deRed  = !!res.error && estado !== 404 && estado !== 403;
-    return (
-      <Vacio
-        icono={FileText}
-        titulo={deRed ? "No pudimos cargar el documento" : "Documento no encontrado"}
-        descripcion={deRed ? "Revisa tu conexión e intenta de nuevo." : "Puede que sea de otra empresa o que ya no exista."}
-        accion={deRed
-          ? <Boton onClick={() => void cargar()}>Reintentar</Boton>
-          : enPanel ? undefined
-          : <Boton variante="secundario" onClick={() => router.push("/documentos/recibidos")}>Ir a Recibidos</Boton>}
-        className="py-20"
-      />
-    );
-  }
+  if (!doc) return (
+    <DetalleNoDisponible error={res.error} icono={FileText} que="el documento"
+      noEncontrado="Documento no encontrado" onReintentar={() => void cargar()}
+      volver={enPanel ? undefined : { texto: "Ir a Recibidos", onClick: () => router.push("/documentos/recibidos") }} />
+  );
 
   const items          = (doc.items_detalle ?? []) as any[];
   const pago           = doc.estado_pago && ["FAC", "LIQ"].includes(doc.tipo_doc) ? ESTADOS_PAGO[doc.estado_pago] : undefined;

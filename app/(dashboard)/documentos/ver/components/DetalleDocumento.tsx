@@ -6,9 +6,8 @@
 import { useRouter } from "next/navigation";
 import { FileText } from "lucide-react";
 import { useLista } from "@/lib/useLista";
-import { Esqueleto, EsqueletoFilas } from "@/components/ui/Esqueleto";
-import Vacio from "@/components/ui/Vacio";
-import Boton from "@/components/ui/Boton";
+import { EsqueletoDetalle } from "@/components/ui/Esqueleto";
+import { DetalleNoDisponible } from "@/components/ui/Vacio";
 import DetalleShared, { type FacturaBase } from "./DetalleShared";
 import DetalleFactura from "./DetalleFactura";
 import DetalleNC      from "./DetalleNC";
@@ -22,32 +21,13 @@ export default function DetalleDocumento({ id, enPanel = false }: { id: string; 
   const res       = useLista<{ data?: any }>(`/api/v1/app/documentos/${id}`);
   const documento = res.datos?.data;
 
-  if (res.cargando) {
-    return (
-      <div className={enPanel ? "space-y-4 p-4" : "mx-auto max-w-3xl space-y-4 p-4 md:p-6"} aria-busy="true">
-        <Esqueleto className="h-52 rounded-2xl" />
-        <EsqueletoFilas filas={4} />
-      </div>
-    );
-  }
+  if (res.cargando) return <EsqueletoDetalle enPanel={enPanel} alto="h-52" />;
 
-  if (!documento) {
-    // 404/403: no existe o es de otra empresa. Otro error: la conexión, se puede reintentar.
-    const estado   = (res.error as { response?: { status?: number } } | undefined)?.response?.status;
-    const deRed    = !!res.error && estado !== 404 && estado !== 403;
-    return (
-      <Vacio
-        icono={FileText}
-        titulo={deRed ? "No pudimos cargar el comprobante" : "Comprobante no encontrado"}
-        descripcion={deRed ? "Revisa tu conexión e intenta de nuevo." : "Puede que sea de otra empresa o que ya no exista."}
-        accion={deRed
-          ? <Boton onClick={() => void res.recargar()}>Reintentar</Boton>
-          : enPanel ? undefined
-          : <Boton variante="secundario" onClick={() => router.push("/documentos")}>Ir a Documentos</Boton>}
-        className="py-20"
-      />
-    );
-  }
+  if (!documento) return (
+    <DetalleNoDisponible error={res.error} icono={FileText} que="el comprobante"
+      noEncontrado="Comprobante no encontrado" onReintentar={() => void res.recargar()}
+      volver={enPanel ? undefined : { texto: "Ir a Documentos", onClick: () => router.push("/documentos") }} />
+  );
 
   // Normalizar estructura al modelo unificado
   const docBase: FacturaBase = {

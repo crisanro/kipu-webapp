@@ -13,9 +13,9 @@ import BotonIcono from "@/components/ui/BotonIcono";
 import Hoja from "@/components/ui/Hoja";
 import HojaAcciones, { type Accion } from "@/components/ui/HojaAcciones";
 import FilaLista, { GrupoFilas } from "@/components/ui/FilaLista";
-import Vacio from "@/components/ui/Vacio";
+import { DetalleNoDisponible } from "@/components/ui/Vacio";
 import TirarParaRefrescar from "@/components/ui/TirarParaRefrescar";
-import { Esqueleto, EsqueletoFilas } from "@/components/ui/Esqueleto";
+import { EsqueletoFilas, EsqueletoDetalle } from "@/components/ui/Esqueleto";
 import { InsigniaEstado, InsigniaSri } from "@/components/ui/InsigniaEstado";
 import { Campo, Entrada } from "@/components/ui/Campo";
 import { etiquetaPeriodo } from "@/components/ui/PeriodoFechas";
@@ -101,29 +101,12 @@ function DetallePersona({ id }: { id: string }) {
   };
 
   // ── Loading / not found ───────────────────────────────────────────────────
-  if (res.cargando) {
-    return (
-      <div className="mx-auto max-w-3xl space-y-4 p-4 md:p-6" aria-busy="true">
-        <Esqueleto className="h-44 rounded-2xl" />
-        <EsqueletoFilas filas={4} />
-      </div>
-    );
-  }
-  if (!data?.cliente) {
-    const estado = (res.error as { response?: { status?: number } } | undefined)?.response?.status;
-    const deRed  = !!res.error && estado !== 404 && estado !== 403;
-    return (
-      <Vacio
-        icono={User}
-        titulo={deRed ? "No pudimos cargar a la persona" : "Persona no encontrada"}
-        descripcion={deRed ? "Revisa tu conexión e intenta de nuevo." : "Puede que sea de otra empresa o que ya no exista."}
-        accion={deRed
-          ? <Boton onClick={() => void res.recargar()}>Reintentar</Boton>
-          : <Boton variante="secundario" onClick={() => router.push("/personas")}>Ir a Personas</Boton>}
-        className="py-20"
-      />
-    );
-  }
+  if (res.cargando) return <EsqueletoDetalle alto="h-44" />;
+  if (!data?.cliente) return (
+    <DetalleNoDisponible error={res.error} icono={User} que="a la persona"
+      noEncontrado="Persona no encontrada" onReintentar={() => void res.recargar()}
+      volver={{ texto: "Ir a Personas", onClick: () => router.push("/personas") }} />
+  );
 
   const { cliente, resumen } = data;
   const facturas   = [...(data.facturas ?? []), ...masFacturas];
