@@ -2,6 +2,7 @@
 import { rutas } from "@/lib/rutas";
 import { useRef, useState } from "react";
 import { useAtajos } from "@/lib/useAtajos";
+import { useNuevoDesdePaleta } from "@/lib/comandos";
 import api from "@/lib/api";
 import { SegmentosPersonas } from "@/components/shell/BarraPestanas";
 import { usePermiso } from "@/hooks/usePermiso";
@@ -210,19 +211,21 @@ function PersonasContenido() {
     }
   };
 
-  // Compu: "/" busca y "n" agrega una persona (lib/useAtajos.ts)
-  const buscadorRef = useRef<HTMLInputElement>(null);
-  useAtajos({
-    "/": () => buscadorRef.current?.focus(),
-    "n": () => abrirModal(),
-  });
-
   const abrirModal = () => {
     setShowModal(true);
     setForm(EMPTY_FORM);
     setError("");
     setLookupMsg("");
   };
+
+  // Compu: "/" busca y "n" agrega una persona (lib/useAtajos.ts)
+  const buscadorRef = useRef<HTMLInputElement>(null);
+  useAtajos({
+    "/": () => buscadorRef.current?.focus(),
+    "n": () => abrirModal(),
+  }, true, { n: "Nuevo cliente o proveedor" });
+  // "Nuevo cliente o proveedor" desde la paleta de comandos (lib/comandos.ts)
+  useNuevoDesdePaleta(() => abrirModal());
 
   return (
     <div className="p-4 md:p-6">

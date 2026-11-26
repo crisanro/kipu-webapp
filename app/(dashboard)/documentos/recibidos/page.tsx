@@ -406,7 +406,7 @@ export default function FacturasRecibidasPage() {
       else if (expandido) setExpandido(null);
       else setMarcada(-1);
     },
-  });
+  }, true, { n: "Registrar compra" });
 
   if (!puedeVer) return <SinAcceso />;
 

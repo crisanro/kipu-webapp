@@ -241,7 +241,7 @@ export default function HistorialPage() {
     "k":         () => mover(-1), "ArrowUp":   () => mover(-1),
     "Enter":     () => { const d = documentos[marcada]; if (d) abrir(d.id); },
     "Escape":    () => { if (sel) cambiarFiltros({ sel: "" }); else setMarcada(-1); },
-  });
+  }, true, { n: "Nueva factura" });
 
   // Nuevo período (PeriodoFechas): se recuerda en la sesión y vuelve a la página 1
   const cambiarPeriodo = (inicio: string, fin: string) => {

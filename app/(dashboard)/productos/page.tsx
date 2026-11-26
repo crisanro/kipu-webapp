@@ -14,6 +14,7 @@ import BotonIcono from "@/components/ui/BotonIcono";
 import { Entrada } from "@/components/ui/Campo";
 import { useState, useEffect, useCallback, useRef, lazy, Suspense } from "react";
 import { useAtajos } from "@/lib/useAtajos";
+import { useNuevoDesdePaleta } from "@/lib/comandos";
 import { etiquetaIva, opcionesIva } from "@/lib/iva";
 import { baseDesdeTotal, tarifaPct } from "@/lib/precios";
 import { r2 } from "@/lib/dinero";
@@ -134,21 +135,23 @@ export default function ProductosPage() {
   };
   useEffect(() => () => { if (debounceRef.current) clearTimeout(debounceRef.current); }, []);
 
-  // Compu: "/" busca y "n" crea un producto (lib/useAtajos.ts); sin permiso, nada
-  const buscadorRef = useRef<HTMLInputElement>(null);
-  useAtajos({
-    "/": () => buscadorRef.current?.focus(),
-    "n": () => abrirCrear(),
-  }, puedeVer);
-
-  if (!puedeVer) return <SinAcceso />;
-
   const abrirCrear = () => {
     setEditando(null);
     setForm(EMPTY_FORM);
     setError("");
     setShowModal(true);
   };
+
+  // Compu: "/" busca y "n" crea un producto (lib/useAtajos.ts); sin permiso, nada
+  const buscadorRef = useRef<HTMLInputElement>(null);
+  useAtajos({
+    "/": () => buscadorRef.current?.focus(),
+    "n": () => abrirCrear(),
+  }, puedeVer, { n: "Nuevo producto" });
+  // "Nuevo producto" desde la paleta de comandos (lib/comandos.ts)
+  useNuevoDesdePaleta(() => { if (puedeVer) abrirCrear(); });
+
+  if (!puedeVer) return <SinAcceso />;
 
   const abrirEditar = (p: Producto) => {
     setEditando(p);

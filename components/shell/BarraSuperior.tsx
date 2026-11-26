@@ -10,7 +10,8 @@
 
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Bell, ChevronDown, ChevronLeft, FlaskConical } from "lucide-react";
+import { Bell, ChevronDown, ChevronLeft, FlaskConical, Search } from "lucide-react";
+import { EVENTO_PALETA } from "@/components/shell/PaletaComandos";
 import BotonIcono from "@/components/ui/BotonIcono";
 import { cn } from "@/components/ui/cn";
 import { useAuthStore } from "@/store/auth.store";
@@ -139,6 +140,11 @@ export default function BarraSuperior({ noLeidas, sandbox, onAbrirNotificaciones
             <FlaskConical size={12} aria-hidden /> Sandbox
           </span>
         )}
+        <BotonIcono
+          etiqueta="Buscar"
+          icono={<Search size={21} />}
+          onClick={() => window.dispatchEvent(new Event(EVENTO_PALETA))}
+        />
         <div className="relative">
           <BotonIcono
             etiqueta={noLeidas > 0 ? `Notificaciones (${noLeidas} sin leer)` : "Notificaciones"}
