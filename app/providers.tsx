@@ -9,12 +9,19 @@ import { useAuthStore } from "@/store/auth.store";
 import { SWRProvider } from "@/lib/swrConfig";
 import api from "@/lib/api";
 import { aEmpresa } from "@/lib/empresa";
+import { SESSION_EMPRESA_KEY } from "@/lib/cuenta";
 import { olvidarDispositivoLocal } from "@/lib/notifications";
 import { guardarVolver } from "@/lib/volver";
+import { ProveedorAvisos } from "@/components/ui/Avisos";
+import { ProveedorConfirmar } from "@/components/ui/Confirmar";
+import PuenteNativo from "@/components/shell/PuenteNativo";
+import { ES_APP_NATIVA } from "@/lib/plataforma";
 
 // Todo lo demás requiere sesión. Lista de públicas (y no de protegidas) para
 // que una pantalla nueva quede protegida por defecto.
-const RUTAS_PUBLICAS = ["/", "/login", "/register", "/reset", "/ayuda", "/blog"];
+// /volver-a-la-app: donde vuelve Stripe cuando el pago se abrió desde la app
+// (el navegador interno no tiene la sesión).
+const RUTAS_PUBLICAS = ["/", "/login", "/register", "/reset", "/ayuda", "/blog", "/volver-a-la-app"];
 
 const esRutaPublica = (path: string) =>
   RUTAS_PUBLICAS.some((r) => path === r || (r !== "/" && path.startsWith(r + "/")));
@@ -22,7 +29,7 @@ const esRutaPublica = (path: string) =>
 // Contenido (Centro de Ayuda y /blog): se muestra al instante, sin esperar a Firebase,
 // para que se vea sin sesión y lo lean los buscadores. La sesión carga detrás
 // (el bloque de soporte de cada artículo depende del plan).
-const RUTAS_CONTENIDO = ["/ayuda", "/blog"];
+const RUTAS_CONTENIDO = ["/ayuda", "/blog", "/volver-a-la-app"];
 const esRutaContenido = (path: string | null) =>
   !!path && RUTAS_CONTENIDO.some((r) => path === r || path.startsWith(r + "/"));
 
@@ -32,9 +39,6 @@ const esRutaSinEmpresa = (path: string) =>
   RUTAS_SIN_EMPRESA.some((r) => path === r || path.startsWith(r + "/"));
 
 const LS_KEYS = ["kipu-ext-token", "kipu-ext-emisor", "kipu-ext-ruc", "kipu-ext-razon"];
-
-// Empresa elegida en esta pestaña (sobrevive recargas, no nuevos logins)
-export const SESSION_EMPRESA_KEY = "kipu-empresa-sesion";
 
 function limpiarStorage() {
   LS_KEYS.forEach((k) => localStorage.removeItem(k));
@@ -203,34 +207,47 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
 
   const contenido = esRutaContenido(pathname);
 
+  let pantalla: React.ReactNode;
   if (errorCarga && !contenido) {
-    return (
-      <div className="h-screen flex flex-col items-center justify-center gap-4 p-6 text-center"
-           style={{ background: "var(--kipu-bg)", color: "var(--kipu-text)" }}>
-        <p className="text-sm max-w-xs" style={{ color: "var(--kipu-muted)" }}>{errorCarga}</p>
+    pantalla = (
+      <div className="h-screen flex flex-col items-center justify-center gap-4 p-6 text-center bg-fondo text-texto">
+        <p className="text-sm max-w-xs text-tenue">{errorCarga}</p>
         <button
           onClick={() => window.location.reload()}
-          className="px-4 py-2 rounded-lg text-sm font-semibold text-white"
-          style={{ background: "var(--kipu-accent)" }}
+          className="px-4 py-2 rounded-lg text-sm font-semibold text-white bg-boton"
         >
           Reintentar
         </button>
       </div>
     );
-  }
-
-  if (!listo && !contenido) {
-    return (
-      <div className="h-screen flex items-center justify-center" style={{ background: "var(--kipu-bg)" }}>
+  } else if (!listo && !contenido) {
+    pantalla = (
+      <div className="h-screen flex items-center justify-center bg-fondo">
         <div className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin"
              style={{ borderColor: "var(--kipu-accent)", borderTopColor: "transparent" }} />
       </div>
     );
+  } else {
+    pantalla = children;
   }
 
+  // El tema envuelve también la carga y el error: quien usa modo oscuro no ve
+  // un destello claro al abrir. En la app de las tiendas sigue al tema del sistema.
   return (
-    <ThemeProvider attribute="data-theme" defaultTheme="light" enableSystem={false}>
-      <SWRProvider>{children}</SWRProvider>
+    <ThemeProvider
+      attribute="data-theme"
+      defaultTheme={ES_APP_NATIVA ? "system" : "light"}
+      enableSystem={ES_APP_NATIVA}
+    >
+      <SWRProvider>
+        {/* useAvisos() y useConfirmar() en cualquier pantalla (components/ui) */}
+        <ProveedorAvisos>
+          <ProveedorConfirmar>
+            <PuenteNativo listo={listo || !!errorCarga || contenido} />
+            {pantalla}
+          </ProveedorConfirmar>
+        </ProveedorAvisos>
+      </SWRProvider>
     </ThemeProvider>
   );
 }

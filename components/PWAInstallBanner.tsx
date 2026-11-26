@@ -71,20 +71,19 @@ export default function PWAInstallBanner() {
       >
         <div className="flex items-start gap-3">
           <div
-            className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-            style={{ background: "var(--kipu-accent)" }}
+            className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-acento"
           >
             <img src="/icons/icon-192.png" alt="Kipu" className="w-8 h-8 rounded-lg" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>Instalar Kipu</p>
+            <p className="text-sm font-semibold text-texto">Instalar Kipu</p>
             {showIOS ? (
-              <p className="text-xs mt-0.5" style={{ color: "var(--kipu-subtle)" }}>
+              <p className="text-xs mt-0.5 text-sutil">
                 Toca <Share size={11} className="inline mx-0.5" /> y luego{" "}
-                <strong style={{ color: "var(--kipu-text)" }}>"Añadir a pantalla de inicio"</strong>
+                <strong className="text-texto">"Añadir a pantalla de inicio"</strong>
               </p>
             ) : (
-              <p className="text-xs mt-0.5" style={{ color: "var(--kipu-subtle)" }}>
+              <p className="text-xs mt-0.5 text-sutil">
                 Accede más rápido y recibe notificaciones nativas.
               </p>
             )}
@@ -92,10 +91,7 @@ export default function PWAInstallBanner() {
           <button
             type="button"
             onClick={descartar}
-            className="transition-colors shrink-0"
-            style={{ color: "var(--kipu-subtle)" }}
-            onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
-            onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-subtle)"}
+            className="transition-colors shrink-0 text-sutil hover:text-texto"
           >
             <X size={16} />
           </button>
@@ -107,23 +103,14 @@ export default function PWAInstallBanner() {
             <button
               type="button"
               onClick={descartar}
-              className="flex-1 py-2 rounded-lg text-xs transition-colors"
-              style={{
-                border: "1px solid var(--kipu-border)",
-                color: "var(--kipu-muted)",
-              }}
-              onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
-              onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-muted)"}
+              className="flex-1 py-2 rounded-lg text-xs transition-colors border border-borde text-tenue hover:text-texto"
             >
               Ahora no
             </button>
             <button
               type="button"
               onClick={instalar}
-              className="flex-1 py-2 rounded-lg text-white text-xs font-medium transition-colors flex items-center justify-center gap-1.5"
-              style={{ background: "var(--kipu-accent)" }}
-              onMouseEnter={e => e.currentTarget.style.background = "var(--kipu-accent-h)"}
-              onMouseLeave={e => e.currentTarget.style.background = "var(--kipu-accent)"}
+              className="flex-1 py-2 rounded-lg text-white text-xs font-medium transition-colors flex items-center justify-center gap-1.5 bg-acento hover:bg-acento-hover"
             >
               <Download size={13} />
               Instalar
@@ -134,13 +121,9 @@ export default function PWAInstallBanner() {
         {/* iOS — solo mostrar el ícono de share */}
         {showIOS && (
           <div
-            className="mt-3 flex items-center gap-2 rounded-lg px-3 py-2 text-xs"
-            style={{
-              background: "color-mix(in srgb, var(--kipu-text) 5%, transparent)",
-              color: "var(--kipu-subtle)",
-            }}
+            className="mt-3 flex items-center gap-2 rounded-lg px-3 py-2 text-xs bg-texto/5 text-sutil"
           >
-            <Share size={14} className="shrink-0" style={{ color: "var(--kipu-accent)" }} />
+            <Share size={14} className="shrink-0 text-acento" />
             <p>
               Compartir → Añadir a pantalla de inicio
             </p>

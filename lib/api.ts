@@ -4,6 +4,9 @@ import { auth, tokenAppCheck } from "./firebase";
 import { useSandboxStore } from "@/store/sandbox.store";
 import { useAuthStore } from "@/store/auth.store";
 import { API_BASE_URL } from "./config";
+import { avisarAlRecargar } from "@/components/ui/Avisos";
+import { neutralizarRespuesta } from "./plataforma";
+import { SESSION_EMPRESA_KEY } from "./cuenta";
 
 const api = axios.create({
   baseURL:         API_BASE_URL,
@@ -47,8 +50,10 @@ let redirigiendo = false;   // varias peticiones pueden fallar a la vez: un solo
 
 // Interceptor — manejo global de errores
 api.interceptors.response.use(
-  (response) => response,
+  // En la app, los mensajes del backend sin nombrar planes (lib/plataforma.ts)
+  (response) => { neutralizarRespuesta(response.data); return response; },
   (error) => {
+    neutralizarRespuesta(error.response?.data);
     if (error.response?.status === 401) {
       // Import dinámico: notifications.ts importa este mismo módulo
       import("./notifications")
@@ -65,8 +70,9 @@ api.interceptors.response.use(
         error.response.data?.detail === SIN_ACCESO_EMPRESA &&
         typeof window !== "undefined" && !redirigiendo) {
       redirigiendo = true;
-      try { sessionStorage.removeItem("kipu-empresa-sesion"); } catch {}  // = SESSION_EMPRESA_KEY
-      alert("Ya no tienes acceso a esta empresa. Te llevamos a otra de tus empresas.");
+      try { sessionStorage.removeItem(SESSION_EMPRESA_KEY); } catch {}
+      // Se muestra al cargar de nuevo (un alert() bloquea la pantalla y en la app sale como diálogo del sistema)
+      avisarAlRecargar("Ya no tienes acceso a esta empresa. Te llevamos a otra de tus empresas.");
       window.location.href = "/dashboard";
     }
     // Rate limit: las pantallas muestran response.data.detail; si el 429 no lo

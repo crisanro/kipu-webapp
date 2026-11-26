@@ -1,6 +1,8 @@
 "use client";
 import { useState } from "react";
 import { ChevronDown, ChevronUp, FileText, ArrowUpRight, ArrowDownLeft } from "lucide-react";
+import { montoEC } from "@/lib/dinero";
+import CeldaCasillero from "./CeldaCasillero";
 
 interface LineaRetencion {
   porcentaje: number;
@@ -59,8 +61,6 @@ interface Props {
   modo: "IVA" | "ATS";
 }
 
-const fmt  = (n: number = 0) => n.toLocaleString("es-EC", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
 const PCT_CAS: Record<number, { cas: string; label: string }> = {
   10:  { cas: "721", label: "Retención del 10%" },
   20:  { cas: "723", label: "Retención del 20%" },
@@ -69,61 +69,6 @@ const PCT_CAS: Record<number, { cas: string; label: string }> = {
   70:  { cas: "729", label: "Retención del 70%" },
   100: { cas: "731", label: "Retención del 100%" },
 };
-
-function CeldaCasillero({ num, label, value, highlight = false, warning = false }: {
-  num: string;
-  label: string;
-  value: number;
-  highlight?: boolean;
-  warning?: boolean;
-}) {
-  return (
-    <div
-      className="p-2.5 rounded-lg flex flex-col justify-between transition-colors"
-      style={{
-        background: highlight
-          ? "color-mix(in srgb, var(--kipu-warning) 10%, transparent)"
-          : warning
-            ? "color-mix(in srgb, var(--kipu-warning) 5%, transparent)"
-            : "color-mix(in srgb, var(--kipu-text) 3%, transparent)",
-        border: highlight
-          ? "1px solid color-mix(in srgb, var(--kipu-warning) 30%, transparent)"
-          : warning
-            ? "1px solid color-mix(in srgb, var(--kipu-warning) 15%, transparent)"
-            : "1px solid var(--kipu-border)",
-      }}
-    >
-      <div className="flex items-center justify-between gap-1 mb-1">
-        <span
-          className="text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0"
-          style={{
-            background: highlight
-              ? "var(--kipu-warning)"
-              : "color-mix(in srgb, var(--kipu-text) 10%, transparent)",
-            color: highlight ? "var(--kipu-surface)" : "var(--kipu-subtle)",
-          }}
-        >
-          {num}
-        </span>
-        <span className="text-[10px] truncate" style={{ color: "var(--kipu-subtle)" }}>
-          {label}
-        </span>
-      </div>
-      <p
-        className="text-sm font-bold tabular-nums text-right"
-        style={{
-          color: highlight
-            ? "var(--kipu-warning)"
-            : value === 0
-              ? "var(--kipu-subtle)"
-              : "var(--kipu-text)",
-        }}
-      >
-        ${fmt(value)}
-      </p>
-    </div>
-  );
-}
 
 export default function SeccionRetenciones({
   retEmitidas, retRecibidas, detalleEmitidas, detalleRecibidas, modo,
@@ -139,15 +84,11 @@ export default function SeccionRetenciones({
   if (!tieneEmitidas && !tieneRecibidas) {
     return (
       <div
-        className="rounded-xl px-4 py-6 text-center"
-        style={{
-          background: "var(--kipu-surface)",
-          border: "1px solid var(--kipu-border)",
-        }}
+        className="rounded-xl px-4 py-6 text-center bg-superficie border border-borde"
       >
-        <FileText size={28} className="mx-auto mb-2" style={{ color: "var(--kipu-subtle)" }} />
-        <p className="text-sm font-medium" style={{ color: "var(--kipu-text)" }}>Sin retenciones en este período</p>
-        <p className="text-xs mt-1" style={{ color: "var(--kipu-subtle)" }}>
+        <FileText size={28} className="mx-auto mb-2 text-sutil" />
+        <p className="text-sm font-medium text-texto">Sin retenciones en este período</p>
+        <p className="text-xs mt-1 text-sutil">
           No se registraron retenciones emitidas como agente ni retenciones recibidas de clientes.
         </p>
       </div>
@@ -160,31 +101,24 @@ export default function SeccionRetenciones({
       {/* ── RETENCIONES QUE EMITIMOS (AGENTE DE RETENCIÓN) ───────────────────────────── */}
       {tieneEmitidas && (
         <div
-          className="rounded-xl overflow-hidden"
-          style={{
-            background: "var(--kipu-surface)",
-            border: "1px solid var(--kipu-border)",
-          }}
+          className="rounded-xl overflow-hidden bg-superficie border border-borde"
         >
           <button
             type="button"
             onClick={() => setExpandEmitidas(!expandEmitidas)}
-            className="w-full flex items-center justify-between px-4 py-3 transition-colors text-left"
-            onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 4%, transparent)"}
-            onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+            className="w-full flex items-center justify-between px-4 py-3 transition-colors text-left hover:bg-texto/4"
           >
             <div className="flex items-center gap-2.5">
               <div
-                className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-                style={{ background: "color-mix(in srgb, var(--kipu-warning) 20%, transparent)" }}
+                className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 bg-alerta/20"
               >
-                <ArrowUpRight size={14} style={{ color: "var(--kipu-warning)" }} />
+                <ArrowUpRight className="text-alerta" size={14} />
               </div>
               <div>
-                <p className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>
+                <p className="text-sm font-semibold text-texto">
                   Retenciones que emitimos (Agente de Retención)
                 </p>
-                <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+                <p className="text-xs text-sutil">
                   {modo === "ATS"
                     ? `${detalleEmitidas?.length ?? 0} comprobantes`
                     : "Impuesto retenido a pagar al SRI"}
@@ -195,29 +129,28 @@ export default function SeccionRetenciones({
             <div className="flex items-center gap-4">
               {retEmitidas && (
                 <div className="text-right hidden sm:block">
-                  <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Total a pagar (801)</p>
-                  <p className="text-sm font-bold" style={{ color: "var(--kipu-warning)" }}>
-                    ${fmt(retEmitidas.casilleros["801"] ?? retEmitidas.casilleros["799"] ?? 0)}
+                  <p className="text-xs text-sutil">Total a pagar (801)</p>
+                  <p className="text-sm font-bold text-alerta">
+                    ${montoEC(retEmitidas.casilleros["801"] ?? retEmitidas.casilleros["799"] ?? 0)}
                   </p>
                 </div>
               )}
               {expandEmitidas ? (
-                <ChevronUp size={16} className="shrink-0" style={{ color: "var(--kipu-subtle)" }} />
+                <ChevronUp size={16} className="shrink-0 text-sutil" />
               ) : (
-                <ChevronDown size={16} className="shrink-0" style={{ color: "var(--kipu-subtle)" }} />
+                <ChevronDown size={16} className="shrink-0 text-sutil" />
               )}
             </div>
           </button>
 
           {expandEmitidas && (
             <div
-              className="p-4 space-y-4"
-              style={{ borderTop: "1px solid var(--kipu-border)" }}
+              className="p-4 space-y-4 border-t border-borde"
             >
               {/* Modo IVA — Casilleros por Porcentaje */}
               {modo === "IVA" && retEmitidas && (
                 <>
-                  <p className="text-xs font-semibold" style={{ color: "var(--kipu-text)" }}>
+                  <p className="text-xs font-semibold text-texto">
                     Desglose por Porcentaje de Retención
                   </p>
 
@@ -228,7 +161,7 @@ export default function SeccionRetenciones({
                       const val  = item ? item.valor : (retEmitidas.casilleros[info.cas] ?? 0);
 
                       return (
-                        <CeldaCasillero
+                        <CeldaCasillero tono="alerta"
                           key={pct}
                           num={info.cas}
                           label={info.label}
@@ -242,17 +175,17 @@ export default function SeccionRetenciones({
                   {/* Resumen Final Agente de Retención */}
                   <div className="pt-3 border-t space-y-2" style={{ borderColor: "var(--kipu-border)" }}>
                     <div className="grid grid-cols-3 gap-2">
-                      <CeldaCasillero
+                      <CeldaCasillero tono="alerta"
                         num="799"
                         label="Total Impuesto Retenido"
                         value={retEmitidas.casilleros["799"] ?? 0}
                       />
-                      <CeldaCasillero
+                      <CeldaCasillero tono="alerta"
                         num="800"
                         label="Devolución / Compensación"
                         value={retEmitidas.casilleros["800"] ?? 0}
                       />
-                      <CeldaCasillero
+                      <CeldaCasillero tono="alerta"
                         num="801"
                         label="Total a Pagar por Retención"
                         value={retEmitidas.casilleros["801"] ?? retEmitidas.casilleros["799"] ?? 0}
@@ -267,14 +200,13 @@ export default function SeccionRetenciones({
               {modo === "ATS" && detalleEmitidas && (
                 <>
                   <div className="flex items-center justify-between">
-                    <p className="text-xs font-semibold" style={{ color: "var(--kipu-text)" }}>
+                    <p className="text-xs font-semibold text-texto">
                       {detalleEmitidas.length} comprobantes de retención emitidos
                     </p>
                     <button
                       type="button"
                       onClick={() => setShowDetalleE(!showDetalleE)}
-                      className="text-xs font-medium transition-colors"
-                      style={{ color: "var(--kipu-accent)" }}
+                      className="text-xs font-medium transition-colors text-acento"
                     >
                       {showDetalleE ? "Ocultar detalle" : "Ver detalle"}
                     </button>
@@ -285,15 +217,11 @@ export default function SeccionRetenciones({
                       {detalleEmitidas.map((ret, idx) => (
                         <div
                           key={idx}
-                          className="rounded-lg p-3 space-y-2"
-                          style={{
-                            background: "color-mix(in srgb, var(--kipu-text) 4%, transparent)",
-                            border: "1px solid var(--kipu-border)",
-                          }}
+                          className="rounded-lg p-3 space-y-2 bg-texto/4 border border-borde"
                         >
                           <div className="flex items-start justify-between gap-2">
                             <div>
-                              <p className="text-xs font-mono font-bold" style={{ color: "var(--kipu-text)" }}>
+                              <p className="text-xs font-mono font-bold text-texto">
                                 {ret.numero_doc}
                               </p>
                               <p className="text-[10px]" style={{ color: "var(--kipu-subtle)" }}>
@@ -308,11 +236,11 @@ export default function SeccionRetenciones({
                           <div className="space-y-1 pt-1 border-t" style={{ borderColor: "var(--kipu-border)" }}>
                             {ret.impuestos.map((imp, i) => (
                               <div key={i} className="flex items-center justify-between text-[10px]">
-                                <span style={{ color: "var(--kipu-subtle)" }}>
-                                  Cód. {imp.codigo} ({imp.porcentaje}%) · Base ${fmt(imp.base_imponible)}
+                                <span className="text-sutil">
+                                  Cód. {imp.codigo} ({imp.porcentaje}%) · Base ${montoEC(imp.base_imponible)}
                                 </span>
-                                <span className="font-bold" style={{ color: "var(--kipu-warning)" }}>
-                                  ${fmt(imp.valor_retenido)}
+                                <span className="font-bold text-alerta">
+                                  ${montoEC(imp.valor_retenido)}
                                 </span>
                               </div>
                             ))}
@@ -331,31 +259,24 @@ export default function SeccionRetenciones({
       {/* ── RETENCIONES QUE NOS HICIERON (CRÉDITO TRIBUTARIO) ────────────────────────────────── */}
       {tieneRecibidas && (
         <div
-          className="rounded-xl overflow-hidden"
-          style={{
-            background: "var(--kipu-surface)",
-            border: "1px solid var(--kipu-border)",
-          }}
+          className="rounded-xl overflow-hidden bg-superficie border border-borde"
         >
           <button
             type="button"
             onClick={() => setExpandRecibidas(!expandRecibidas)}
-            className="w-full flex items-center justify-between px-4 py-3 transition-colors text-left"
-            onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 4%, transparent)"}
-            onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+            className="w-full flex items-center justify-between px-4 py-3 transition-colors text-left hover:bg-texto/4"
           >
             <div className="flex items-center gap-2.5">
               <div
-                className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-                style={{ background: "color-mix(in srgb, var(--kipu-info) 20%, transparent)" }}
+                className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 bg-info/20"
               >
-                <ArrowDownLeft size={14} style={{ color: "var(--kipu-info)" }} />
+                <ArrowDownLeft className="text-info" size={14} />
               </div>
               <div>
-                <p className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>
+                <p className="text-sm font-semibold text-texto">
                   Retenciones que nos hicieron
                 </p>
-                <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+                <p className="text-xs text-sutil">
                   {modo === "ATS"
                     ? `${detalleRecibidas?.length ?? 0} comprobantes recibidos`
                     : "Crédito tributario de IVA en ventas"}
@@ -366,42 +287,36 @@ export default function SeccionRetenciones({
             <div className="flex items-center gap-4">
               {retRecibidas && (
                 <div className="text-right hidden sm:block">
-                  <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Casillero 609</p>
-                  <p className="text-sm font-bold" style={{ color: "var(--kipu-info)" }}>
-                    ${fmt(retRecibidas.casilleros["609"] ?? 0)}
+                  <p className="text-xs text-sutil">Casillero 609</p>
+                  <p className="text-sm font-bold text-info">
+                    ${montoEC(retRecibidas.casilleros["609"] ?? 0)}
                   </p>
                 </div>
               )}
               {expandRecibidas ? (
-                <ChevronUp size={16} className="shrink-0" style={{ color: "var(--kipu-subtle)" }} />
+                <ChevronUp size={16} className="shrink-0 text-sutil" />
               ) : (
-                <ChevronDown size={16} className="shrink-0" style={{ color: "var(--kipu-subtle)" }} />
+                <ChevronDown size={16} className="shrink-0 text-sutil" />
               )}
             </div>
           </button>
 
           {expandRecibidas && (
             <div
-              className="p-4 space-y-3"
-              style={{ borderTop: "1px solid var(--kipu-border)" }}
+              className="p-4 space-y-3 border-t border-borde"
             >
               {modo === "IVA" && retRecibidas && (
                 <div
-                  className="p-3 rounded-lg flex items-center justify-between"
-                  style={{
-                    background: "color-mix(in srgb, var(--kipu-info) 10%, transparent)",
-                    border: "1px solid color-mix(in srgb, var(--kipu-info) 25%, transparent)",
-                  }}
+                  className="p-3 rounded-lg flex items-center justify-between bg-info/10 border border-info/25"
                 >
                   <div className="flex items-center gap-2.5">
                     <span
-                      className="text-[10px] font-bold px-2 py-0.5 rounded text-white"
-                      style={{ background: "var(--kipu-info)" }}
+                      className="text-[10px] font-bold px-2 py-0.5 rounded text-white bg-info"
                     >
                       609
                     </span>
                     <div>
-                      <p className="text-xs font-semibold" style={{ color: "var(--kipu-text)" }}>
+                      <p className="text-xs font-semibold text-texto">
                         Retenciones en la fuente de IVA efectuadas en este período
                       </p>
                       <p className="text-[10px]" style={{ color: "var(--kipu-subtle)" }}>
@@ -409,8 +324,8 @@ export default function SeccionRetenciones({
                       </p>
                     </div>
                   </div>
-                  <p className="text-base font-bold tabular-nums" style={{ color: "var(--kipu-info)" }}>
-                    ${fmt(retRecibidas.casilleros["609"] ?? 0)}
+                  <p className="text-base font-bold tabular-nums text-info">
+                    ${montoEC(retRecibidas.casilleros["609"] ?? 0)}
                   </p>
                 </div>
               )}
@@ -418,14 +333,13 @@ export default function SeccionRetenciones({
               {modo === "ATS" && detalleRecibidas && (
                 <>
                   <div className="flex items-center justify-between">
-                    <p className="text-xs font-semibold" style={{ color: "var(--kipu-text)" }}>
+                    <p className="text-xs font-semibold text-texto">
                       {detalleRecibidas.length} comprobantes de retención recibidos
                     </p>
                     <button
                       type="button"
                       onClick={() => setShowDetalleR(!showDetalleR)}
-                      className="text-xs font-medium transition-colors"
-                      style={{ color: "var(--kipu-accent)" }}
+                      className="text-xs font-medium transition-colors text-acento"
                     >
                       {showDetalleR ? "Ocultar detalle" : "Ver detalle"}
                     </button>
@@ -436,15 +350,11 @@ export default function SeccionRetenciones({
                       {detalleRecibidas.map((ret, idx) => (
                         <div
                           key={idx}
-                          className="rounded-lg p-3 space-y-2"
-                          style={{
-                            background: "color-mix(in srgb, var(--kipu-text) 4%, transparent)",
-                            border: "1px solid var(--kipu-border)",
-                          }}
+                          className="rounded-lg p-3 space-y-2 bg-texto/4 border border-borde"
                         >
                           <div className="flex items-start justify-between gap-2">
                             <div>
-                              <p className="text-xs font-mono font-bold" style={{ color: "var(--kipu-text)" }}>
+                              <p className="text-xs font-mono font-bold text-texto">
                                 {ret.numero_doc}
                               </p>
                               <p className="text-[10px]" style={{ color: "var(--kipu-subtle)" }}>
@@ -459,16 +369,16 @@ export default function SeccionRetenciones({
                           <div className="space-y-1 pt-1 border-t" style={{ borderColor: "var(--kipu-border)" }}>
                             {ret.impuestos.map((imp, i) => (
                               <div key={i} className="flex items-center justify-between text-[10px]">
-                                <span style={{ color: "var(--kipu-subtle)" }}>
-                                  {imp.porcentaje ?? imp.tarifa}% · Base ${fmt(imp.base_imponible)}
+                                <span className="text-sutil">
+                                  {imp.porcentaje ?? imp.tarifa}% · Base ${montoEC(imp.base_imponible)}
                                   {imp.aplica_credito && (
-                                    <span className="ml-1 font-medium" style={{ color: "var(--kipu-success)" }}>
+                                    <span className="ml-1 font-medium text-exito">
                                       · crédito
                                     </span>
                                   )}
                                 </span>
-                                <span className="font-bold" style={{ color: "var(--kipu-info)" }}>
-                                  ${fmt(imp.valor)}
+                                <span className="font-bold text-info">
+                                  ${montoEC(imp.valor)}
                                 </span>
                               </div>
                             ))}

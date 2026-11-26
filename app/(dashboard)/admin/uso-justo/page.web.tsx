@@ -5,13 +5,15 @@
 //     pedido o a otro) o rechazar con una nota que ve el cliente.
 //   - Nivel de una empresa (se busca por RUC o nombre): ver su uso y sus
 //     criterios, y ponerle el nivel a mano.
-// Niveles: 1 = 300/100, 2 = 600/200, 3 = 1.000/330 (mes / día).
+// Los niveles y sus límites vienen del backend (GET /admin/uso-justo/niveles, del
+// .env USO_JUSTO_*): aquí no se repiten números que pueden cambiar.
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, Gauge, Loader2, RotateCw, Search, XCircle } from "lucide-react";
 import api from "@/lib/api";
+import { detalleError } from "@/lib/errores";
 
 interface Criterio {
   ok:             boolean;
@@ -70,15 +72,12 @@ type Estado = Solicitud["estado"];
 const FILTROS: { v: Estado; t: string }[] = [
   { v: "PENDIENTE", t: "Pendientes" }, { v: "APROBADA", t: "Aprobadas" }, { v: "RECHAZADA", t: "Rechazadas" },
 ];
-const LIMITES: Record<number, string> = { 1: "300 / 100", 2: "600 / 200", 3: "1.000 / 330" };
+interface NivelUsoJusto { nivel: number; mes: number; dia: number }
+const cifra = (n: number) => n.toLocaleString("es-EC");
+const limitesDe = (t: NivelUsoJusto) => `${cifra(t.mes)} / ${cifra(t.dia)}`;
 
 const fecha = (iso: string) =>
   new Date(iso).toLocaleDateString("es-EC", { day: "numeric", month: "short", year: "numeric" });
-
-const detalle = (e: unknown, porDefecto: string) => {
-  const det = (e as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail;
-  return typeof det === "string" ? det : porDefecto;
-};
 
 function textoCriterio(clave: string, c: Criterio): string {
   if (clave === "dias") return `${c.valor} ${c.texto} (pide ${c.requerido})`;
@@ -93,10 +92,10 @@ function ListaCriterios({ criterios }: { criterios: Criterios | null }) {
   return (
     <ul className="space-y-1">
       {Object.entries(criterios).map(([k, c]) => (
-        <li key={k} className="flex items-center gap-1.5 text-xs" style={{ color: "var(--kipu-muted)" }}>
+        <li key={k} className="flex items-center gap-1.5 text-xs text-tenue">
           {c.ok
-            ? <CheckCircle2 size={12} style={{ color: "var(--kipu-success)" }} />
-            : <XCircle size={12} style={{ color: "var(--kipu-danger)" }} />}
+            ? <CheckCircle2 className="text-exito" size={12} />
+            : <XCircle className="text-peligro" size={12} />}
           {textoCriterio(k, c)}
         </li>
       ))}
@@ -139,6 +138,15 @@ export default function AdminUsoJustoPage() {
   const [manual,    setManual]    = useState(true);
   const [notaNivel, setNotaNivel] = useState("");
   const [guardando, setGuardando] = useState(false);
+  const [tabla,     setTabla]     = useState<NivelUsoJusto[]>([]);
+
+  useEffect(() => {
+    let vivo = true;
+    api.get("/api/v1/admin/uso-justo/niveles")
+      .then((r) => { if (vivo) setTabla(r.data.data ?? []); })
+      .catch(() => { /* sin la tabla solo falta la leyenda; el resto funciona */ });
+    return () => { vivo = false; };
+  }, []);
 
   const aplicar = useCallback((r: Lectura) => {
     if (r.prohibido) { router.replace("/dashboard"); return; }
@@ -168,7 +176,7 @@ export default function AdminUsoJustoPage() {
         : `Solicitud de ${s.razon_social} rechazada. Ya le llegó la notificación.`);
       recargar();
     } catch (e) {
-      setError(detalle(e, "No se pudo resolver la solicitud."));
+      setError(detalleError(e, "No se pudo resolver la solicitud."));
     } finally {
       setResolviendo(null);
     }
@@ -187,7 +195,7 @@ export default function AdminUsoJustoPage() {
       if (lista.length === 1) await abrir(lista[0].id);
     } catch (e) {
       setEncontradas(null);
-      setError(detalle(e, "No se pudo buscar."));
+      setError(detalleError(e, "No se pudo buscar."));
     } finally {
       setBuscando(false);
     }
@@ -201,7 +209,7 @@ export default function AdminUsoJustoPage() {
       setNuevoNivel(res.data.data.nivel);
     } catch (e) {
       setEmpresa(null);
-      setError(detalle(e, "No se encontró la empresa."));
+      setError(detalleError(e, "No se encontró la empresa."));
     }
   };
 
@@ -217,7 +225,7 @@ export default function AdminUsoJustoPage() {
       setNotaNivel("");
       await abrir(empresa.id);
     } catch (e) {
-      setError(detalle(e, "No se pudo cambiar el nivel."));
+      setError(detalleError(e, "No se pudo cambiar el nivel."));
     } finally {
       setGuardando(false);
     }
@@ -227,16 +235,17 @@ export default function AdminUsoJustoPage() {
     <div className="max-w-6xl mx-auto px-4 md:px-6 py-4 md:py-6 space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-base font-semibold flex items-center gap-2" style={{ color: "var(--kipu-text)" }}>
-            <Gauge size={16} style={{ color: "var(--kipu-accent)" }} /> Uso justo del plan gratis
+          <h2 className="text-base font-semibold flex items-center gap-2 text-texto">
+            <Gauge className="text-acento" size={16} /> Uso justo del plan gratis
           </h2>
-          <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
-            Nivel 1: 300/100 · nivel 2: 600/200 · nivel 3: 1.000/330 (mes / día). Las que cumplen suben solas;
+          <p className="text-xs text-sutil">
+            {tabla.length > 0 && `${tabla.map((t) => `Nivel ${t.nivel}: ${limitesDe(t)}`).join(" · ")} (mes / día). `}
+            Las que cumplen suben solas;
             aquí quedan las que no.
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex rounded-lg p-0.5" style={{ border: "1px solid var(--kipu-border)" }}>
+          <div className="flex rounded-lg p-0.5 border border-borde">
             {FILTROS.map(({ v, t }) => (
               <button
                 key={v}
@@ -254,8 +263,7 @@ export default function AdminUsoJustoPage() {
             onClick={recargar}
             disabled={cargando}
             aria-label="Actualizar"
-            className="p-2 rounded-lg transition-colors hover:bg-[color-mix(in_srgb,var(--kipu-text)_6%,transparent)]"
-            style={{ color: "var(--kipu-subtle)", border: "1px solid var(--kipu-border)" }}
+            className="p-2 rounded-lg transition-colors hover:bg-[color-mix(in_srgb,var(--kipu-text)_6%,transparent)] text-sutil border border-borde"
           >
             <RotateCw size={14} className={cargando ? "animate-spin" : ""} />
           </button>
@@ -263,14 +271,12 @@ export default function AdminUsoJustoPage() {
       </div>
 
       {aviso && (
-        <p className="text-xs rounded-lg px-3 py-2 flex items-center gap-2"
-           style={{ background: "color-mix(in srgb, var(--kipu-success) 10%, transparent)", color: "var(--kipu-text)" }}>
-          <CheckCircle2 size={14} style={{ color: "var(--kipu-success)" }} /> {aviso}
+        <p className="text-xs rounded-lg px-3 py-2 flex items-center gap-2 bg-exito/10 text-texto">
+          <CheckCircle2 className="text-exito" size={14} /> {aviso}
         </p>
       )}
       {error && (
-        <p className="text-xs rounded-lg px-3 py-2"
-           style={{ background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)", color: "var(--kipu-danger)" }}>
+        <p className="text-xs rounded-lg px-3 py-2 bg-peligro-suave text-peligro">
           {error}
         </p>
       )}
@@ -278,11 +284,10 @@ export default function AdminUsoJustoPage() {
       {/* ── Solicitudes ─────────────────────────────────────────────────── */}
       {lista === null ? (
         <div className="flex justify-center py-16">
-          <Loader2 size={20} className="animate-spin" style={{ color: "var(--kipu-accent)" }} />
+          <Loader2 size={20} className="animate-spin text-acento" />
         </div>
       ) : lista.length === 0 ? (
-        <div className="rounded-xl p-8 text-center text-sm"
-             style={{ background: "var(--kipu-surface)", border: "1px solid var(--kipu-border)", color: "var(--kipu-subtle)" }}>
+        <div className="rounded-xl p-8 text-center text-sm bg-superficie border border-borde text-sutil">
           {filtro === "PENDIENTE" ? "No hay solicitudes por revisar." : "No hay solicitudes en este estado."}
         </div>
       ) : (
@@ -296,14 +301,14 @@ export default function AdminUsoJustoPage() {
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="min-w-0">
                     <Link href={`/admin/emisores/${s.emisor_id}`}
-                          className="text-sm font-semibold truncate hover:underline block" style={{ color: "var(--kipu-text)" }}>
+                          className="text-sm font-semibold truncate hover:underline block text-texto">
                       {s.razon_social}
                     </Link>
-                    <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+                    <p className="text-xs text-sutil">
                       RUC {s.ruc} · empresa {s.emisor_id} · #{s.id} · {fecha(s.created_at)}
                     </p>
                   </div>
-                  <p className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>
+                  <p className="text-sm font-semibold text-texto">
                     Nivel {s.nivel_actual} → {s.nivel_pedido}
                   </p>
                 </div>
@@ -311,7 +316,7 @@ export default function AdminUsoJustoPage() {
                 <ListaCriterios criterios={s.criterios} />
 
                 {!pendiente && (
-                  <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+                  <p className="text-xs text-sutil">
                     {s.aprobada_sola ? "Se aprobó sola (cumplía todo)" : `Resuelta por ${s.resuelta_por ?? "—"}`}
                     {s.resuelta_at && ` · ${fecha(s.resuelta_at)}`}
                     {s.nota && ` · nota: ${s.nota}`}
@@ -319,8 +324,7 @@ export default function AdminUsoJustoPage() {
                 )}
 
                 {pendiente && (
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 pt-3"
-                       style={{ borderTop: "1px solid var(--kipu-border)" }}>
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 pt-3 border-t border-borde">
                     <input
                       value={notas[s.id] ?? ""}
                       onChange={(ev) => setNotas((n) => ({ ...n, [s.id]: ev.target.value }))}
@@ -337,16 +341,14 @@ export default function AdminUsoJustoPage() {
                         style={inputStyle}
                         aria-label="Nivel al aprobar"
                       >
-                        {[2, 3].filter((n) => n > s.nivel_actual).map((n) => (
-                          <option key={n} value={n}>Nivel {n}</option>
-                        ))}
+                        {(tabla.length ? tabla.map((t) => t.nivel).filter((n) => n > s.nivel_actual) : [s.nivel_pedido])
+                          .map((n) => <option key={n} value={n}>Nivel {n}</option>)}
                       </select>
                       <button
                         type="button"
                         onClick={() => resolver(s, true)}
                         disabled={resolviendo === s.id}
-                        className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white whitespace-nowrap flex items-center gap-1.5 transition-opacity hover:opacity-90 disabled:opacity-50"
-                        style={{ background: "var(--kipu-success)" }}
+                        className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white whitespace-nowrap flex items-center gap-1.5 transition-opacity hover:opacity-90 disabled:opacity-50 bg-exito"
                       >
                         {resolviendo === s.id && <Loader2 size={12} className="animate-spin" />}
                         Aprobar
@@ -355,8 +357,7 @@ export default function AdminUsoJustoPage() {
                         type="button"
                         onClick={() => resolver(s, false)}
                         disabled={resolviendo === s.id}
-                        className="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-opacity hover:opacity-90 disabled:opacity-50"
-                        style={{ border: "1px solid var(--kipu-danger)", color: "var(--kipu-danger)" }}
+                        className="px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-opacity hover:opacity-90 disabled:opacity-50 border border-peligro text-peligro"
                       >
                         Rechazar
                       </button>
@@ -370,9 +371,8 @@ export default function AdminUsoJustoPage() {
       )}
 
       {/* ── Nivel de una empresa ────────────────────────────────────────── */}
-      <div className="rounded-xl p-4 space-y-3"
-           style={{ background: "var(--kipu-surface)", border: "1px solid var(--kipu-border)" }}>
-        <p className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>Nivel de una empresa</p>
+      <div className="rounded-xl p-4 space-y-3 bg-superficie border border-borde">
+        <p className="text-sm font-semibold text-texto">Nivel de una empresa</p>
         <form onSubmit={(ev) => { ev.preventDefault(); buscar(); }} className="flex gap-2">
           <input
             value={busqueda}
@@ -385,15 +385,14 @@ export default function AdminUsoJustoPage() {
           <button
             type="submit"
             disabled={buscando || busqueda.trim().length < 3}
-            className="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 disabled:opacity-50"
-            style={{ border: "1px solid var(--kipu-border)", color: "var(--kipu-text)" }}
+            className="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 disabled:opacity-50 border border-borde text-texto"
           >
             {buscando ? <Loader2 size={12} className="animate-spin" /> : <Search size={12} />} Ver
           </button>
         </form>
 
         {encontradas && encontradas.length === 0 && (
-          <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Ninguna empresa coincide.</p>
+          <p className="text-xs text-sutil">Ninguna empresa coincide.</p>
         )}
         {encontradas && encontradas.length > 1 && (
           <ul className="space-y-1">
@@ -407,7 +406,7 @@ export default function AdminUsoJustoPage() {
                            color: "var(--kipu-text)" }}
                 >
                   <span className="font-medium">{x.razon_social}</span>
-                  <span style={{ color: "var(--kipu-subtle)" }}>
+                  <span className="text-sutil">
                     {" · "}RUC {x.ruc} · {x.ambiente === 2 ? "producción" : "pruebas"} · nivel {x.uso_justo_nivel}
                     {x.uso_justo_nivel_manual && " (a mano)"}
                   </span>
@@ -419,27 +418,26 @@ export default function AdminUsoJustoPage() {
 
         {empresa && (
           <div className="space-y-3">
-            <p className="text-sm font-medium" style={{ color: "var(--kipu-text)" }}>
+            <p className="text-sm font-medium text-texto">
               {empresa.razon_social}
-              <span className="text-xs font-normal" style={{ color: "var(--kipu-subtle)" }}>
+              <span className="text-xs font-normal text-sutil">
                 {" · "}RUC {empresa.ruc} · {empresa.ambiente === 2 ? "producción" : "pruebas"}
               </span>
             </p>
-            <p className="text-xs" style={{ color: "var(--kipu-muted)" }}>
-              <strong style={{ color: "var(--kipu-text)" }}>Nivel {empresa.nivel}</strong>
+            <p className="text-xs text-tenue">
+              <strong className="text-texto">Nivel {empresa.nivel}</strong>
               {empresa.manual && " (puesto a mano: no sube solo)"} · {empresa.limite_mes} al mes / {empresa.limite_dia} al día
               {" · "}lleva {empresa.usados_mes} este mes y {empresa.usados_hoy} hoy
             </p>
             {empresa.siguiente && (
               <div className="space-y-1">
-                <p className="text-xs font-medium" style={{ color: "var(--kipu-text)" }}>
+                <p className="text-xs font-medium text-texto">
                   Para el nivel {empresa.siguiente}: {empresa.cumple ? "cumple" : "no cumple"}
                 </p>
                 <ListaCriterios criterios={empresa.criterios} />
               </div>
             )}
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2 pt-3"
-                 style={{ borderTop: "1px solid var(--kipu-border)" }}>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 pt-3 border-t border-borde">
               <select
                 value={nuevoNivel}
                 onChange={(ev) => setNuevoNivel(Number(ev.target.value))}
@@ -447,9 +445,11 @@ export default function AdminUsoJustoPage() {
                 style={inputStyle}
                 aria-label="Nuevo nivel"
               >
-                {[1, 2, 3].map((n) => <option key={n} value={n}>Nivel {n} ({LIMITES[n]})</option>)}
+                {(tabla.length ? tabla : [{ nivel: nuevoNivel, mes: 0, dia: 0 }]).map((t) => (
+                  <option key={t.nivel} value={t.nivel}>Nivel {t.nivel}{t.mes ? ` (${limitesDe(t)})` : ""}</option>
+                ))}
               </select>
-              <label className="flex items-center gap-1.5 text-xs" style={{ color: "var(--kipu-muted)" }}>
+              <label className="flex items-center gap-1.5 text-xs text-tenue">
                 <input type="checkbox" checked={manual} onChange={(ev) => setManual(ev.target.checked)} />
                 A mano (la subida automática no lo toca)
               </label>
@@ -465,8 +465,7 @@ export default function AdminUsoJustoPage() {
                 type="button"
                 onClick={guardarNivel}
                 disabled={guardando}
-                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white whitespace-nowrap flex items-center gap-1.5 transition-opacity hover:opacity-90 disabled:opacity-50"
-                style={{ background: "var(--kipu-accent)" }}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white whitespace-nowrap flex items-center gap-1.5 transition-opacity hover:opacity-90 disabled:opacity-50 bg-acento"
               >
                 {guardando && <Loader2 size={12} className="animate-spin" />}
                 Guardar nivel

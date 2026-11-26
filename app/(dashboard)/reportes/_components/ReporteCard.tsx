@@ -6,6 +6,7 @@ import {
   Calendar, Shield, AlertTriangle, Lock,
 } from "lucide-react";
 import EstadoBadge, { EstadoReporte } from "./EstadoBadge";
+import { montoEC } from "@/lib/dinero";
 
 interface Props {
   tipo:           "IVA" | "RENTA" | "ATS";
@@ -24,7 +25,7 @@ interface Props {
     totalDocs?:       number;
   };
   generadoAt?: string;
-  sinPlan?:    boolean;  // plan gratis: el total se ve gratis, el 104 completo con pase o Pro
+  sinPlan?:    boolean;  // plan gratis: el total se ve gratis, el 104 completo con Pro
 }
 
 const TIPO_CONFIG = {
@@ -32,9 +33,6 @@ const TIPO_CONFIG = {
   RENTA: { label: "Renta 102", color: "var(--kipu-muted)",            bg: "color-mix(in srgb, #a855f7 20%, transparent)",     border: "color-mix(in srgb, #a855f7 20%, transparent)" },
   ATS:   { label: "ATS",       color: "#22d3ee",            bg: "color-mix(in srgb, #06b6d4 20%, transparent)",     border: "color-mix(in srgb, #06b6d4 20%, transparent)" },
 };
-
-const fmt = (n: number) =>
-  n.toLocaleString("es-EC", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 const MESES_CORTOS = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
 
@@ -111,7 +109,7 @@ export default function ReporteCard({
               >
                 {cfg.label}
               </span>
-              <p className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>{periodoFmt}</p>
+              <p className="text-sm font-semibold text-texto">{periodoFmt}</p>
               {enCurso && (
                 <span
                   className="text-[10px] px-1.5 py-0.5 rounded font-medium"
@@ -153,24 +151,24 @@ export default function ReporteCard({
               <div className="flex items-center gap-3 flex-wrap">
                 {tieneAPagar && (
                   <div className="flex items-center gap-1">
-                    <AlertTriangle size={11} style={{ color: "var(--kipu-danger)" }} />
-                    <span className="text-xs font-semibold" style={{ color: "var(--kipu-danger)" }}>
-                      A pagar: ${fmt(resumen.ivaAPagar ?? 0)}
+                    <AlertTriangle className="text-peligro" size={11} />
+                    <span className="text-xs font-semibold text-peligro">
+                      A pagar: ${montoEC(resumen.ivaAPagar ?? 0)}
                     </span>
                   </div>
                 )}
                 {tieneSaldo && (
-                  <span className="text-xs font-semibold" style={{ color: "var(--kipu-success)" }}>
-                    Saldo favor: ${fmt(resumen.saldoFavor ?? 0)}
+                  <span className="text-xs font-semibold text-exito">
+                    Saldo favor: ${montoEC(resumen.saldoFavor ?? 0)}
                   </span>
                 )}
                 {tieneCausado && !tieneAPagar && !tieneSaldo && (
-                  <span className="text-xs font-semibold" style={{ color: "var(--kipu-muted)" }}>
-                    Causado: ${fmt(resumen.impuestoCausado ?? 0)}
+                  <span className="text-xs font-semibold text-tenue">
+                    Causado: ${montoEC(resumen.impuestoCausado ?? 0)}
                   </span>
                 )}
                 {resumen.totalDocs !== undefined && (
-                  <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+                  <span className="text-xs text-sutil">
                     {resumen.totalDocs} documentos
                   </span>
                 )}
@@ -180,23 +178,23 @@ export default function ReporteCard({
             {/* Plan gratis: el total del mes se ve al abrirlo */}
             {sinPlan && !cached && (
               <div className="flex items-center gap-1.5">
-                <Lock size={11} style={{ color: "var(--kipu-accent)" }} />
-                <p className="text-xs font-medium" style={{ color: "var(--kipu-accent)" }}>Ver total gratis</p>
+                <Lock className="text-acento" size={11} />
+                <p className="text-xs font-medium text-acento">Ver total gratis</p>
               </div>
             )}
 
             {/* Generado / pendiente */}
             {!sinPlan && !cached && !enCurso && (
               <div className="flex items-center gap-1.5">
-                <RefreshCw size={11} style={{ color: "var(--kipu-subtle)" }} />
-                <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Reporte no generado aún</p>
+                <RefreshCw className="text-sutil" size={11} />
+                <p className="text-xs text-sutil">Reporte no generado aún</p>
               </div>
             )}
 
             {cached && generadoAt && (
               <div className="flex items-center gap-1.5 mt-1">
-                <Shield size={11} style={{ color: "var(--kipu-subtle)" }} />
-                <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+                <Shield className="text-sutil" size={11} />
+                <p className="text-xs text-sutil">
                   Generado {fmtGenerado(generadoAt)}
                 </p>
               </div>
@@ -209,8 +207,7 @@ export default function ReporteCard({
           <EstadoBadge estado={estado} diasRestantes={diasRestantes} size="sm" />
           <ChevronRight
             size={16}
-            className="transition-colors mt-1"
-            style={{ color: "var(--kipu-subtle)" }}
+            className="transition-colors mt-1 text-sutil"
           />
         </div>
 

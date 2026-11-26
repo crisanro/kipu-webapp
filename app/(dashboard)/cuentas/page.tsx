@@ -1,6 +1,8 @@
 "use client";
+import { detalleError } from "@/lib/errores";
 import { rutas } from "@/lib/rutas";
-import { useState, useEffect, useCallback, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
+import { useAtajos } from "@/lib/useAtajos";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import api from "@/lib/api";
@@ -9,14 +11,30 @@ import SinAcceso from "@/components/SinAcceso";
 import { useAuthStore } from "@/store/auth.store";
 import { hoyEC } from "@/lib/fecha";
 import { demoCuentas, resumenCuentas } from "@/lib/demos";
-import { BannerEjemplo, EtiquetaEjemplo } from "@/components/EjemploPro";
+import { AvisoFuncionPro, BannerEjemplo, EtiquetaEjemplo } from "@/components/EjemploPro";
 import SoloWeb from "@/components/SoloWeb";
 import { ES_APP_NATIVA } from "@/lib/plataforma";
+import Hoja from "@/components/ui/Hoja";
+import Boton from "@/components/ui/Boton";
+import { useLista, useFiltrosUrl, useBusquedaUrl } from "@/lib/useLista";
+import type { TonoEstado } from "@/lib/estados";
+import FilaLista, { GrupoFilas } from "@/components/ui/FilaLista";
+import { InsigniaEstado } from "@/components/ui/InsigniaEstado";
+import { EsqueletoFilas } from "@/components/ui/Esqueleto";
+import Vacio, { VacioError } from "@/components/ui/Vacio";
+import BotonFlotante from "@/components/ui/BotonFlotante";
+import TirarParaRefrescar from "@/components/ui/TirarParaRefrescar";
+import ChipsFiltro from "@/components/ui/ChipsFiltro";
+import { AreaTexto, Campo, Entrada } from "@/components/ui/Campo";
+import BotonIcono from "@/components/ui/BotonIcono";
+import { etiquetaPeriodo } from "@/components/ui/PeriodoFechas";
+import { cn } from "@/components/ui/cn";
 import {
-  Wallet, Plus, X, ChevronDown, Save,
+  Wallet, Plus, X, Save,
   TrendingUp, TrendingDown, Scale, Search,
-  AlertTriangle, CheckCircle2, Clock, Ban,
+  AlertTriangle, Loader2,
 } from "lucide-react";
+import { dolares } from "@/lib/dinero";
 
 // ── Tipos ──────────────────────────────────────────────────────────────────────
 interface Cuenta {
@@ -42,16 +60,24 @@ interface Resumen {
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
-const fmt = (n: number) => `$${n.toFixed(2)}`;
 
-const ESTADO_CONFIG = {
-  PENDIENTE: { label: "Pendiente", color: "var(--kipu-warning)", bg: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)", icon: Clock },
-  PARCIAL:   { label: "Parcial",   color: "var(--kipu-info)",           bg: "color-mix(in srgb, var(--kipu-info) 10%, transparent)",           icon: AlertTriangle },
-  PAGADO:    { label: "Pagado",    color: "var(--kipu-success)", bg: "color-mix(in srgb, var(--kipu-success) 10%, transparent)", icon: CheckCircle2 },
-  ANULADO:   { label: "Anulado",   color: "var(--kipu-subtle)",  bg: "color-mix(in srgb, var(--kipu-subtle) 10%, transparent)",  icon: Ban },
+const ESTADOS: Record<Cuenta["estado"], { etiqueta: string; tono: TonoEstado }> = {
+  PENDIENTE: { etiqueta: "Pendiente", tono: "alerta" },
+  PARCIAL:   { etiqueta: "Parcial",   tono: "info" },
+  PAGADO:    { etiqueta: "Pagado",    tono: "exito" },
+  ANULADO:   { etiqueta: "Anulado",   tono: "neutro" },
 };
 
-const EMPTY_FORM = {
+const FILTROS_ESTADO = [
+  { valor: "",          etiqueta: "Todos" },
+  { valor: "PENDIENTE", etiqueta: "Pendientes" },
+  { valor: "PARCIAL",   etiqueta: "Parciales" },
+  { valor: "PAGADO",    etiqueta: "Pagadas" },
+  { valor: "ANULADO",   etiqueta: "Anuladas" },
+];
+
+// Función y no constante: con la app abierta desde ayer, la fecha debe ser la de hoy
+const formVacio = () => ({
   cliente_id:        "",
   tipo:              "COBRAR",
   concepto:          "",
@@ -59,25 +85,26 @@ const EMPTY_FORM = {
   fecha_emision:     hoyEC(),
   fecha_vencimiento: "",
   notas:             "",
-};
+});
 
 // ── Componente Interno ─────────────────────────────────────────────────────────
 function CuentasContent() {
   const searchParams = useSearchParams();
 
-  const [cuentas,    setCuentas]    = useState<Cuenta[]>([]);
-  const [resumen,    setResumen]    = useState<Resumen>({ por_cobrar: 0, por_pagar: 0, balance: 0 });
-  const [loading,    setLoading]    = useState(true);
-  const [query,      setQuery]      = useState("");
-  const [filtroTipo, setFiltroTipo] = useState<"" | "COBRAR" | "PAGAR">("");
-  const [filtroEst,  setFiltroEst]  = useState("");
+  // En la URL: al volver de una cuenta, la lista sigue filtrada (antes se perdía)
+  const [query, setQuery] = useBusquedaUrl();
+  const [filtros, cambiarFiltros] = useFiltrosUrl({ tipo: "", estado: "" });
+  const filtroTipo = (["COBRAR", "PAGAR"].includes(filtros.tipo) ? filtros.tipo : "") as "" | "COBRAR" | "PAGAR";
+  const filtroEst  = filtros.estado;
+  const setFiltroTipo = (tipo: "" | "COBRAR" | "PAGAR") => cambiarFiltros({ tipo });
+  const setFiltroEst  = (estado: string) => cambiarFiltros({ estado });
 
   const empresa  = useAuthStore((s) => s.empresa);
   const tieneSub = empresa?.suscripcion_activa ?? false;
 
   // Modal nueva cuenta
   const [showModal,  setShowModal]  = useState(false);
-  const [form,       setForm]       = useState<any>(EMPTY_FORM);
+  const [form,       setForm]       = useState<any>(formVacio);
   const [saving,     setSaving]     = useState(false);
   const [error,      setError]      = useState("");
 
@@ -87,27 +114,21 @@ function CuentasContent() {
   const [buscandoCliente, setBuscandoCliente] = useState(false);
   const [clienteSelec,    setClienteSelec]    = useState<any>(null);
 
-  const cargar = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params: any = {};
-      if (filtroTipo) params.tipo   = filtroTipo;
-      if (filtroEst)  params.estado = filtroEst;
-      const res = await api.get("/api/v1/app/cuentas", { params });
-      setCuentas(res.data.data    ?? []);
-      setResumen(res.data.resumen ?? { por_cobrar: 0, por_pagar: 0, balance: 0 });
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  }, [filtroTipo, filtroEst]);
+  // Con caché: al volver de una cuenta la lista aparece al instante (lib/useLista.ts)
+  const qs = new URLSearchParams();
+  if (filtroTipo) qs.set("tipo", filtroTipo);
+  if (filtroEst)  qs.set("estado", filtroEst);
+  const datos   = useLista<{ data?: Cuenta[]; resumen?: Resumen }>(`/api/v1/app/cuentas${qs.size ? `?${qs}` : ""}`);
+  const cuentas = datos.datos?.data ?? [];
+  const resumen = datos.datos?.resumen ?? { por_cobrar: 0, por_pagar: 0, balance: 0 };
+  const loading = datos.cargando;
+  const cargar  = datos.recargar;
 
-  useEffect(() => { cargar(); }, [cargar]);
-
-  // Manejo de query param para preseleccionar cliente
+  // ?cliente=… preselecciona el cliente. Depende solo de ese valor: los filtros
+  // también viven en la URL y, con searchParams entero, el modal se volvía a abrir
+  // con cada filtro
+  const clienteId = searchParams.get("cliente");
   useEffect(() => {
-    const clienteId = searchParams.get("cliente");
     if (!clienteId) return;
     const preseleccionar = async () => {
       try {
@@ -123,7 +144,7 @@ function CuentasContent() {
       }
     };
     preseleccionar();
-  }, [searchParams]);
+  }, [clienteId]);
 
   // Buscar clientes para el selector del modal
   useEffect(() => {
@@ -140,7 +161,7 @@ function CuentasContent() {
   }, [clienteQuery]);
 
   // Sin Plan Pro y sin cuentas propias: ejemplos para ver cómo funciona
-  const esDemo = !loading && !tieneSub && cuentas.length === 0 && !filtroTipo && !filtroEst;
+  const esDemo = !loading && !datos.fallo && !tieneSub && cuentas.length === 0 && !filtroTipo && !filtroEst;
   const lista  = esDemo ? demoCuentas() : cuentas;
   const totales = esDemo ? resumenCuentas(lista) : resumen;
 
@@ -176,54 +197,49 @@ function CuentasContent() {
         setShowModal(false);
         resetModal();
     } catch (err: any) {
-        const detail = err?.response?.data?.detail;
-        if (Array.isArray(detail)) {
-        setError(detail.map((e: any) => e.mensaje ?? e.msg ?? JSON.stringify(e)).join(", "));
-        } else {
-        setError(detail ?? "Error al guardar.");
-        }
+        setError(detalleError(err, "Error al guardar."));
     } finally {
         setSaving(false);
     }
   };
 
   const resetModal = () => {
-    setForm(EMPTY_FORM);
+    setForm(formVacio());
     setClienteQuery("");
     setClientesBusq([]);
     setClienteSelec(null);
     setError("");
   };
 
+  const nueva = () => { if (!tieneSub) return; resetModal(); setShowModal(true); };
+
+  // Compu: "/" busca y "n" registra una cuenta (lib/useAtajos.ts)
+  const buscadorRef = useRef<HTMLInputElement>(null);
+  useAtajos({
+    "/": () => buscadorRef.current?.focus(),
+    "n": nueva,
+  }, true, { n: "Nueva cuenta" });
+  const hoy   = hoyEC();
+  // Las tarjetas del resumen filtran por tipo; tocar la elegida quita el filtro
+  const alternarTipo = (t: "COBRAR" | "PAGAR") => setFiltroTipo(filtroTipo === t ? "" : t);
+  const tarjeta = "rounded-xl border bg-superficie p-3 text-left transition-colors sm:p-4";
+
   return (
     <div className="p-4 md:p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      {/* Encabezado: en el celular el título ya está en la barra superior */}
+      <div className="mb-6 hidden items-center justify-between lg:flex">
         <div>
-          <h1 className="text-xl font-bold" style={{ color: "var(--kipu-text)" }}>Cuentas</h1>
-          <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>{cuentas.length} registradas</p>
+          <h1 className="text-xl font-bold text-texto">Cuentas</h1>
+          <p className="text-sm text-sutil">{cuentas.length} registradas</p>
         </div>
-        <button
-          type="button"
-          onClick={() => { if (!tieneSub) return; setShowModal(true); resetModal(); }}
+        <Boton
+          onClick={nueva}
           disabled={!tieneSub}
           title={!tieneSub ? (ES_APP_NATIVA ? "No incluido en tu plan actual" : "Disponible en el Plan Pro") : undefined}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:cursor-not-allowed"
-          style={{
-            background: tieneSub ? "var(--kipu-accent)" : "var(--kipu-surface)",
-            color: tieneSub ? "#FFFFFF" : "var(--kipu-subtle)",
-            border: tieneSub ? "none" : "1px solid var(--kipu-border)",
-          }}
-          onMouseEnter={e => {
-            if (tieneSub) e.currentTarget.style.background = "var(--kipu-accent-h)";
-          }}
-          onMouseLeave={e => {
-            if (tieneSub) e.currentTarget.style.background = "var(--kipu-accent)";
-          }}
+          icono={<Plus size={16} />}
         >
-          <Plus size={15} />
           Nueva cuenta
-        </button>
+        </Boton>
       </div>
 
       {esDemo && (
@@ -234,338 +250,153 @@ function CuentasContent() {
       )}
 
       {!tieneSub && !esDemo && (
-        <div
-          className="flex items-center gap-3 rounded-xl px-4 py-3 mb-4"
-          style={{
-            background: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)",
-            border: "1px solid color-mix(in srgb, var(--kipu-warning) 20%, transparent)",
-          }}
-        >
-          <AlertTriangle size={15} className="shrink-0" style={{ color: "var(--kipu-warning)" }} />
-          <div className="flex-1">
-            <p className="text-sm font-medium" style={{ color: "var(--kipu-warning)" }}>
-              {ES_APP_NATIVA ? "No incluido en tu plan actual" : "Función del Plan Pro"}
-            </p>
-            <p className="text-xs" style={{ color: "color-mix(in srgb, var(--kipu-warning) 80%, transparent)" }}>
-              {ES_APP_NATIVA
-                ? "Las cuentas por cobrar y pagar no están incluidas en tu plan actual. Las que ya registraste las sigues viendo."
-                : "Las cuentas por cobrar y pagar son del Plan Pro. Las que ya registraste las sigues viendo."}
-            </p>
-          </div>
-          <SoloWeb>
-            <Link
-              href="/planes"
-              className="text-xs underline underline-offset-2 shrink-0 transition-colors"
-              style={{ color: "var(--kipu-warning)" }}
-            >
-              Ver planes
-            </Link>
-          </SoloWeb>
-        </div>
+        <AvisoFuncionPro
+          titulo className="mb-4"
+          texto="Las cuentas por cobrar y pagar son del Plan Pro. Las que ya registraste las sigues viendo."
+          textoApp="Las cuentas por cobrar y pagar no están incluidas en tu plan actual. Las que ya registraste las sigues viendo."
+        />
       )}
 
-      {/* Resumen */}
-      <div className="grid grid-cols-3 gap-3 mb-6">
-        <div
-          className="rounded-xl p-4"
-          style={{
-            background: "var(--kipu-surface)",
-            border: "1px solid var(--kipu-border)",
-          }}
+      {/* Resumen: tocar Por cobrar / Por pagar filtra la lista */}
+      <div className="mb-4 grid grid-cols-3 gap-2 sm:gap-3">
+        <button
+          type="button"
+          onClick={() => alternarTipo("COBRAR")}
+          aria-pressed={filtroTipo === "COBRAR"}
+          className={cn(tarjeta, filtroTipo === "COBRAR" ? "border-exito ring-1 ring-exito" : "border-borde hover:border-exito/50")}
         >
-          <div className="flex items-center gap-2 mb-1">
-            <TrendingUp size={14} style={{ color: "var(--kipu-success)" }} />
-            <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Por cobrar</p>
-          </div>
-          <p className="text-xl font-bold" style={{ color: "var(--kipu-success)" }}>{fmt(totales.por_cobrar)}</p>
-        </div>
-        <div
-          className="rounded-xl p-4"
-          style={{
-            background: "var(--kipu-surface)",
-            border: "1px solid var(--kipu-border)",
-          }}
+          <span className="mb-1 flex items-center gap-1.5 text-xs text-sutil">
+            <TrendingUp size={14} className="text-exito" aria-hidden /> Por cobrar
+          </span>
+          <span className="block truncate text-base font-bold tabular-nums text-exito-texto sm:text-xl">{dolares(totales.por_cobrar)}</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => alternarTipo("PAGAR")}
+          aria-pressed={filtroTipo === "PAGAR"}
+          className={cn(tarjeta, filtroTipo === "PAGAR" ? "border-peligro ring-1 ring-peligro" : "border-borde hover:border-peligro/50")}
         >
-          <div className="flex items-center gap-2 mb-1">
-            <TrendingDown size={14} style={{ color: "var(--kipu-danger)" }} />
-            <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Por pagar</p>
-          </div>
-          <p className="text-xl font-bold" style={{ color: "var(--kipu-danger)" }}>{fmt(totales.por_pagar)}</p>
-        </div>
-        <div
-          className="rounded-xl p-4"
-          style={{
-            background: "var(--kipu-surface)",
-            border: "1px solid var(--kipu-border)",
-          }}
-        >
-          <div className="flex items-center gap-2 mb-1">
-            <Scale
-              size={14}
-              style={{ color: totales.balance >= 0 ? "var(--kipu-accent)" : "var(--kipu-warning)" }}
-            />
-            <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Balance</p>
-          </div>
-          <p
-            className="text-xl font-bold"
-            style={{ color: totales.balance >= 0 ? "var(--kipu-accent)" : "var(--kipu-warning)" }}
-          >
-            {fmt(totales.balance)}
-          </p>
+          <span className="mb-1 flex items-center gap-1.5 text-xs text-sutil">
+            <TrendingDown size={14} className="text-peligro" aria-hidden /> Por pagar
+          </span>
+          <span className="block truncate text-base font-bold tabular-nums text-peligro-texto sm:text-xl">{dolares(totales.por_pagar)}</span>
+        </button>
+        <div className={cn(tarjeta, "border-borde")}>
+          <span className="mb-1 flex items-center gap-1.5 text-xs text-sutil">
+            <Scale size={14} className={totales.balance >= 0 ? "text-acento" : "text-alerta"} aria-hidden /> Balance
+          </span>
+          <span className={cn("block truncate text-base font-bold tabular-nums sm:text-xl",
+                              totales.balance >= 0 ? "text-acento" : "text-alerta-texto")}>
+            {dolares(totales.balance)}
+          </span>
         </div>
       </div>
 
-      {/* Filtros */}
-      <div className="flex gap-2 mb-4 flex-wrap">
-        <div className="relative flex-1 min-w-48">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--kipu-subtle)" }} />
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Buscar por persona o concepto..."
-            className="w-full pl-9 pr-4 py-2.5 rounded-lg text-sm transition-colors focus:outline-none"
-            style={{
-              background: "var(--kipu-surface)",
-              border: "1px solid var(--kipu-border)",
-              color: "var(--kipu-text)",
-            }}
-            onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-            onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
-          />
-        </div>
-        <div className="relative">
-          <select
-            value={filtroTipo}
-            onChange={(e) => setFiltroTipo(e.target.value as any)}
-            className="pl-3 pr-8 py-2.5 rounded-lg text-sm appearance-none transition-colors focus:outline-none"
-            style={{
-              background: "var(--kipu-surface)",
-              border: "1px solid var(--kipu-border)",
-              color: "var(--kipu-text)",
-            }}
-            onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-            onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
-          >
-            <option value="">Todos</option>
-            <option value="COBRAR">Por cobrar</option>
-            <option value="PAGAR">Por pagar</option>
-          </select>
-          <ChevronDown
-            size={13}
-            className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none"
-            style={{ color: "var(--kipu-subtle)" }}
-          />
-        </div>
-        <div className="relative">
-          <select
-            value={filtroEst}
-            onChange={(e) => setFiltroEst(e.target.value)}
-            className="pl-3 pr-8 py-2.5 rounded-lg text-sm appearance-none transition-colors focus:outline-none"
-            style={{
-              background: "var(--kipu-surface)",
-              border: "1px solid var(--kipu-border)",
-              color: "var(--kipu-text)",
-            }}
-            onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-            onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
-          >
-            <option value="">Todos los estados</option>
-            <option value="PENDIENTE">Pendiente</option>
-            <option value="PARCIAL">Parcial</option>
-            <option value="PAGADO">Pagado</option>
-            <option value="ANULADO">Anulado</option>
-          </select>
-          <ChevronDown
-            size={13}
-            className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none"
-            style={{ color: "var(--kipu-subtle)" }}
-          />
-        </div>
-      </div>
+      <Entrada
+        teclado="buscar"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Buscar por persona o concepto…"
+        aria-label="Buscar cuentas"
+        prefijo={<Search size={16} />}
+        ref={buscadorRef}
+        className="mb-3"
+      />
+      <ChipsFiltro opciones={FILTROS_ESTADO} valor={filtroEst} onCambio={setFiltroEst} etiqueta="Estado de la cuenta" className="mb-4" />
 
       {/* Lista */}
       {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <div
-            className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin"
-            style={{ borderColor: "var(--kipu-accent)", borderTopColor: "transparent" }}
-          />
-        </div>
+        <EsqueletoFilas filas={6} />
+      ) : datos.fallo ? (
+        <VacioError que="tus cuentas" onReintentar={datos.recargar} />
       ) : filtradas.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <Wallet size={40} className="mb-3" style={{ color: "var(--kipu-subtle)" }} />
-          <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>
-            {query || filtroTipo || filtroEst
-              ? "No hay cuentas que coincidan con los filtros."
-              : "Aún no tienes cuentas registradas."}
-          </p>
-          {!query && !filtroTipo && !filtroEst && (
-            tieneSub ? (
-              <button
-                type="button"
-                onClick={() => { setShowModal(true); resetModal(); }}
-                className="mt-4 px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors"
-                style={{ background: "var(--kipu-accent)" }}
-                onMouseEnter={e => e.currentTarget.style.background = "var(--kipu-accent-h)"}
-                onMouseLeave={e => e.currentTarget.style.background = "var(--kipu-accent)"}
-              >
-                Registrar primera cuenta
-              </button>
-            ) : (
-              <SoloWeb>
-                <Link
-                  href="/planes"
-                  className="mt-4 px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors inline-block"
-                  style={{ background: "var(--kipu-warning)" }}
-                >
-                  Ver planes
-                </Link>
-              </SoloWeb>
-            )
-          )}
-        </div>
+        query || filtroTipo || filtroEst ? (
+          <Vacio icono={Search} titulo="Ninguna cuenta coincide" descripcion="Prueba con otra búsqueda o quita los filtros." />
+        ) : (
+          <Vacio
+            icono={Wallet}
+            titulo="Aún no tienes cuentas registradas"
+            descripcion="Lleva lo que te deben y lo que debes, con sus abonos y vencimientos."
+            accion={tieneSub
+              ? <Boton onClick={nueva} icono={<Plus size={16} />}>Registrar cuenta</Boton>
+              : <SoloWeb><Link href="/planes" className="text-sm font-medium text-acento underline underline-offset-2">Ver planes</Link></SoloWeb>}
+          />
+        )
       ) : (
-        <div
-          className="rounded-xl overflow-hidden"
-          style={{
-            background: "var(--kipu-surface)",
-            border: "1px solid var(--kipu-border)",
-          }}
-        >
-          <div>
-            {filtradas.map((c, idx) => {
-              const est  = ESTADO_CONFIG[c.estado] ?? ESTADO_CONFIG.PENDIENTE;
-              const Icon = est.icon;
-              const vencida = c.fecha_vencimiento &&
-                c.fecha_vencimiento < hoyEC() &&
-                c.estado !== "PAGADO" && c.estado !== "ANULADO";
-
+        <TirarParaRefrescar alRefrescar={cargar}>
+          <GrupoFilas>
+            {filtradas.map((c) => {
+              const est     = ESTADOS[c.estado] ?? ESTADOS.PENDIENTE;
+              const abierta = c.estado !== "PAGADO" && c.estado !== "ANULADO";
+              const vencida = abierta && !!c.fecha_vencimiento && c.fecha_vencimiento < hoy;
+              const vence   = c.fecha_vencimiento ? etiquetaPeriodo(c.fecha_vencimiento, c.fecha_vencimiento, hoy).toLowerCase() : "";
               return (
-                <Link
+                <FilaLista
                   key={c.id}
                   href={esDemo ? (ES_APP_NATIVA ? "/cuentas" : "/planes") : rutas.cuenta(c.id)}
-                  className="flex items-center gap-3 px-4 py-3 transition-colors"
-                  style={{
-                    borderTop: idx > 0 ? "1px solid var(--kipu-border)" : "none",
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 4%, transparent)"}
-                  onMouseLeave={e => e.currentTarget.style.background = "transparent"}
-                >
-                  {/* Tipo badge */}
-                  <div
-                    className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-xs font-bold"
-                    style={{
-                      background: c.tipo === "COBRAR"
-                        ? "color-mix(in srgb, var(--kipu-success) 10%, transparent)"
-                        : "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
-                      color: c.tipo === "COBRAR" ? "var(--kipu-success)" : "var(--kipu-danger)",
-                    }}
-                  >
-                    {c.tipo === "COBRAR" ? "C" : "P"}
-                  </div>
-
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium flex items-center gap-2 min-w-0" style={{ color: "var(--kipu-text)" }}>
-                      <span className="truncate">{c.concepto}</span>{esDemo && <EtiquetaEjemplo />}
-                    </p>
-                    <p className="text-xs truncate" style={{ color: "var(--kipu-subtle)" }}>
-                      {c.razon_social}
-                      {c.fecha_vencimiento && (
-                        <span
-                          className="ml-2"
-                          style={{ color: vencida ? "var(--kipu-danger)" : "var(--kipu-subtle)" }}
-                        >
-                          · Vence {c.fecha_vencimiento}
-                          {vencida && " ⚠️"}
-                        </span>
-                      )}
-                    </p>
-                  </div>
-
-                  {/* Montos */}
-                  <div className="text-right shrink-0">
-                    <p className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>{fmt(c.saldo_pendiente)}</p>
-                    <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>de {fmt(c.monto_total)}</p>
-                  </div>
-
-                  {/* Estado */}
-                  <div
-                    className="items-center gap-1 px-2 py-1 rounded-full text-xs shrink-0 hidden sm:flex font-medium"
-                    style={{
-                      color: est.color,
-                      background: est.bg,
-                    }}
-                  >
-                    <Icon size={11} />
-                    {est.label}
-                  </div>
-                </Link>
+                  apagada={c.estado === "ANULADO"}
+                  inicio={
+                    <span
+                      className={cn("inline-flex size-10 items-center justify-center rounded-full text-xs font-bold",
+                        c.tipo === "COBRAR" ? "bg-exito-suave text-exito-texto" : "bg-peligro-suave text-peligro-texto")}
+                      title={c.tipo === "COBRAR" ? "Por cobrar" : "Por pagar"}
+                    >
+                      {c.tipo === "COBRAR" ? "C" : "P"}
+                    </span>
+                  }
+                  titulo={<span className="flex items-center gap-2">{c.concepto}{esDemo && <EtiquetaEjemplo />}</span>}
+                  subtitulo={c.razon_social}
+                  detalle={
+                    <>
+                      {`de ${dolares(c.monto_total)}`}
+                      {vence && <span className={vencida ? "text-peligro-texto" : undefined}>{` · ${vencida ? "venció" : "vence"} ${vence}`}</span>}
+                    </>
+                  }
+                  fin={dolares(c.saldo_pendiente)}
+                  finAbajo={vencida
+                    ? <InsigniaEstado tono="peligro" icono={AlertTriangle}>Vencida</InsigniaEstado>
+                    : <InsigniaEstado tono={est.tono}>{est.etiqueta}</InsigniaEstado>}
+                />
               );
             })}
-          </div>
-        </div>
+          </GrupoFilas>
+        </TirarParaRefrescar>
       )}
 
-      {/* Modal nueva cuenta */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-          <div
-            className="rounded-xl w-full max-w-md"
-            style={{
-              background: "var(--kipu-surface)",
-              border: "1px solid var(--kipu-border)",
-            }}
-          >
-            <div
-              className="flex items-center justify-between px-5 py-4"
-              style={{ borderBottom: "1px solid var(--kipu-border)" }}
-            >
-              <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>Nueva cuenta</h2>
-              <button
-                type="button"
-                onClick={() => { setShowModal(false); resetModal(); }}
-                className="transition-colors"
-                style={{ color: "var(--kipu-subtle)" }}
-                onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
-                onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-subtle)"}
-              >
-                <X size={18} />
-              </button>
-            </div>
+      {/* Celular: nueva cuenta (solo si el plan lo permite) */}
+      {tieneSub && <BotonFlotante onClick={nueva} etiqueta="Nueva cuenta" />}
 
-            <div className="p-5 space-y-3">
-              {/* Tipo */}
-              <div className="grid grid-cols-2 gap-2">
+      {/* Nueva cuenta: Hoja (en el celular sube desde abajo, con los botones fijos abajo) */}
+      <Hoja
+        abierta={showModal}
+        onCerrar={() => { setShowModal(false); resetModal(); }}
+        titulo="Nueva cuenta"
+        cerrable={!saving}
+        pie={<>
+          <Boton variante="secundario" onClick={() => { setShowModal(false); resetModal(); }} disabled={saving}>
+            Cancelar
+          </Boton>
+          <Boton onClick={handleGuardar} cargando={saving} icono={<Save size={16} />}>Guardar</Boton>
+        </>}
+      >
+            <div className="space-y-3">
+              {/* Tipo: lo que me deben (verde) o lo que debo (rojo) */}
+              <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Tipo de cuenta">
                 {(["COBRAR", "PAGAR"] as const).map((t) => {
-                  const isSelected = form.tipo === t;
+                  const elegido = form.tipo === t;
                   return (
                     <button
                       key={t}
                       type="button"
+                      role="radio"
+                      aria-checked={elegido}
                       onClick={() => setForm({ ...form, tipo: t })}
-                      className="py-2.5 rounded-lg text-sm font-medium transition-colors"
-                      style={{
-                        background: isSelected
-                          ? (t === "COBRAR"
-                              ? "color-mix(in srgb, var(--kipu-success) 20%, transparent)"
-                              : "color-mix(in srgb, var(--kipu-danger) 20%, transparent)")
-                          : "var(--kipu-surface)",
-                        border: isSelected
-                          ? (t === "COBRAR"
-                              ? "1px solid color-mix(in srgb, var(--kipu-success) 50%, transparent)"
-                              : "1px solid color-mix(in srgb, var(--kipu-danger) 50%, transparent)")
-                          : "1px solid var(--kipu-border)",
-                        color: isSelected
-                          ? (t === "COBRAR" ? "var(--kipu-success)" : "var(--kipu-danger)")
-                          : "var(--kipu-subtle)",
-                      }}
-                      onMouseEnter={e => {
-                        if (!isSelected) e.currentTarget.style.color = "var(--kipu-text)";
-                      }}
-                      onMouseLeave={e => {
-                        if (!isSelected) e.currentTarget.style.color = "var(--kipu-subtle)";
-                      }}
+                      className={cn(
+                        "rounded-lg border py-2.5 text-sm font-medium transition-colors",
+                        !elegido && "border-borde bg-superficie text-sutil hover:text-texto",
+                        elegido && t === "COBRAR" && "border-exito/50 bg-exito-suave text-exito-texto",
+                        elegido && t === "PAGAR" && "border-peligro/50 bg-peligro-suave text-peligro-texto",
+                      )}
                     >
                       {t === "COBRAR" ? "Por cobrar" : "Por pagar"}
                     </button>
@@ -573,74 +404,38 @@ function CuentasContent() {
                 })}
               </div>
 
-              {/* Selector de persona */}
-              <div>
-                <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Persona *</label>
+              <Campo etiqueta="Persona *">
                 {clienteSelec ? (
-                  <div
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg"
-                    style={{
-                      background: "color-mix(in srgb, var(--kipu-text) 5%, transparent)",
-                      border: "1px solid var(--kipu-border)",
-                    }}
-                  >
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm truncate" style={{ color: "var(--kipu-text)" }}>{clienteSelec.razon_social}</p>
-                      <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>{clienteSelec.identificacion}</p>
+                  <div className="flex items-center gap-2 rounded-lg border border-borde bg-presionado px-3 py-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm text-texto">{clienteSelec.razon_social}</p>
+                      <p className="text-xs text-sutil">{clienteSelec.identificacion}</p>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => { setClienteSelec(null); setClienteQuery(""); }}
-                      className="shrink-0 transition-colors"
-                      style={{ color: "var(--kipu-subtle)" }}
-                      onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
-                      onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-subtle)"}
-                    >
-                      <X size={14} />
-                    </button>
+                    <BotonIcono etiqueta="Quitar la persona" icono={<X size={14} />} tamano="sm"
+                                onClick={() => { setClienteSelec(null); setClienteQuery(""); }} />
                   </div>
                 ) : (
                   <div className="relative">
-                    <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--kipu-subtle)" }} />
-                    <input
+                    <Entrada
+                      teclado="buscar"
                       value={clienteQuery}
                       onChange={(e) => setClienteQuery(e.target.value)}
                       placeholder="Buscar por nombre o identificación..."
-                      className="w-full pl-9 pr-4 py-2 rounded-lg text-sm transition-colors focus:outline-none"
-                      style={{
-                        background: "var(--kipu-surface)",
-                        border: "1px solid var(--kipu-border)",
-                        color: "var(--kipu-text)",
-                      }}
-                      onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                      onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+                      prefijo={<Search size={14} />}
+                      sufijo={buscandoCliente ? <Loader2 size={14} className="animate-spin text-acento" aria-hidden /> : undefined}
                     />
-                    {buscandoCliente && (
-                      <div
-                        className="w-3.5 h-3.5 border-2 border-t-transparent rounded-full animate-spin absolute right-3 top-1/2 -translate-y-1/2"
-                        style={{ borderColor: "var(--kipu-accent)", borderTopColor: "transparent" }}
-                      />
-                    )}
                     {clientesBusq.length > 0 && (
-                      <div
-                        className="absolute top-full left-0 right-0 mt-1 rounded-lg overflow-hidden z-10 shadow-xl"
-                        style={{
-                          background: "var(--kipu-surface)",
-                          border: "1px solid var(--kipu-border)",
-                        }}
-                      >
+                      <div className="absolute inset-x-0 top-full z-10 mt-1 overflow-hidden rounded-lg border border-borde bg-superficie shadow-xl">
                         {clientesBusq.map((cl) => (
                           <button
                             type="button"
                             key={cl.uid ?? cl.id}
                             onClick={() => { setClienteSelec(cl); setClienteQuery(""); setClientesBusq([]); }}
-                            className="w-full flex items-start gap-2 px-3 py-2.5 text-left transition-colors"
-                            onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 5%, transparent)"}
-                            onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                            className="flex w-full items-start gap-2 px-3 py-2.5 text-left transition-colors hover:bg-presionado"
                           >
                             <div>
-                              <p className="text-sm" style={{ color: "var(--kipu-text)" }}>{cl.razon_social}</p>
-                              <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>{cl.identificacion}</p>
+                              <p className="text-sm text-texto">{cl.razon_social}</p>
+                              <p className="text-xs text-sutil">{cl.identificacion}</p>
                             </div>
                           </button>
                         ))}
@@ -648,159 +443,51 @@ function CuentasContent() {
                     )}
                   </div>
                 )}
-              </div>
+              </Campo>
 
-              {/* Concepto */}
-              <div>
-                <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Concepto *</label>
-                <input
+              <Campo etiqueta="Concepto *">
+                <Entrada
                   value={form.concepto}
                   onChange={(e) => setForm({ ...form, concepto: e.target.value })}
                   placeholder="Descripción de la deuda..."
-                  className="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none"
-                  style={{
-                    background: "var(--kipu-surface)",
-                    border: "1px solid var(--kipu-border)",
-                    color: "var(--kipu-text)",
-                  }}
-                  onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                  onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
                 />
-              </div>
+              </Campo>
 
-              {/* Monto */}
-              <div>
-                <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Monto total *</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm" style={{ color: "var(--kipu-subtle)" }}>$</span>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={form.monto_total}
-                    onChange={(e) => setForm({ ...form, monto_total: e.target.value })}
-                    placeholder="0.00"
-                    className="w-full pl-7 pr-4 py-2 rounded-lg text-sm transition-colors focus:outline-none"
-                    style={{
-                      background: "var(--kipu-surface)",
-                      border: "1px solid var(--kipu-border)",
-                      color: "var(--kipu-text)",
-                    }}
-                    onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                    onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
-                  />
-                </div>
-              </div>
+              <Campo etiqueta="Monto total *">
+                <Entrada
+                  teclado="decimal"
+                  value={form.monto_total}
+                  onChange={(e) => setForm({ ...form, monto_total: e.target.value.replace(",", ".") })}
+                  placeholder="0.00"
+                  prefijo="$"
+                />
+              </Campo>
 
-              {/* Fechas */}
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Fecha</label>
-                  <input
-                    type="date"
-                    value={form.fecha_emision}
-                    onChange={(e) => setForm({ ...form, fecha_emision: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none"
-                    style={{
-                      background: "var(--kipu-surface)",
-                      border: "1px solid var(--kipu-border)",
-                      color: "var(--kipu-text)",
-                    }}
-                    onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                    onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Vencimiento</label>
-                  <input
-                    type="date"
-                    value={form.fecha_vencimiento}
-                    onChange={(e) => setForm({ ...form, fecha_vencimiento: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none"
-                    style={{
-                      background: "var(--kipu-surface)",
-                      border: "1px solid var(--kipu-border)",
-                      color: "var(--kipu-text)",
-                    }}
-                    onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                    onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
-                  />
-                </div>
+                <Campo etiqueta="Fecha">
+                  <Entrada type="date" value={form.fecha_emision}
+                           onChange={(e) => setForm({ ...form, fecha_emision: e.target.value })} />
+                </Campo>
+                <Campo etiqueta="Vencimiento">
+                  <Entrada type="date" value={form.fecha_vencimiento}
+                           onChange={(e) => setForm({ ...form, fecha_vencimiento: e.target.value })} />
+                </Campo>
               </div>
 
-              {/* Notas */}
-              <div>
-                <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Notas</label>
-                <textarea
+              <Campo etiqueta="Notas" opcional>
+                <AreaTexto
                   value={form.notas}
                   onChange={(e) => setForm({ ...form, notas: e.target.value })}
-                  placeholder="Notas adicionales (opcional)..."
+                  placeholder="Notas adicionales..."
                   rows={2}
-                  className="w-full px-3 py-2 rounded-lg text-sm resize-none transition-colors focus:outline-none"
-                  style={{
-                    background: "var(--kipu-surface)",
-                    border: "1px solid var(--kipu-border)",
-                    color: "var(--kipu-text)",
-                  }}
-                  onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                  onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
                 />
-              </div>
+              </Campo>
 
               {error && (
-                <p
-                  className="text-xs px-3 py-2 rounded-lg"
-                  style={{
-                    color: "var(--kipu-danger)",
-                    background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
-                  }}
-                >
-                  {error}
-                </p>
+                <p role="alert" className="rounded-lg bg-peligro-suave px-3 py-2 text-xs text-peligro-texto">{error}</p>
               )}
-
-              <div className="flex gap-3 pt-1">
-                <button
-                  type="button"
-                  onClick={() => { setShowModal(false); resetModal(); }}
-                  className="flex-1 py-2.5 rounded-lg text-sm transition-colors"
-                  style={{
-                    border: "1px solid var(--kipu-border)",
-                    color: "var(--kipu-muted)",
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
-                  onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-muted)"}
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  onClick={handleGuardar}
-                  disabled={saving}
-                  className="flex-1 py-2.5 rounded-lg text-white text-sm font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-                  style={{ background: "var(--kipu-accent)" }}
-                  onMouseEnter={e => {
-                    if (!saving) e.currentTarget.style.background = "var(--kipu-accent-h)";
-                  }}
-                  onMouseLeave={e => {
-                    if (!saving) e.currentTarget.style.background = "var(--kipu-accent)";
-                  }}
-                >
-                  {saving ? (
-                    <div
-                      className="w-3.5 h-3.5 border-2 border-t-transparent rounded-full animate-spin"
-                      style={{ borderColor: "#FFFFFF", borderTopColor: "transparent" }}
-                    />
-                  ) : (
-                    <Save size={14} />
-                  )}
-                  Guardar
-                </button>
-              </div>
             </div>
-          </div>
-        </div>
-      )}
+      </Hoja>
     </div>
   );
 }
@@ -810,14 +497,7 @@ export default function CuentasPage() {
   const puedeVer = usePermiso("clientes");   // como la API de cuentas
   if (!puedeVer) return <SinAcceso />;
   return (
-    <Suspense fallback={
-      <div className="flex items-center justify-center py-20">
-        <div
-          className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin"
-          style={{ borderColor: "var(--kipu-accent)", borderTopColor: "transparent" }}
-        />
-      </div>
-    }>
+    <Suspense fallback={<div className="p-4 md:p-6"><EsqueletoFilas filas={6} /></div>}>
       <CuentasContent />
     </Suspense>
   );

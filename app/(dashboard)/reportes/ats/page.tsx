@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { notFound, useRouter, useSearchParams } from "next/navigation";
 import api from "@/lib/api";
+import { guardarYCompartir } from "@/lib/nativo";
 import {
   ArrowLeft, RefreshCw, AlertTriangle,
   FileText, ChevronDown, ChevronUp, Download, Info,
@@ -13,10 +14,8 @@ import ResumenImpositivo   from "../_components/ResumenImpositivo";
 import DocumentosIncluidos from "../_components/DocumentosIncluidos";
 import EstadoBadge         from "../_components/EstadoBadge";
 import { ES_APP_NATIVA } from "@/lib/plataforma";
-
-const fmt  = (n: number = 0) =>
-  n.toLocaleString("es-EC", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const fmtN = (n: number = 0) => n.toLocaleString("es-EC");
+import { detalleError } from "@/lib/errores";
+import { montoEC, numeroEC } from "@/lib/dinero";
 
 function TablaDetalle({ titulo, rows, columnas, color = "indigo" }: {
   titulo:   string;
@@ -27,6 +26,14 @@ function TablaDetalle({ titulo, rows, columnas, color = "indigo" }: {
   const [expandido, setExpandido] = useState(false);
   const MAX_VISIBLE = 5;
   const visibles = expandido ? rows : rows.slice(0, MAX_VISIBLE);
+  // En el celular cada fila muestra las primeras columnas; tocarla muestra el resto
+  const COLUMNAS_MOVIL = 3;
+  const [filasAbiertas, setFilasAbiertas] = useState<Set<number>>(new Set());
+  const alternarFila = (idx: number) => setFilasAbiertas(prev => {
+    const s = new Set(prev);
+    if (s.has(idx)) s.delete(idx); else s.add(idx);
+    return s;
+  });
 
   if (rows.length === 0) return null;
 
@@ -34,20 +41,15 @@ function TablaDetalle({ titulo, rows, columnas, color = "indigo" }: {
 
   return (
     <div
-      className="rounded-xl overflow-hidden"
-      style={{
-        background: "var(--kipu-surface)",
-        border: "1px solid var(--kipu-border)",
-      }}
+      className="rounded-xl overflow-hidden bg-superficie border border-borde"
     >
       <div
-        className="px-4 py-3 flex items-center justify-between"
-        style={{ borderBottom: "1px solid var(--kipu-border)" }}
+        className="px-4 py-3 flex items-center justify-between border-b border-borde"
       >
         <div className="flex items-center gap-2">
           <FileText size={14} style={{ color: iconColor }} />
-          <p className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>{titulo}</p>
-          <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>({fmtN(rows.length)})</span>
+          <p className="text-sm font-semibold text-texto">{titulo}</p>
+          <span className="text-xs text-sutil">({numeroEC(rows.length)})</span>
         </div>
       </div>
 
@@ -69,18 +71,16 @@ function TablaDetalle({ titulo, rows, columnas, color = "indigo" }: {
               ))}
             </tr>
           </thead>
-          <tbody style={{ borderTop: "1px solid var(--kipu-border)" }}>
+          <tbody className="border-t border-borde">
             {visibles.map((row, idx) => (
               <tr
                 key={idx}
-                className="transition-colors"
+                className="transition-colors hover:bg-texto/4"
                 style={{ borderBottom: idx < visibles.length - 1 ? "1px solid var(--kipu-border)" : "none" }}
-                onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 4%, transparent)"}
-                onMouseLeave={e => e.currentTarget.style.background = "transparent"}
               >
                 {columnas.map(c => (
                   <td key={c.key} className={`px-4 py-2.5 ${c.right ? "text-right" : ""} ${c.mono ? "font-mono" : ""}`}>
-                    <span style={{ color: "var(--kipu-text)" }}>{row[c.key] ?? "—"}</span>
+                    <span className="text-texto">{row[c.key] ?? "—"}</span>
                   </td>
                 ))}
               </tr>
@@ -89,24 +89,38 @@ function TablaDetalle({ titulo, rows, columnas, color = "indigo" }: {
         </table>
       </div>
 
-      {/* Mobile */}
+      {/* Mobile: las 3 primeras columnas; al tocar la fila, el resto (montos incluidos) */}
       <div className="md:hidden">
-        {visibles.map((row, idx) => (
-          <div
-            key={idx}
-            className="px-4 py-3 space-y-1"
-            style={{ borderTop: idx > 0 ? "1px solid var(--kipu-border)" : "none" }}
-          >
-            {columnas.slice(0, 3).map(c => (
-              <div key={c.key} className="flex justify-between gap-2">
-                <span className="text-[10px]" style={{ color: "var(--kipu-subtle)" }}>{c.label}</span>
-                <span className={`text-xs ${c.mono ? "font-mono" : ""}`} style={{ color: "var(--kipu-text)" }}>
-                  {row[c.key] ?? "—"}
+        {visibles.map((row, idx) => {
+          const abierta = filasAbiertas.has(idx);
+          const ocultas = columnas.length - COLUMNAS_MOVIL;
+          return (
+            <button
+              key={idx}
+              type="button"
+              onClick={() => alternarFila(idx)}
+              aria-expanded={abierta}
+              className="w-full text-left px-4 py-3 space-y-1 active:opacity-70"
+              style={{ borderTop: idx > 0 ? "1px solid var(--kipu-border)" : "none" }}
+            >
+              {(abierta ? columnas : columnas.slice(0, COLUMNAS_MOVIL)).map(c => (
+                <div key={c.key} className="flex justify-between gap-2">
+                  <span className="text-[10px]" style={{ color: "var(--kipu-subtle)" }}>{c.label}</span>
+                  <span className={`text-xs text-right ${c.mono ? "font-mono" : ""}`} style={{ color: "var(--kipu-text)" }}>
+                    {row[c.key] ?? "—"}
+                  </span>
+                </div>
+              ))}
+              {ocultas > 0 && (
+                <span className="flex items-center gap-1 pt-1 text-[11px]" style={{ color: "var(--kipu-accent)" }}>
+                  {abierta
+                    ? <><ChevronUp size={12} /> Ver menos</>
+                    : <><ChevronDown size={12} /> Ver {ocultas} más</>}
                 </span>
-              </div>
-            ))}
-          </div>
-        ))}
+              )}
+            </button>
+          );
+        })}
       </div>
 
       {/* Ver más */}
@@ -183,7 +197,7 @@ function ReporteATS({ periodo }: { periodo: string }) {
         setDecl(null);
       }
     } catch (e: any) {
-      setError(e?.response?.data?.detail ?? "Error al cargar el ATS.");
+      setError(detalleError(e, "Error al cargar el ATS."));
     } finally {
       setLoading(false);
       setRegenerando(false);
@@ -200,14 +214,10 @@ function ReporteATS({ periodo }: { periodo: string }) {
       const res = await api.post(`/api/v1/app/declaraciones/ats/generar?periodo=${periodo}`);
       const url = res.data?.download_url;
       if (!url) throw new Error("sin url");
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = res.data?.nombre_zip ?? `ATS-${periodo}.zip`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
+      // Web: descarga; app: hoja de compartir para guardarlo o enviarlo (lib/nativo.ts)
+      await guardarYCompartir({ url }, res.data?.nombre_zip ?? `ATS-${periodo}.zip`, { titulo: `ATS ${periodo}` });
     } catch (e: any) {
-      setError(e?.response?.data?.detail ?? "No se pudo generar el archivo del ATS.");
+      setError(detalleError(e, "No se pudo generar el archivo del ATS."));
     } finally {
       setDescargando(false);
     }
@@ -221,7 +231,7 @@ function ReporteATS({ periodo }: { periodo: string }) {
             className="w-7 h-7 border-2 border-t-transparent rounded-full animate-spin mx-auto"
             style={{ borderColor: "#22d3ee", borderTopColor: "transparent" }}
           />
-          <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>Generando Anexo Transaccional...</p>
+          <p className="text-sm text-sutil">Generando Anexo Transaccional...</p>
         </div>
       </div>
     );
@@ -231,14 +241,10 @@ function ReporteATS({ periodo }: { periodo: string }) {
     return (
       <div className="p-6 max-w-2xl mx-auto">
         <div
-          className="flex items-start gap-3 rounded-xl px-4 py-3"
-          style={{
-            background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
-            border: "1px solid color-mix(in srgb, var(--kipu-danger) 20%, transparent)",
-          }}
+          className="flex items-start gap-3 rounded-xl px-4 py-3 bg-peligro-suave border border-peligro/20"
         >
-          <AlertTriangle size={16} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-danger)" }} />
-          <p className="text-sm" style={{ color: "var(--kipu-danger)" }}>{error}</p>
+          <AlertTriangle size={16} className="shrink-0 mt-0.5 text-peligro" />
+          <p className="text-sm text-peligro">{error}</p>
         </div>
       </div>
     );
@@ -287,15 +293,15 @@ function ReporteATS({ periodo }: { periodo: string }) {
   // Formatear valores para tabla
   const ventasFormateadas = detalleVentas.map((r: any) => ({
     ...r,
-    base_iva_nz: `$${fmt(r.base_iva_nz)}`,
-    base_iva_0:  `$${fmt(r.base_iva_0)}`,
-    iva:         `$${fmt(r.iva)}`,
+    base_iva_nz: `$${montoEC(r.base_iva_nz)}`,
+    base_iva_0:  `$${montoEC(r.base_iva_0)}`,
+    iva:         `$${montoEC(r.iva)}`,
   }));
 
   const comprasFormateadas = detalleCompras.map((r: any) => ({
     ...r,
-    base_iva_nz:  `$${fmt(r.base_iva_nz)}`,
-    iva_credito:  `$${fmt(r.iva_credito)}`,
+    base_iva_nz:  `$${montoEC(r.base_iva_nz)}`,
+    iva_credito:  `$${montoEC(r.iva_credito)}`,
     fuente:       r.fuente === "FISICO" ? "📄 Físico" : r.fuente === "EMITIDA" ? "🧾 Liquidación emitida" : "🔵 XML",
   }));
 
@@ -308,7 +314,7 @@ function ReporteATS({ periodo }: { periodo: string }) {
           <button
             type="button"
             onClick={() => router.push("/reportes")}
-            className="p-2 rounded-lg transition-colors mt-0.5"
+            className="hidden p-2 rounded-lg transition-colors mt-0.5 lg:inline-flex"
             style={{
               border: "1px solid var(--kipu-border)",
               color: "var(--kipu-subtle)",
@@ -337,7 +343,7 @@ function ReporteATS({ periodo }: { periodo: string }) {
               >
                 ATS
               </span>
-              <h1 className="text-xl font-bold capitalize" style={{ color: "var(--kipu-text)" }}>{periodoFmt}</h1>
+              <h1 className="text-xl font-bold capitalize text-texto">{periodoFmt}</h1>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
               {!esDemo && (
@@ -400,15 +406,11 @@ function ReporteATS({ periodo }: { periodo: string }) {
 
       {esDemo && (
         <div
-          className="flex items-start gap-3 rounded-xl px-4 py-3"
-          style={{
-            background: "color-mix(in srgb, var(--kipu-accent) 10%, transparent)",
-            border: "1px solid color-mix(in srgb, var(--kipu-accent) 20%, transparent)",
-          }}
+          className="flex items-start gap-3 rounded-xl px-4 py-3 bg-acento/10 border border-acento/20"
         >
-          <Info size={15} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-accent)" }} />
-          <p className="text-xs" style={{ color: "var(--kipu-muted)" }}>
-            <span className="font-semibold" style={{ color: "var(--kipu-text)" }}>Estos son datos de ejemplo. </span>
+          <Info size={15} className="shrink-0 mt-0.5 text-acento" />
+          <p className="text-xs text-tenue">
+            <span className="font-semibold text-texto">Estos son datos de ejemplo. </span>
             {data?.motivo === "no_obligado"
               ? "El ATS lo presentan los obligados a llevar contabilidad y las sociedades; según tu configuración no te corresponde."
               : ES_APP_NATIVA
@@ -426,35 +428,27 @@ function ReporteATS({ periodo }: { periodo: string }) {
 
       {error && (
         <div
-          className="flex items-start gap-2 rounded-lg px-3 py-2.5"
-          style={{
-            background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
-            border: "1px solid color-mix(in srgb, var(--kipu-danger) 20%, transparent)",
-          }}
+          className="flex items-start gap-2 rounded-lg px-3 py-2.5 bg-peligro-suave border border-peligro/20"
         >
-          <AlertTriangle size={14} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-danger)" }} />
-          <p className="text-sm" style={{ color: "var(--kipu-danger)" }}>{error}</p>
+          <AlertTriangle size={14} className="shrink-0 mt-0.5 text-peligro" />
+          <p className="text-sm text-peligro">{error}</p>
         </div>
       )}
 
       {/* Resumen rápido */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: "Ventas",      value: fmtN(totalesVentas.num_docs  ?? 0), sub: `$${fmt(totalesVentas.total  ?? 0)}`, color: "var(--kipu-accent)" },
-          { label: "Compras",     value: fmtN(totalesCompras.num_docs ?? 0), sub: `$${fmt(totalesCompras.total ?? 0)}`, color: "var(--kipu-success)" },
-          { label: "Ret. emit.",  value: fmtN(retEmitidas.length),           sub: "comprobantes",                       color: "var(--kipu-warning)" },
-          { label: "Ret. recib.", value: fmtN(retRecibidas.length),          sub: "comprobantes",                       color: "var(--kipu-info)" },
+          { label: "Ventas",      value: numeroEC(totalesVentas.num_docs  ?? 0), sub: `$${montoEC(totalesVentas.total  ?? 0)}`, color: "var(--kipu-accent)" },
+          { label: "Compras",     value: numeroEC(totalesCompras.num_docs ?? 0), sub: `$${montoEC(totalesCompras.total ?? 0)}`, color: "var(--kipu-success)" },
+          { label: "Ret. emit.",  value: numeroEC(retEmitidas.length),           sub: "comprobantes",                       color: "var(--kipu-warning)" },
+          { label: "Ret. recib.", value: numeroEC(retRecibidas.length),          sub: "comprobantes",                       color: "var(--kipu-info)" },
         ].map(({ label, value, sub, color }) => (
           <div
             key={label}
-            className="rounded-xl p-3 text-center"
-            style={{
-              background: "var(--kipu-surface)",
-              border: "1px solid var(--kipu-border)",
-            }}
+            className="rounded-xl p-3 text-center bg-superficie border border-borde"
           >
-            <p className="text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>{label}</p>
-            <p className="text-xl font-bold" style={{ color: "var(--kipu-text)" }}>{value}</p>
+            <p className="text-xs mb-1 text-sutil">{label}</p>
+            <p className="text-xl font-bold text-texto">{value}</p>
             <p className="text-[10px] mt-0.5" style={{ color: "var(--kipu-subtle)" }}>{sub}</p>
           </div>
         ))}
@@ -485,7 +479,7 @@ function ReporteATS({ periodo }: { periodo: string }) {
 
       {/* Detalle ventas */}
       <div>
-        <p className="text-sm font-semibold mb-2" style={{ color: "var(--kipu-text)" }}>
+        <p className="text-sm font-semibold mb-2 text-texto">
           Comprobantes emitidos — ventas
         </p>
 
@@ -498,14 +492,10 @@ function ReporteATS({ periodo }: { periodo: string }) {
           ].map(({ label, value, color }) => (
             <div
               key={label}
-              className="rounded-lg px-3 py-2"
-              style={{
-                background: "var(--kipu-surface)",
-                border: "1px solid var(--kipu-border)",
-              }}
+              className="rounded-lg px-3 py-2 bg-superficie border border-borde"
             >
               <p className="text-[10px]" style={{ color: "var(--kipu-subtle)" }}>{label}</p>
-              <p className="text-sm font-bold" style={{ color: color }}>${fmt(value)}</p>
+              <p className="text-sm font-bold" style={{ color: color }}>${montoEC(value)}</p>
             </div>
           ))}
         </div>
@@ -520,7 +510,7 @@ function ReporteATS({ periodo }: { periodo: string }) {
 
       {/* Detalle compras */}
       <div>
-        <p className="text-sm font-semibold mb-2" style={{ color: "var(--kipu-text)" }}>
+        <p className="text-sm font-semibold mb-2 text-texto">
           Comprobantes recibidos — compras
         </p>
 
@@ -533,14 +523,10 @@ function ReporteATS({ periodo }: { periodo: string }) {
           ].map(({ label, value, color }) => (
             <div
               key={label}
-              className="rounded-lg px-3 py-2"
-              style={{
-                background: "var(--kipu-surface)",
-                border: "1px solid var(--kipu-border)",
-              }}
+              className="rounded-lg px-3 py-2 bg-superficie border border-borde"
             >
               <p className="text-[10px]" style={{ color: "var(--kipu-subtle)" }}>{label}</p>
-              <p className="text-sm font-bold" style={{ color: color }}>${fmt(value)}</p>
+              <p className="text-sm font-bold" style={{ color: color }}>${montoEC(value)}</p>
             </div>
           ))}
         </div>
@@ -555,7 +541,7 @@ function ReporteATS({ periodo }: { periodo: string }) {
 
       {/* Retenciones */}
       <div>
-        <p className="text-sm font-semibold mb-2" style={{ color: "var(--kipu-text)" }}>Retenciones</p>
+        <p className="text-sm font-semibold mb-2 text-texto">Retenciones</p>
         <SeccionRetenciones
           modo="ATS"
           detalleEmitidas={retEmitidas}
@@ -583,15 +569,11 @@ function ReporteATS({ periodo }: { periodo: string }) {
       {/* Notas */}
       {reporte?.notas?.length > 0 && (
         <div
-          className="rounded-xl p-4 space-y-1.5"
-          style={{
-            background: "var(--kipu-surface)",
-            border: "1px solid var(--kipu-border)",
-          }}
+          className="rounded-xl p-4 space-y-1.5 bg-superficie border border-borde"
         >
-          <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: "var(--kipu-subtle)" }}>Notas</p>
+          <p className="text-xs font-semibold uppercase tracking-wider mb-2 text-sutil">Notas</p>
           {reporte.notas.map((nota: string, i: number) => (
-            <p key={i} className="text-xs" style={{ color: "var(--kipu-subtle)" }}>· {nota}</p>
+            <p key={i} className="text-xs text-sutil">· {nota}</p>
           ))}
         </div>
       )}

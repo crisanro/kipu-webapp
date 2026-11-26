@@ -6,13 +6,16 @@ import { usePathname } from "next/navigation";
 import {
   CheckCircle2, Circle, Mail, Building2,
   Shield, Store, ChevronRight, Rocket, Lock,
-  Upload, Loader2, X, UserCog
+  Upload, UserCog
 } from "lucide-react";
 import api from "@/lib/api";
 import { refrescarEmpresaActual } from "@/lib/empresa";
 import { useAuthStore } from "@/store/auth.store";
 import { useSandboxStore } from "@/store/sandbox.store";
 import { usePermiso } from "@/hooks/usePermiso";
+import Hoja from "@/components/ui/Hoja";
+import Boton from "@/components/ui/Boton";
+import { detalleError } from "@/lib/errores";
 
 export interface HealthData {
   email_verificado:              boolean;
@@ -92,7 +95,7 @@ export default function Checklist({ health, compact = false, onUpdate }: Props) 
       onUpdate?.();
       void refrescarEmpresaActual();   // la barra lateral deja de decir "Sin firma"
     } catch (err: any) {
-      setFirmaError(err?.response?.data?.detail ?? "Error al subir la firma.");
+      setFirmaError(detalleError(err, "Error al subir la firma."));
     } finally {
       setFirmaUploading(false);
     }
@@ -194,43 +197,21 @@ export default function Checklist({ health, compact = false, onUpdate }: Props) 
   };
 
   // ── Modal firma ─────────────────────────────────────────────────
-  const modalFirma = showFirmaModal && (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div
-        className="rounded-2xl w-full max-w-sm p-6 relative"
-        style={{
-          background: "var(--kipu-surface)",
-          border: "1px solid var(--kipu-border)",
-        }}
-      >
-        <div className="flex items-center justify-between mb-5">
-          <div className="flex items-center gap-3">
-            <div
-              className="w-10 h-10 rounded-xl flex items-center justify-center"
-              style={{ background: "color-mix(in srgb, var(--kipu-accent) 12%, transparent)", color: "var(--kipu-accent)" }}
-            >
-              <Shield size={20} />
-            </div>
-            <div>
-              <h3 className="text-sm font-bold" style={{ color: "var(--kipu-text)" }}>
-                Subir firma electrónica
-              </h3>
-              <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
-                Certificado .p12 del BCE o SecurityData
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={cerrarFirmaModal}
-            className="p-1.5 rounded-lg transition-colors"
-            style={{ color: "var(--kipu-subtle)" }}
-            onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
-            onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-subtle)"}
-          >
-            <X size={18} />
-          </button>
-        </div>
-
+  const modalFirma = (
+    <Hoja
+      abierta={showFirmaModal}
+      onCerrar={cerrarFirmaModal}
+      titulo={<span className="inline-flex items-center gap-2"><Shield size={18} className="text-acento" /> Subir firma electrónica</span>}
+      descripcion="Certificado .p12 del BCE o SecurityData"
+      tamano="sm"
+      cerrable={!firmaUploading}
+      pie={<>
+        <Boton variante="secundario" onClick={cerrarFirmaModal} disabled={firmaUploading}>Cancelar</Boton>
+        <Boton onClick={subirFirma} disabled={!p12File || !p12Pass} cargando={firmaUploading}>
+          {firmaUploading ? "Subiendo…" : "Guardar firma"}
+        </Boton>
+      </>}
+    >
         <div className="space-y-4">
           <div
             onClick={() => fileRef.current?.click()}
@@ -263,7 +244,7 @@ export default function Checklist({ health, compact = false, onUpdate }: Props) 
           </div>
 
           <div>
-            <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--kipu-subtle)" }}>
+            <label className="block text-xs font-medium mb-1.5 text-sutil">
               Contraseña del certificado
             </label>
             <input
@@ -271,151 +252,70 @@ export default function Checklist({ health, compact = false, onUpdate }: Props) 
               value={p12Pass}
               onChange={e => { setP12Pass(e.target.value); setFirmaError(""); }}
               placeholder="••••••••"
-              className="w-full px-3 py-2.5 rounded-xl text-sm focus:outline-none"
-              style={{
-                background: "var(--kipu-bg)",
-                border: "1px solid var(--kipu-border)",
-                color: "var(--kipu-text)",
-              }}
-              onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-              onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+              className="w-full px-3 py-2.5 rounded-xl text-sm focus:outline-none bg-fondo border border-borde text-texto focus:border-acento"
               onKeyDown={e => { if (e.key === "Enter" && p12File && p12Pass) subirFirma(); }}
             />
           </div>
 
           {firmaError && (
             <p
-              className="text-xs px-3 py-2 rounded-lg"
-              style={{
-                color: "var(--kipu-danger)",
-                background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
-              }}
+              className="text-xs px-3 py-2 rounded-lg text-peligro bg-peligro-suave"
             >
               {firmaError}
             </p>
           )}
-
-          <div className="flex gap-2 pt-1">
-            <button
-              type="button"
-              onClick={cerrarFirmaModal}
-              className="flex-1 py-2.5 rounded-xl text-sm transition-colors"
-              style={{
-                border: "1px solid var(--kipu-border)",
-                color: "var(--kipu-muted)",
-              }}
-              onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
-              onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-muted)"}
-            >
-              Cancelar
-            </button>
-            <button
-              type="button"
-              onClick={subirFirma}
-              disabled={firmaUploading || !p12File || !p12Pass}
-              className="flex-1 py-2.5 rounded-xl text-white text-sm font-semibold transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-              style={{ background: "var(--kipu-accent)" }}
-            >
-              {firmaUploading ? (
-                <><Loader2 size={14} className="animate-spin" /> Subiendo...</>
-              ) : (
-                "Guardar firma"
-              )}
-            </button>
-          </div>
         </div>
-      </div>
-    </div>
+    </Hoja>
   );
 
-  // ── Modal producción ────────────────────────────────────────────
-  const modalProduccion = showProdModal && (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div
-        className="rounded-2xl w-full max-w-sm p-6 relative"
-        style={{
-          background: "var(--kipu-surface)",
-          border: "1px solid var(--kipu-border)",
-        }}
-      >
-        <div className="text-center mb-5">
-          <div
-            className="w-11 h-11 rounded-xl flex items-center justify-center mx-auto mb-3"
-            style={{ background: "color-mix(in srgb, var(--kipu-success) 12%, transparent)", color: "var(--kipu-success)" }}
-          >
-            <Rocket size={20} />
-          </div>
-          <h3 className="text-sm font-bold mb-0.5" style={{ color: "var(--kipu-text)" }}>
-            Confirmar pase a producción
-          </h3>
-          <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
-            Desde ahora tus comprobantes tendrán validez tributaria ante el SRI.
-            Factura gratis, hasta 300 al mes (ampliable gratis).
-          </p>
-        </div>
-        {prodError && (
-          <p
-            className="text-xs px-3 py-2 rounded-lg mb-3"
-            style={{
-              color: "var(--kipu-danger)",
-              background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
-            }}
-          >
-            {prodError}
-          </p>
-        )}
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => { setShowProdModal(false); setProdError(""); }}
-            disabled={activando}
-            className="flex-1 py-2.5 rounded-xl text-sm transition-colors disabled:opacity-50"
-            style={{ border: "1px solid var(--kipu-border)", color: "var(--kipu-muted)" }}
-          >
-            Cancelar
-          </button>
-          <button
-            type="button"
-            disabled={activando}
-            onClick={async () => {
-              setActivando(true);
-              setProdError("");
-              try {
-                await api.post("/api/v1/app/emisor/produccion");
-                // Desde ya emite de verdad: fuera el sandbox antes de ir al dashboard
-                useSandboxStore.getState().setSandbox(false);
-                setProdMsg("¡Bienvenido a producción!");
-                setShowProdModal(false);
-                onUpdate?.();
-                sessionStorage.removeItem("kipu:estructura");
-                setTimeout(() => window.location.href = "/dashboard", 1500);
-              } catch (err: unknown) {
-                const detalle = (err as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail;
-                setProdError(typeof detalle === "string" ? detalle : "No se pudo activar producción. Intenta de nuevo.");
-              } finally {
-                setActivando(false);
-              }
-            }}
-            className="flex-1 py-2.5 rounded-xl text-white text-sm font-semibold transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-            style={{ background: "var(--kipu-success)" }}
-          >
-            {activando ? <><Loader2 size={14} className="animate-spin" /> Activando...</> : "Pasar a producción"}
-          </button>
-        </div>
-      </div>
-    </div>
+  // ── Pase a producción (Hoja) ────────────────────────────────────
+  const pasarAProduccion = async () => {
+    setActivando(true);
+    setProdError("");
+    try {
+      await api.post("/api/v1/app/emisor/produccion");
+      // Desde ya emite de verdad: fuera el sandbox antes de ir al dashboard
+      useSandboxStore.getState().setSandbox(false);
+      setProdMsg("¡Bienvenido a producción!");
+      setShowProdModal(false);
+      onUpdate?.();
+      sessionStorage.removeItem("kipu:estructura");
+      setTimeout(() => window.location.href = "/dashboard", 1500);
+    } catch (err: unknown) {
+      setProdError(detalleError(err, "No se pudo activar producción. Intenta de nuevo."));
+    } finally {
+      setActivando(false);
+    }
+  };
+
+  const modalProduccion = (
+    <Hoja
+      abierta={showProdModal}
+      onCerrar={() => { setShowProdModal(false); setProdError(""); }}
+      titulo={<span className="inline-flex items-center gap-2"><Rocket size={18} className="text-exito" /> Confirmar pase a producción</span>}
+      descripcion={<>Desde ahora tus comprobantes tendrán validez tributaria ante el SRI.
+        Factura gratis, hasta 300 al mes (ampliable gratis).</>}
+      tamano="sm"
+      cerrable={!activando}
+      pie={<>
+        <Boton variante="secundario" onClick={() => { setShowProdModal(false); setProdError(""); }} disabled={activando}>
+          Cancelar
+        </Boton>
+        <Boton onClick={pasarAProduccion} cargando={activando}>
+          {activando ? "Activando…" : "Pasar a producción"}
+        </Boton>
+      </>}
+    >
+      {prodError && <p className="text-xs px-3 py-2 rounded-lg text-peligro bg-peligro-suave">{prodError}</p>}
+    </Hoja>
   );
 
   // ── Mensajes post-acción ────────────────────────────────────────
   const mensajes = (prodMsg || firmaMsg) && (
     <div
-      className="rounded-xl px-4 py-3 text-center"
-      style={{
-        background: "color-mix(in srgb, var(--kipu-success) 10%, transparent)",
-        border: "1px solid color-mix(in srgb, var(--kipu-success) 25%, transparent)",
-      }}
+      className="rounded-xl px-4 py-3 text-center bg-exito/10 border border-exito/25"
     >
-      <p className="text-sm font-semibold" style={{ color: "var(--kipu-success)" }}>
+      <p className="text-sm font-semibold text-exito">
         {prodMsg || firmaMsg}
       </p>
     </div>
@@ -475,11 +375,11 @@ export default function Checklist({ health, compact = false, onUpdate }: Props) 
           }}
         >
           {done ? (
-            <CheckCircle2 size={16} style={{ color: "var(--kipu-success)" }} />
+            <CheckCircle2 className="text-exito" size={16} />
           ) : noAcceso ? (
-            <UserCog size={14} style={{ color: "var(--kipu-subtle)" }} />
+            <UserCog className="text-sutil" size={14} />
           ) : locked ? (
-            <Lock size={14} style={{ color: "var(--kipu-subtle)" }} />
+            <Lock className="text-sutil" size={14} />
           ) : (
             <Icon size={15} style={{ color: esListo ? "var(--kipu-success)" : "var(--kipu-subtle)" }} />
           )}
@@ -500,7 +400,7 @@ export default function Checklist({ health, compact = false, onUpdate }: Props) 
           >
             {label}
           </p>
-          <p className="text-xs mt-0.5" style={{ color: "var(--kipu-subtle)" }}>{desc}</p>
+          <p className="text-xs mt-0.5 text-sutil">{desc}</p>
         </div>
         {esActivo && (
           <ChevronRight size={14} className="shrink-0" style={{ color: esListo ? "var(--kipu-success)" : "var(--kipu-subtle)" }} />
@@ -520,27 +420,22 @@ export default function Checklist({ health, compact = false, onUpdate }: Props) 
       <>
         {mensajes}
         <div
-          className="rounded-xl p-4"
-          style={{
-            background: "color-mix(in srgb, var(--kipu-accent) 10%, transparent)",
-            border: "1px solid color-mix(in srgb, var(--kipu-accent) 20%, transparent)",
-          }}
+          className="rounded-xl p-4 bg-acento/10 border border-acento/20"
         >
           <div className="flex items-center justify-between mb-3">
             <div>
-              <p className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>
+              <p className="text-sm font-semibold text-texto">
                 Configura tu cuenta ({completados}/{total})
               </p>
-              <p className="text-xs mt-0.5" style={{ color: "var(--kipu-subtle)" }}>
+              <p className="text-xs mt-0.5 text-sutil">
                 Completa estos pasos para emitir comprobantes
               </p>
             </div>
-            <span className="text-sm font-bold" style={{ color: "var(--kipu-accent)" }}>{porcentaje}%</span>
+            <span className="text-sm font-bold text-acento">{porcentaje}%</span>
           </div>
 
           <div
-            className="h-1.5 rounded-full mb-3 overflow-hidden"
-            style={{ background: "color-mix(in srgb, var(--kipu-text) 8%, transparent)" }}
+            className="h-1.5 rounded-full mb-3 overflow-hidden bg-texto/8"
           >
             <div
               className="h-full rounded-full transition-all duration-500"
@@ -583,9 +478,9 @@ export default function Checklist({ health, compact = false, onUpdate }: Props) 
             >
               <div className="flex items-center gap-2.5">
                 {siguiente.noAcceso ? (
-                  <UserCog size={14} className="shrink-0" style={{ color: "var(--kipu-subtle)" }} />
+                  <UserCog size={14} className="shrink-0 text-sutil" />
                 ) : siguiente.locked ? (
-                  <Lock size={14} className="shrink-0" style={{ color: "var(--kipu-subtle)" }} />
+                  <Lock size={14} className="shrink-0 text-sutil" />
                 ) : (
                   <Circle size={14} className="shrink-0" style={{ color: siguiente.key === "activar_produccion" ? "var(--kipu-success)" : "var(--kipu-subtle)" }} />
                 )}
@@ -593,7 +488,7 @@ export default function Checklist({ health, compact = false, onUpdate }: Props) 
                   <p className="text-xs font-medium" style={{ color: siguiente.noAcceso ? "var(--kipu-subtle)" : siguiente.key === "activar_produccion" ? "var(--kipu-success)" : "var(--kipu-text)" }}>
                     {siguiente.noAcceso ? `${siguiente.label} — requiere administrador` : `Siguiente: ${siguiente.label}`}
                   </p>
-                  <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>{siguiente.desc}</p>
+                  <p className="text-xs text-sutil">{siguiente.desc}</p>
                 </div>
               </div>
               {!siguiente.locked && !siguiente.noAcceso && (
@@ -613,27 +508,21 @@ export default function Checklist({ health, compact = false, onUpdate }: Props) 
     <>
       {mensajes}
       <div
-        className="rounded-xl overflow-hidden"
-        style={{
-          background: "var(--kipu-surface)",
-          border: "1px solid var(--kipu-border)",
-        }}
+        className="rounded-xl overflow-hidden bg-superficie border border-borde"
       >
         <div
-          className="px-5 py-4"
-          style={{ borderBottom: "1px solid var(--kipu-border)" }}
+          className="px-5 py-4 border-b border-borde"
         >
           <div className="flex items-center justify-between mb-2">
-            <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>
+            <h2 className="text-sm font-semibold text-texto">
               Pasos para emitir comprobantes
             </h2>
-            <span className="text-xs font-bold" style={{ color: "var(--kipu-accent)" }}>
+            <span className="text-xs font-bold text-acento">
               {completados}/{total} completados
             </span>
           </div>
           <div
-            className="h-1.5 rounded-full overflow-hidden"
-            style={{ background: "color-mix(in srgb, var(--kipu-text) 8%, transparent)" }}
+            className="h-1.5 rounded-full overflow-hidden bg-texto/8"
           >
             <div
               className="h-full rounded-full transition-all duration-500"

@@ -40,28 +40,28 @@ const errMsg = (e: any) => {
 
 function Estado({ ok }: { ok: boolean | null | undefined }) {
   if (ok === null || ok === undefined) {
-    return <MinusCircle size={14} style={{ color: "var(--kipu-subtle)" }} />;
+    return <MinusCircle className="text-sutil" size={14} />;
   }
   return ok
-    ? <CheckCircle2 size={14} style={{ color: "var(--kipu-success)" }} />
-    : <XCircle size={14} style={{ color: "var(--kipu-danger)" }} />;
+    ? <CheckCircle2 className="text-exito" size={14} />
+    : <XCircle className="text-peligro" size={14} />;
 }
 
 function Fila({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex items-start justify-between gap-3 py-1.5">
-      <span className="text-xs shrink-0" style={{ color: "var(--kipu-subtle)" }}>{label}</span>
-      <span className="text-xs text-right break-all" style={{ color: "var(--kipu-text)" }}>{children}</span>
+      <span className="text-xs shrink-0 text-sutil">{label}</span>
+      <span className="text-xs text-right break-all text-texto">{children}</span>
     </div>
   );
 }
 
 function DnsFila({ nombre, info, ayuda }: { nombre: string; info: any; ayuda: string }) {
   return (
-    <div className="py-2" style={{ borderTop: "1px solid var(--kipu-border)" }}>
+    <div className="py-2 border-t border-borde">
       <div className="flex items-center gap-2">
         <Estado ok={info ? info.ok : null} />
-        <span className="text-xs font-medium" style={{ color: "var(--kipu-text)" }}>{nombre}</span>
+        <span className="text-xs font-medium text-texto">{nombre}</span>
         <span className="text-[11px]" style={{ color: "var(--kipu-subtle)" }}>· {ayuda}</span>
       </div>
       {info && (
@@ -135,14 +135,10 @@ export default function AdminDiagnosticoPage() {
       {/* Error */}
       {error && (
         <div
-          className="flex items-start gap-3 rounded-xl p-4"
-          style={{
-            background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
-            border:     "1px solid color-mix(in srgb, var(--kipu-danger) 40%, transparent)",
-          }}
+          className="flex items-start gap-3 rounded-xl p-4 bg-peligro-suave border border-peligro/40"
         >
-          <AlertTriangle size={16} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-danger)" }} />
-          <p className="text-xs break-all" style={{ color: "var(--kipu-text)" }}>{error}</p>
+          <AlertTriangle size={16} className="shrink-0 mt-0.5 text-peligro" />
+          <p className="text-xs break-all text-texto">{error}</p>
         </div>
       )}
 
@@ -153,8 +149,8 @@ export default function AdminDiagnosticoPage() {
       <div className="rounded-xl p-4" style={cardStyle}>
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
-            <Mail size={16} style={{ color: "var(--kipu-accent)" }} />
-            <p className="text-sm font-medium" style={{ color: "var(--kipu-text)" }}>Configuración de correo</p>
+            <Mail className="text-acento" size={16} />
+            <p className="text-sm font-medium text-texto">Configuración de correo</p>
           </div>
           <button
             type="button"
@@ -169,11 +165,11 @@ export default function AdminDiagnosticoPage() {
 
         {cargando && !config ? (
           <div className="flex justify-center py-6">
-            <Loader2 size={18} className="animate-spin" style={{ color: "var(--kipu-accent)" }} />
+            <Loader2 size={18} className="animate-spin text-acento" />
           </div>
         ) : config ? (
           <>
-            <div style={{ borderTop: "1px solid var(--kipu-border)" }} className="pt-1">
+            <div className="pt-1 border-t border-borde">
               <Fila label="Estado">
                 <span className="inline-flex items-center gap-1">
                   <Estado ok={config.habilitado} />
@@ -186,13 +182,30 @@ export default function AdminDiagnosticoPage() {
               <Fila label="Dominio alineado">
                 <span className="inline-flex items-center gap-1">
                   <Estado ok={config.alineado} />
-                  {config.alineado === null
-                    ? "—"
-                    : config.alineado
-                      ? config.dominio_from
-                      : `${config.dominio_from} ≠ ${config.dominio_user}`}
+                  {config.alineacion?.proveedor === "oracle"
+                    // Oracle: el usuario SMTP es un OCID; se mide por SPF y DKIM del remitente
+                    ? `Oracle · SPF ${config.alineacion.spf ? "✓" : "✗"} · DKIM ${
+                        config.alineacion.dkim === null ? "indica el selector" : config.alineacion.dkim ? "✓" : "✗"}`
+                    : config.alineado === null
+                      ? "—"
+                      : config.alineado
+                        ? config.dominio_from
+                        : `${config.dominio_from} ≠ ${config.dominio_user}`}
                 </span>
               </Fila>
+              {/* Cupo diario del proveedor (CORREO_CUPO_DIARIO): aviso desde el 70 % */}
+              {config.cupo && (
+                <Fila label="Correos hoy">
+                  <span className="inline-flex items-center gap-1"
+                        style={{ color: config.cupo.aviso ? "var(--kipu-warning)" : undefined }}>
+                    <Estado ok={!config.cupo.aviso} />
+                    {config.cupo.enviados} de {config.cupo.diario}
+                    {config.cupo.porcentaje !== null && ` (${config.cupo.porcentaje} %)`}
+                    {config.cupo.normales !== undefined && ` · normales hasta ${config.cupo.normales}`}
+                    {config.cupo.en_cola > 0 && ` · ${config.cupo.en_cola} en cola para mañana`}
+                  </span>
+                </Fila>
+              )}
             </div>
 
             {config.alineado === false && (
@@ -203,15 +216,25 @@ export default function AdminDiagnosticoPage() {
                   color: "var(--kipu-text)",
                 }}
               >
-                El remitente es de un dominio distinto a la cuenta SMTP. Gmail y Outlook suelen
-                mandar estos correos a spam si el SPF/DKIM del dominio remitente no autoriza a ese servidor.
+                {config.alineacion?.proveedor === "oracle" ? (
+                  <>
+                    Al DNS de {config.dominio_from} le falta autorizar a Oracle Email Delivery:{" "}
+                    {config.alineacion.falta.join(" y ")}. Sin eso, Gmail y Outlook suelen mandar
+                    estos correos a spam.
+                  </>
+                ) : (
+                  <>
+                    El remitente es de un dominio distinto a la cuenta SMTP. Gmail y Outlook suelen
+                    mandar estos correos a spam si el SPF/DKIM del dominio remitente no autoriza a ese servidor.
+                  </>
+                )}
               </p>
             )}
 
             {/* DNS */}
             {config.dns && (
               <div className="mt-3">
-                <p className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: "var(--kipu-subtle)" }}>
+                <p className="text-xs font-semibold uppercase tracking-wide mb-1 text-sutil">
                   DNS de {config.dominio_from}
                 </p>
                 <DnsFila nombre="SPF"   info={config.dns.spf}   ayuda="qué servidores pueden enviar por tu dominio" />
@@ -219,13 +242,17 @@ export default function AdminDiagnosticoPage() {
                 <DnsFila
                   nombre="DKIM"
                   info={config.dns.dkim}
-                  ayuda={config.dns.dkim ? "firma criptográfica del correo" : "indica el selector abajo para revisarlo"}
+                  ayuda={config.dns.dkim
+                    ? `firma criptográfica del correo · selector ${config.dkim_selector}`
+                    : "indica el selector abajo para revisarlo"}
                 />
                 <div className="flex gap-2 mt-2">
                   <input
                     value={selector}
                     onChange={(e) => setSelector(e.target.value)}
-                    placeholder="Selector DKIM (ej. default, google, zmail)"
+                    placeholder={config.dkim_selector_configurado
+                      ? `Probar otro selector (configurado: ${config.dkim_selector_configurado})`
+                      : "Selector DKIM (ej. default, google, zmail)"}
                     className="flex-1 px-3 py-2 rounded-lg text-xs focus:outline-none"
                     style={inputStyle}
                   />
@@ -248,8 +275,8 @@ export default function AdminDiagnosticoPage() {
       {/* Prueba */}
       <div className="rounded-xl p-4 space-y-3" style={cardStyle}>
         <div className="flex items-center gap-2">
-          <Send size={16} style={{ color: "var(--kipu-accent)" }} />
-          <p className="text-sm font-medium" style={{ color: "var(--kipu-text)" }}>Probar envío</p>
+          <Send className="text-acento" size={16} />
+          <p className="text-sm font-medium text-texto">Probar envío</p>
         </div>
 
         <input
@@ -299,9 +326,9 @@ export default function AdminDiagnosticoPage() {
               <div key={p.paso} className="flex items-start gap-2">
                 <span className="mt-0.5"><Estado ok={p.ok} /></span>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium" style={{ color: "var(--kipu-text)" }}>
+                  <p className="text-xs font-medium text-texto">
                     {PASO_LABEL[p.paso] ?? p.paso}
-                    <span className="font-normal" style={{ color: "var(--kipu-subtle)" }}> · {p.ms} ms</span>
+                    <span className="font-normal text-sutil"> · {p.ms} ms</span>
                   </p>
                   <p className="text-[11px] break-all" style={{ color: "var(--kipu-subtle)" }}>{p.detalle}</p>
                 </div>
@@ -310,10 +337,9 @@ export default function AdminDiagnosticoPage() {
 
             {resultado.ok && resultado.codigo && (
               <div
-                className="rounded-lg px-3 py-2 mt-1"
-                style={{ background: "var(--kipu-surface)", border: "1px solid var(--kipu-border)" }}
+                className="rounded-lg px-3 py-2 mt-1 bg-superficie border border-borde"
               >
-                <p className="text-xs" style={{ color: "var(--kipu-text)" }}>
+                <p className="text-xs text-texto">
                   Busca en <strong>{resultado.destino}</strong> un correo con el código{" "}
                   <span className="font-mono font-bold">{resultado.codigo}</span>.
                 </p>
@@ -330,13 +356,13 @@ export default function AdminDiagnosticoPage() {
       {/* Guía de entrega */}
       <div className="rounded-xl p-4 space-y-2" style={cardStyle}>
         <div className="flex items-center gap-2">
-          <Info size={16} style={{ color: "var(--kipu-accent)" }} />
-          <p className="text-sm font-medium" style={{ color: "var(--kipu-text)" }}>¿Llega a la bandeja o a spam?</p>
+          <Info className="text-acento" size={16} />
+          <p className="text-sm font-medium text-texto">¿Llega a la bandeja o a spam?</p>
         </div>
-        <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+        <p className="text-xs text-sutil">
           Que el servidor acepte el correo no garantiza que llegue a la bandeja. Para medirlo:
         </p>
-        <ol className="text-xs space-y-1 list-decimal ml-4" style={{ color: "var(--kipu-text)" }}>
+        <ol className="text-xs space-y-1 list-decimal ml-4 text-texto">
           <li>Abre mail-tester.com y copia la dirección que te muestra.</li>
           <li>Pégala arriba y envía el correo de prueba.</li>
           <li>Vuelve a mail-tester y revisa tu puntaje (ideal 9/10 o más) y qué te falta.</li>
@@ -346,8 +372,7 @@ export default function AdminDiagnosticoPage() {
           href="https://www.mail-tester.com"
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 text-xs font-medium"
-          style={{ color: "var(--kipu-accent)" }}
+          className="inline-flex items-center gap-1 text-xs font-medium text-acento"
         >
           Abrir mail-tester.com <ExternalLink size={11} />
         </a>

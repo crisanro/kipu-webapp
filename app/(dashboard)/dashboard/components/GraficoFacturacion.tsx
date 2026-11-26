@@ -5,30 +5,21 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip,
   ResponsiveContainer, Cell
 } from "recharts";
+import { compactoK, dosDecimales } from "@/lib/dinero";
 
 interface Props {
   documentos: any[];
 }
 
-const fmt  = (n: any) => parseFloat(n ?? 0).toFixed(2);
-const fmtK = (n: any) => {
-  const v = parseFloat(n ?? 0);
-  return v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v.toFixed(2);
-};
-
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
   return (
     <div
-      className="rounded-lg px-3 py-2 text-xs shadow-xl"
-      style={{
-        background: "var(--kipu-surface)",
-        border:     "1px solid var(--kipu-border)",
-      }}
+      className="rounded-lg px-3 py-2 text-xs shadow-xl bg-superficie border border-borde"
     >
-      <p className="mb-1" style={{ color: "var(--kipu-muted)" }}>Día {label}</p>
-      <p className="font-bold text-sm" style={{ color: "var(--kipu-text)" }}>
-        ${fmt(payload[0].value)}
+      <p className="mb-1 text-tenue">Día {label}</p>
+      <p className="font-bold text-sm text-texto">
+        ${dosDecimales(payload[0].value)}
       </p>
     </div>
   );
@@ -64,17 +55,13 @@ export default function GraficoFacturacion({ documentos }: Props) {
 
   return (
     <div
-      className="rounded-xl p-5 h-full"
-      style={{
-        background: "var(--kipu-surface)",
-        border:     "1px solid var(--kipu-border)",
-      }}
+      className="rounded-xl p-5 h-full bg-superficie border border-borde"
     >
       <div className="mb-4">
-        <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>
+        <h2 className="text-sm font-semibold text-texto">
           Facturación del mes
         </h2>
-        <p className="text-xs mt-0.5" style={{ color: "var(--kipu-muted)" }}>
+        <p className="text-xs mt-0.5 text-tenue">
           Total diario autorizado
         </p>
       </div>
@@ -92,7 +79,7 @@ export default function GraficoFacturacion({ documentos }: Props) {
               tick={{ fill: mutedColor, fontSize: 10 }}
               axisLine={false}
               tickLine={false}
-              tickFormatter={(v: number) => `$${fmtK(v)}`}
+              tickFormatter={(v: number) => `$${compactoK(v)}`}
             />
             <Tooltip
               content={<CustomTooltip />}
@@ -112,15 +99,14 @@ export default function GraficoFacturacion({ documentos }: Props) {
       ) : (
         <div className="flex flex-col items-center justify-center h-48 text-center">
           <div
-            className="w-12 h-12 rounded-xl flex items-center justify-center mb-3"
-            style={{ background: "var(--kipu-bg)" }}
+            className="w-12 h-12 rounded-xl flex items-center justify-center mb-3 bg-fondo"
           >
             <span className="text-2xl">📊</span>
           </div>
-          <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>
+          <p className="text-sm text-tenue">
             Sin datos aún este mes
           </p>
-          <p className="text-xs mt-1" style={{ color: "var(--kipu-subtle)" }}>
+          <p className="text-xs mt-1 text-sutil">
             Emite tu primer comprobante
           </p>
         </div>

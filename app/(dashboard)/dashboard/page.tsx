@@ -1,4 +1,5 @@
 "use client";
+import dynamic from "next/dynamic";
 import useSWR from "swr";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
@@ -8,12 +9,31 @@ import Link from "next/link";
 import Checklist, { HealthData } from "@/components/Checklist";
 import DeclaracionWidget from "@/components/DeclaracionWidget";
 import StatsGrid from "./components/StatsGrid";
-import GraficoFacturacion from "./components/GraficoFacturacion";
 import UltimosDocumentos from "./components/UltimosDocumentos";
 import DocumentosRecibidos from "./components/DocumentosRecibidos";
 import AccesosRapidos from "./components/AccesosRapidos";
 import OfertaRenta from "@/components/renta/OfertaRenta";
 import { ES_APP_NATIVA, rutaFueraDelPlan } from "@/lib/plataforma";
+import { usePermiso } from "@/hooks/usePermiso";
+
+// El gráfico usa recharts (~370 KB): se baja aparte, después de pintar el panel.
+// Mientras tanto, un esqueleto del mismo tamaño para que la pantalla no salte.
+const GraficoFacturacion = dynamic(() => import("./components/GraficoFacturacion"), {
+  ssr: false,
+  loading: () => (
+    <div
+      className="rounded-xl p-5 h-full bg-superficie border border-borde"
+      aria-busy="true"
+      aria-label="Cargando gráfico"
+    >
+      <div className="mb-4 space-y-2">
+        <div className="h-4 w-40 rounded animate-pulse bg-borde" />
+        <div className="h-3 w-28 rounded animate-pulse bg-borde" />
+      </div>
+      <div className="h-[200px] rounded-lg animate-pulse bg-borde/50" />
+    </div>
+  ),
+});
 
 interface DashboardData {
   health?: HealthData;
@@ -56,6 +76,10 @@ export default function DashboardPage() {
   // sandbox va en la clave: al cambiarlo SWR recarga solo (un mutate() aquí
   // duplicaba la petición al abrir el dashboard)
 
+  // Lo mismo que entrega la API (dashboard.py): cada parte, con el permiso de su pantalla
+  const verDocumentos = usePermiso("descargar");
+  const verRecibidos  = usePermiso("documentos_recibidos") && !rutaFueraDelPlan("/documentos/recibidos", empresa);
+
   const nombre      = empresa?.nombre_comercial || empresa?.razon_social || "tu empresa";
   const esProduccion = empresa?.ambiente === 2;
   const declaracion  = data?.declaracion;
@@ -66,10 +90,10 @@ export default function DashboardPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold" style={{ color: "var(--kipu-text)" }}>
+          <h1 className="text-2xl font-bold text-texto">
             Hola 👋
           </h1>
-          <p className="text-sm mt-0.5 truncate max-w-xs" style={{ color: "var(--kipu-muted)" }}>
+          <p className="text-sm mt-0.5 truncate max-w-xs text-tenue">
             {nombre} ·{" "}
             <span style={{
               color: sandbox
@@ -84,10 +108,7 @@ export default function DashboardPage() {
         </div>
         <Link
           href="/documentos/emitir/fac"
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-white text-sm font-semibold transition-colors"
-          style={{ background: "var(--kipu-accent)" }}
-          onMouseEnter={e => e.currentTarget.style.background = "var(--kipu-accent-h)"}
-          onMouseLeave={e => e.currentTarget.style.background = "var(--kipu-accent)"}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-white text-sm font-semibold transition-colors bg-acento hover:bg-acento-hover"
         >
           <span className="text-base">+</span>
           <span className="hidden sm:inline">Nueva Factura</span>
@@ -110,22 +131,18 @@ export default function DashboardPage() {
       {/* Plan gratis: no necesita un plan para facturar (ofrece planes: solo web) */}
       {!ES_APP_NATIVA && empresa && !empresa.suscripcion_activa && empresa.emision_gratis && (
         <div
-          className="flex items-start gap-3 rounded-xl px-4 py-3"
-          style={{
-            background: "color-mix(in srgb, var(--kipu-accent) 8%, transparent)",
-            border:     "1px solid color-mix(in srgb, var(--kipu-accent) 25%, transparent)",
-          }}
+          className="flex items-start gap-3 rounded-xl px-4 py-3 bg-acento/8 border border-acento/25"
         >
-          <Sparkles size={16} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-accent)" }} />
+          <Sparkles size={16} className="shrink-0 mt-0.5 text-acento" />
           <div>
-            <p className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>
+            <p className="text-sm font-semibold text-texto">
               Estás en el plan gratis: no necesitas pagar para facturar
             </p>
-            <p className="text-xs mt-0.5" style={{ color: "var(--kipu-subtle)" }}>
+            <p className="text-xs mt-0.5 text-sutil">
               Emites tus facturas desde el panel sin costo y cargas tus compras. Cuando quieras más:
               con <b>Kipu Pro</b> emites sin límite, ves el formulario 104 completo con alertas y sumas usuarios;
               con <b>Kipu Al Día</b>, el equipo de Kipu presenta tus declaraciones.{" "}
-              <Link href="/planes" className="underline font-medium" style={{ color: "var(--kipu-accent)" }}>
+              <Link href="/planes" className="underline font-medium text-acento">
                 Ver planes
               </Link>
             </p>
@@ -136,18 +153,14 @@ export default function DashboardPage() {
       {/* Alerta suscripción inactiva (sin el plan gratis) */}
       {empresa && !empresa.suscripcion_activa && !empresa.emision_gratis && (
         <div
-          className="flex items-start gap-3 rounded-xl px-4 py-3"
-          style={{
-            background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
-            border:     "1px solid color-mix(in srgb, var(--kipu-danger) 20%, transparent)",
-          }}
+          className="flex items-start gap-3 rounded-xl px-4 py-3 bg-peligro-suave border border-peligro/20"
         >
-          <AlertTriangle size={16} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-danger)" }} />
+          <AlertTriangle size={16} className="shrink-0 mt-0.5 text-peligro" />
           <div>
-            <p className="text-sm font-semibold" style={{ color: "var(--kipu-danger)" }}>
+            <p className="text-sm font-semibold text-peligro">
               {ES_APP_NATIVA ? "Sin comprobantes disponibles" : "Suscripción inactiva"}
             </p>
-            <p className="text-xs mt-0.5" style={{ color: "color-mix(in srgb, var(--kipu-danger) 70%, transparent)" }}>
+            <p className="text-xs mt-0.5 text-peligro/70">
               {ES_APP_NATIVA ? (
                 "Tu plan actual no tiene comprobantes disponibles para emitir."
               ) : (
@@ -155,8 +168,7 @@ export default function DashboardPage() {
                   Activa tu plan para emitir comprobantes.{" "}
                   <Link
                     href="/planes"
-                    className="underline"
-                    style={{ color: "var(--kipu-danger)" }}
+                    className="underline text-peligro"
                   >
                     Ver planes
                   </Link>
@@ -170,18 +182,17 @@ export default function DashboardPage() {
       {/* Contenido */}
       {isLoading ? (
         <div className="flex items-center justify-center py-20">
-          <Loader2 size={28} className="animate-spin" style={{ color: "var(--kipu-accent)" }} />
+          <Loader2 size={28} className="animate-spin text-acento" />
         </div>
       ) : error ? (
         <div className="flex flex-col items-center justify-center py-20 gap-3">
-          <AlertTriangle size={28} style={{ color: "var(--kipu-danger)" }} />
-          <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>
+          <AlertTriangle className="text-peligro" size={28} />
+          <p className="text-sm text-tenue">
             Error al cargar el dashboard.
           </p>
           <button
             onClick={() => mutate()}
-            className="text-xs underline"
-            style={{ color: "var(--kipu-accent)" }}
+            className="text-xs underline text-acento"
           >
             Reintentar
           </button>
@@ -190,20 +201,24 @@ export default function DashboardPage() {
         <div className="space-y-6">
           <StatsGrid resumen={data?.resumen} empresa={empresa} />
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <div className="lg:col-span-2">
-              <GraficoFacturacion documentos={data?.documentos ?? []} />
-            </div>
+            {verDocumentos && (
+              <div className="lg:col-span-2">
+                <GraficoFacturacion documentos={data?.documentos ?? []} />
+              </div>
+            )}
             <AccesosRapidos />
           </div>
           {/* App de las tiendas: Recibidos solo si el plan lo incluye (lib/plataforma.ts) */}
-          {rutaFueraDelPlan("/documentos/recibidos", empresa) ? (
-            <UltimosDocumentos documentos={data?.documentos ?? []} />
-          ) : (
+          {verDocumentos && verRecibidos ? (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <UltimosDocumentos documentos={data?.documentos ?? []} />
               <DocumentosRecibidos docs={data?.recibidos_recientes ?? []} />
             </div>
-          )}
+          ) : verDocumentos ? (
+            <UltimosDocumentos documentos={data?.documentos ?? []} />
+          ) : verRecibidos ? (
+            <DocumentosRecibidos docs={data?.recibidos_recientes ?? []} />
+          ) : null}
         </div>
       )}
 

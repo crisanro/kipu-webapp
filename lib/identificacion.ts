@@ -2,6 +2,15 @@
 // selector de clientes y otra vez al emitir: sin esto se podía emitir a un
 // cliente nuevo con identificación inválida (el SRI lo rechaza y se pierde el secuencial).
 
+/** Nombre de cada tipo de identificación del SRI (tabla 6), para mostrarlo. */
+export const NOMBRE_TIPO_ID: Record<string, string> = {
+  "04": "RUC",
+  "05": "Cédula",
+  "06": "Pasaporte",
+  "07": "Consumidor Final",
+  "08": "Exterior",
+};
+
 export function validarIdentificacion(
   tipo: string,
   valor: string

@@ -1,98 +1,37 @@
 "use client";
 import { rutas } from "@/lib/rutas";
 import Link from "next/link";
-import { ArrowRight, CheckCircle2, Clock, AlertTriangle, XCircle, Ban } from "lucide-react";
+import { ArrowRight } from "lucide-react";
+import { estadoSri, tipoComprobante } from "@/lib/estados";
+import { CLASES_TONO, InsigniaSri } from "@/components/ui/InsigniaEstado";
+import { cn } from "@/components/ui/cn";
+import { dosDecimales } from "@/lib/dinero";
 
 interface Props {
   documentos: any[];
 }
-
-const ESTADO_CONFIG: Record<string, { label: string; color: string; bg: string; icon: any }> = {
-  AUTORIZADO: {
-    label: "Autorizado",
-    color: "var(--kipu-success)",
-    bg: "color-mix(in srgb, var(--kipu-success) 10%, transparent)",
-    icon: CheckCircle2,
-  },
-  RECIBIDA: {
-    label: "En proceso",
-    color: "var(--kipu-info)",
-    bg: "color-mix(in srgb, var(--kipu-info) 10%, transparent)",
-    icon: Clock,
-  },
-  EN_REVISION: {
-    label: "En revisión",
-    color: "var(--kipu-info)",
-    bg: "color-mix(in srgb, var(--kipu-info) 10%, transparent)",
-    icon: Clock,
-  },
-  FIRMADO: {
-    label: "En cola",
-    color: "var(--kipu-info)",
-    bg: "color-mix(in srgb, var(--kipu-info) 10%, transparent)",
-    icon: Clock,
-  },
-  DEVUELTA: {
-    label: "Devuelto",
-    color: "var(--kipu-warning)",
-    bg: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)",
-    icon: AlertTriangle,
-  },
-  RECHAZADO: {
-    label: "Rechazado",
-    color: "var(--kipu-danger)",
-    bg: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
-    icon: XCircle,
-  },
-  ANULADO: {
-    label: "Anulado",
-    color: "var(--kipu-muted)",
-    bg: "color-mix(in srgb, var(--kipu-muted) 10%, transparent)",
-    icon: Ban,
-  },
-  PENDIENTE: {
-    label: "Pendiente",
-    color: "var(--kipu-subtle)",
-    bg: "color-mix(in srgb, var(--kipu-subtle) 10%, transparent)",
-    icon: Clock,
-  },
-};
-
-const TIPO_LABEL: Record<string, string> = {
-  FAC: "FAC", LIQ: "LIQ", NCR: "NC", NDB: "ND", RET: "RET",
-};
-
-const fmt = (n: any) => parseFloat(n ?? 0).toFixed(2);
 
 export default function UltimosDocumentos({ documentos }: Props) {
   const recientes = documentos.slice(0, 6);
 
   return (
     <div
-      className="rounded-xl overflow-hidden"
-      style={{
-        background: "var(--kipu-surface)",
-        border: "1px solid var(--kipu-border)",
-      }}
+      className="rounded-xl overflow-hidden bg-superficie border border-borde"
     >
       <div
-        className="flex items-center justify-between px-5 py-4"
-        style={{ borderBottom: "2px solid var(--kipu-border)" }}
+        className="flex items-center justify-between px-5 py-4 border-b-2 border-borde"
       >
         <div>
-          <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>
+          <h2 className="text-sm font-semibold text-texto">
             Últimos emitidos
           </h2>
-          <p className="text-xs mt-0.5" style={{ color: "var(--kipu-subtle)" }}>
+          <p className="text-xs mt-0.5 text-sutil">
             Comprobantes recientes
           </p>
         </div>
         <Link
           href="/documentos"
-          className="flex items-center gap-1 text-xs transition-colors"
-          style={{ color: "var(--kipu-accent)" }}
-          onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent-h)"}
-          onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-accent)"}
+          className="flex items-center gap-1 text-xs transition-colors text-acento hover:text-acento-hover"
         >
           Ver todos <ArrowRight size={12} />
         </Link>
@@ -101,15 +40,12 @@ export default function UltimosDocumentos({ documentos }: Props) {
       {recientes.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 text-center">
           <span className="text-3xl mb-2">📄</span>
-          <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>
+          <p className="text-sm text-tenue">
             Sin comprobantes este mes
           </p>
           <Link
             href="/documentos/emitir/fac"
-            className="mt-3 text-xs transition-colors"
-            style={{ color: "var(--kipu-accent)" }}
-            onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent-h)"}
-            onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-accent)"}
+            className="mt-3 text-xs transition-colors text-acento hover:text-acento-hover"
           >
             Emitir primero →
           </Link>
@@ -117,33 +53,24 @@ export default function UltimosDocumentos({ documentos }: Props) {
       ) : (
         <div>
           {recientes.map((d: any, index: number) => {
-            const estado = ESTADO_CONFIG[d.estado] ?? ESTADO_CONFIG.PENDIENTE;
-            const Icon   = estado.icon;
+            const estado = estadoSri(d.estado);
+            const Icon   = estado.icono;
             return (
               <Link
                 key={d.id}
                 href={rutas.documento(d.id)}
-                className="flex items-center gap-3 px-5 py-3.5 transition-colors group"
+                className="flex items-center gap-3 px-5 py-3.5 transition-colors group hover:bg-texto/4"
                 style={{
                   borderTop: index > 0 ? "1px solid var(--kipu-border)" : "none",
                 }}
-                onMouseEnter={e =>
-                  (e.currentTarget.style.background =
-                    "color-mix(in srgb, var(--kipu-text) 4%, transparent)")
-                }
-                onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
               >
-                <div
-                  className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-                  style={{ background: estado.bg }}
-                >
-                  <Icon size={14} style={{ color: estado.color }} />
+                <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", CLASES_TONO[estado.tono])}>
+                  <Icon size={14} aria-hidden />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <p
-                      className="text-sm font-medium truncate"
-                      style={{ color: "var(--kipu-text)" }}
+                      className="text-sm font-medium truncate text-texto"
                     >
                       {d.cliente_nombre || "—"}
                     </p>
@@ -155,27 +82,23 @@ export default function UltimosDocumentos({ documentos }: Props) {
                           color: "var(--kipu-muted)",
                         }}
                       >
-                        {TIPO_LABEL[d.tipo_doc] ?? d.tipo_doc}
+                        {tipoComprobante(d.tipo_doc).corta}
                       </span>
                     )}
                   </div>
                   <p
-                    className="text-xs mt-0.5"
-                    style={{ color: "var(--kipu-subtle)" }}
+                    className="text-xs mt-0.5 text-sutil"
                   >
                     {d.numero ?? d.numero_doc} · {String(d.fecha ?? "").slice(0, 10)}
                   </p>
                 </div>
                 <div className="text-right shrink-0">
                   <p
-                    className="text-sm font-bold"
-                    style={{ color: "var(--kipu-text)" }}
+                    className="text-sm font-bold text-texto"
                   >
-                    ${fmt(d.total)}
+                    ${dosDecimales(d.total)}
                   </p>
-                  <p className="text-xs" style={{ color: estado.color }}>
-                    {estado.label}
-                  </p>
+                  <InsigniaSri estado={d.estado} conIcono={false} className="mt-0.5" />
                 </div>
               </Link>
             );

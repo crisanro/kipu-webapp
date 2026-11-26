@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/auth.store";
 import { ES_APP_NATIVA } from "@/lib/plataforma";
 import { AlertTriangle, FileText, FileImage, Download } from "lucide-react";
+import { AvisoFuncionPro } from "@/components/EjemploPro";
 
 import TabXML              from "./_components/TabXML";
 import TabFisico           from "./_components/TabFisico";
@@ -80,39 +81,25 @@ export default function NuevaRecibidaPage() {
 
       {/* Header */}
       <div>
-        <h1 className="text-xl font-bold" style={{ color: "var(--kipu-text)" }}>
+        <h1 className="text-xl font-bold text-texto">
           Registrar documento recibido
         </h1>
-        <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>
+        <p className="text-sm text-sutil">
           XML electrónico o documento físico
         </p>
       </div>
 
       {/* Alerta suscripción */}
       {!suscripcionActiva && (
-        <div
-          className="flex items-start gap-3 rounded-lg px-4 py-3"
-          style={{
-            background: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)",
-            border: "1px solid color-mix(in srgb, var(--kipu-warning) 20%, transparent)",
-          }}
-        >
-          <AlertTriangle size={16} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-warning)" }} />
-          <p className="text-sm" style={{ color: "var(--kipu-warning)" }}>
-            {ES_APP_NATIVA
-              ? "Registrar compras no está incluido en tu plan actual. Las que ya registraste las sigues viendo."
-              : "Registrar tus compras es del Plan Pro. Las que ya registraste las sigues viendo."}
-          </p>
-        </div>
+        <AvisoFuncionPro
+          texto="Registrar tus compras es del Plan Pro. Las que ya registraste las sigues viendo."
+          textoApp="Registrar compras no está incluido en tu plan actual. Las que ya registraste las sigues viendo."
+        />
       )}
 
       {/* Tabs */}
       <div
-        className="flex gap-2 rounded-xl p-1"
-        style={{
-          background: "var(--kipu-surface)",
-          border: "1px solid var(--kipu-border)",
-        }}
+        className="flex gap-2 rounded-xl p-1 bg-superficie border border-borde"
       >
         <button
           type="button"
@@ -173,14 +160,10 @@ export default function NuevaRecibidaPage() {
       {/* Error compartido */}
       {error && (
         <div
-          className="flex items-start gap-2 rounded-lg px-3 py-2.5"
-          style={{
-            background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
-            border: "1px solid color-mix(in srgb, var(--kipu-danger) 20%, transparent)",
-          }}
+          className="flex items-start gap-2 rounded-lg px-3 py-2.5 bg-peligro-suave border border-peligro/20"
         >
-          <AlertTriangle size={14} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-danger)" }} />
-          <p className="text-sm" style={{ color: "var(--kipu-danger)" }}>{error}</p>
+          <AlertTriangle size={14} className="shrink-0 mt-0.5 text-peligro" />
+          <p className="text-sm text-peligro">{error}</p>
         </div>
       )}
 
@@ -215,10 +198,7 @@ export default function NuevaRecibidaPage() {
         <button
           type="button"
           onClick={() => router.push("/documentos/recibidos")}
-          className="text-xs transition-colors"
-          style={{ color: "var(--kipu-accent)" }}
-          onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent-h)"}
-          onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-accent)"}
+          className="text-xs transition-colors text-acento hover:text-acento-hover"
         >
           Ver historial →
         </button>

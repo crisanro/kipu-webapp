@@ -1,6 +1,8 @@
 "use client";
 import { useState } from "react";
 import { ChevronDown, ChevronUp, TrendingUp } from "lucide-react";
+import { montoEC, numeroEC } from "@/lib/dinero";
+import CeldaCasillero from "./CeldaCasillero";
 
 interface DesgloseTarifa {
   tarifa:    number;
@@ -27,57 +29,6 @@ interface Props {
   casilleros: CasillerosVentas;
 }
 
-const fmt  = (n: number = 0) => n.toLocaleString("es-EC", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const fmtN = (n: number = 0) => n.toLocaleString("es-EC", { minimumFractionDigits: 0 });
-
-function CeldaCasillero({ num, label, value, highlight = false }: {
-  num: string;
-  label: string;
-  value: number;
-  highlight?: boolean;
-}) {
-  return (
-    <div
-      className="p-2.5 rounded-lg flex flex-col justify-between transition-colors"
-      style={{
-        background: highlight
-          ? "color-mix(in srgb, var(--kipu-accent) 10%, transparent)"
-          : "color-mix(in srgb, var(--kipu-text) 3%, transparent)",
-        border: highlight
-          ? "1px solid color-mix(in srgb, var(--kipu-accent) 25%, transparent)"
-          : "1px solid var(--kipu-border)",
-      }}
-    >
-      <div className="flex items-center justify-between gap-1 mb-1">
-        <span
-          className="text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0"
-          style={{
-            background: highlight ? "var(--kipu-accent)" : "color-mix(in srgb, var(--kipu-text) 10%, transparent)",
-            color: highlight ? "#FFFFFF" : "var(--kipu-subtle)",
-          }}
-        >
-          {num}
-        </span>
-        <span className="text-[10px] truncate" style={{ color: "var(--kipu-subtle)" }}>
-          {label}
-        </span>
-      </div>
-      <p
-        className="text-sm font-bold tabular-nums text-right"
-        style={{
-          color: highlight
-            ? "var(--kipu-accent)"
-            : value === 0
-              ? "var(--kipu-subtle)"
-              : "var(--kipu-text)",
-        }}
-      >
-        ${fmt(value)}
-      </p>
-    </div>
-  );
-}
-
 export default function SeccionVentas({ desglose, casilleros }: Props) {
   const [expandido, setExpandido] = useState(true);
 
@@ -100,57 +51,49 @@ export default function SeccionVentas({ desglose, casilleros }: Props) {
 
   return (
     <div
-      className="rounded-xl overflow-hidden"
-      style={{
-        background: "var(--kipu-surface)",
-        border: "1px solid var(--kipu-border)",
-      }}
+      className="rounded-xl overflow-hidden bg-superficie border border-borde"
     >
       {/* Header */}
       <button
         type="button"
         onClick={() => setExpandido(!expandido)}
-        className="w-full flex items-center justify-between px-4 py-3 transition-colors text-left"
-        onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 4%, transparent)"}
-        onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+        className="w-full flex items-center justify-between px-4 py-3 transition-colors text-left hover:bg-texto/4"
       >
         <div className="flex items-center gap-2.5">
           <div
-            className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-            style={{ background: "color-mix(in srgb, var(--kipu-accent) 20%, transparent)" }}
+            className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 bg-acento/20"
           >
-            <TrendingUp size={14} style={{ color: "var(--kipu-accent)" }} />
+            <TrendingUp className="text-acento" size={14} />
           </div>
           <div>
-            <p className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>
+            <p className="text-sm font-semibold text-texto">
               Ventas y otras operaciones
             </p>
-            <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
-              {fmtN(casilleros["111"])} comprobantes emitidos
-              {(casilleros["113"] ?? 0) > 0 && ` · ${fmtN(casilleros["113"])} anulados`}
+            <p className="text-xs text-sutil">
+              {numeroEC(casilleros["111"])} comprobantes emitidos
+              {(casilleros["113"] ?? 0) > 0 && ` · ${numeroEC(casilleros["113"])} anulados`}
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-4">
           <div className="text-right hidden sm:block">
-            <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Total neto ventas</p>
-            <p className="text-sm font-bold" style={{ color: "var(--kipu-accent)" }}>
-              ${fmt(casilleros["419"] ?? 0)}
+            <p className="text-xs text-sutil">Total neto ventas</p>
+            <p className="text-sm font-bold text-acento">
+              ${montoEC(casilleros["419"] ?? 0)}
             </p>
           </div>
           {expandido ? (
-            <ChevronUp size={16} className="shrink-0" style={{ color: "var(--kipu-subtle)" }} />
+            <ChevronUp size={16} className="shrink-0 text-sutil" />
           ) : (
-            <ChevronDown size={16} className="shrink-0" style={{ color: "var(--kipu-subtle)" }} />
+            <ChevronDown size={16} className="shrink-0 text-sutil" />
           )}
         </div>
       </button>
 
       {expandido && (
         <div
-          className="p-4 space-y-4"
-          style={{ borderTop: "1px solid var(--kipu-border)" }}
+          className="p-4 space-y-4 border-t border-borde"
         >
           {/* Desglose de Ventas Gravadas (15%, 5%, etc.) */}
           {tarifasNZ.map((d) => {
@@ -158,26 +101,26 @@ export default function SeccionVentas({ desglose, casilleros }: Props) {
             return (
               <div key={d.tarifa} className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold" style={{ color: "var(--kipu-text)" }}>
+                  <span className="text-xs font-semibold text-texto">
                     Ventas gravadas tarifa {d.tarifa}%
                   </span>
                   <span className="text-[10px]" style={{ color: "var(--kipu-subtle)" }}>
-                    {fmtN(d.num_docs)} doc(s) · N/C: -${fmt(d.ncr)}
+                    {numeroEC(d.num_docs)} doc(s) · N/C: -${montoEC(d.ncr)}
                   </span>
                 </div>
 
                 <div className="grid grid-cols-3 gap-2">
-                  <CeldaCasillero
+                  <CeldaCasillero tono="acento"
                     num={brutoNum}
                     label="Valor Bruto"
                     value={d.bruto}
                   />
-                  <CeldaCasillero
+                  <CeldaCasillero tono="acento"
                     num={netoNum}
                     label="Valor Neto"
                     value={d.neto}
                   />
-                  <CeldaCasillero
+                  <CeldaCasillero tono="acento"
                     num={ivaNum}
                     label="Impuesto Generado"
                     value={d.iva_neto}
@@ -190,23 +133,23 @@ export default function SeccionVentas({ desglose, casilleros }: Props) {
 
           {/* Ventas Tarifa 0% */}
           {tarifa0 && tarifa0.bruto > 0 && (
-            <div className="space-y-2 pt-2" style={{ borderTop: "1px solid var(--kipu-border)" }}>
+            <div className="space-y-2 pt-2 border-t border-borde">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold" style={{ color: "var(--kipu-text)" }}>
+                <span className="text-xs font-semibold text-texto">
                   Ventas gravadas tarifa 0%
                 </span>
                 <span className="text-[10px]" style={{ color: "var(--kipu-subtle)" }}>
-                  {fmtN(tarifa0.num_docs)} doc(s) · N/C: -${fmt(tarifa0.ncr)}
+                  {numeroEC(tarifa0.num_docs)} doc(s) · N/C: -${montoEC(tarifa0.ncr)}
                 </span>
               </div>
 
               <div className="grid grid-cols-2 gap-2">
-                <CeldaCasillero
+                <CeldaCasillero tono="acento"
                   num="403"
                   label="Valor Bruto"
                   value={tarifa0.bruto}
                 />
-                <CeldaCasillero
+                <CeldaCasillero tono="acento"
                   num="413"
                   label="Valor Neto"
                   value={tarifa0.neto}
@@ -217,9 +160,9 @@ export default function SeccionVentas({ desglose, casilleros }: Props) {
 
           {/* Exportación de servicios: ventas 0% a clientes del exterior */}
           {(casilleros["408"] ?? 0) > 0 && (
-            <div className="space-y-2 pt-2" style={{ borderTop: "1px solid var(--kipu-border)" }}>
+            <div className="space-y-2 pt-2 border-t border-borde">
               <div>
-                <span className="text-xs font-semibold" style={{ color: "var(--kipu-text)" }}>
+                <span className="text-xs font-semibold text-texto">
                   Exportaciones de servicios
                 </span>
                 <p className="text-[10px]" style={{ color: "var(--kipu-subtle)" }}>
@@ -227,17 +170,17 @@ export default function SeccionVentas({ desglose, casilleros }: Props) {
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-2">
-                <CeldaCasillero num="408" label="Valor Bruto" value={casilleros["408"] ?? 0} />
-                <CeldaCasillero num="418" label="Valor Neto"  value={casilleros["418"] ?? 0} />
+                <CeldaCasillero tono="acento" num="408" label="Valor Bruto" value={casilleros["408"] ?? 0} />
+                <CeldaCasillero tono="acento" num="418" label="Valor Neto"  value={casilleros["418"] ?? 0} />
               </div>
             </div>
           )}
 
           {/* No objeto / exentas: se informan aparte, no suman al total 409 */}
           {(casilleros["431"] ?? 0) > 0 && (
-            <div className="space-y-2 pt-2" style={{ borderTop: "1px solid var(--kipu-border)" }}>
+            <div className="space-y-2 pt-2 border-t border-borde">
               <div>
-                <span className="text-xs font-semibold" style={{ color: "var(--kipu-text)" }}>
+                <span className="text-xs font-semibold text-texto">
                   Ventas no objeto o exentas de IVA
                 </span>
                 <p className="text-[10px]" style={{ color: "var(--kipu-subtle)" }}>
@@ -245,29 +188,29 @@ export default function SeccionVentas({ desglose, casilleros }: Props) {
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-2">
-                <CeldaCasillero num="431" label="Valor Bruto" value={casilleros["431"] ?? 0} />
-                <CeldaCasillero num="441" label="Valor Neto"  value={casilleros["441"] ?? 0} />
+                <CeldaCasillero tono="acento" num="431" label="Valor Bruto" value={casilleros["431"] ?? 0} />
+                <CeldaCasillero tono="acento" num="441" label="Valor Neto"  value={casilleros["441"] ?? 0} />
               </div>
             </div>
           )}
 
           {/* Totales Consolidados de la Sección */}
-          <div className="pt-3" style={{ borderTop: "1px solid var(--kipu-border)" }}>
-            <p className="text-xs font-semibold uppercase tracking-wider mb-2.5" style={{ color: "var(--kipu-subtle)" }}>
+          <div className="pt-3 border-t border-borde">
+            <p className="text-xs font-semibold uppercase tracking-wider mb-2.5 text-sutil">
               Totales de ventas y otras operaciones
             </p>
             <div className="grid grid-cols-3 gap-2">
-              <CeldaCasillero
+              <CeldaCasillero tono="acento"
                 num="409"
                 label="Total Bruto"
                 value={casilleros["409"] ?? 0}
               />
-              <CeldaCasillero
+              <CeldaCasillero tono="acento"
                 num="419"
                 label="Total Neto"
                 value={casilleros["419"] ?? 0}
               />
-              <CeldaCasillero
+              <CeldaCasillero tono="acento"
                 num="429"
                 label="Total IVA Generado"
                 value={casilleros["429"] ?? 0}
@@ -277,21 +220,17 @@ export default function SeccionVentas({ desglose, casilleros }: Props) {
           </div>
 
           {/* Resumen de Comprobantes Emitidos y Anulados */}
-          <div className="pt-3" style={{ borderTop: "1px solid var(--kipu-border)" }}>
-            <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: "var(--kipu-subtle)" }}>
+          <div className="pt-3 border-t border-borde">
+            <p className="text-xs font-semibold uppercase tracking-wider mb-2 text-sutil">
               Resumen de Comprobantes
             </p>
             <div className="grid grid-cols-2 gap-2">
               <div
-                className="rounded-lg px-3 py-2.5 text-center"
-                style={{
-                  background: "color-mix(in srgb, var(--kipu-text) 4%, transparent)",
-                  border: "1px solid var(--kipu-border)",
-                }}
+                className="rounded-lg px-3 py-2.5 text-center bg-texto/4 border border-borde"
               >
-                <p className="text-xs mb-0.5" style={{ color: "var(--kipu-subtle)" }}>Emitidos (FAC + NDB + LIQ)</p>
-                <p className="text-base font-bold" style={{ color: "var(--kipu-text)" }}>
-                  {fmtN(casilleros["111"])}
+                <p className="text-xs mb-0.5 text-sutil">Emitidos (FAC + NDB + LIQ)</p>
+                <p className="text-base font-bold text-texto">
+                  {numeroEC(casilleros["111"])}
                 </p>
                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ background: "color-mix(in srgb, var(--kipu-text) 8%, transparent)", color: "var(--kipu-subtle)" }}>
                   111
@@ -309,14 +248,14 @@ export default function SeccionVentas({ desglose, casilleros }: Props) {
                     : "1px solid var(--kipu-border)",
                 }}
               >
-                <p className="text-xs mb-0.5" style={{ color: "var(--kipu-subtle)" }}>Anulados</p>
+                <p className="text-xs mb-0.5 text-sutil">Anulados</p>
                 <p
                   className="text-base font-bold"
                   style={{
                     color: (casilleros["113"] ?? 0) > 0 ? "var(--kipu-danger)" : "var(--kipu-text)",
                   }}
                 >
-                  {fmtN(casilleros["113"])}
+                  {numeroEC(casilleros["113"])}
                 </p>
                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ background: "color-mix(in srgb, var(--kipu-text) 8%, transparent)", color: "var(--kipu-subtle)" }}>
                   113

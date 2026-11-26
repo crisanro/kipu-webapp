@@ -9,6 +9,7 @@
 import { useEffect, useState } from "react";
 import { CheckCircle2, Clock, Loader2, TrendingUp } from "lucide-react";
 import api from "@/lib/api";
+import { detalleError } from "@/lib/errores";
 
 interface EstadoUsoJusto {
   plan_pro:        boolean;
@@ -39,8 +40,7 @@ export default function SolicitarAmpliacion({ onResultado }: { onResultado?: () 
       setResultado({ tipo: d.estado === "APROBADA" ? "ok" : "pendiente", texto: d.mensaje });
       onResultado?.();
     } catch (e) {
-      const det = (e as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail;
-      setResultado({ tipo: "error", texto: typeof det === "string" ? det : "No se pudo enviar la solicitud. Intenta de nuevo." });
+      setResultado({ tipo: "error", texto: detalleError(e, "No se pudo enviar la solicitud. Intenta de nuevo.") });
     } finally {
       setEnviando(false);
     }
@@ -62,8 +62,7 @@ export default function SolicitarAmpliacion({ onResultado }: { onResultado?: () 
 
   if (estado.solicitud?.estado === "PENDIENTE") {
     return (
-      <p className="mt-2 flex items-start gap-1.5 text-left text-xs rounded-lg px-3 py-2"
-         style={{ color: "var(--kipu-info)", background: "color-mix(in srgb, var(--kipu-info) 10%, transparent)" }}>
+      <p className="mt-2 flex items-start gap-1.5 text-left text-xs rounded-lg px-3 py-2 text-info bg-info/10">
         <Clock size={13} className="mt-0.5 shrink-0" />
         Tu solicitud de ampliación está en revisión. El equipo de Kipu te avisará por aquí.
       </p>
@@ -77,8 +76,7 @@ export default function SolicitarAmpliacion({ onResultado }: { onResultado?: () 
       type="button"
       onClick={solicitar}
       disabled={enviando}
-      className="mt-2 w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-semibold transition-colors disabled:opacity-60"
-      style={{ border: "1px solid var(--kipu-accent)", color: "var(--kipu-accent)" }}
+      className="mt-2 w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-semibold transition-colors disabled:opacity-60 border border-acento text-acento"
     >
       {enviando ? <Loader2 size={13} className="animate-spin" /> : <TrendingUp size={13} />}
       Solicitar ampliación gratis

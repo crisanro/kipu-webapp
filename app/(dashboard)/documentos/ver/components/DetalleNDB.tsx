@@ -1,7 +1,11 @@
 "use client";
 import { rutas } from "@/lib/rutas";
 import { useRouter } from "next/navigation";
-import { fmt, TIPO_ID, type FacturaBase } from "./DetalleShared";
+import { User } from "lucide-react";
+import Seccion from "@/components/ui/Seccion";
+import Boton from "@/components/ui/Boton";
+import { Dato, SeccionAdicionales, SeccionEmisor, SeccionFormaPago, TIPO_ID, type FacturaBase } from "./DetalleShared";
+import { dosDecimales } from "@/lib/dinero";
 
 interface Props { factura: FacturaBase; }
 
@@ -23,215 +27,68 @@ export default function DetalleNDB({ factura }: Props) {
     ? (Array.isArray(infoNDB.pagos.pago) ? infoNDB.pagos.pago : [infoNDB.pagos.pago])
     : [];
 
-  const adicionales = datos.infoAdicional?.campoAdicional
-    ? (Array.isArray(datos.infoAdicional.campoAdicional)
-        ? datos.infoAdicional.campoAdicional
-        : [datos.infoAdicional.campoAdicional])
-    : [];
-
-  const FORMA_PAGO: Record<string, string> = {
-    "01": "Sin utilización del sistema financiero",
-    "16": "Tarjeta de débito",
-    "17": "Dinero electrónico",
-    "19": "Tarjeta de crédito",
-    "20": "Transferencia bancaria",
-    "15": "Compensación de deudas",
-  };
-
   return (
     <>
-      {/* Emisor */}
-      <div
-        className="rounded-xl p-4"
-        style={{
-          background: "var(--kipu-surface)",
-          border: "1px solid var(--kipu-border)",
-        }}
-      >
-        <h2 className="text-xs font-semibold mb-3 uppercase tracking-wide" style={{ color: "var(--kipu-subtle)" }}>Emisor</h2>
-        <div className="space-y-2 text-sm">
-          {[
-            { label: "Razón Social",    value: trib.razonSocial },
-            { label: "RUC",             value: trib.ruc },
-            { label: "Dirección",       value: trib.dirMatriz },
-            { label: "Establecimiento", value: `${trib.estab}-${trib.ptoEmi}` },
-            { label: "Ambiente",        value: trib.ambiente == 2 ? "🟢 Producción" : "🟡 Pruebas" },
-          ].map(({ label, value }) => (
-            <div key={label} className="flex justify-between">
-              <span style={{ color: "var(--kipu-muted)" }}>{label}</span>
-              <span className="text-right max-w-[60%]" style={{ color: "var(--kipu-text)" }}>{value}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Cliente */}
-      <div
-        className="rounded-xl p-4"
-        style={{
-          background: "var(--kipu-surface)",
-          border: "1px solid var(--kipu-border)",
-        }}
-      >
-        <h2 className="text-xs font-semibold mb-3 uppercase tracking-wide" style={{ color: "var(--kipu-subtle)" }}>Cliente</h2>
-        <div className="space-y-2 text-sm">
-          {[
-            { label: "Razón Social",   value: infoNDB.razonSocialComprador },
-            { label: "Tipo ID",        value: TIPO_ID[infoNDB.tipoIdentificacionComprador] ?? infoNDB.tipoIdentificacionComprador },
-            { label: "Identificación", value: infoNDB.identificacionComprador },
-          ].map(({ label, value }) => (
-            <div key={label} className="flex justify-between">
-              <span style={{ color: "var(--kipu-muted)" }}>{label}</span>
-              <span className="text-right max-w-[60%]" style={{ color: "var(--kipu-text)" }}>{value}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
       {/* Documento que modifica */}
-      <div
-        className="rounded-xl p-4"
-        style={{
-          background: "color-mix(in srgb, var(--kipu-warning) 5%, transparent)",
-          border: "1px solid color-mix(in srgb, var(--kipu-warning) 20%, transparent)",
-        }}
-      >
-        <h2 className="text-xs font-semibold mb-3 uppercase tracking-wide" style={{ color: "var(--kipu-warning)" }}>
-          Documento que Modifica
-        </h2>
-        <div className="space-y-2 text-sm">
-          {[
-            { label: "Tipo",          value: infoNDB.codDocModificado === "01" ? "Factura" : infoNDB.codDocModificado },
-            { label: "Número",        value: infoNDB.numDocModificado || "—" },
-            { label: "Fecha emisión", value: infoNDB.fechaEmisionDocSustento },
-          ].map(({ label, value }) => (
-            <div key={label} className="flex justify-between">
-              <span style={{ color: "var(--kipu-muted)" }}>{label}</span>
-              <span className="text-right max-w-[60%] font-medium" style={{ color: "var(--kipu-text)" }}>{value}</span>
-            </div>
-          ))}
-        </div>
+      <section className="rounded-xl border border-borde bg-superficie p-4">
+        <h2 className="mb-2 text-sm font-semibold text-texto">Documento que modifica</h2>
+        <Dato etiqueta="Tipo"          valor={infoNDB.codDocModificado === "01" ? "Factura" : infoNDB.codDocModificado} />
+        <Dato etiqueta="Número"        valor={<span className="font-mono">{infoNDB.numDocModificado || "—"}</span>} />
+        <Dato etiqueta="Fecha emisión" valor={infoNDB.fechaEmisionDocSustento} />
         {factura.doc_origen_emitido_id && (
-          <button
-            onClick={() => router.push(rutas.documento(factura.doc_origen_emitido_id!))}
-            className="mt-3 text-xs transition-colors underline-offset-2 hover:underline"
-            style={{ color: "var(--kipu-warning)" }}
-          >
-            Ver documento original →
-          </button>
+          <Boton variante="secundario" tamano="sm" className="mt-3"
+                 onClick={() => router.push(rutas.documento(factura.doc_origen_emitido_id!))}>
+            Ver documento original
+          </Boton>
         )}
-      </div>
+      </section>
 
       {/* Motivos */}
       {motivos.length > 0 && (
-        <div
-          className="rounded-xl overflow-hidden"
-          style={{
-            background: "var(--kipu-surface)",
-            border: "1px solid var(--kipu-border)",
-          }}
-        >
-          <div
-            className="px-4 py-3"
-            style={{ borderBottom: "2px solid var(--kipu-border)" }}
-          >
-            <h2 className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--kipu-subtle)" }}>Motivos</h2>
-          </div>
-          <div>
+        <section className="overflow-hidden rounded-xl border border-borde bg-superficie">
+          <h2 className="border-b border-borde px-4 py-3 text-sm font-semibold text-texto">Motivos</h2>
+          <div className="divide-y divide-borde">
             {motivos.map((m: any, i: number) => (
-              <div
-                key={i}
-                className="flex items-center justify-between px-4 py-3"
-                style={{
-                  borderTop: i > 0 ? "1px solid var(--kipu-border)" : "none",
-                }}
-              >
-                <span className="text-sm" style={{ color: "var(--kipu-text)" }}>{m.razon}</span>
-                <span className="text-sm font-bold" style={{ color: "var(--kipu-warning)" }}>${fmt(m.valor)}</span>
+              <div key={i} className="flex items-center justify-between gap-3 px-4 py-3">
+                <span className="text-sm text-texto">{m.razon}</span>
+                <span className="shrink-0 text-sm font-semibold tabular-nums text-texto">${dosDecimales(m.valor)}</span>
               </div>
             ))}
           </div>
-        </div>
+        </section>
       )}
 
-      {/* Impuestos */}
-      {impuestos.length > 0 && (
-        <div
-          className="rounded-xl p-4"
-          style={{
-            background: "var(--kipu-surface)",
-            border: "1px solid var(--kipu-border)",
-          }}
-        >
-          <h2 className="text-xs font-semibold mb-3 uppercase tracking-wide" style={{ color: "var(--kipu-subtle)" }}>Impuestos</h2>
-          <div className="space-y-2 text-sm">
-            {impuestos.map((imp: any, i: number) => (
-              <div key={i} className="flex justify-between" style={{ color: "var(--kipu-muted)" }}>
-                <span>IVA {imp.tarifa}% · Base ${fmt(imp.baseImponible)}</span>
-                <span>${fmt(imp.valor)}</span>
-              </div>
-            ))}
+      {/* Impuestos y total */}
+      <section className="rounded-xl border border-borde bg-superficie p-4">
+        <div className="space-y-1.5 text-sm tabular-nums">
+          {impuestos.map((imp: any, i: number) => (
+            <div key={i} className="flex justify-between text-tenue">
+              <span>IVA {imp.tarifa}% · Base ${dosDecimales(imp.baseImponible)}</span>
+              <span>${dosDecimales(imp.valor)}</span>
+            </div>
+          ))}
+          <div className={`flex justify-between text-base font-bold text-texto ${impuestos.length > 0 ? "mt-2 border-t border-borde pt-2" : ""}`}>
+            <span>Total nota de débito</span>
+            <span>${dosDecimales(infoNDB.valorTotal)}</span>
           </div>
         </div>
-      )}
+      </section>
 
-      {/* Total */}
-      <div
-        className="rounded-xl p-4"
-        style={{
-          background: "var(--kipu-surface)",
-          border: "1px solid var(--kipu-border)",
-        }}
-      >
-        <div className="flex justify-between font-bold text-base" style={{ color: "var(--kipu-warning)" }}>
-          <span>Total nota de débito</span>
-          <span>${fmt(infoNDB.valorTotal)}</span>
-        </div>
-      </div>
+      {/* Cliente */}
+      <Seccion titulo="Cliente" icono={User} resumen={infoNDB.identificacionComprador}>
+        <Dato etiqueta="Razón social"   valor={infoNDB.razonSocialComprador} />
+        <Dato etiqueta="Tipo ID"        valor={TIPO_ID[infoNDB.tipoIdentificacionComprador] ?? infoNDB.tipoIdentificacionComprador} />
+        <Dato etiqueta="Identificación" valor={infoNDB.identificacionComprador} />
+      </Seccion>
 
       {/* Pagos */}
-      {pagos.length > 0 && (
-        <div
-          className="rounded-xl p-4"
-          style={{
-            background: "var(--kipu-surface)",
-            border: "1px solid var(--kipu-border)",
-          }}
-        >
-          <h2 className="text-xs font-semibold mb-3 uppercase tracking-wide" style={{ color: "var(--kipu-subtle)" }}>Forma de Pago</h2>
-          <div className="space-y-2">
-            {pagos.map((pago: any, i: number) => (
-              <div key={i} className="flex justify-between text-sm">
-                <span style={{ color: "var(--kipu-muted)" }}>{FORMA_PAGO[pago.formaPago] ?? pago.formaPago}</span>
-                <span className="font-medium" style={{ color: "var(--kipu-text)" }}>${fmt(pago.total)}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      <SeccionFormaPago pagos={pagos} />
 
       {/* Info adicional */}
-      {adicionales.filter((a: any) => a["@nombre"] !== "PROVEEDOR_SISTEMA_INFORMATICO").length > 0 && (
-        <div
-          className="rounded-xl p-4"
-          style={{
-            background: "var(--kipu-surface)",
-            border: "1px solid var(--kipu-border)",
-          }}
-        >
-          <h2 className="text-xs font-semibold mb-3 uppercase tracking-wide" style={{ color: "var(--kipu-subtle)" }}>Información Adicional</h2>
-          <div className="space-y-2">
-            {adicionales
-              .filter((a: any) => a["@nombre"] !== "PROVEEDOR_SISTEMA_INFORMATICO")
-              .map((campo: any, i: number) => (
-                <div key={i} className="flex justify-between text-sm">
-                  <span style={{ color: "var(--kipu-subtle)" }}>{campo["@nombre"]}</span>
-                  <span style={{ color: "var(--kipu-text)" }}>{campo["#text"]}</span>
-                </div>
-              ))}
-          </div>
-        </div>
-      )}
+      <SeccionAdicionales datos={datos} />
+
+      {/* Emisor */}
+      <SeccionEmisor trib={trib} />
     </>
   );
 }

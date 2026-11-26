@@ -34,14 +34,13 @@ function UsuariosContenido() {
       {/* Header */}
       <div className="flex items-center gap-3">
         <div
-          className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
-          style={{ background: "color-mix(in srgb, var(--kipu-accent) 20%, transparent)" }}
+          className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 bg-acento/20"
         >
-          <UserCog size={18} style={{ color: "var(--kipu-accent)" }} />
+          <UserCog className="text-acento" size={18} />
         </div>
         <div>
-          <h1 className="text-xl font-bold" style={{ color: "var(--kipu-text)" }}>Usuarios</h1>
-          <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>
+          <h1 className="text-xl font-bold text-texto">Usuarios</h1>
+          <p className="text-sm text-sutil">
             Gestiona quién tiene acceso a {empresa.nombre_comercial || empresa.razon_social}
           </p>
         </div>

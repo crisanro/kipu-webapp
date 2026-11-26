@@ -6,9 +6,9 @@ import { useState, useEffect } from "react";
 import { notFound, useRouter, useSearchParams } from "next/navigation";
 import api from "@/lib/api";
 import OfertaRenta from "@/components/renta/OfertaRenta";
+import Alertas104, { type Alerta104 } from "../_components/Alertas104";
 import { ArrowLeft, RefreshCw, FileText, AlertTriangle, TrendingUp, TrendingDown, Receipt } from "lucide-react";
-
-const fmt = (n: number = 0) => n.toLocaleString("es-EC", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+import { montoEC } from "@/lib/dinero";
 
 export default function ReporteRentaPage() {
   const anio = useSearchParams().get("anio");
@@ -20,6 +20,7 @@ function ReporteRenta({ anio }: { anio: string }) {
   const router = useRouter();
 
   const [data, setData] = useState<any>(null);
+  const [alertas, setAlertas] = useState<Alerta104[]>([]);   // SOLO_KIPU (no viene con datos de ejemplo)
   const [loading, setLoading] = useState(true);
 
   const cargar = async () => {
@@ -29,6 +30,7 @@ function ReporteRenta({ anio }: { anio: string }) {
       // Acceder a .resumen.resumen_anual en lugar de .resumen_anual directo
       const resumenAnual = res.data.data?.resumen?.resumen_anual || res.data.data?.resumen_anual;
       setData(resumenAnual);
+      setAlertas(res.data.alertas ?? []);
     } catch (e) {
       console.error(e);
     } finally {
@@ -45,12 +47,12 @@ function ReporteRenta({ anio }: { anio: string }) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <button onClick={() => router.push("/reportes")} className="p-2 rounded-lg border border-[var(--kipu-border)]">
+          <button onClick={() => router.push("/reportes")} aria-label="Volver a reportes" className="hidden p-2 rounded-lg border border-[var(--kipu-border)] lg:inline-flex">
             <ArrowLeft size={16} />
           </button>
           <div>
-            <h1 className="text-xl font-bold" style={{ color: "var(--kipu-text)" }}>Consolidado Anual de Renta ({anio})</h1>
-            <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Resumen informativo de comprobantes para el Formulario 102</p>
+            <h1 className="text-xl font-bold text-texto">Consolidado Anual de Renta ({anio})</h1>
+            <p className="text-xs text-sutil">Resumen informativo de comprobantes para el Formulario 102</p>
           </div>
         </div>
         <button onClick={cargar} className="p-2 rounded-lg border border-[var(--kipu-border)]">
@@ -59,12 +61,15 @@ function ReporteRenta({ anio }: { anio: string }) {
       </div>
 
       {/* Nota legal / Informativa */}
-      <div className="p-3.5 rounded-xl flex items-start gap-2.5 text-xs" style={{ background: "color-mix(in srgb, var(--kipu-warning) 8%, transparent)", border: "1px solid color-mix(in srgb, var(--kipu-warning) 25%, transparent)", color: "var(--kipu-warning)" }}>
+      <div className="p-3.5 rounded-xl flex items-start gap-2.5 text-xs bg-alerta/8 border border-alerta/25 text-alerta">
         <AlertTriangle size={16} className="shrink-0 mt-0.5" />
         <p>
           <strong>Aviso Informativo:</strong> Este reporte consolida únicamente las facturas, notas de crédito, liquidaciones y retenciones registradas en Kipu durante el año {anio}. Recuerda incorporar en el portal del SRI tus ingresos por relación de dependencia, arrendamientos, rendimientos financieros y gastos personales.
         </p>
       </div>
+
+      {/* Solo lo emitido en Kipu: el año de la primera venta en Kipu (o antes) */}
+      <Alertas104 alertas={alertas} encabezado={false} />
 
       {/* Kipu Renta: si es el año que se vende, que el equipo de Kipu la presente */}
       <OfertaRenta variante="reportes" anio={Number(anio)} />
@@ -72,63 +77,61 @@ function ReporteRenta({ anio }: { anio: string }) {
       {/* Tarjetas Principales */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* EMITIDOS / INGRESOS */}
-        <div className="p-4 rounded-xl space-y-3" style={{ background: "var(--kipu-surface)", border: "1px solid var(--kipu-border)" }}>
-          <div className="flex items-center gap-2 pb-2" style={{ borderBottom: "1px solid var(--kipu-border)" }}>
+        <div className="p-4 rounded-xl space-y-3 bg-superficie border border-borde">
+          <div className="flex items-center gap-2 pb-2 border-b border-borde">
             <TrendingUp size={16} className="text-emerald-500" />
-            <h3 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>Comprobantes Emitidos (Ingresos)</h3>
+            <h3 className="text-sm font-semibold text-texto">Comprobantes Emitidos (Ingresos)</h3>
           </div>
           <div className="space-y-2 text-xs">
             <div className="flex justify-between">
-              <span style={{ color: "var(--kipu-subtle)" }}>Ventas brutas (FAC + NDB)</span>
-              <span className="font-mono font-medium">${fmt(data?.ventas_brutas)}</span>
+              <span className="text-sutil">Ventas brutas (FAC + NDB)</span>
+              <span className="font-mono font-medium">${montoEC(data?.ventas_brutas)}</span>
             </div>
             <div className="flex justify-between">
-              <span style={{ color: "var(--kipu-subtle)" }}>(-) Notas de crédito emitidas</span>
-              <span className="font-mono text-red-400">-${fmt(data?.notas_credito_emitidas)}</span>
+              <span className="text-sutil">(-) Notas de crédito emitidas</span>
+              <span className="font-mono text-red-400">-${montoEC(data?.notas_credito_emitidas)}</span>
             </div>
             {/* Liquidaciones de compra a tu nombre: las emitió tu cliente, son ventas tuyas */}
             {(data?.ventas_liquidaciones_recibidas ?? 0) > 0 && (
               <div className="flex justify-between">
-                <span style={{ color: "var(--kipu-subtle)" }}>(+) Ventas con liquidación de compra (la emitió tu cliente)</span>
-                <span className="font-mono font-medium">${fmt(data?.ventas_liquidaciones_recibidas)}</span>
+                <span className="text-sutil">(+) Ventas con liquidación de compra (la emitió tu cliente)</span>
+                <span className="font-mono font-medium">${montoEC(data?.ventas_liquidaciones_recibidas)}</span>
               </div>
             )}
-            <div className="pt-2 flex justify-between font-bold text-sm" style={{ borderTop: "1px solid var(--kipu-border)" }}>
+            <div className="pt-2 flex justify-between font-bold text-sm border-t border-borde">
               <span>{(data?.ventas_liquidaciones_recibidas ?? 0) > 0 ? "Total Ingresos" : "Total Ingresos Facturados"}</span>
-              <span className="text-emerald-500">${fmt(data?.ventas_netas)}</span>
+              <span className="text-emerald-500">${montoEC(data?.ventas_netas)}</span>
             </div>
           </div>
         </div>
 
         {/* RECIBIDOS / DEDUCIBLES */}
-        <div className="p-4 rounded-xl space-y-3" style={{ background: "var(--kipu-surface)", border: "1px solid var(--kipu-border)" }}>
-          <div className="flex items-center gap-2 pb-2" style={{ borderBottom: "1px solid var(--kipu-border)" }}>
+        <div className="p-4 rounded-xl space-y-3 bg-superficie border border-borde">
+          <div className="flex items-center gap-2 pb-2 border-b border-borde">
             <TrendingDown size={16} className="text-sky-400" />
-            <h3 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>Comprobantes Recibidos (Gastos Deducibles)</h3>
+            <h3 className="text-sm font-semibold text-texto">Comprobantes Recibidos (Gastos Deducibles)</h3>
           </div>
           <div className="space-y-2 text-xs">
             <div className="flex justify-between">
-              <span style={{ color: "var(--kipu-subtle)" }}>Compras recibidas deducibles</span>
-              <span className="font-mono font-medium">${fmt(data?.compras_deducibles)}</span>
+              <span className="text-sutil">Compras recibidas deducibles</span>
+              <span className="font-mono font-medium">${montoEC(data?.compras_deducibles)}</span>
             </div>
             <div className="flex justify-between">
-              <span style={{ color: "var(--kipu-subtle)" }}>(+) Liquidaciones de compra emitidas</span>
-              <span className="font-mono font-medium">${fmt(data?.liquidaciones_compras)}</span>
+              <span className="text-sutil">(+) Liquidaciones de compra emitidas</span>
+              <span className="font-mono font-medium">${montoEC(data?.liquidaciones_compras)}</span>
             </div>
-            <div className="pt-2 flex justify-between font-bold text-sm" style={{ borderTop: "1px solid var(--kipu-border)" }}>
+            <div className="pt-2 flex justify-between font-bold text-sm border-t border-borde">
               <span>Total Gastos Deducibles</span>
-              <span className="text-sky-400">${fmt(data?.total_gastos_deducibles)}</span>
+              <span className="text-sky-400">${montoEC(data?.total_gastos_deducibles)}</span>
             </div>
             {/* Activos fijos: fuera del total, se deducen por depreciación */}
             {(data?.activos_fijos_comprados ?? 0) > 0 && (
-              <div className="pt-2 space-y-0.5" style={{ borderTop: "1px solid var(--kipu-border)" }}>
+              <div className="pt-2 space-y-0.5 border-t border-borde">
                 <div className="flex justify-between">
-                  <span style={{ color: "var(--kipu-subtle)" }}>Activos fijos comprados en el año</span>
-                  <span className="font-mono font-medium">${fmt(data?.activos_fijos_comprados)}</span>
+                  <span className="text-sutil">Activos fijos comprados en el año</span>
+                  <span className="font-mono font-medium">${montoEC(data?.activos_fijos_comprados)}</span>
                 </div>
-                <p className="text-[10px]" style={{ color: "var(--kipu-subtle)" }}>
-                  Se deducen por depreciación, no completos.
-                </p>
+                <p className="text-[10px] text-sutil">Se deducen por depreciación, no completos.</p>
               </div>
             )}
           </div>
@@ -136,20 +139,20 @@ function ReporteRenta({ anio }: { anio: string }) {
       </div>
 
       {/* RETENCIONES DE RENTA */}
-      <div className="p-4 rounded-xl space-y-3" style={{ background: "var(--kipu-surface)", border: "1px solid var(--kipu-border)" }}>
-        <div className="flex items-center gap-2 pb-2" style={{ borderBottom: "1px solid var(--kipu-border)" }}>
+      <div className="p-4 rounded-xl space-y-3 bg-superficie border border-borde">
+        <div className="flex items-center gap-2 pb-2 border-b border-borde">
           <Receipt size={16} className="text-amber-400" />
-          <h3 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>Retenciones de Impuesto a la Renta ({anio})</h3>
+          <h3 className="text-sm font-semibold text-texto">Retenciones de Impuesto a la Renta ({anio})</h3>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-          <div className="p-3 rounded-lg" style={{ background: "color-mix(in srgb, var(--kipu-info) 8%, transparent)", border: "1px solid color-mix(in srgb, var(--kipu-info) 20%, transparent)" }}>
+          <div className="p-3 rounded-lg bg-info/8 border border-info/20">
             <p className="text-[10px] uppercase font-bold text-sky-400">Retenciones Recibidas (Crédito a tu favor)</p>
-            <p className="text-lg font-bold text-sky-400 mt-1">${fmt(data?.retenciones_renta_recibidas)}</p>
+            <p className="text-lg font-bold text-sky-400 mt-1">${montoEC(data?.retenciones_renta_recibidas)}</p>
             <p className="text-[10px] text-[var(--kipu-subtle)] mt-1">Retenciones que te hicieron tus clientes en ventas (Casillero 855/841)</p>
           </div>
           <div className="p-3 rounded-lg" style={{ background: "color-mix(in srgb, #f59e0b 8%, transparent)", border: "1px solid color-mix(in srgb, #f59e0b 20%, transparent)" }}>
             <p className="text-[10px] uppercase font-bold text-amber-400">Retenciones Emitidas (A tus proveedores)</p>
-            <p className="text-lg font-bold text-amber-400 mt-1">${fmt(data?.retenciones_renta_emitidas)}</p>
+            <p className="text-lg font-bold text-amber-400 mt-1">${montoEC(data?.retenciones_renta_emitidas)}</p>
             <p className="text-[10px] text-[var(--kipu-subtle)] mt-1">Retenciones de Renta que realizaste a tus proveedores en compras</p>
           </div>
         </div>

@@ -1,17 +1,4 @@
-// Dirección vieja (/reportes/iva/[periodo]): solo existe en la web, para que los enlaces guardados,
-// los correos y lo que manda el backend sigan funcionando. Redirige con 307 a
-// la nueva conservando el resto de la query. Ver lib/rutas.ts.
-import { conQuery, rutas } from "@/lib/rutas";
+// Dirección vieja (/reportes/iva/2026-10), solo en la web: redirige a la nueva (lib/rutas.ts).
+import { redirigirVieja, rutas } from "@/lib/rutas";
 
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ periodo: string }> },
-) {
-  const { periodo } = await params;
-  const query   = Object.fromEntries(new URL(request.url).searchParams);
-  // Location relativa: detrás de Traefik request.url no trae el dominio público
-  return new Response(null, {
-    status:  307,
-    headers: { Location: conQuery(rutas.reporteIva(periodo), query) },
-  });
-}
+export const GET = redirigirVieja(rutas.reporteIva);

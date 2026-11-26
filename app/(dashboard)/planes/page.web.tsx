@@ -1,15 +1,19 @@
 "use client";
+import { useConfirmar } from "@/components/ui/Confirmar";
+import { useAvisos } from "@/components/ui/Avisos";
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
 import { detalleError } from "@/lib/errores";
+import SelectorPeriodo, { ahorroAnual, periodoDisponible, type Periodo, type PreciosPlan } from "@/components/SelectorPeriodo";
 import {
   CreditCard, Zap, RefreshCw,
-  CheckCircle2, AlertTriangle, TrendingDown, Star, ArrowRight, Info, CalendarCheck, MinusCircle
+  CheckCircle2, AlertTriangle, TrendingDown, Star, ArrowRight, Info, CalendarCheck, MinusCircle, ShieldCheck
 } from "lucide-react";
-
-const fmt = (n: unknown) => parseFloat(String(n ?? 0)).toFixed(2);
+import { dosDecimales } from "@/lib/dinero";
+import { URL_TERMINOS } from "@/lib/config";
+import { INCLUYE_PRO, INCLUYE_AL_DIA, SISTEMA_AL_DIA, GRATIS_INCLUYE, GRATIS_NO_INCLUYE } from "@/lib/planes";
 
 interface EstadoSub {
   plan:                 string;
@@ -38,45 +42,17 @@ interface Transaccion {
   created_at:   string;
 }
 
-// El precio sale de Stripe vía backend (GET /suscripcion/precio): para cambiarlo
-// basta con cambiar STRIPE_PRICE_PRO_ANUAL en el .env del backend.
-interface PrecioPlan {
-  base:      number;          // sin IVA
-  total:     number;          // lo que cobra Stripe
-  iva:       number;
-  intervalo: string | null;   // year | month
-  etiqueta:  string | null;   // p. ej. "Precio de lanzamiento" (metadatos del Price en Stripe)
+// Los precios salen de Stripe vía backend (GET /suscripcion/precios): para
+// cambiarlos basta con cambiar los STRIPE_PRICE_* en el .env del backend.
+interface Precios {
+  PRO:    PreciosPlan;
+  AL_DIA: PreciosPlan;
 }
 
 interface EstadoAlDia {
   disponible:         boolean;
-  precio:             PrecioPlan | null;
   motivo_no_elegible: string | null;
 }
-
-const FEATURES_AL_DIA = [
-  "Declaramos tu IVA, mensual o semestral",
-  "Declaramos tu renta anual",
-  "Revisamos tus compras cada mes",
-  "Te avisamos por WhatsApp cuánto pagar y hasta cuándo",
-  "Respondemos al SRI por las declaraciones que presentamos",
-];
-const SISTEMA_AL_DIA = [
-  "Facturas sin límite",
-  "Compras y reportes de IVA, renta y ATS",
-  "Cuentas por cobrar y pagar, y proformas",
-  "Hasta 5 usuarios",
-];
-
-// Plan gratis (solo se muestra con el interruptor EMISION_GRATIS encendido)
-const GRATIS_INCLUYE = [
-  "Facturas desde el panel web, con uso justo",
-  "Importa tus compras y mira el IVA a pagar de cada mes",
-];
-const GRATIS_NO_INCLUYE = [
-  "Formulario 104 casillero por casillero y alertas",
-  "API, WooCommerce y varios usuarios",
-];
 
 const ESTADO_COLOR: Record<string, { color: string; bg: string; border: string }> = {
   ACTIVO:    { color: "var(--kipu-success)", bg: "color-mix(in srgb, var(--kipu-success) 10%, transparent)", border: "color-mix(in srgb, var(--kipu-success) 20%, transparent)" },
@@ -85,16 +61,9 @@ const ESTADO_COLOR: Record<string, { color: string; bg: string; border: string }
   VENCIDO:   { color: "var(--kipu-danger)",  bg: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",  border: "color-mix(in srgb, var(--kipu-danger) 20%, transparent)" },
 };
 
-const FEATURES: { texto: string; destacado?: boolean }[] = [
-  { texto: "Facturas, liquidaciones, notas y retenciones sin límite" },
-  { texto: "Registro de compras y reportes de IVA (104), renta y ATS" },
-  { texto: "Cuentas por cobrar y pagar, y proformas en PDF" },
-  { texto: "Alertas de errores antes de declarar y facturas sin la marca de Kipu" },
-  { texto: "API: 300 comprobantes al mes incluidos" },
-  { texto: "Hasta 5 usuarios · soporte por WhatsApp" },
-];
-
 export default function PlanesPage() {
+  const confirmar = useConfirmar();
+  const avisos    = useAvisos();
   const empresa = useAuthStore((s) => s.empresa);
 
   const [sub,        setSub]        = useState<EstadoSub | null>(null);
@@ -134,14 +103,23 @@ export default function PlanesPage() {
   }, [cargar]);
 
   // Aparte del resto: si Stripe no responde, la página sigue funcionando
-  const [precio, setPrecio] = useState<PrecioPlan | null>(null);
+  const [precios, setPrecios] = useState<Precios | null>(null);
   const [precioFallo, setPrecioFallo] = useState(false);
   useEffect(() => {
-    api.get("/api/v1/app/suscripcion/precio")
-      .then((r) => { setPrecio(r.data.data ?? null); setPrecioFallo(!r.data.data); })
+    api.get("/api/v1/app/suscripcion/precios")
+      .then((r) => setPrecios(r.data.data ?? null))
       .catch(() => setPrecioFallo(true));
   }, []);
-  const textoPrecio = precio ? `$${precio.base.toFixed(2)}/año + IVA` : "un pago anual";
+
+  // Un solo Mensual / Anual para las dos tarjetas (el periodo efectivo se calcula abajo)
+  const [periodoElegido, setPeriodo] = useState<Periodo>("ANUAL");
+
+  // "desde $10,99 al mes" en los avisos (el mensual si existe; si no, el anual)
+  const proMes  = precios?.PRO?.MENSUAL;
+  const proAnio = precios?.PRO?.ANUAL;
+  const textoPrecio = proMes ? `$${proMes.total.toFixed(2)} al mes`
+                    : proAnio ? `$${proAnio.total.toFixed(2)} al año`
+                    : "un pago mensual o anual";
 
   // Kipu Al Día: precio y si esta empresa puede contratarlo (mismo criterio que /al-dia)
   const [alDia, setAlDia] = useState<EstadoAlDia | null>(null);
@@ -154,10 +132,11 @@ export default function PlanesPage() {
   const iniciarCheckout = async () => {
     setPagando("pro");
     try {
-      const res = await api.post("/api/v1/app/suscripcion/checkout");
+      // Siempre con el periodo explícito (sin cuerpo el backend asume anual)
+      const res = await api.post("/api/v1/app/suscripcion/checkout", { periodo });
       window.location.assign(res.data.checkout_url);
     } catch (err) {
-      alert(detalleError(err, "Error al iniciar el pago."));
+      avisos.error(detalleError(err, "No se pudo iniciar el pago."));
       setPagando(null);
     }
   };
@@ -168,7 +147,7 @@ export default function PlanesPage() {
       const res = await api.post("/api/v1/app/creditos/checkout", { plan_id });
       window.location.assign(res.data.checkout_url);
     } catch (err) {
-      alert(detalleError(err, "Error al iniciar el pago."));
+      avisos.error(detalleError(err, "No se pudo iniciar el pago."));
       setPagando(null);
     }
   };
@@ -179,18 +158,22 @@ export default function PlanesPage() {
       const res = await api.post("/api/v1/app/suscripcion/portal");
       window.location.assign(res.data.portal_url);
     } catch (err) {
-      alert(detalleError(err, "Error al abrir el portal."));
+      avisos.error(detalleError(err, "Error al abrir el portal."));
     } finally { setAbriendo(false); }
   };
 
   const cancelar = async () => {
-    if (!confirm("¿Cancelar la suscripción al final del período actual?")) return;
+    if (!(await confirmar({
+      titulo: "¿Cancelar tu suscripción?",
+      mensaje: "Sigues con tu plan hasta el final del período actual.",
+      textoConfirmar: "Cancelar suscripción", textoCancelar: "Mantener", peligro: true,
+    }))) return;
     setCancelando(true);
     try {
       await api.post("/api/v1/app/suscripcion/cancelar");
       recargar();
     } catch (err) {
-      alert(detalleError(err, "Error al cancelar."));
+      avisos.error(detalleError(err, "No se pudo cancelar la suscripción."));
     } finally { setCancelando(false); }
   };
 
@@ -199,7 +182,7 @@ export default function PlanesPage() {
       await api.post("/api/v1/app/suscripcion/reactivar");
       recargar();
     } catch (err) {
-      alert(detalleError(err, "Error al reactivar."));
+      avisos.error(detalleError(err, "No se pudo reactivar la suscripción."));
     }
   };
 
@@ -211,6 +194,24 @@ export default function PlanesPage() {
   const verPro        = !sub?.activa || sub.cancel_at_period_end;
   const verAlDia      = !esAlDia;
 
+  // Mensual / Anual: el selector apaga una opción solo si ninguna tarjeta visible la
+  // ofrece; cada tarjeta usa su propio periodo (si el Pro no tiene mensual, la suya
+  // queda en anual con "Solo anual por ahora" y Al Día sigue en mensual).
+  const visibles: PreciosPlan[] = [verPro ? precios?.PRO : null, verAlDia ? precios?.AL_DIA : null]
+    .filter((p): p is PreciosPlan => !!p);
+  const conocidos   = visibles.some((p) => p.MENSUAL || p.ANUAL);   // Stripe caído: las dos opciones
+  const disponibles: Record<Periodo, boolean> = {
+    MENSUAL: !conocidos || visibles.some((p) => !!p.MENSUAL),
+    ANUAL:   !conocidos || visibles.some((p) => !!p.ANUAL),
+  };
+  const periodoSel: Periodo = disponibles[periodoElegido] ? periodoElegido
+                            : periodoElegido === "ANUAL" ? "MENSUAL" : "ANUAL";
+
+  const periodo      = periodoDisponible(precios?.PRO, periodoSel);       // el de la tarjeta del Pro
+  const soloAnualPro = periodoSel === "MENSUAL" && periodo === "ANUAL";
+  const precio    = precios?.PRO?.[periodo] ?? null;
+  const sinPrecio = precioFallo || (precios !== null && !precio);   // se ve al pagar
+
   return (
     <div className="p-4 md:p-6 max-w-3xl mx-auto space-y-5">
 
@@ -218,37 +219,20 @@ export default function PlanesPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div
-            className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
-            style={{ background: "color-mix(in srgb, var(--kipu-accent) 20%, transparent)" }}
+            className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 bg-acento/20"
           >
-            <CreditCard size={18} style={{ color: "var(--kipu-accent)" }} />
+            <CreditCard className="text-acento" size={18} />
           </div>
           <div>
-            <h1 className="text-xl font-bold" style={{ color: "var(--kipu-text)" }}>Plan y créditos</h1>
-            <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>Gestiona tu suscripción y créditos de emisión</p>
+            <h1 className="text-xl font-bold text-texto">Plan y créditos</h1>
+            <p className="text-sm text-sutil">Gestiona tu suscripción y créditos de emisión</p>
           </div>
         </div>
         <button
           type="button"
-          onClick={cargar}
+          onClick={recargar}
           disabled={loading}
-          className="p-2 rounded-lg transition-colors disabled:opacity-40"
-          style={{
-            border: "1px solid var(--kipu-border)",
-            color: "var(--kipu-subtle)",
-          }}
-          onMouseEnter={e => {
-            if (!loading) {
-              e.currentTarget.style.color = "var(--kipu-text)";
-              e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 5%, transparent)";
-            }
-          }}
-          onMouseLeave={e => {
-            if (!loading) {
-              e.currentTarget.style.color = "var(--kipu-subtle)";
-              e.currentTarget.style.background = "transparent";
-            }
-          }}
+          className="p-2 rounded-lg transition-colors disabled:opacity-40 border border-borde text-sutil enabled:hover:text-texto enabled:hover:bg-texto/5"
         >
           {loading ? (
             <div
@@ -291,7 +275,7 @@ export default function PlanesPage() {
               }}
             >
               <div className="flex items-center justify-between mb-2">
-                <CreditCard size={16} style={{ color: "var(--kipu-accent)" }} />
+                <CreditCard className="text-acento" size={16} />
                 {sub?.activa ? (
                   <span
                     className="text-[10px] px-2 py-0.5 rounded-full font-semibold"
@@ -315,10 +299,10 @@ export default function PlanesPage() {
                   </span>
                 )}
               </div>
-              <p className="text-lg font-bold" style={{ color: "var(--kipu-text)" }}>
+              <p className="text-lg font-bold text-texto">
                 {sub?.activa ? (sub.plan === "AL_DIA" ? "Kipu Al Día" : "Plan Pro") : "Plan Free"}
               </p>
-              <p className="text-xs mt-0.5" style={{ color: "var(--kipu-subtle)" }}>
+              <p className="text-xs mt-0.5 text-sutil">
                 {sub?.activa
                   ? `${sub.periodo === "MENSUAL" ? "Mensual" : "Anual"} · ${sub.dias_restantes ?? 0} días restantes`
                   : balance > 0
@@ -346,7 +330,7 @@ export default function PlanesPage() {
               }}
             >
               <div className="flex items-center justify-between mb-2">
-                <Zap size={16} style={{ color: "var(--kipu-warning)" }} />
+                <Zap className="text-alerta" size={16} />
                 <span
                   className="text-[10px] px-2 py-0.5 rounded-full font-semibold"
                   style={{
@@ -358,8 +342,8 @@ export default function PlanesPage() {
                   CRÉDITOS
                 </span>
               </div>
-              <p className="text-lg font-bold" style={{ color: "var(--kipu-text)" }}>{balance} créditos</p>
-              <p className="text-xs mt-0.5" style={{ color: "var(--kipu-subtle)" }}>
+              <p className="text-lg font-bold text-texto">{balance} créditos</p>
+              <p className="text-xs mt-0.5 text-sutil">
                 {balance === 0
                   ? "Sin créditos — compra un paquete"
                   : esFree
@@ -373,14 +357,10 @@ export default function PlanesPage() {
           {/* Aviso pruebas */}
           {!enProduccion && (
             <div
-              className="flex items-start gap-3 rounded-xl px-4 py-3"
-              style={{
-                background: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)",
-                border: "1px solid color-mix(in srgb, var(--kipu-warning) 20%, transparent)",
-              }}
+              className="flex items-start gap-3 rounded-xl px-4 py-3 bg-alerta/10 border border-alerta/20"
             >
-              <AlertTriangle size={15} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-warning)" }} />
-              <p className="text-sm" style={{ color: "var(--kipu-warning)" }}>
+              <AlertTriangle size={15} className="shrink-0 mt-0.5 text-alerta" />
+              <p className="text-sm text-alerta">
                 Estás en ambiente de pruebas. Solo puedes suscribirte en producción.
               </p>
             </div>
@@ -393,18 +373,14 @@ export default function PlanesPage() {
               {/* Banner explicativo — solo en Free */}
               {esFree && (
                 <div
-                  className="flex items-start gap-3 rounded-xl px-4 py-3"
-                  style={{
-                    background: "color-mix(in srgb, var(--kipu-accent) 10%, transparent)",
-                    border: "1px solid color-mix(in srgb, var(--kipu-accent) 20%, transparent)",
-                  }}
+                  className="flex items-start gap-3 rounded-xl px-4 py-3 bg-acento/10 border border-acento/20"
                 >
-                  <Info size={15} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-accent)" }} />
+                  <Info size={15} className="shrink-0 mt-0.5 text-acento" />
                   <div className="text-sm">
-                    <p className="font-medium mb-0.5" style={{ color: "var(--kipu-accent)" }}>
+                    <p className="font-medium mb-0.5 text-acento">
                       {planGratis ? "Estás en el plan gratis" : "Estás en Plan Free"}
                     </p>
-                    <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+                    <p className="text-xs text-sutil">
                       {planGratis
                         ? `Facturas gratis desde el panel, con uso justo. Con Kipu Pro, por ${textoPrecio}, emites sin límite y tienes el formulario 104 completo con sus alertas; con Kipu Al Día, el equipo de Kipu presenta tus declaraciones.`
                         : balance > 0
@@ -419,26 +395,22 @@ export default function PlanesPage() {
               {/* Suscripción activa */}
               {sub?.activa && (
                 <div
-                  className="rounded-xl p-5"
-                  style={{
-                    background: "var(--kipu-surface)",
-                    border: "1px solid var(--kipu-border)",
-                  }}
+                  className="rounded-xl p-5 bg-superficie border border-borde"
                 >
-                  <h2 className="text-xs font-semibold uppercase tracking-wider mb-4" style={{ color: "var(--kipu-subtle)" }}>
+                  <h2 className="text-xs font-semibold uppercase tracking-wider mb-4 text-sutil">
                     Suscripción activa
                   </h2>
                   <div className="flex items-center justify-between mb-4">
                     <div>
-                      <p className="text-2xl font-bold" style={{ color: "var(--kipu-text)" }}>
+                      <p className="text-2xl font-bold text-texto">
                         {esAlDia ? "Kipu Al Día" : "Plan Pro"}
                       </p>
-                      <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>
+                      <p className="text-sm text-sutil">
                         {sub.periodo === "MENSUAL" ? "Mensual" : "Anual"} · IVA incluido
                         {sub.cancel_at_period_end && " · Cancela al vencer"}
                       </p>
                       {esAlDia && (
-                        <Link href="/al-dia" className="text-xs font-medium" style={{ color: "var(--kipu-accent)" }}>
+                        <Link href="/al-dia" className="text-xs font-medium text-acento">
                           Ver mi Kipu Al Día y mi clave del SRI →
                         </Link>
                       )}
@@ -456,20 +428,19 @@ export default function PlanesPage() {
                   </div>
                   {sub.period_end && (
                     <div
-                      className="rounded-lg px-4 py-3 mb-4 flex justify-between text-sm"
-                      style={{ background: "color-mix(in srgb, var(--kipu-text) 5%, transparent)" }}
+                      className="rounded-lg px-4 py-3 mb-4 flex justify-between text-sm bg-texto/5"
                     >
-                      <span style={{ color: "var(--kipu-subtle)" }}>
+                      <span className="text-sutil">
                         {sub.cancel_at_period_end ? "Acceso hasta" : "Próximo cobro"}
                       </span>
-                      <span className="font-medium" style={{ color: "var(--kipu-text)" }}>
+                      <span className="font-medium text-texto">
                         {new Date(sub.period_end).toLocaleDateString("es-EC")}
-                        <span className="ml-2 text-xs" style={{ color: "var(--kipu-subtle)" }}>({sub.dias_restantes} días)</span>
+                        <span className="ml-2 text-xs text-sutil">({sub.dias_restantes} días)</span>
                       </span>
                     </div>
                   )}
                   {!esAdmin ? (
-                    <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+                    <p className="text-xs text-sutil">
                       Solo el administrador de la empresa puede cambiar la tarjeta o cancelar el plan.
                     </p>
                   ) : (
@@ -478,14 +449,7 @@ export default function PlanesPage() {
                       type="button"
                       onClick={abrirPortal}
                       disabled={abriendo}
-                      className="flex items-center gap-2 px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors disabled:opacity-50"
-                      style={{ background: "var(--kipu-accent)" }}
-                      onMouseEnter={e => {
-                        if (!abriendo) e.currentTarget.style.background = "var(--kipu-accent-h)";
-                      }}
-                      onMouseLeave={e => {
-                        if (!abriendo) e.currentTarget.style.background = "var(--kipu-accent)";
-                      }}
+                      className="flex items-center gap-2 px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors disabled:opacity-50 bg-acento enabled:hover:bg-acento-hover"
                     >
                       {abriendo ? (
                         <div
@@ -527,8 +491,7 @@ export default function PlanesPage() {
                       <button
                         type="button"
                         onClick={reactivar}
-                        className="px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors"
-                        style={{ background: "var(--kipu-success)" }}
+                        className="px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors bg-exito"
                       >
                         Reactivar plan
                       </button>
@@ -541,11 +504,18 @@ export default function PlanesPage() {
               {/* Opciones: Kipu Al Día (recomendado) y Kipu Pro, lado a lado */}
               {verPro && verAlDia && (
                 <div className="text-center pt-2">
-                  <p className="text-base font-bold" style={{ color: "var(--kipu-text)" }}>¿Quién presenta tus declaraciones?</p>
-                  <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>
-                    <b style={{ color: "var(--kipu-accent)" }}>Nosotros</b>, con Kipu Al Día ·{" "}
-                    <b style={{ color: "var(--kipu-text)" }}>Tú</b>, con Kipu Pro
+                  <p className="text-base font-bold text-texto">¿Quién presenta tus declaraciones?</p>
+                  <p className="text-sm text-tenue">
+                    <b className="text-acento">Nosotros</b>, con Kipu Al Día ·{" "}
+                    <b className="text-texto">Tú</b>, con Kipu Pro
                   </p>
+                </div>
+              )}
+              {(verPro || verAlDia) && (
+                <div className="flex justify-center pt-1">
+                  {/* Sin "ahorras $X": cada tarjeta muestra el suyo en la vista anual */}
+                  <SelectorPeriodo valor={periodoSel} onCambio={setPeriodo} precios={null}
+                                   disponibles={disponibles} />
                 </div>
               )}
               {(verPro || verAlDia) && (
@@ -553,6 +523,8 @@ export default function PlanesPage() {
               {verAlDia && (
                 <TarjetaAlDia
                   estado={alDia}
+                  precios={precios?.AL_DIA ?? null}
+                  periodo={periodoSel}
                   enProduccion={enProduccion}
                   esAdmin={esAdmin}
                   tienePro={!!sub?.activa && !esAlDia}
@@ -560,19 +532,14 @@ export default function PlanesPage() {
               )}
               {verPro && (
                 <div
-                  className="relative rounded-xl p-6 flex flex-col"
-                  style={{
-                    background: "var(--kipu-surface)",
-                    border: "1px solid var(--kipu-border)",
-                  }}
+                  className="relative rounded-xl p-6 flex flex-col bg-superficie border border-borde"
                 >
                   <div className="absolute -top-3 left-5">
                     <span
-                      className="flex items-center gap-1.5 text-xs px-3 py-1 rounded-full font-semibold"
-                      style={{ background: "var(--kipu-surface)", color: "var(--kipu-text)", border: "1px solid var(--kipu-border)" }}
+                      className="flex items-center gap-1.5 text-xs px-3 py-1 rounded-full font-semibold bg-superficie text-texto border border-borde"
                     >
                       <CreditCard size={11} />
-                      Kipu Pro · Anual
+                      Kipu Pro · {soloAnualPro ? "Solo anual por ahora" : periodo === "ANUAL" ? "Anual" : "Mensual"}
                     </span>
                   </div>
 
@@ -588,48 +555,46 @@ export default function PlanesPage() {
                         {precio.etiqueta}
                       </span>
                     )}
-                    <p className="text-sm font-medium mb-2" style={{ color: "var(--kipu-text)" }}>
+                    <p className="text-sm font-medium mb-2 text-texto">
                       Hazlo tú: el sistema completo para facturar y preparar tus impuestos.
                     </p>
                     <div className="flex items-baseline gap-2">
                       {precio ? (
-                        <span className="text-4xl font-extrabold" style={{ color: "var(--kipu-text)" }}>${precio.base.toFixed(2)}</span>
-                      ) : precioFallo ? (
-                        <span className="text-sm" style={{ color: "var(--kipu-subtle)" }}>
+                        <span className="text-4xl font-extrabold text-texto">${precio.total.toFixed(2)}</span>
+                      ) : sinPrecio ? (
+                        <span className="text-sm text-sutil">
                           No pudimos cargar el precio; lo verás al pagar
                         </span>
                       ) : (
-                        <span className="inline-block h-9 w-28 rounded-lg animate-pulse"
-                              style={{ background: "color-mix(in srgb, var(--kipu-text) 8%, transparent)" }} />
+                        <span className="inline-block h-9 w-28 rounded-lg animate-pulse bg-texto/8" />
                       )}
-                      {!precioFallo && <span className="text-sm" style={{ color: "var(--kipu-subtle)" }}>+ IVA / año</span>}
+                      {!sinPrecio && (
+                        <span className="text-sm text-sutil">
+                          IVA incluido / {periodo === "ANUAL" ? "año" : "mes"}
+                        </span>
+                      )}
                     </div>
                     {precio && (
-                      <p className="text-xs mt-1" style={{ color: "var(--kipu-subtle)" }}>
-                        ${precio.total.toFixed(2)} IVA incluido · equivale a ${(precio.total / 12).toFixed(2)}/mes
+                      <p className="text-xs mt-1 text-sutil">
+                        ${precio.base.toFixed(2)} + IVA
+                        {periodo === "ANUAL" && ` · equivale a $${(precio.total / 12).toFixed(2)}/mes`}
                       </p>
                     )}
-                    <p className="text-xs mt-1" style={{ color: "var(--kipu-subtle)" }}>
-                      Se renueva cada año con el mismo precio. Cancela cuando quieras.
+                    {periodo === "ANUAL" && <AhorroAnual precios={precios?.PRO} />}
+                    <p className="text-xs mt-1 text-sutil">
+                      Se renueva cada {periodo === "ANUAL" ? "año" : "mes"} con el mismo precio. Cancela cuando quieras.
+                      {periodo === "MENSUAL" && " Cada mes pagado incluye una declaración."}
                     </p>
                   </div>
 
                   <div className="space-y-2.5 mb-6 flex-1">
-                    {FEATURES.map((f, i) => (
-                      <div key={i} className="flex items-start gap-2.5">
-                        <CheckCircle2 size={14} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-success)" }} />
-                        <p
-                          className="text-sm"
-                          style={{
-                            color: f.destacado ? "var(--kipu-accent)" : "var(--kipu-text)",
-                            fontWeight: f.destacado ? 500 : 400,
-                          }}
-                        >
-                          {f.texto}
-                        </p>
+                    {INCLUYE_PRO.map((t) => (
+                      <div key={t} className="flex items-start gap-2.5">
+                        <CheckCircle2 size={14} className="shrink-0 mt-0.5 text-exito" />
+                        <p className="text-sm text-texto">{t}</p>
                       </div>
                     ))}
-                    <p className="text-xs pt-1" style={{ color: "var(--kipu-subtle)" }}>
+                    <p className="text-xs pt-1 text-sutil">
                       Las declaraciones las presentas tú.
                     </p>
                   </div>
@@ -651,8 +616,13 @@ export default function PlanesPage() {
                     {pagando === "pro" ? "Redirigiendo..." : "Contratar Kipu Pro"}
                   </button>
 
+                  {/* Política de devolución (términos, sección 7): solo la primera compra */}
+                  <SelloGarantia titulo="Garantía de 7 días">
+                    Si no te convence, te devolvemos el 100%. Sin preguntas.
+                  </SelloGarantia>
+
                   {(!enProduccion || !esAdmin) && (
-                    <p className="text-center text-xs mt-2" style={{ color: "var(--kipu-subtle)" }}>
+                    <p className="text-center text-xs mt-2 text-sutil">
                       {!enProduccion ? "Disponible solo en producción" : "Solo el administrador de la empresa puede contratarlo"}
                     </p>
                   )}
@@ -662,8 +632,11 @@ export default function PlanesPage() {
               </div>
               )}
 
-              {/* Plan gratis: la tercera opción (lo que se tiene sin pagar) */}
-              {planGratis && <TarjetaGratis actual={esFree} />}
+              {(verPro || verAlDia) && <GarantiaDevolucion verPro={verPro} verAlDia={verAlDia} />}
+
+              {/* Plan gratis: solo para quien está en él. Planes muestra el actual y los
+                  de arriba, nunca uno inferior (al Pro o Al Día no se le ofrece bajar) */}
+              {planGratis && esFree && <TarjetaGratis actual />}
             </div>
           )}
 
@@ -676,59 +649,40 @@ export default function PlanesPage() {
                 <button
                   type="button"
                   onClick={() => setTab("suscripcion")}
-                  className="w-full flex items-center justify-between gap-3 rounded-xl px-4 py-3 text-left transition-colors group"
-                  style={{
-                    background: "color-mix(in srgb, var(--kipu-accent) 10%, transparent)",
-                    border: "1px solid color-mix(in srgb, var(--kipu-accent) 20%, transparent)",
-                  }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-accent) 15%, transparent)";
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-accent) 10%, transparent)";
-                  }}
+                  className="w-full flex items-center justify-between gap-3 rounded-xl px-4 py-3 text-left transition-colors group bg-acento/10 border border-acento/20 hover:bg-acento/15"
                 >
                   <div className="flex items-start gap-3">
-                    <Star size={15} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-accent)" }} />
+                    <Star size={15} className="shrink-0 mt-0.5 text-acento" />
                     <div>
-                      <p className="text-sm font-medium mb-0.5" style={{ color: "var(--kipu-accent)" }}>¿Emites frecuentemente?</p>
-                      <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+                      <p className="text-sm font-medium mb-0.5 text-acento">¿Emites frecuentemente?</p>
+                      <p className="text-xs text-sutil">
                         Con Plan Pro ({textoPrecio}) emites sin límite, sin comprar créditos, y además
                         registras tus compras, preparas tus declaraciones y llevas tus cuentas.
                       </p>
                     </div>
                   </div>
-                  <ArrowRight size={15} className="shrink-0 group-hover:translate-x-0.5 transition-transform" style={{ color: "var(--kipu-accent)" }} />
+                  <ArrowRight size={15} className="shrink-0 group-hover:translate-x-0.5 transition-transform text-acento" />
                 </button>
               )}
 
               {/* Balance */}
               <div
-                className="rounded-xl p-5"
-                style={{
-                  background: "var(--kipu-surface)",
-                  border: "1px solid var(--kipu-border)",
-                }}
+                className="rounded-xl p-5 bg-superficie border border-borde"
               >
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>Balance actual</p>
-                    <p className="text-4xl font-bold" style={{ color: "var(--kipu-text)" }}>{balance}</p>
-                    <p className="text-sm mt-1" style={{ color: "var(--kipu-subtle)" }}>créditos disponibles</p>
+                    <p className="text-xs mb-1 text-sutil">Balance actual</p>
+                    <p className="text-4xl font-bold text-texto">{balance}</p>
+                    <p className="text-sm mt-1 text-sutil">créditos disponibles</p>
                   </div>
                   <div
-                    className="w-16 h-16 rounded-2xl flex items-center justify-center shrink-0"
-                    style={{ background: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)" }}
+                    className="w-16 h-16 rounded-2xl flex items-center justify-center shrink-0 bg-alerta/10"
                   >
-                    <Zap size={28} style={{ color: "var(--kipu-warning)" }} />
+                    <Zap className="text-alerta" size={28} />
                   </div>
                 </div>
                 <div
-                  className="mt-4 pt-4 text-xs space-y-1"
-                  style={{
-                    borderTop: "1px solid var(--kipu-border)",
-                    color: "var(--kipu-subtle)",
-                  }}
+                  className="mt-4 pt-4 text-xs space-y-1 border-t border-borde text-sutil"
                 >
                   <p>· 1 crédito = 1 comprobante emitido (FAC, LIQ, NCR, NDB, RET)</p>
                   <p>· No vencen nunca</p>
@@ -741,17 +695,16 @@ export default function PlanesPage() {
 
               {/* Planes de créditos */}
               <div
-                className="rounded-xl p-5"
-                style={{
-                  background: "var(--kipu-surface)",
-                  border: "1px solid var(--kipu-border)",
-                }}
+                className="rounded-xl p-5 bg-superficie border border-borde"
               >
-                <h2 className="text-sm font-semibold mb-1" style={{ color: "var(--kipu-text)" }}>Comprar créditos</h2>
-                <p className="text-xs mb-4" style={{ color: "var(--kipu-subtle)" }}>Pago único · No vencen · IVA incluido</p>
+                <h2 className="text-sm font-semibold mb-1 text-texto">Comprar créditos</h2>
+                <p className="text-xs mb-4 text-sutil">
+                  Pago único · No vencen · IVA incluido
+                  {!esAdmin && " · Solo el administrador de la empresa puede comprarlos"}
+                </p>
 
                 {planes.length === 0 ? (
-                  <p className="text-sm text-center py-4" style={{ color: "var(--kipu-subtle)" }}>No hay planes disponibles.</p>
+                  <p className="text-sm text-center py-4 text-sutil">No hay planes disponibles.</p>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {planes.map((p) => {
@@ -780,26 +733,22 @@ export default function PlanesPage() {
                           )}
                           <div className="flex justify-between items-start mb-3">
                             <div>
-                              <p className="text-base font-bold" style={{ color: "var(--kipu-text)" }}>{p.cantidad} créditos</p>
-                              <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>{p.nombre}</p>
+                              <p className="text-base font-bold text-texto">{p.cantidad} créditos</p>
+                              <p className="text-xs text-sutil">{p.nombre}</p>
                             </div>
                             <div className="text-right">
-                              <p className="text-xl font-bold" style={{ color: "var(--kipu-text)" }}>${fmt(p.precio)}</p>
-                              <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>${p.precio_por_credito.toFixed(3)}/crédito · IVA inc.</p>
+                              <p className="text-xl font-bold text-texto">${dosDecimales(p.precio)}</p>
+                              <p className="text-xs text-sutil">${p.precio_por_credito.toFixed(3)}/crédito · IVA inc.</p>
                             </div>
                           </div>
                           {p.descripcion && (
-                            <p className="text-xs mb-3" style={{ color: "var(--kipu-subtle)" }}>{p.descripcion}</p>
+                            <p className="text-xs mb-3 text-sutil">{p.descripcion}</p>
                           )}
                           <button
                             type="button"
                             onClick={() => iniciarCheckoutCreditos(p.id)}
-                            disabled={!!pagando || !enProduccion}
-                            className="w-full py-2 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-                            style={{
-                              background: "var(--kipu-warning)",
-                              color: "var(--kipu-surface)",
-                            }}
+                            disabled={!!pagando || !enProduccion || !esAdmin}
+                            className="w-full py-2 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-2 disabled:opacity-50 bg-alerta text-superficie"
                           >
                             {pagando === `cred_${p.id}` ? (
                               <div
@@ -821,17 +770,12 @@ export default function PlanesPage() {
               {/* Historial */}
               {historial.length > 0 && (
                 <div
-                  className="rounded-xl overflow-hidden"
-                  style={{
-                    background: "var(--kipu-surface)",
-                    border: "1px solid var(--kipu-border)",
-                  }}
+                  className="rounded-xl overflow-hidden bg-superficie border border-borde"
                 >
                   <div
-                    className="px-4 py-3"
-                    style={{ borderBottom: "1px solid var(--kipu-border)" }}
+                    className="px-4 py-3 border-b border-borde"
                   >
-                    <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>Historial de créditos</h2>
+                    <h2 className="text-sm font-semibold text-texto">Historial de créditos</h2>
                   </div>
                   <div>
                     {historial.map((t, idx) => (
@@ -850,15 +794,15 @@ export default function PlanesPage() {
                             }}
                           >
                             {t.tipo === "BONO" || t.tipo === "RECARGA"
-                              ? <Zap size={14} style={{ color: "var(--kipu-success)" }} />
-                              : <TrendingDown size={14} style={{ color: "var(--kipu-danger)" }} />
+                              ? <Zap className="text-exito" size={14} />
+                              : <TrendingDown className="text-peligro" size={14} />
                             }
                           </div>
                           <div>
-                            <p className="text-sm font-medium" style={{ color: "var(--kipu-text)" }}>
+                            <p className="text-sm font-medium text-texto">
                               {t.tipo === "BONO" ? "Bono" : t.tipo === "RECARGA" ? "Recarga" : "Consumo"}
                             </p>
-                            <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+                            <p className="text-xs text-sutil">
                               {t.notas || t.metodo_pago} · {new Date(t.created_at).toLocaleDateString("es-EC")}
                             </p>
                           </div>
@@ -871,7 +815,7 @@ export default function PlanesPage() {
                             {t.cantidad > 0 ? "+" : ""}{t.cantidad}
                           </p>
                           {t.precio_total > 0 && (
-                            <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>${fmt(t.precio_total)}</p>
+                            <p className="text-xs text-sutil">${dosDecimales(t.precio_total)}</p>
                           )}
                         </div>
                       </div>
@@ -887,12 +831,29 @@ export default function PlanesPage() {
   );
 }
 
+// ── Ahorro del anual frente a 12 meses, de un solo plan ──────────────────────
+// Sin los dos precios de ese plan (p. ej. el Pro sin mensual), no se muestra nada.
+function AhorroAnual({ precios }: { precios: PreciosPlan | null | undefined }) {
+  const ahorro = ahorroAnual(precios);
+  if (ahorro === null) return null;
+  return (
+    <p className="text-xs font-semibold mt-1 text-acento">
+      Ahorras ${ahorro.toFixed(2)} al año frente al pago mensual
+    </p>
+  );
+}
+
 // ── Tarjeta Kipu Al Día (la recomendada) ─────────────────────────────────────
 // Los términos y el pago están en /al-dia: aquí se presenta y se lleva allá.
-function TarjetaAlDia({ estado, enProduccion, esAdmin, tienePro }: {
-  estado: EstadoAlDia | null; enProduccion: boolean; esAdmin: boolean; tienePro: boolean;
+function TarjetaAlDia({ estado, precios, periodo: pedido, enProduccion, esAdmin, tienePro }: {
+  estado: EstadoAlDia | null; precios: PreciosPlan | null; periodo: Periodo;
+  enProduccion: boolean; esAdmin: boolean; tienePro: boolean;
 }) {
-  const total = estado?.precio?.total ?? null;   // sin Stripe no se inventa un monto
+  // El mismo Mensual / Anual de arriba; si Al Día no se ofrece en ese, el otro
+  const periodo = periodoDisponible(precios, pedido);
+  const total = precios?.[periodo]?.total ?? null;   // sin Stripe no se inventa un monto
+  const base  = precios?.[periodo]?.base  ?? null;   // sin IVA (el backend lo saca con IVA_RATE del .env)
+  const unidad = periodo === "ANUAL" ? "año" : "mes";
 
   // Por qué no se puede contratar todavía (la producción primero, como en Pro)
   const bloqueo = !enProduccion
@@ -913,8 +874,7 @@ function TarjetaAlDia({ estado, enProduccion, esAdmin, tienePro }: {
     >
       <div className="absolute -top-3 left-5">
         <span
-          className="flex items-center gap-1.5 text-white text-xs px-3 py-1 rounded-full font-semibold shadow-lg"
-          style={{ background: "var(--kipu-accent)" }}
+          className="flex items-center gap-1.5 text-white text-xs px-3 py-1 rounded-full font-semibold shadow-lg bg-acento"
         >
           <Star size={11} className="fill-white" />
           Recomendado · Kipu Al Día
@@ -922,39 +882,49 @@ function TarjetaAlDia({ estado, enProduccion, esAdmin, tienePro }: {
       </div>
 
       <div className="mt-3 mb-5">
-        <p className="text-sm font-semibold mb-2" style={{ color: "var(--kipu-text)" }}>
+        <p className="text-sm font-semibold mb-2 text-texto">
           Tú facturas. Nosotros declaramos.
         </p>
         {total !== null ? (
           <div className="flex items-baseline gap-2">
-            <span className="text-4xl font-extrabold" style={{ color: "var(--kipu-text)" }}>${total.toFixed(0)}</span>
-            <span className="text-sm" style={{ color: "var(--kipu-subtle)" }}>IVA incluido / mes</span>
+            <span className="text-4xl font-extrabold text-texto">${total.toFixed(2)}</span>
+            <span className="text-sm text-sutil">IVA incluido / {unidad}</span>
           </div>
         ) : (
-          <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>Mensual · el precio lo ves al pagar</p>
+          <p className="text-sm text-sutil">
+            {periodo === "ANUAL" ? "Anual" : "Mensual"} · el precio lo ves al pagar
+          </p>
         )}
-        <p className="text-xs mt-1" style={{ color: "var(--kipu-subtle)" }}>
+        {/* Como en Pro: la base sin IVA, para que los dos se lean igual */}
+        {total !== null && base !== null && (
+          <p className="text-xs mt-1 text-sutil">
+            ${base.toFixed(2)} + IVA
+            {periodo === "ANUAL" && ` · equivale a $${(total / 12).toFixed(2)}/mes`}
+          </p>
+        )}
+        {periodo === "ANUAL" && <AhorroAnual precios={precios} />}
+        <p className="text-xs mt-1 text-sutil">
           Tu precio no sube mientras sigas suscrito. Sin permanencia.
         </p>
       </div>
 
       <div className="space-y-2.5 mb-5 flex-1">
-        {FEATURES_AL_DIA.map((t) => (
+        {INCLUYE_AL_DIA.map((t) => (
           <div key={t} className="flex items-start gap-2.5">
-            <CheckCircle2 size={14} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-success)" }} />
-            <p className="text-sm font-medium" style={{ color: "var(--kipu-text)" }}>{t}</p>
+            <CheckCircle2 size={14} className="shrink-0 mt-0.5 text-exito" />
+            <p className="text-sm font-medium text-texto">{t}</p>
           </div>
         ))}
-        <p className="text-xs font-semibold pt-2" style={{ color: "var(--kipu-accent)" }}>
+        <p className="text-xs font-semibold pt-2 text-acento">
           Y además, todo Kipu Pro:
         </p>
         {SISTEMA_AL_DIA.map((t) => (
           <div key={t} className="flex items-start gap-2.5">
-            <CheckCircle2 size={14} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-accent)" }} />
-            <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>{t}</p>
+            <CheckCircle2 size={14} className="shrink-0 mt-0.5 text-acento" />
+            <p className="text-sm text-tenue">{t}</p>
           </div>
         ))}
-        <p className="text-xs pt-2" style={{ color: "var(--kipu-subtle)" }}>
+        <p className="text-xs pt-2 text-sutil">
           Para personas naturales no obligadas a llevar contabilidad (régimen general o RIMPE Emprendedor).
         </p>
       </div>
@@ -964,17 +934,16 @@ function TarjetaAlDia({ estado, enProduccion, esAdmin, tienePro }: {
           <button
             type="button"
             disabled
-            className="w-full py-3 rounded-xl text-white font-bold text-sm flex items-center justify-center gap-2 opacity-50"
-            style={{ background: "var(--kipu-accent)" }}
+            className="w-full py-3 rounded-xl text-white font-bold text-sm flex items-center justify-center gap-2 opacity-50 bg-acento"
           >
             <CalendarCheck size={16} />
             Contratar Kipu Al Día
           </button>
-          <p className="text-center text-xs mt-2" style={{ color: "var(--kipu-subtle)" }}>{bloqueo}</p>
+          <p className="text-center text-xs mt-2 text-sutil">{bloqueo}</p>
         </>
       ) : (
         <Link
-          href="/al-dia#contratar"
+          href={`/al-dia?periodo=${periodo}#contratar`}
           className="w-full py-3 rounded-xl text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg transition-all
                      bg-[var(--kipu-accent)] hover:bg-[var(--kipu-accent-h)] active:scale-[0.98]"
         >
@@ -983,14 +952,17 @@ function TarjetaAlDia({ estado, enProduccion, esAdmin, tienePro }: {
         </Link>
       )}
       {tienePro && !bloqueo && (
-        <p className="text-center text-xs mt-2" style={{ color: "var(--kipu-subtle)" }}>
+        <p className="text-center text-xs mt-2 text-sutil">
           Te devolvemos los días de Kipu Pro que no uses.
         </p>
       )}
+      {/* Términos de Al Día v3, sección 9: solo la primera contratación */}
+      <SelloGarantia titulo="Garantía de devolución">
+        Si todavía no empezamos a trabajar en tu cuenta, te devolvemos el 100%. Sin preguntas.
+      </SelloGarantia>
       <Link
         href="/al-dia"
-        className="mt-3 text-center text-sm font-medium flex items-center justify-center gap-1 hover:underline underline-offset-2"
-        style={{ color: "var(--kipu-accent)" }}
+        className="mt-3 text-center text-sm font-medium flex items-center justify-center gap-1 hover:underline underline-offset-2 text-acento"
       >
         Ver cómo funciona <ArrowRight size={14} />
       </Link>
@@ -1007,10 +979,10 @@ function TarjetaGratis({ actual }: { actual: boolean }) {
     >
       <div className="flex items-start justify-between gap-3 flex-wrap mb-3">
         <div>
-          <p className="text-base font-bold" style={{ color: "var(--kipu-text)" }}>
-            Gratis <span className="text-sm font-normal" style={{ color: "var(--kipu-subtle)" }}>· $0</span>
+          <p className="text-base font-bold text-texto">
+            Gratis <span className="text-sm font-normal text-sutil">· $0</span>
           </p>
-          <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+          <p className="text-xs text-sutil">
             Para empezar a facturar. Tus facturas llevan «Facturado con Kipu».
           </p>
         </div>
@@ -1029,16 +1001,83 @@ function TarjetaGratis({ actual }: { actual: boolean }) {
       </div>
       <div className="grid sm:grid-cols-2 gap-x-6 gap-y-1.5">
         {GRATIS_INCLUYE.map((t) => (
-          <p key={t} className="flex items-start gap-2 text-sm" style={{ color: "var(--kipu-text)" }}>
-            <CheckCircle2 size={14} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-success)" }} />{t}
+          <p key={t} className="flex items-start gap-2 text-sm text-texto">
+            <CheckCircle2 size={14} className="shrink-0 mt-0.5 text-exito" />{t}
           </p>
         ))}
         {GRATIS_NO_INCLUYE.map((t) => (
-          <p key={t} className="flex items-start gap-2 text-sm" style={{ color: "var(--kipu-subtle)" }}>
+          <p key={t} className="flex items-start gap-2 text-sm text-sutil">
             <MinusCircle size={14} className="shrink-0 mt-0.5" />{t}
           </p>
         ))}
       </div>
     </div>
+  );
+}
+
+// ── Garantía de devolución ───────────────────────────────────────────────────
+// Política de kipu.ec/terminos (sección 7) y términos de Al Día v3 (sección 9):
+// 100% sin preguntas, solo la primera compra de cada plan. Pro: 7 días.
+// Al Día: mientras no hayamos empezado a trabajar en la cuenta.
+const VERDE_SUAVE  = "color-mix(in srgb, var(--kipu-success) 10%, transparent)";
+const VERDE_BORDE  = "color-mix(in srgb, var(--kipu-success) 40%, transparent)";
+
+/** Sello dentro de cada tarjeta, junto al botón de contratar. */
+function SelloGarantia({ titulo, children }: { titulo: string; children: React.ReactNode }) {
+  return (
+    <div className="mt-3 flex items-start gap-3 rounded-xl p-3"
+         style={{ background: VERDE_SUAVE, border: `1px solid ${VERDE_BORDE}` }}>
+      <ShieldCheck size={22} className="shrink-0 text-exito" aria-hidden />
+      <div className="min-w-0">
+        <p className="text-sm font-bold text-texto">{titulo}</p>
+        <p className="text-xs text-tenue">{children}</p>
+      </div>
+    </div>
+  );
+}
+
+/** Recuadro grande debajo de las tarjetas: la garantía como promesa principal. */
+function GarantiaDevolucion({ verPro, verAlDia }: { verPro: boolean; verAlDia: boolean }) {
+  return (
+    <section className="mt-6 rounded-2xl p-6 md:p-8 text-center"
+             style={{ background: VERDE_SUAVE, border: `2px solid ${VERDE_BORDE}` }}>
+      <div className="mx-auto mb-3 flex size-14 items-center justify-center rounded-full bg-exito">
+        <ShieldCheck size={30} color="white" aria-hidden />
+      </div>
+      <h2 className="text-xl md:text-2xl font-bold text-texto">
+        Te devolvemos el 100%. Sin preguntas.
+      </h2>
+      <p className="mx-auto mt-2 max-w-xl text-sm md:text-base text-tenue">
+        Queremos que contrates tranquilo. Si no te convence, nos escribes y te devolvemos todo tu dinero a
+        la misma tarjeta. Sin trámites ni explicaciones.
+      </p>
+
+      <div className={`mx-auto mt-5 grid max-w-2xl gap-3 text-left ${verPro && verAlDia ? "md:grid-cols-2" : ""}`}>
+        {verAlDia && (
+          <div className="rounded-xl p-4 bg-superficie border border-borde">
+            <p className="text-sm font-bold text-texto">Kipu Al Día</p>
+            <p className="text-sm text-tenue">
+              Mientras todavía no empecemos a trabajar en tu cuenta.
+            </p>
+          </div>
+        )}
+        {verPro && (
+          <div className="rounded-xl p-4 bg-superficie border border-borde">
+            <p className="text-sm font-bold text-texto">Kipu Pro</p>
+            <p className="text-sm text-tenue">
+              Dentro de los 7 días después de pagar.
+            </p>
+          </div>
+        )}
+      </div>
+
+      <p className="mt-4 text-xs text-sutil">
+        Aplica a la primera compra de cada plan.{" "}
+        <a href={URL_TERMINOS} target="_blank" rel="noopener noreferrer"
+           className="underline underline-offset-2 text-acento">
+          Ver términos
+        </a>
+      </p>
+    </section>
   );
 }

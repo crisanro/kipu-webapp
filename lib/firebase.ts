@@ -80,5 +80,3 @@ export const getFirebaseMessaging = async () => {
   if (!supported) return null;
   return getMessaging(app);
 };
-
-export default app;

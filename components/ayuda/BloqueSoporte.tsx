@@ -41,7 +41,7 @@ export default function BloqueSoporte() {
       <Caja titulo="¿Necesitas más ayuda?">
         <p>
           {ES_APP_NATIVA
-            ? "Inicia sesión para escribirnos por WhatsApp si tu plan incluye soporte."
+            ? "Inicia sesión para ver cómo escribirnos."
             : "Si tienes Kipu Pro o Kipu Al Día, inicia sesión y escríbenos por WhatsApp desde aquí."}
         </p>
         <Link
@@ -77,8 +77,11 @@ export default function BloqueSoporte() {
   return (
     <Caja titulo="¿Necesitas más ayuda? Escríbenos">
       <p>
-        Te atiende el equipo de Kipu por WhatsApp. El soporte está incluido en tu plan{" "}
-        <strong style={{ color: "var(--kipu-text)" }}>{NOMBRE_PLAN[plan]}</strong>
+        Te atiende el equipo de Kipu por WhatsApp. El soporte está incluido en tu plan
+        {/* En la app no se nombra el Pro (reglas de las tiendas); Al Día sí */}
+        {(!ES_APP_NATIVA || plan === "AL_DIA") && (
+          <>{" "}<strong className="text-texto">{NOMBRE_PLAN[plan]}</strong></>
+        )}
         {empresa?.razon_social && <> de {empresa.razon_social}</>}.
       </p>
       <a
@@ -90,7 +93,7 @@ export default function BloqueSoporte() {
       >
         <MessageCircle size={16} /> Escribir por WhatsApp
       </a>
-      <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+      <p className="text-xs text-sutil">
         El mensaje ya lleva tu RUC y tu plan para atenderte más rápido.
       </p>
     </Caja>
@@ -103,10 +106,9 @@ const BOTON =
 function Caja({ titulo, children }: { titulo: string; children: React.ReactNode }) {
   return (
     <aside
-      className="mt-10 rounded-xl p-5 space-y-3 text-sm"
-      style={{ background: "var(--kipu-surface)", border: "1px solid var(--kipu-border)", color: "var(--kipu-muted)" }}
+      className="mt-10 rounded-xl p-5 space-y-3 text-sm bg-superficie border border-borde text-tenue"
     >
-      <h2 className="text-base font-bold" style={{ color: "var(--kipu-text)" }}>{titulo}</h2>
+      <h2 className="text-base font-bold text-texto">{titulo}</h2>
       {children}
     </aside>
   );

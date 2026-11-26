@@ -17,8 +17,7 @@ export default function AccionesUsoJusto() {
       <SoloWeb>
         <Link
           href="/planes"
-          className="mt-2 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-semibold text-white transition-opacity hover:opacity-90 active:scale-[0.98]"
-          style={{ background: "var(--kipu-accent)" }}
+          className="mt-2 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-semibold text-white transition-opacity hover:opacity-90 active:scale-[0.98] bg-acento"
         >
           <Sparkles size={13} /> Ver Kipu Pro: emite sin límite
         </Link>

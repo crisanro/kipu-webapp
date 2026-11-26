@@ -4,16 +4,12 @@ import {
   CreditCard, Zap, Users
 } from "lucide-react";
 import { ES_APP_NATIVA } from "@/lib/plataforma";
+import { compactoK } from "@/lib/dinero";
 
 interface Props {
   resumen: any;
   empresa: any;
 }
-
-const fmtK = (n: any) => {
-  const v = parseFloat(n ?? 0);
-  return v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v.toFixed(2);
-};
 
 export default function StatsGrid({ resumen, empresa }: Props) {
   const suscripcion = empresa?.suscripcion;
@@ -24,7 +20,8 @@ export default function StatsGrid({ resumen, empresa }: Props) {
   const stats = [
     {
       label: "Total facturado",
-      value: `$${fmtK(resumen?.importe_total ?? 0)}`,
+      cifra: true,
+      value: `$${compactoK(resumen?.importe_total ?? 0)}`,
       sub: "este mes · autorizados",
       icon: TrendingUp,
       color: "var(--kipu-accent)",
@@ -33,6 +30,7 @@ export default function StatsGrid({ resumen, empresa }: Props) {
     },
     {
       label: "Comprobantes",
+      cifra: true,
       value: resumen?.total_documentos ?? 0,
       sub: "emitidos este mes",
       icon: FileText,
@@ -42,7 +40,8 @@ export default function StatsGrid({ resumen, empresa }: Props) {
     },
     {
       label: "IVA generado",
-      value: `$${fmtK(resumen?.valor_iva ?? 0)}`,
+      cifra: true,
+      value: `$${compactoK(resumen?.valor_iva ?? 0)}`,
       sub: "para declaración",
       icon: Receipt,
       color: "var(--kipu-info)",
@@ -53,7 +52,7 @@ export default function StatsGrid({ resumen, empresa }: Props) {
       label: gratis ? "Tu plan" : "Suscripción",
       value: gratis ? "Gratis"
         : suscripcion?.plan === "AL_DIA" ? "Kipu Al Día"   // el backend manda el código del plan
-        : suscripcion?.plan === "PRO" ? "Kipu Pro"
+        : suscripcion?.plan === "PRO" ? (ES_APP_NATIVA ? "Plan activo" : "Kipu Pro")   // en la app no se nombra el Pro
         : suscripcion?.plan ?? "—",
       sub: suscripcion?.estado === "TRIAL"
         ? "⏳ En período de prueba"
@@ -78,7 +77,8 @@ export default function StatsGrid({ resumen, empresa }: Props) {
     },
     {
       label: "Subtotal base",
-      value: `$${fmtK(resumen?.subtotal_iva ?? 0)}`,
+      cifra: true,
+      value: `$${compactoK(resumen?.subtotal_iva ?? 0)}`,
       sub: "base gravada 15%",
       icon: Users,
       color: "var(--kipu-muted)",
@@ -89,7 +89,8 @@ export default function StatsGrid({ resumen, empresa }: Props) {
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-      {stats.map(({ label, value, sub, icon: Icon, color, bg, border }) => (
+      {/* Sin el permiso "reportes" la API no manda el resumen: solo plan y créditos */}
+      {stats.filter((s) => resumen || !s.cifra).map(({ label, value, sub, icon: Icon, color, bg, border }) => (
         <div
           key={label}
           className="relative overflow-hidden rounded-xl p-4"
@@ -106,20 +107,17 @@ export default function StatsGrid({ resumen, empresa }: Props) {
               <Icon size={17} style={{ color }} />
             </div>
             <p
-              className="text-2xl font-bold tracking-tight"
-              style={{ color: "var(--kipu-text)" }}
+              className="text-2xl font-bold tracking-tight text-texto"
             >
               {value}
             </p>
             <p
-              className="text-xs mt-0.5 font-medium"
-              style={{ color: "var(--kipu-muted)" }}
+              className="text-xs mt-0.5 font-medium text-tenue"
             >
               {label}
             </p>
             <p
-              className="text-xs mt-0.5"
-              style={{ color: "var(--kipu-subtle)" }}
+              className="text-xs mt-0.5 text-sutil"
             >
               {sub}
             </p>

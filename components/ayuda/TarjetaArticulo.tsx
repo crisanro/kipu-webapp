@@ -11,11 +11,10 @@ export default function TarjetaArticulo({ articulo }: { articulo: ArticuloAyuda 
       style={{ background: "var(--kipu-surface)", border: "1px solid var(--kipu-border)" }}
     >
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>{articulo.titulo}</p>
-        <p className="text-xs mt-0.5" style={{ color: "var(--kipu-subtle)" }}>{articulo.resumen}</p>
+        <p className="text-sm font-semibold text-texto">{articulo.titulo}</p>
+        <p className="text-xs mt-0.5 text-sutil">{articulo.resumen}</p>
       </div>
-      <ChevronRight size={16} className="shrink-0 transition-transform group-hover:translate-x-0.5"
-                    style={{ color: "var(--kipu-subtle)" }} />
+      <ChevronRight size={16} className="shrink-0 transition-transform group-hover:translate-x-0.5 text-sutil" />
     </Link>
   );
 }

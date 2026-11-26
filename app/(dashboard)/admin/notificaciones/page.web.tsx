@@ -1,22 +1,34 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import api from "@/lib/api";
 import { ArrowLeft, Bell, Send, CheckCircle2, Users, User } from "lucide-react";
+import { detalleError } from "@/lib/errores";
 
 const TIPOS = [
   { value: "SISTEMA",     label: "Sistema",     color: "var(--kipu-info)", bg: "color-mix(in srgb, var(--kipu-info) 10%, transparent)" },
   { value: "DECLARACION", label: "Declaración", color: "var(--kipu-accent)", bg: "color-mix(in srgb, var(--kipu-accent) 10%, transparent)" },
   { value: "CREDITOS",    label: "Créditos",    color: "var(--kipu-warning)", bg: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)" },
   { value: "FACTURA",     label: "Factura",     color: "var(--kipu-success)", bg: "color-mix(in srgb, var(--kipu-success) 10%, transparent)" },
+  // Mismos tipos que entiende la bandeja (components/NotificacionesDrawer.tsx).
+  // Suscripción no llega a la app de las tiendas (el backend no la envía a "app-…").
+  { value: "SUSCRIPCION", label: "Suscripción", color: "var(--kipu-accent)", bg: "color-mix(in srgb, var(--kipu-accent) 10%, transparent)" },
 ];
 
+// useSearchParams necesita un Suspense encima (si no, el build estático falla)
 export default function AdminNotificacionesPage() {
+  return <Suspense fallback={null}><Notificaciones /></Suspense>;
+}
+
+function Notificaciones() {
   const router = useRouter();
 
-  const [destino,    setDestino]    = useState<"todos" | "individual">("todos");
-  const [emisorId,   setEmisorId]   = useState("");
+  // ?emisor=123 (desde el detalle del emisor): ya elegido como destino
+  const emisorDeUrl = useSearchParams().get("emisor") ?? "";
+  const conEmisor   = /^\d+$/.test(emisorDeUrl);
+  const [destino,    setDestino]    = useState<"todos" | "individual">(conEmisor ? "individual" : "todos");
+  const [emisorId,   setEmisorId]   = useState(conEmisor ? emisorDeUrl : "");
   const [tipo,       setTipo]       = useState("SISTEMA");
   const [titulo,     setTitulo]     = useState("");
   const [mensaje,    setMensaje]    = useState("");
@@ -54,7 +66,7 @@ export default function AdminNotificacionesPage() {
         router.replace("/dashboard");
         return;
       }
-      setError(e?.response?.data?.detail ?? "Error al enviar notificación.");
+      setError(detalleError(e, "Error al enviar notificación."));
     } finally {
       setEnviando(false);
     }
@@ -68,29 +80,19 @@ export default function AdminNotificacionesPage() {
         <button
           type="button"
           onClick={() => router.back()}
-          className="p-2 rounded-lg transition-colors"
-          style={{ color: "var(--kipu-subtle)" }}
-          onMouseEnter={e => {
-            e.currentTarget.style.color = "var(--kipu-text)";
-            e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 5%, transparent)";
-          }}
-          onMouseLeave={e => {
-            e.currentTarget.style.color = "var(--kipu-subtle)";
-            e.currentTarget.style.background = "transparent";
-          }}
+          className="p-2 rounded-lg transition-colors text-sutil hover:text-texto hover:bg-texto/5"
         >
           <ArrowLeft size={18} />
         </button>
         <div className="flex items-center gap-2">
           <div
-            className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-            style={{ background: "color-mix(in srgb, var(--kipu-accent) 20%, transparent)" }}
+            className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-acento/20"
           >
-            <Bell size={16} style={{ color: "var(--kipu-accent)" }} />
+            <Bell className="text-acento" size={16} />
           </div>
           <div>
-            <h1 className="text-lg font-bold" style={{ color: "var(--kipu-text)" }}>Enviar Notificación</h1>
-            <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Push + in-app a emisores</p>
+            <h1 className="text-lg font-bold text-texto">Enviar Notificación</h1>
+            <p className="text-xs text-sutil">Push + in-app a emisores</p>
           </div>
         </div>
       </div>
@@ -98,26 +100,18 @@ export default function AdminNotificacionesPage() {
       {/* Resultado exitoso */}
       {resultado?.ok && (
         <div
-          className="flex items-center gap-3 rounded-xl px-4 py-3"
-          style={{
-            background: "color-mix(in srgb, var(--kipu-success) 10%, transparent)",
-            border: "1px solid color-mix(in srgb, var(--kipu-success) 20%, transparent)",
-          }}
+          className="flex items-center gap-3 rounded-xl px-4 py-3 bg-exito/10 border border-exito/20"
         >
-          <CheckCircle2 size={16} className="shrink-0" style={{ color: "var(--kipu-success)" }} />
-          <p className="text-sm font-medium" style={{ color: "var(--kipu-success)" }}>{resultado.mensaje}</p>
+          <CheckCircle2 size={16} className="shrink-0 text-exito" />
+          <p className="text-sm font-medium text-exito">{resultado.mensaje}</p>
         </div>
       )}
 
       {/* Destino */}
       <div
-        className="rounded-xl p-4 space-y-3"
-        style={{
-          background: "var(--kipu-surface)",
-          border: "1px solid var(--kipu-border)",
-        }}
+        className="rounded-xl p-4 space-y-3 bg-superficie border border-borde"
       >
-        <h2 className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--kipu-subtle)" }}>Destino</h2>
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-sutil">Destino</h2>
         <div className="grid grid-cols-2 gap-2">
           <button
             type="button"
@@ -173,23 +167,16 @@ export default function AdminNotificacionesPage() {
 
         {destino === "individual" && (
           <div>
-            <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>ID del emisor</label>
+            <label className="block text-xs mb-1.5 text-sutil">ID del emisor</label>
             <input
               type="number"
               value={emisorId}
               inputMode="numeric"
               onChange={(e) => setEmisorId(e.target.value)}
               placeholder="Ej: 42"
-              className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none transition-colors"
-              style={{
-                background: "var(--kipu-surface)",
-                border: "1px solid var(--kipu-border)",
-                color: "var(--kipu-text)",
-              }}
-              onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-              onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+              className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none transition-colors bg-superficie border border-borde text-texto focus:border-acento"
             />
-            <p className="text-xs mt-1" style={{ color: "var(--kipu-subtle)" }}>
+            <p className="text-xs mt-1 text-sutil">
               Encuéntralo en la lista de emisores del panel.
             </p>
           </div>
@@ -198,13 +185,9 @@ export default function AdminNotificacionesPage() {
 
       {/* Tipo */}
       <div
-        className="rounded-xl p-4 space-y-3"
-        style={{
-          background: "var(--kipu-surface)",
-          border: "1px solid var(--kipu-border)",
-        }}
+        className="rounded-xl p-4 space-y-3 bg-superficie border border-borde"
       >
-        <h2 className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--kipu-subtle)" }}>Tipo</h2>
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-sutil">Tipo</h2>
         <div className="flex gap-2 flex-wrap">
           {TIPOS.map((t) => {
             const active = tipo === t.value;
@@ -241,69 +224,44 @@ export default function AdminNotificacionesPage() {
 
       {/* Contenido */}
       <div
-        className="rounded-xl p-4 space-y-3"
-        style={{
-          background: "var(--kipu-surface)",
-          border: "1px solid var(--kipu-border)",
-        }}
+        className="rounded-xl p-4 space-y-3 bg-superficie border border-borde"
       >
-        <h2 className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--kipu-subtle)" }}>Contenido</h2>
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-sutil">Contenido</h2>
 
         <div>
-          <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Título *</label>
+          <label className="block text-xs mb-1.5 text-sutil">Título *</label>
           <input
             value={titulo}
             onChange={(e) => setTitulo(e.target.value)}
             placeholder="Ej: 🔔 Nueva funcionalidad disponible"
             maxLength={100}
-            className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none transition-colors"
-            style={{
-              background: "var(--kipu-surface)",
-              border: "1px solid var(--kipu-border)",
-              color: "var(--kipu-text)",
-            }}
-            onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-            onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+            className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none transition-colors bg-superficie border border-borde text-texto focus:border-acento"
           />
-          <p className="text-xs mt-1 text-right" style={{ color: "var(--kipu-subtle)" }}>{titulo.length}/100</p>
+          <p className="text-xs mt-1 text-right text-sutil">{titulo.length}/100</p>
         </div>
 
         <div>
-          <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Mensaje *</label>
+          <label className="block text-xs mb-1.5 text-sutil">Mensaje *</label>
           <textarea
             value={mensaje}
             onChange={(e) => setMensaje(e.target.value)}
             placeholder="Descripción detallada de la notificación..."
             rows={4}
             maxLength={500}
-            className="w-full px-3 py-2 rounded-lg text-sm resize-none focus:outline-none transition-colors"
-            style={{
-              background: "var(--kipu-surface)",
-              border: "1px solid var(--kipu-border)",
-              color: "var(--kipu-text)",
-            }}
-            onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-            onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+            className="w-full px-3 py-2 rounded-lg text-sm resize-none focus:outline-none transition-colors bg-superficie border border-borde text-texto focus:border-acento"
           />
-          <p className="text-xs mt-1 text-right" style={{ color: "var(--kipu-subtle)" }}>{mensaje.length}/500</p>
+          <p className="text-xs mt-1 text-right text-sutil">{mensaje.length}/500</p>
         </div>
 
         <div>
-          <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>URL de redirección</label>
+          <label className="block text-xs mb-1.5 text-sutil">URL de redirección</label>
           <input
             value={referencia}
             onChange={(e) => setReferencia(e.target.value)}
             placeholder="/dashboard"
-            className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none transition-colors"
-            style={{
-              background: "var(--kipu-surface)",
-              border: "1px solid var(--kipu-border)",
-              color: "var(--kipu-text)",
-            }}
-            onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-            onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+            className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none transition-colors bg-superficie border border-borde text-texto focus:border-acento"
           />
-          <p className="text-xs mt-1" style={{ color: "var(--kipu-subtle)" }}>
+          <p className="text-xs mt-1 text-sutil">
             Ruta a la que se redirige al hacer click en la notificación.
           </p>
         </div>
@@ -312,26 +270,20 @@ export default function AdminNotificacionesPage() {
       {/* Preview */}
       {(titulo || mensaje) && (
         <div
-          className="rounded-xl p-4 space-y-2"
-          style={{
-            background: "var(--kipu-surface)",
-            border: "1px solid var(--kipu-border)",
-          }}
+          className="rounded-xl p-4 space-y-2 bg-superficie border border-borde"
         >
-          <h2 className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--kipu-subtle)" }}>Preview</h2>
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-sutil">Preview</h2>
           <div
-            className="rounded-lg p-3 flex items-start gap-3"
-            style={{ background: "color-mix(in srgb, var(--kipu-text) 5%, transparent)" }}
+            className="rounded-lg p-3 flex items-start gap-3 bg-texto/5"
           >
             <div
-              className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-              style={{ background: "color-mix(in srgb, var(--kipu-accent) 20%, transparent)" }}
+              className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-acento/20"
             >
-              <Bell size={14} style={{ color: "var(--kipu-accent)" }} />
+              <Bell className="text-acento" size={14} />
             </div>
             <div>
-              <p className="text-sm font-medium" style={{ color: "var(--kipu-text)" }}>{titulo || "Título"}</p>
-              <p className="text-xs mt-0.5" style={{ color: "var(--kipu-subtle)" }}>{mensaje || "Mensaje..."}</p>
+              <p className="text-sm font-medium text-texto">{titulo || "Título"}</p>
+              <p className="text-xs mt-0.5 text-sutil">{mensaje || "Mensaje..."}</p>
             </div>
           </div>
         </div>
@@ -340,11 +292,7 @@ export default function AdminNotificacionesPage() {
       {/* Error */}
       {error && (
         <p
-          className="text-xs px-3 py-2 rounded-lg font-medium"
-          style={{
-            background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
-            color: "var(--kipu-danger)",
-          }}
+          className="text-xs px-3 py-2 rounded-lg font-medium bg-peligro-suave text-peligro"
         >
           {error}
         </p>
@@ -376,8 +324,7 @@ export default function AdminNotificacionesPage() {
           type="button"
           onClick={enviar}
           disabled={enviando || !titulo.trim() || !mensaje.trim()}
-          className="flex-1 py-3 rounded-lg text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-          style={{ background: "var(--kipu-accent)" }}
+          className="flex-1 py-3 rounded-lg text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50 bg-acento"
           onMouseEnter={e => {
             if (!enviando && titulo.trim() && mensaje.trim()) {
               e.currentTarget.style.background = "var(--kipu-accent-h)";

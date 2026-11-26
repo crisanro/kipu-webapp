@@ -1,9 +1,10 @@
 "use client";
-import { useState, useEffect, useCallback, useRef } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { rutas } from "@/lib/rutas";
 import Link from "next/link";
-import api from "@/lib/api";
+import { useLista, useFiltrosUrl, useBusquedaUrl } from "@/lib/useLista";
+import { SegmentosDocumentos } from "@/components/shell/BarraPestanas";
 import { usePermiso } from "@/hooks/usePermiso";
 import SinAcceso from "@/components/SinAcceso";
 import { useAuthStore } from "@/store/auth.store";
@@ -11,11 +12,26 @@ import { demoRecibidos, resumenRecibidos } from "@/lib/demos";
 import { BannerEjemplo, EtiquetaEjemplo } from "@/components/EjemploPro";
 import { ES_APP_NATIVA } from "@/lib/plataforma";
 import {
-  Plus, FileText, RefreshCw, Search,
+  Plus, FileText, Search,
   ChevronDown, ChevronUp, TrendingUp, ArrowUpRight,
-  Receipt, ExternalLink, ChevronLeft, ChevronRight,
-  AlertTriangle, CreditCard
+  Receipt, ExternalLink, AlertTriangle, CreditCard,
 } from "lucide-react";
+import Paginacion, { type InfoPaginacion } from "@/components/ui/Paginacion";
+import { AvisoRango, AyudaAtajos, BotonActualizar, enPanel, useNavegacionLista, usePeriodo } from "../_comun";
+import FilaLista, { GrupoFilas } from "@/components/ui/FilaLista";
+import { InsigniaEstado, InsigniaPago } from "@/components/ui/InsigniaEstado";
+import { EsqueletoFilas } from "@/components/ui/Esqueleto";
+import Vacio, { VacioError } from "@/components/ui/Vacio";
+import BotonFlotante from "@/components/ui/BotonFlotante";
+import PeriodoFechas, { etiquetaPeriodo } from "@/components/ui/PeriodoFechas";
+import TirarParaRefrescar from "@/components/ui/TirarParaRefrescar";
+import { Entrada } from "@/components/ui/Campo";
+import Boton from "@/components/ui/Boton";
+import { tipoComprobante } from "@/lib/estados";
+import PanelDetalle from "@/components/ui/PanelDetalle";
+import { cn } from "@/components/ui/cn";
+import DetalleRecibido from "./ver/components/DetalleRecibido";
+import { dosDecimales } from "@/lib/dinero";
 
 // ── Tipos ──────────────────────────────────────────────────────────────────────
 interface DocRecibido {
@@ -48,18 +64,7 @@ interface Resumen {
   retenciones?:   { cantidad: number; total: number; iva: number; renta: number; otros: number };
 }
 
-interface PaginationInfo {
-  page:        number;
-  limit:       number;
-  total_items: number;
-  total_pages: number;
-  has_next:    boolean;
-  has_prev:    boolean;
-}
-
 const UMBRAL_BANCARIZACION = 500.00;
-
-const fmt = (n: any) => parseFloat(String(n ?? 0)).toFixed(2);
 
 const TIPO_COLOR: Record<string, { color: string; bg: string }> = {
   FAC: { color: "var(--kipu-muted)", bg: "color-mix(in srgb, var(--kipu-muted) 10%, transparent)" },
@@ -70,40 +75,11 @@ const TIPO_COLOR: Record<string, { color: string; bg: string }> = {
   RET: { color: "var(--kipu-info)", bg: "color-mix(in srgb, var(--kipu-info) 10%, transparent)" },
 };
 
-const PAGO_COLOR: Record<string, { color: string; bg: string }> = {
-  PENDIENTE: { color: "var(--kipu-warning)", bg: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)" },
-  PAGADO:    { color: "var(--kipu-success)", bg: "color-mix(in srgb, var(--kipu-success) 10%, transparent)" },
-  PARCIAL:   { color: "var(--kipu-info)", bg: "color-mix(in srgb, var(--kipu-info) 10%, transparent)" },
-  ANULADO:   { color: "var(--kipu-danger)", bg: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)" },
-};
-
-const PAGO_LABEL: Record<string, string> = {
-  PENDIENTE: "Por pagar", PAGADO: "Pagado",
-  PARCIAL: "Parcial", ANULADO: "Anulado",
-};
-
 const FUENTE_COLOR: Record<string, { color: string; bg: string }> = {
   XML:    { color: "var(--kipu-accent)", bg: "color-mix(in srgb, var(--kipu-accent) 10%, transparent)" },
   FISICO: { color: "var(--kipu-warning)", bg: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)" },
   API:    { color: "#22d3ee", bg: "color-mix(in srgb, #22d3ee 10%, transparent)" },
 };
-
-// ── Storage helpers ────────────────────────────────────────────────────────────
-const SS_KEY_INICIO = "kipu_recibidos_fecha_inicio";
-const SS_KEY_FIN    = "kipu_recibidos_fecha_fin";
-
-function getHoy() {
-  return new Date().toLocaleDateString("en-CA", { timeZone: "America/Guayaquil" });
-}
-
-function leerFecha(key: string): string {
-  try { return sessionStorage.getItem(key) || getHoy(); }
-  catch { return getHoy(); }
-}
-
-function guardarFecha(key: string, val: string) {
-  try { sessionStorage.setItem(key, val); } catch {}
-}
 
 // ── Componente Insignia de Bancarización ────────────────────────────────────────
 function BadgeBancarizacion({ doc }: { doc: DocRecibido }) {
@@ -135,10 +111,10 @@ function BadgeBancarizacion({ doc }: { doc: DocRecibido }) {
           color: "var(--kipu-text)",
         }}
       >
-        <p className="font-bold flex items-center gap-1 mb-1" style={{ color: "var(--kipu-warning)" }}>
+        <p className="font-bold flex items-center gap-1 mb-1 text-alerta">
           <AlertTriangle size={12} /> Requiere Bancarización (Art. 103 LRTI)
         </p>
-        <p style={{ color: "var(--kipu-subtle)" }}>
+        <p className="text-sutil">
           Al superar $500.00, debe pagarse mediante el sistema financiero (transferencia, tarjeta o cheque) para ser deducible de Renta y conservar el Crédito Tributario de IVA.
         </p>
         {/* Triángulo indicador del tooltip */}
@@ -156,33 +132,26 @@ function DocExpandido({ doc, onVerDetalle }: { doc: DocRecibido; onVerDetalle: (
   const requiereBanc = ["FAC", "NDB"].includes(doc.tipo_doc) && doc.importe_total > UMBRAL_BANCARIZACION;
 
   return (
-    <div
-      style={{
-        borderTop: "1px solid var(--kipu-border)",
-        background: "color-mix(in srgb, var(--kipu-text) 2%, transparent)",
-      }}
+    <div className="border-t border-borde bg-texto/2"
     >
       <div className="px-4 py-3 grid grid-cols-3 gap-2">
         <div
-          className="rounded-lg p-2.5 text-center"
-          style={{ background: "color-mix(in srgb, var(--kipu-text) 4%, transparent)" }}
+          className="rounded-lg p-2.5 text-center bg-texto/4"
         >
           <p className="text-[10px] mb-1" style={{ color: "var(--kipu-subtle)" }}>Base sin IVA</p>
-          <p className="text-sm font-bold" style={{ color: "var(--kipu-text)" }}>${fmt(doc.subtotal_base)}</p>
+          <p className="text-sm font-bold text-texto">${dosDecimales(doc.subtotal_base)}</p>
         </div>
         <div
-          className="rounded-lg p-2.5 text-center"
-          style={{ background: "color-mix(in srgb, var(--kipu-text) 4%, transparent)" }}
+          className="rounded-lg p-2.5 text-center bg-texto/4"
         >
           <p className="text-[10px] mb-1" style={{ color: "var(--kipu-subtle)" }}>IVA</p>
-          <p className="text-sm font-bold" style={{ color: "var(--kipu-text)" }}>${fmt(doc.valor_iva_total)}</p>
+          <p className="text-sm font-bold text-texto">${dosDecimales(doc.valor_iva_total)}</p>
         </div>
         <div
-          className="rounded-lg p-2.5 text-center"
-          style={{ background: "color-mix(in srgb, var(--kipu-text) 4%, transparent)" }}
+          className="rounded-lg p-2.5 text-center bg-texto/4"
         >
           <p className="text-[10px] mb-1" style={{ color: "var(--kipu-subtle)" }}>Total</p>
-          <p className="text-sm font-bold" style={{ color: "var(--kipu-text)" }}>${fmt(doc.importe_total)}</p>
+          <p className="text-sm font-bold text-texto">${dosDecimales(doc.importe_total)}</p>
         </div>
       </div>
 
@@ -203,7 +172,7 @@ function DocExpandido({ doc, onVerDetalle }: { doc: DocRecibido; onVerDetalle: (
             className="text-xs font-bold"
             style={{ color: doc.deducible_renta ? "var(--kipu-success)" : "var(--kipu-subtle)" }}
           >
-            {doc.deducible_renta ? `$${fmt(doc.subtotal_base)}` : "No aplica"}
+            {doc.deducible_renta ? `$${dosDecimales(doc.subtotal_base)}` : "No aplica"}
           </p>
         </div>
         <div
@@ -222,19 +191,14 @@ function DocExpandido({ doc, onVerDetalle }: { doc: DocRecibido; onVerDetalle: (
             className="text-xs font-bold"
             style={{ color: doc.credito_tributario_iva ? "var(--kipu-info)" : "var(--kipu-subtle)" }}
           >
-            {doc.credito_tributario_iva ? `$${fmt(doc.valor_iva_total)}` : "No aplica"}
+            {doc.credito_tributario_iva ? `$${dosDecimales(doc.valor_iva_total)}` : "No aplica"}
           </p>
         </div>
       </div>
 
       {requiereBanc && (
         <div 
-          className="mx-4 mb-3 p-2.5 rounded-lg flex items-start gap-2 text-xs"
-          style={{
-            background: "color-mix(in srgb, var(--kipu-warning) 8%, transparent)",
-            border: "1px solid color-mix(in srgb, var(--kipu-warning) 25%, transparent)",
-            color: "var(--kipu-warning)",
-          }}
+          className="mx-4 mb-3 p-2.5 rounded-lg flex items-start gap-2 text-xs bg-alerta/8 border border-alerta/25 text-alerta"
         >
           <AlertTriangle size={14} className="shrink-0 mt-0.5" />
           <p>
@@ -245,22 +209,13 @@ function DocExpandido({ doc, onVerDetalle }: { doc: DocRecibido; onVerDetalle: (
 
       {["FAC", "LIQ"].includes(doc.tipo_doc) && doc.estado_pago && (
         <div
-          className="mx-4 mb-3 flex items-center justify-between rounded-lg px-3 py-2"
-          style={{ background: "color-mix(in srgb, var(--kipu-text) 4%, transparent)" }}
+          className="mx-4 mb-3 flex items-center justify-between rounded-lg px-3 py-2 bg-texto/4"
         >
           <div className="flex items-center gap-2">
-            <Receipt size={12} style={{ color: "var(--kipu-subtle)" }} />
-            <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Pago proveedor</span>
+            <Receipt className="text-sutil" size={12} />
+            <span className="text-xs text-sutil">Pago proveedor</span>
           </div>
-          <span
-            className="text-[10px] px-2 py-0.5 rounded-full font-medium"
-            style={{
-              color: PAGO_COLOR[doc.estado_pago]?.color ?? "var(--kipu-muted)",
-              background: PAGO_COLOR[doc.estado_pago]?.bg ?? "color-mix(in srgb, var(--kipu-text) 8%, transparent)",
-            }}
-          >
-            {PAGO_LABEL[doc.estado_pago] ?? doc.estado_pago}
-          </span>
+          <InsigniaPago estado={doc.estado_pago} />
         </div>
       )}
 
@@ -276,17 +231,12 @@ function DocExpandido({ doc, onVerDetalle }: { doc: DocRecibido; onVerDetalle: (
             {doc.fuente}
           </span>
           {doc.notas && (
-            <p className="text-xs italic truncate" style={{ color: "var(--kipu-subtle)" }}>{doc.notas}</p>
+            <p className="text-xs italic truncate text-sutil">{doc.notas}</p>
           )}
         </div>
         <button
           onClick={e => { e.stopPropagation(); onVerDetalle(); }}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors shrink-0"
-          style={{
-            background: "color-mix(in srgb, var(--kipu-accent) 12%, transparent)",
-            color: "var(--kipu-accent)",
-            border: "1px solid color-mix(in srgb, var(--kipu-accent) 25%, transparent)",
-          }}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors shrink-0 bg-acento-suave text-acento border border-acento/25"
         >
           Ver ítems y detalle <ExternalLink size={11} />
         </button>
@@ -299,181 +249,88 @@ function DocExpandido({ doc, onVerDetalle }: { doc: DocRecibido; onVerDetalle: (
 export default function FacturasRecibidasPage() {
   const puedeVer = usePermiso("documentos_recibidos");
   const router = useRouter();
-  const searchParams = useSearchParams();
 
-  // Estados temporales para los inputs de fecha (no disparan consulta)
-  const [tempFechaInicio, setTempFechaInicio] = useState<string>(() => {
-    return searchParams.get("fecha_inicio") || leerFecha(SS_KEY_INICIO);
-  });
-  const [tempFechaFin, setTempFechaFin] = useState<string>(() => {
-    return searchParams.get("fecha_fin") || leerFecha(SS_KEY_FIN);
-  });
-
-  // Fechas activas para la API
-  const [fechaInicio, setFechaInicio] = useState<string>(tempFechaInicio);
-  const [fechaFin, setFechaFin]       = useState<string>(tempFechaFin);
-
-  // Búsqueda remota con debounce
-  const [query, setQuery]             = useState("");
-  const [queryActivo, setQueryActivo] = useState("");
-  const debounceRef                   = useRef<NodeJS.Timeout | null>(null);
+  // Búsqueda y página en la URL: al volver de un comprobante la lista queda igual
+  // sel: la compra abierta en el panel de la derecha (compu, 1280 px o más)
+  const [filtros, cambiarFiltros] = useFiltrosUrl({ q: "", page: "1", sel: "" });
+  const queryActivo = filtros.q;
+  const page        = Math.max(1, Number(filtros.page) || 1);
+  const irAPagina   = (n: number) => cambiarFiltros({ page: String(n) });
+  const [query, cambiarQuery] = useBusquedaUrl("q", { page: "" });   // se busca 400 ms después
+  const periodo = usePeriodo("recibidos", () => irAPagina(1));
 
   // Con Plan Pro, o con el plan gratis encendido (importar recibidas es para todos)
   const tieneSub = useAuthStore((s) => !!(s.empresa?.suscripcion_activa || s.empresa?.emision_gratis));
-  const [docs, setDocs]               = useState<DocRecibido[]>([]);
-  const [resumen, setResumen]         = useState<Resumen | null>(null);
-  const [loading, setLoading]         = useState(true);
   const [expandido, setExpandido]     = useState<string | null>(null);
   const [resumenOpen, setResumenOpen] = useState(false);
 
-  // Paginación
-  const [page, setPage]               = useState(1);
-  const [pagination, setPagination]   = useState<PaginationInfo | null>(null);
+  // Lista paginada (25) con su resumen: con caché, al volver aparece al instante
+  // y se actualiza por detrás (lib/useLista.ts)
+  const params = new URLSearchParams();
+  if (periodo.inicio) params.append("fecha_inicio", periodo.inicio);
+  if (periodo.fin)    params.append("fecha_fin",    periodo.fin);
+  if (queryActivo)    params.append("q",            queryActivo);
+  params.append("page", String(page));
+  params.append("limit", "25");
+  const lista = useLista<{ data?: DocRecibido[]; resumen?: Resumen | null; pagination?: InfoPaginacion | null }>(
+    periodo.valido ? `/api/v1/app/recibidos?${params}` : null);
+  const docs       = lista.datos?.data ?? [];
+  const resumen    = lista.datos?.resumen ?? null;
+  const pagination = lista.datos?.pagination ?? null;
+  const loading    = lista.cargando;
 
-  const diasRango = fechaInicio && fechaFin
-    ? Math.ceil((new Date(fechaFin).getTime() - new Date(fechaInicio).getTime()) / (1000 * 60 * 60 * 24))
-    : 0;
+  const irARegistrar = () => router.push("/documentos/recibidos/nueva");
 
-  const handleQueryChange = (val: string) => {
-    setQuery(val);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      setPage(1);
-      setQueryActivo(val.trim());
-    }, 400);
-  };
-
-  const cargar = useCallback(async () => {
-    if (diasRango > 365) return;
-    setLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (fechaInicio) params.append("fecha_inicio", fechaInicio);
-      if (fechaFin)    params.append("fecha_fin",    fechaFin);
-      if (queryActivo) params.append("q",            queryActivo);
-      params.append("page", String(page));
-      params.append("limit", "25");
-
-      const res = await api.get(`/api/v1/app/recibidos?${params}`);
-      setDocs(res.data.data ?? []);
-      setResumen(res.data.resumen ?? null);
-      setPagination(res.data.pagination ?? null);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  }, [fechaInicio, fechaFin, diasRango, page, queryActivo]);
-
-  useEffect(() => {
-    cargar();
-  }, [cargar]);
-
-  const handleBuscar = () => {
-    setPage(1); // Reset a primera página
-    guardarFecha(SS_KEY_INICIO, tempFechaInicio);
-    guardarFecha(SS_KEY_FIN, tempFechaFin);
-    setFechaInicio(tempFechaInicio);
-    setFechaFin(tempFechaFin);
-  };
+  // ── Compu: panel de detalle y atajos de teclado ──────────────────────────────
+  // (con los ejemplos del plan no hay panel ni atajos: docs viene vacío)
+  const sel = filtros.sel;
+  const { buscadorRef, marcada, setMarcada, refFila } = useNavegacionLista({
+    ids:        docs.map(d => d.id),
+    sel,
+    cambiarSel: (id) => cambiarFiltros({ sel: id }),
+    rutaDe:     rutas.recibido,
+    nuevo:      irARegistrar,
+    textoNuevo: "Registrar compra",
+    alEscapar:  () => { if (!expandido) return false; setExpandido(null); return true; },
+  });
 
   if (!puedeVer) return <SinAcceso />;
 
   // Sin Plan Pro y sin compras propias: ejemplos para ver cómo funciona
-  const esDemo    = !loading && !tieneSub && docs.length === 0 && !queryActivo;
+  const esDemo    = !loading && !lista.fallo && !tieneSub && docs.length === 0 && !queryActivo;
   const filtrados = esDemo ? demoRecibidos() : docs;
   const resumenV: Resumen | null = esDemo ? resumenRecibidos(demoRecibidos()) : resumen;
   const verDetalle = (id: string) => { if (esDemo && ES_APP_NATIVA) return; router.push(esDemo ? "/planes" : rutas.recibido(id)); };
 
+  const docSel = docs.find(d => d.id === sel);
+
   return (
-    <div className="p-4 md:p-6 space-y-5">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold" style={{ color: "var(--kipu-text)" }}>Documentos Recibidos</h1>
-          <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>
-            {resumenV ? `${resumenV.total_documentos} en el período` : "—"}
-          </p>
+    <div className={cn(sel && "xl:flex xl:items-start")}>
+    <div className="min-w-0 flex-1 space-y-5 p-4 md:p-6">
+      <SegmentosDocumentos />
+      {/* Encabezado: en el celular el título ya está en la barra superior */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="mr-auto hidden lg:block">
+          <h1 className="text-xl font-bold text-texto">Documentos recibidos</h1>
+          <p className="text-sm text-sutil">{resumenV ? `${resumenV.total_documentos} en el período` : "—"}</p>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={cargar}
-            disabled={diasRango > 365}
-            className="p-2 rounded-lg transition-colors disabled:opacity-40"
-            style={{
-              background: "var(--kipu-surface)",
-              border: "1px solid var(--kipu-border)",
-              color: "var(--kipu-muted)",
-            }}
-          >
-            <RefreshCw size={16} />
-          </button>
-          <button
-            onClick={() => router.push("/documentos/recibidos/nueva")}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors"
-            style={{ background: "var(--kipu-accent)" }}
-          >
-            <Plus size={15} /> Registrar
-          </button>
-        </div>
+        <PeriodoFechas inicio={periodo.inicio} fin={periodo.fin} onCambio={periodo.cambiar} className="mr-auto lg:mr-0" />
+        <BotonActualizar onClick={() => void lista.recargar()} deshabilitado={!periodo.valido}
+                         girando={lista.actualizando} />
+        <Boton onClick={irARegistrar} icono={<Plus size={16} />} className="hidden lg:inline-flex">Registrar</Boton>
       </div>
 
-      {/* Filtros de Búsqueda y Rango de Fechas */}
-      <div className="flex flex-col md:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--kipu-subtle)" }} />
-          <input
-            value={query}
-            onChange={e => handleQueryChange(e.target.value)}
-            placeholder="Buscar por proveedor o número..."
-            className="w-full pl-9 pr-4 py-2.5 rounded-lg text-sm transition-colors focus:outline-none"
-            style={{
-              background: "var(--kipu-surface)",
-              border: "1px solid var(--kipu-border)",
-              color: "var(--kipu-text)",
-            }}
-          />
-        </div>
-        <div className="flex gap-2 items-center shrink-0">
-          <input
-            type="date"
-            value={tempFechaInicio}
-            onChange={e => setTempFechaInicio(e.target.value)}
-            className="px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none"
-            style={{
-              background: "var(--kipu-surface)",
-              border: "1px solid var(--kipu-border)",
-              color: "var(--kipu-text)",
-            }}
-          />
-          <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>—</span>
-          <input
-            type="date"
-            value={tempFechaFin}
-            onChange={e => setTempFechaFin(e.target.value)}
-            className="px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none"
-            style={{
-              background: "var(--kipu-surface)",
-              border: "1px solid var(--kipu-border)",
-              color: "var(--kipu-text)",
-            }}
-          />
-          <button
-            type="button"
-            onClick={handleBuscar}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors"
-            style={{ background: "var(--kipu-accent)" }}
-          >
-            <Search size={13} /> Buscar
-          </button>
-        </div>
-      </div>
+      <Entrada
+        teclado="buscar"
+        value={query}
+        onChange={e => cambiarQuery(e.target.value)}
+        placeholder="Buscar por proveedor o número…"
+        aria-label="Buscar compras"
+        prefijo={<Search size={16} />}
+        ref={buscadorRef}
+      />
 
-      {diasRango > 365 && (
-        <p className="text-xs font-medium" style={{ color: "var(--kipu-warning)" }}>
-          El rango máximo de consulta es de 365 días (1 año).
-        </p>
-      )}
+      <AvisoRango valido={periodo.valido} />
 
       {esDemo && (
         <BannerEjemplo
@@ -485,70 +342,66 @@ export default function FacturasRecibidasPage() {
       {/* Resumen Fiscal */}
       {resumenV && resumenV.total_documentos > 0 && (
         <div
-          className="rounded-xl overflow-hidden"
-          style={{
-            background: "var(--kipu-surface)",
-            border: "1px solid var(--kipu-border)",
-          }}
+          className="rounded-xl overflow-hidden bg-superficie border border-borde"
         >
           <button
             onClick={() => setResumenOpen(!resumenOpen)}
             className="w-full flex items-center justify-between px-4 py-3 transition-colors"
           >
             <div className="flex items-center gap-2">
-              <TrendingUp size={15} style={{ color: "var(--kipu-success)" }} />
-              <span className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>Resumen fiscal</span>
-              <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>{fechaInicio} → {fechaFin}</span>
+              <TrendingUp className="text-exito" size={15} />
+              <span className="text-sm font-semibold text-texto">Resumen fiscal</span>
+              <span className="text-xs text-sutil">{periodo.inicio} → {periodo.fin}</span>
             </div>
             <div className="flex items-center gap-4">
-              <span className="text-xs hidden sm:block" style={{ color: "var(--kipu-muted)" }}>
-                Compras netas <span className="font-medium" style={{ color: "var(--kipu-text)" }}>${fmt(resumenV.importe_total)}</span>
+              <span className="text-xs hidden sm:block text-tenue">
+                Compras netas <span className="font-medium text-texto">${dosDecimales(resumenV.importe_total)}</span>
               </span>
-              <span className="text-xs hidden sm:block" style={{ color: "var(--kipu-muted)" }}>
-                Ded. <span className="font-medium" style={{ color: "var(--kipu-success)" }}>${fmt(resumenV.total_deducible)}</span>
+              <span className="text-xs hidden sm:block text-tenue">
+                Ded. <span className="font-medium text-exito">${dosDecimales(resumenV.total_deducible)}</span>
               </span>
-              <span className="text-xs hidden sm:block" style={{ color: "var(--kipu-muted)" }}>
-                CT IVA <span className="font-medium" style={{ color: "var(--kipu-info)" }}>${fmt(resumenV.iva_credito_tributario)}</span>
+              <span className="text-xs hidden sm:block text-tenue">
+                CT IVA <span className="font-medium text-info">${dosDecimales(resumenV.iva_credito_tributario)}</span>
               </span>
-              {resumenOpen ? <ChevronUp size={16} style={{ color: "var(--kipu-subtle)" }} /> : <ChevronDown size={16} style={{ color: "var(--kipu-subtle)" }} />}
+              {resumenOpen ? <ChevronUp className="text-sutil" size={16} /> : <ChevronDown className="text-sutil" size={16} />}
             </div>
           </button>
 
           {resumenOpen && (
-            <div className="px-4 pb-4 pt-3 space-y-3" style={{ borderTop: "2px solid var(--kipu-border)" }}>
+            <div className="px-4 pb-4 pt-3 space-y-3 border-t-2 border-borde">
               {resumenV.compras && resumenV.notas_credito && resumenV.neto && (
-                <div className="rounded-xl overflow-x-auto" style={{ border: "1px solid var(--kipu-border)" }}>
+                <div className="rounded-xl overflow-x-auto border border-borde">
                   <table className="w-full text-xs">
                     <thead>
-                      <tr style={{ color: "var(--kipu-subtle)" }}>
+                      <tr className="text-sutil">
                         <th className="text-left font-medium px-3 py-2"></th>
                         <th className="text-right font-medium px-3 py-2">Subtotal</th>
                         <th className="text-right font-medium px-3 py-2">IVA</th>
                         <th className="text-right font-medium px-3 py-2">Total</th>
                       </tr>
                     </thead>
-                    <tbody style={{ color: "var(--kipu-text)" }}>
-                      <tr style={{ borderTop: "1px solid var(--kipu-border)" }}>
+                    <tbody className="text-texto">
+                      <tr className="border-t border-borde">
                         <td className="px-3 py-2">
-                          Compras <span style={{ color: "var(--kipu-subtle)" }}>({resumenV.compras.cantidad})</span>
+                          Compras <span className="text-sutil">({resumenV.compras.cantidad})</span>
                         </td>
-                        <td className="text-right px-3 py-2">${fmt(resumenV.compras.subtotal)}</td>
-                        <td className="text-right px-3 py-2">${fmt(resumenV.compras.iva)}</td>
-                        <td className="text-right px-3 py-2">${fmt(resumenV.compras.total)}</td>
+                        <td className="text-right px-3 py-2">${dosDecimales(resumenV.compras.subtotal)}</td>
+                        <td className="text-right px-3 py-2">${dosDecimales(resumenV.compras.iva)}</td>
+                        <td className="text-right px-3 py-2">${dosDecimales(resumenV.compras.total)}</td>
                       </tr>
-                      <tr style={{ borderTop: "1px solid var(--kipu-border)", color: "var(--kipu-danger)" }}>
+                      <tr className="border-t border-borde text-peligro">
                         <td className="px-3 py-2">
-                          Notas de crédito <span style={{ color: "var(--kipu-subtle)" }}>({resumenV.notas_credito.cantidad}, restan)</span>
+                          Notas de crédito <span className="text-sutil">({resumenV.notas_credito.cantidad}, restan)</span>
                         </td>
-                        <td className="text-right px-3 py-2">−${fmt(resumenV.notas_credito.subtotal)}</td>
-                        <td className="text-right px-3 py-2">−${fmt(resumenV.notas_credito.iva)}</td>
-                        <td className="text-right px-3 py-2">−${fmt(resumenV.notas_credito.total)}</td>
+                        <td className="text-right px-3 py-2">−${dosDecimales(resumenV.notas_credito.subtotal)}</td>
+                        <td className="text-right px-3 py-2">−${dosDecimales(resumenV.notas_credito.iva)}</td>
+                        <td className="text-right px-3 py-2">−${dosDecimales(resumenV.notas_credito.total)}</td>
                       </tr>
-                      <tr className="font-bold" style={{ borderTop: "2px solid var(--kipu-border)" }}>
+                      <tr className="font-bold border-t-2 border-borde">
                         <td className="px-3 py-2">Compras netas</td>
-                        <td className="text-right px-3 py-2">${fmt(resumenV.neto.subtotal)}</td>
-                        <td className="text-right px-3 py-2">${fmt(resumenV.neto.iva)}</td>
-                        <td className="text-right px-3 py-2">${fmt(resumenV.neto.total)}</td>
+                        <td className="text-right px-3 py-2">${dosDecimales(resumenV.neto.subtotal)}</td>
+                        <td className="text-right px-3 py-2">${dosDecimales(resumenV.neto.iva)}</td>
+                        <td className="text-right px-3 py-2">${dosDecimales(resumenV.neto.total)}</td>
                       </tr>
                     </tbody>
                   </table>
@@ -557,39 +410,27 @@ export default function FacturasRecibidasPage() {
 
               <div className={`grid grid-cols-1 gap-3 ${resumenV.retenciones ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
                 <div
-                  className="rounded-xl p-4 text-center"
-                  style={{
-                    background: "color-mix(in srgb, var(--kipu-success) 5%, transparent)",
-                    border: "1px solid color-mix(in srgb, var(--kipu-success) 10%, transparent)",
-                  }}
+                  className="rounded-xl p-4 text-center bg-exito/5 border border-exito/10"
                 >
                   <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: "var(--kipu-subtle)" }}>Deducible renta</p>
-                  <p className="text-lg font-bold" style={{ color: "var(--kipu-success)" }}>${fmt(resumenV.total_deducible)}</p>
+                  <p className="text-lg font-bold text-exito">${dosDecimales(resumenV.total_deducible)}</p>
                   <p className="text-[10px] mt-1" style={{ color: "var(--kipu-subtle)" }}>base sin IVA, menos notas de crédito</p>
                 </div>
                 <div
-                  className="rounded-xl p-4 text-center"
-                  style={{
-                    background: "color-mix(in srgb, var(--kipu-info) 5%, transparent)",
-                    border: "1px solid color-mix(in srgb, var(--kipu-info) 10%, transparent)",
-                  }}
+                  className="rounded-xl p-4 text-center bg-info/5 border border-info/10"
                 >
                   <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: "var(--kipu-subtle)" }}>Crédito trib. IVA</p>
-                  <p className="text-lg font-bold" style={{ color: "var(--kipu-info)" }}>${fmt(resumenV.iva_credito_tributario)}</p>
+                  <p className="text-lg font-bold text-info">${dosDecimales(resumenV.iva_credito_tributario)}</p>
                   <p className="text-[10px] mt-1" style={{ color: "var(--kipu-subtle)" }}>IVA recuperable, menos notas de crédito</p>
                 </div>
                 {resumenV.retenciones && (
                   <div
-                    className="rounded-xl p-4 text-center"
-                    style={{
-                      background: "color-mix(in srgb, var(--kipu-surface) 60%, transparent)",
-                      border: "1px solid var(--kipu-border)",
-                    }}
+                    className="rounded-xl p-4 text-center bg-superficie/60 border border-borde"
                   >
                     <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: "var(--kipu-subtle)" }}>Te retuvieron</p>
-                    <p className="text-lg font-bold" style={{ color: "var(--kipu-text)" }}>${fmt(resumenV.retenciones.total)}</p>
+                    <p className="text-lg font-bold text-texto">${dosDecimales(resumenV.retenciones.total)}</p>
                     <p className="text-[10px] mt-1" style={{ color: "var(--kipu-subtle)" }}>
-                      {resumenV.retenciones.cantidad} retenciones · IVA ${fmt(resumenV.retenciones.iva)} · renta ${fmt(resumenV.retenciones.renta)}
+                      {resumenV.retenciones.cantidad} retenciones · IVA ${dosDecimales(resumenV.retenciones.iva)} · renta ${dosDecimales(resumenV.retenciones.renta)}
                     </p>
                   </div>
                 )}
@@ -598,7 +439,7 @@ export default function FacturasRecibidasPage() {
               <p className="text-[11px] text-center" style={{ color: "var(--kipu-subtle)" }}>
                 Es la suma de tus documentos. Tu declaración de IVA (formulario 104) armada casillero por
                 casillero y revisada está en{" "}
-                <Link href="/reportes" className="underline" style={{ color: "var(--kipu-accent)" }}>Reportes</Link>.
+                <Link href="/reportes" className="underline text-acento">Reportes</Link>.
               </p>
             </div>
           )}
@@ -607,36 +448,47 @@ export default function FacturasRecibidasPage() {
 
       {/* Lista */}
       {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <div
-            className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin"
-            style={{ borderColor: "var(--kipu-accent)", borderTopColor: "transparent" }}
-          />
-        </div>
+        <EsqueletoFilas filas={8} />
+      ) : lista.fallo ? (
+        <VacioError que="tus compras" onReintentar={lista.recargar} />
       ) : filtrados.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <FileText size={40} className="mb-3" style={{ color: "var(--kipu-subtle)" }} />
-          <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>
-            {queryActivo ? "No hay documentos que coincidan en esta página." : "Sin documentos recibidos en este período."}
-          </p>
-          {!queryActivo && (
-            <button
-              onClick={() => router.push("/documentos/recibidos/nueva")}
-              className="mt-4 px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors"
-              style={{ background: "var(--kipu-accent)" }}
-            >
-              Registrar primer documento
-            </button>
-          )}
-        </div>
+        queryActivo ? (
+          <Vacio icono={Search} titulo="Nada coincide con la búsqueda"
+                 descripcion="Prueba con otro proveedor, número u otro período." />
+        ) : (
+          <Vacio icono={FileText} titulo="Sin compras en este período"
+                 descripcion="Registra las facturas de tus proveedores para llevar tu IVA y tus gastos."
+                 accion={<Boton onClick={irARegistrar} icono={<Plus size={16} />}>Registrar compra</Boton>} />
+        )
       ) : (
-        <div
-          className="rounded-xl overflow-hidden"
-          style={{
-            background: "var(--kipu-surface)",
-            border: "1px solid var(--kipu-border)",
-          }}
-        >
+        <>
+        {/* Celular: tocar la fila abre el comprobante; deslizar hacia abajo actualiza */}
+        <TirarParaRefrescar alRefrescar={lista.recargar} className="md:hidden">
+          <GrupoFilas>
+            {filtrados.map(doc => {
+              return (
+                <FilaLista
+                  key={doc.id}
+                  onClick={() => verDetalle(doc.id)}
+                  titulo={<>{doc.razon_social_proveedor}{esDemo && <> <EtiquetaEjemplo /></>}</>}
+                  subtitulo={`${tipoComprobante(doc.tipo_doc).corta} ${doc.numero_doc} · ${etiquetaPeriodo(doc.fecha_emision, doc.fecha_emision)}`}
+                  fin={`$${dosDecimales(doc.importe_total)}`}
+                  finAbajo={
+                    <span className="flex flex-wrap justify-end gap-1">
+                      {doc.deducible_renta && <InsigniaEstado tono="exito">Deducible</InsigniaEstado>}
+                      {doc.credito_tributario_iva && <InsigniaEstado tono="info">Crédito IVA</InsigniaEstado>}
+                      {["FAC", "LIQ"].includes(doc.tipo_doc) && <InsigniaPago estado={doc.estado_pago} />}
+                    </span>
+                  }
+                />
+              );
+            })}
+          </GrupoFilas>
+        </TirarParaRefrescar>
+
+        {/* Escritorio: desde 1280 px la fila abre la compra en el panel de la derecha;
+            más angosto se despliega el resumen. La flecha abre la pantalla completa. */}
+        <div className="hidden overflow-hidden rounded-xl border border-borde bg-superficie md:block">
           <div>
             {filtrados.map((doc, index) => {
               const isOpen = expandido === doc.id;
@@ -644,15 +496,23 @@ export default function FacturasRecibidasPage() {
               return (
                 <div
                   key={doc.id}
+                  ref={refFila(doc.id)}
                   style={{
                     borderTop: index > 0 ? "1px solid var(--kipu-border)" : "none",
                   }}
                 >
                   <div
-                    onClick={() => setExpandido(isOpen ? null : doc.id)}
-                    className="flex items-center gap-3 px-4 py-3 transition-colors cursor-pointer select-none"
-                    onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 4%, transparent)"}
-                    onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                    onClick={() => {
+                      setMarcada(index);
+                      if (!esDemo && enPanel()) cambiarFiltros({ sel: doc.id });
+                      else setExpandido(isOpen ? null : doc.id);
+                    }}
+                    aria-selected={doc.id === sel || undefined}
+                    className={cn(
+                      "flex cursor-pointer select-none items-center gap-3 px-4 py-3 transition-colors hover:bg-presionado",
+                      doc.id === sel && "bg-acento-suave hover:bg-acento-suave",
+                      index === marcada && "outline-2 -outline-offset-2 outline-acento/50",
+                    )}
                   >
                     <span
                       className="text-[10px] px-1.5 py-0.5 rounded font-bold shrink-0"
@@ -662,7 +522,7 @@ export default function FacturasRecibidasPage() {
                     </span>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-sm font-medium truncate" style={{ color: "var(--kipu-text)" }}>
+                        <p className="text-sm font-medium truncate text-texto">
                           {doc.razon_social_proveedor}
                         </p>
                         {esDemo && <EtiquetaEjemplo />}
@@ -693,38 +553,29 @@ export default function FacturasRecibidasPage() {
                           <BadgeBancarizacion doc={doc} />
                         </div>
                       </div>
-                      <p className="text-xs font-mono" style={{ color: "var(--kipu-subtle)" }}>
+                      <p className="text-xs font-mono text-sutil">
                         {doc.numero_doc} · {doc.fecha_emision}
                       </p>
                     </div>
                     <div className="text-right shrink-0">
-                      <p className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>${fmt(doc.importe_total)}</p>
-                      {doc.estado_pago && ["FAC", "LIQ"].includes(doc.tipo_doc) && (
-                        <span
-                          className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
-                          style={{
-                            color: PAGO_COLOR[doc.estado_pago]?.color ?? "var(--kipu-muted)",
-                            background: PAGO_COLOR[doc.estado_pago]?.bg ?? "color-mix(in srgb, var(--kipu-text) 8%, transparent)",
-                          }}
-                        >
-                          {PAGO_LABEL[doc.estado_pago] ?? doc.estado_pago}
-                        </span>
-                      )}
+                      <p className="text-sm font-semibold text-texto">${dosDecimales(doc.importe_total)}</p>
+                      {["FAC", "LIQ"].includes(doc.tipo_doc) && <InsigniaPago estado={doc.estado_pago} />}
                     </div>
                     <button
                       type="button"
                       onClick={e => { e.stopPropagation(); verDetalle(doc.id); }}
-                      className="p-1.5 rounded-lg transition-colors shrink-0"
-                      style={{ color: "var(--kipu-subtle)" }}
+                      className="p-1.5 rounded-lg transition-colors shrink-0 text-sutil"
                       title="Ver detalle completo"
+                      aria-label="Ver detalle completo"
                     >
                       <ArrowUpRight size={15} />
                     </button>
-                    <div className="shrink-0" style={{ color: "var(--kipu-subtle)" }}>
+                    {/* Desde 1280 px la fila abre el panel en vez de desplegarse (salvo los ejemplos) */}
+                    <div className={`shrink-0 ${esDemo ? "" : "xl:hidden"}`} style={{ color: "var(--kipu-subtle)" }}>
                       {isOpen ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
                     </div>
                   </div>
-                  {isOpen && (
+                  {isOpen && !sel && (
                     <DocExpandido
                       doc={doc}
                       onVerDetalle={() => verDetalle(doc.id)}
@@ -735,54 +586,26 @@ export default function FacturasRecibidasPage() {
             })}
           </div>
         </div>
+        </>
       )}
 
-      {/* Controles de Paginación */}
-      {pagination && pagination.total_pages > 1 && (
-        <div
-          className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 rounded-xl"
-          style={{
-            background: "var(--kipu-surface)",
-            border: "1px solid var(--kipu-border)",
-          }}
-        >
-          <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
-            Mostrando <span className="font-semibold" style={{ color: "var(--kipu-text)" }}>{docs.length}</span> de{" "}
-            <span className="font-semibold" style={{ color: "var(--kipu-text)" }}>{pagination.total_items}</span> comprobantes
-          </p>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setPage(p => Math.max(p - 1, 1))}
-              disabled={!pagination.has_prev || loading}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors disabled:opacity-40"
-              style={{
-                background: "var(--kipu-surface)",
-                border: "1px solid var(--kipu-border)",
-                color: "var(--kipu-text)",
-              }}
-            >
-              <ChevronLeft size={14} /> Anterior
-            </button>
-            <span className="text-xs font-medium px-2" style={{ color: "var(--kipu-subtle)" }}>
-              Página {pagination.page} de {pagination.total_pages}
-            </span>
-            <button
-              type="button"
-              onClick={() => setPage(p => Math.min(p + 1, pagination.total_pages))}
-              disabled={!pagination.has_next || loading}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors disabled:opacity-40"
-              style={{
-                background: "var(--kipu-surface)",
-                border: "1px solid var(--kipu-border)",
-                color: "var(--kipu-text)",
-              }}
-            >
-              Siguiente <ChevronRight size={14} />
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Celular: registrar una compra (el + de la barra es para emitir) */}
+      {!esDemo && <BotonFlotante onClick={irARegistrar} etiqueta="Registrar compra" />}
+
+      <Paginacion info={pagination} enPantalla={docs.length} cargando={loading} onCambio={irAPagina} />
+      <AyudaAtajos nuevo="registrar compra" />
+    </div>
+
+    {/* Compu (1280 px o más): la compra elegida, a la derecha */}
+    {sel && (
+      <PanelDetalle
+        titulo={docSel ? `${tipoComprobante(docSel.tipo_doc).etiqueta} ${docSel.numero_doc}` : "Comprobante recibido"}
+        hrefCompleto={rutas.recibido(sel)}
+        onCerrar={() => cambiarFiltros({ sel: "" })}
+      >
+        <DetalleRecibido key={sel} id={sel} enPanel />
+      </PanelDetalle>
+    )}
     </div>
   );
 }

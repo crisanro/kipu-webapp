@@ -8,6 +8,7 @@ import {
   CheckCircle2, Zap, CreditCard, ArrowRight,
   FileText, Sparkles, KeyRound,
 } from "lucide-react";
+import { INCLUYE_AL_DIA, INCLUYE_PRO } from "@/lib/planes";
 
 export default function PagoExitosoPage() {
   const params  = useSearchParams();
@@ -83,26 +84,24 @@ export default function PagoExitosoPage() {
         <div className="flex justify-center">
           <div className="relative">
             <div
-              className="w-24 h-24 rounded-full flex items-center justify-center animate-pulse"
-              style={{ background: "color-mix(in srgb, var(--kipu-success) 20%, transparent)" }}
+              className="w-24 h-24 rounded-full flex items-center justify-center animate-pulse bg-exito/20"
             >
               <div
-                className="w-16 h-16 rounded-full flex items-center justify-center"
-                style={{ background: "color-mix(in srgb, var(--kipu-success) 30%, transparent)" }}
+                className="w-16 h-16 rounded-full flex items-center justify-center bg-exito/30"
               >
-                <CheckCircle2 size={36} style={{ color: "var(--kipu-success)" }} />
+                <CheckCircle2 className="text-exito" size={36} />
               </div>
             </div>
             <div className="absolute -top-1 -right-1">
-              <Sparkles size={20} style={{ color: "var(--kipu-warning)" }} />
+              <Sparkles className="text-alerta" size={20} />
             </div>
           </div>
         </div>
 
         {/* Título */}
         <div className="text-center space-y-2">
-          <h1 className="text-2xl font-bold" style={{ color: "var(--kipu-text)" }}>¡Pago exitoso!</h1>
-          <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>
+          <h1 className="text-2xl font-bold text-texto">¡Pago exitoso!</h1>
+          <p className="text-sm text-sutil">
             {estado !== "confirmado"
               ? (esCreditos ? "Tu pago fue recibido. Estamos acreditando tus créditos."
                             : "Tu pago fue recibido. Estamos activando tu suscripción.")
@@ -113,11 +112,7 @@ export default function PagoExitosoPage() {
 
         {/* Card detalle */}
         <div
-          className="rounded-2xl p-5 space-y-4"
-          style={{
-            background: "var(--kipu-surface)",
-            border: "1px solid var(--kipu-border)",
-          }}
+          className="rounded-2xl p-5 space-y-4 bg-superficie border border-borde"
         >
 
           {/* Qué compraron */}
@@ -131,18 +126,18 @@ export default function PagoExitosoPage() {
               }}
             >
               {esCreditos
-                ? <Zap size={20} style={{ color: "var(--kipu-warning)" }} />
-                : <CreditCard size={20} style={{ color: "var(--kipu-accent)" }} />
+                ? <Zap className="text-alerta" size={20} />
+                : <CreditCard className="text-acento" size={20} />
               }
             </div>
             <div>
-              <p className="font-semibold" style={{ color: "var(--kipu-text)" }}>{tituloPlan}</p>
-              <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+              <p className="font-semibold text-texto">{tituloPlan}</p>
+              <p className="text-xs text-sutil">
                 {esCreditos
                   ? "Créditos para emitir comprobantes"
                   : esAlDia
                     ? "Facturación sin límite · Declaraciones de IVA y renta"
-                    : "Emisión ilimitada · Sistema contable · Soporte"
+                    : "Facturación sin límite · Reportes para el SRI · Soporte"
                 }
               </p>
             </div>
@@ -151,14 +146,10 @@ export default function PagoExitosoPage() {
           {/* Balance actualizado (créditos) */}
           {esCreditos && (
             <div
-              className="rounded-xl px-4 py-3"
-              style={{
-                background: "color-mix(in srgb, var(--kipu-warning) 5%, transparent)",
-                border: "1px solid color-mix(in srgb, var(--kipu-warning) 20%, transparent)",
-              }}
+              className="rounded-xl px-4 py-3 bg-alerta/5 border border-alerta/20"
             >
               {loading ? (
-                <div className="flex items-center gap-2 text-sm" style={{ color: "var(--kipu-subtle)" }}>
+                <div className="flex items-center gap-2 text-sm text-sutil">
                   <div
                     className="w-3.5 h-3.5 border-2 border-t-transparent rounded-full animate-spin"
                     style={{ borderColor: "currentColor", borderTopColor: "transparent" }}
@@ -166,13 +157,13 @@ export default function PagoExitosoPage() {
                   Confirmando tu pago con el banco...
                 </div>
               ) : estado === "demora" ? (
-                <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+                <p className="text-xs text-sutil">
                   Recibimos tu pago. Los créditos se acreditarán en unos minutos y te avisaremos con una notificación.
                 </p>
               ) : (
                 <div className="flex items-center justify-between">
-                  <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Balance actual</span>
-                  <span className="text-xl font-bold" style={{ color: "var(--kipu-warning)" }}>
+                  <span className="text-xs text-sutil">Balance actual</span>
+                  <span className="text-xl font-bold text-alerta">
                     {balance ?? "—"} créditos
                   </span>
                 </div>
@@ -183,14 +174,10 @@ export default function PagoExitosoPage() {
           {/* Estado suscripción */}
           {esSuscripcion && (
             <div
-              className="rounded-xl px-4 py-3"
-              style={{
-                background: "color-mix(in srgb, var(--kipu-success) 5%, transparent)",
-                border: "1px solid color-mix(in srgb, var(--kipu-success) 20%, transparent)",
-              }}
+              className="rounded-xl px-4 py-3 bg-exito/5 border border-exito/20"
             >
               {loading ? (
-                <div className="flex items-center gap-2 text-sm" style={{ color: "var(--kipu-subtle)" }}>
+                <div className="flex items-center gap-2 text-sm text-sutil">
                   <div
                     className="w-3.5 h-3.5 border-2 border-t-transparent rounded-full animate-spin"
                     style={{ borderColor: "currentColor", borderTopColor: "transparent" }}
@@ -199,13 +186,13 @@ export default function PagoExitosoPage() {
                 </div>
               ) : estado === "confirmado" ? (
                 <div className="flex items-center justify-between">
-                  <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Estado</span>
-                  <span className="text-sm font-bold" style={{ color: "var(--kipu-success)" }}>
+                  <span className="text-xs text-sutil">Estado</span>
+                  <span className="text-sm font-bold text-exito">
                     ✅ Activo
                   </span>
                 </div>
               ) : (
-                <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+                <p className="text-xs text-sutil">
                   Recibimos tu pago. La activación está tardando un poco más de lo normal:
                   te avisaremos con una notificación apenas quede lista (normalmente en minutos).
                 </p>
@@ -216,21 +203,15 @@ export default function PagoExitosoPage() {
           {/* Incluye (suscripción) */}
           {esSuscripcion && (
             <div className="space-y-2 pt-1">
-              {(esAlDia ? [
-                "Todo lo del Plan Pro",
-                "Presentamos tus declaraciones de IVA y renta",
-                "Te avisamos por WhatsApp cuánto pagar",
-                "Soporte de lunes a viernes, de 8:00 a 17:00",
-              ] : [
-                "Emisión ilimitada de comprobantes",
-                "Registro de documentos recibidos",
-                "Reportes IVA y Renta",
-                "Hasta 5 usuarios",
-                "Soporte por WhatsApp",
-              ]).map((item, i) => (
+              {/* Las mismas listas que la página de Planes (lib/planes.ts) */}
+              {(esAlDia
+                // El horario es el de los términos de Al Día (app/legal/kipu_al_dia_v1.md, en el backend)
+                ? [...INCLUYE_AL_DIA, "Soporte de lunes a viernes, de 8:00 a 17:00"]
+                : INCLUYE_PRO
+              ).map((item, i) => (
                 <div key={i} className="flex items-center gap-2">
-                  <CheckCircle2 size={13} className="shrink-0" style={{ color: "var(--kipu-success)" }} />
-                  <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>{item}</p>
+                  <CheckCircle2 size={13} className="shrink-0 text-exito" />
+                  <p className="text-xs text-sutil">{item}</p>
                 </div>
               ))}
             </div>
@@ -245,32 +226,27 @@ export default function PagoExitosoPage() {
         {/* Kipu Al Día: sin la clave del SRI no podemos declarar */}
         {esAlDia && (
           <div
-            className="rounded-2xl p-5 space-y-3"
-            style={{
-              background: "color-mix(in srgb, var(--kipu-accent) 10%, transparent)",
-              border: "1px solid color-mix(in srgb, var(--kipu-accent) 40%, transparent)",
-            }}
+            className="rounded-2xl p-5 space-y-3 bg-acento/10 border border-acento/40"
           >
             <div className="flex items-center gap-2">
-              <KeyRound size={18} style={{ color: "var(--kipu-accent)" }} />
-              <p className="font-semibold" style={{ color: "var(--kipu-text)" }}>Último paso: guarda tu clave del SRI</p>
+              <KeyRound className="text-acento" size={18} />
+              <p className="font-semibold text-texto">Último paso: guarda tu clave del SRI</p>
             </div>
-            <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>
+            <p className="text-sm text-tenue">
               Sin ella no podemos presentar tus declaraciones. Queda cifrada, solo la usa el equipo de Kipu
               y ves cada vez que alguien la consulta.
             </p>
             {estado === "confirmado" || estado === "demora" ? (
               <Link
                 href="/al-dia#clave-sri"
-                className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-white font-semibold text-sm"
-                style={{ background: "var(--kipu-accent)" }}
+                className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-white font-semibold text-sm bg-acento"
               >
                 <KeyRound size={16} />
                 Guardar mi clave del SRI
                 <ArrowRight size={16} />
               </Link>
             ) : (
-              <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+              <p className="text-xs text-sutil">
                 En cuanto confirmemos tu pago aparecerá aquí el botón para guardarla.
               </p>
             )}
@@ -292,34 +268,18 @@ export default function PagoExitosoPage() {
           </Link>
           <Link
             href="/dashboard"
-            className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm transition-colors"
-            style={{
-              border: "1px solid var(--kipu-border)",
-              color: "var(--kipu-subtle)",
-              background: "var(--kipu-surface)",
-            }}
-            onMouseEnter={e => {
-              e.currentTarget.style.color = "var(--kipu-text)";
-              e.currentTarget.style.borderColor = "color-mix(in srgb, var(--kipu-text) 30%, transparent)";
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.color = "var(--kipu-subtle)";
-              e.currentTarget.style.borderColor = "var(--kipu-border)";
-            }}
+            className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm transition-colors border border-borde text-sutil bg-superficie hover:text-texto hover:border-texto/30"
           >
             Ir al dashboard
           </Link>
         </div>
 
         {/* Link planes */}
-        <p className="text-center text-xs" style={{ color: "var(--kipu-subtle)" }}>
+        <p className="text-center text-xs text-sutil">
           ¿Tienes dudas?{" "}
           <Link
             href="/planes"
-            className="transition-colors"
-            style={{ color: "var(--kipu-accent)" }}
-            onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent-h)"}
-            onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-accent)"}
+            className="transition-colors text-acento hover:text-acento-hover"
           >
             Ver mi plan
           </Link>

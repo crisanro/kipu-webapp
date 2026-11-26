@@ -31,8 +31,26 @@ function cargarScript(): Promise<void> {
 }
 
 /**
+ * El captcha de un formulario: `widget` va donde se muestra; antes de enviar,
+ * `if (captcha.falta) …`; se manda `captcha.token` y, si el envío falla,
+ * `captcha.renovar()` (cada token sirve una sola vez).
+ */
+export function useCaptcha() {
+  const [token,   setToken]   = useState<string | null>(null);
+  const [intento, setIntento] = useState(0);
+  return {
+    token,
+    falta:   TURNSTILE_ACTIVO && !token,
+    renovar: () => { setToken(null); setIntento(n => n + 1); },
+    widget:  <Turnstile key={intento} onToken={setToken} />,
+  };
+}
+
+export const FALTA_CAPTCHA = "Completa la verificación de seguridad.";
+
+/**
  * Cada token sirve una sola vez: después de enviar (aunque falle), el padre debe
- * volver a montar el componente con otra `key` para obtener uno nuevo.
+ * volver a montar el componente con otra `key` para obtener uno nuevo (useCaptcha).
  */
 export default function Turnstile({ onToken }: { onToken: (token: string | null) => void }) {
   const caja = useRef<HTMLDivElement>(null);
@@ -68,7 +86,7 @@ export default function Turnstile({ onToken }: { onToken: (token: string | null)
     <div className="flex flex-col items-center gap-1">
       <div ref={caja} />
       {fallo && (
-        <p className="text-xs text-center" style={{ color: "var(--kipu-danger)" }}>
+        <p className="text-xs text-center text-peligro">
           No se pudo cargar la verificación de seguridad. Revisa tu conexión y recarga la página.
         </p>
       )}

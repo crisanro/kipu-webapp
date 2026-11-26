@@ -1,10 +1,13 @@
 "use client";
 
+import { useAvisos } from "@/components/ui/Avisos";
+import Hoja from "@/components/ui/Hoja";
 import { useState } from "react";
 import api from "@/lib/api";
 import {
-  Plus, X, Save, Power, Pencil, AlertTriangle
+  Plus, Save, Power, Pencil, AlertTriangle
 } from "lucide-react";
+import { detalleError } from "@/lib/errores";
 
 interface Props {
   estructura:   any[];
@@ -12,37 +15,14 @@ interface Props {
 }
 
 // ── Modal genérico ─────────────────────────────────────────────────────────────
+// Hoja: en el celular sube desde abajo; en la compu, diálogo centrado
 function Modal({ title, onClose, children }: {
   title: string; onClose: () => void; children: React.ReactNode
 }) {
   return (
-    <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-      <div
-        className="rounded-xl w-full max-w-sm"
-        style={{
-          background: "var(--kipu-surface)",
-          border: "1px solid var(--kipu-border)",
-        }}
-      >
-        <div
-          className="flex items-center justify-between px-5 py-4"
-          style={{ borderBottom: "1px solid var(--kipu-border)" }}
-        >
-          <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>{title}</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="transition-colors"
-            style={{ color: "var(--kipu-subtle)" }}
-            onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
-            onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-subtle)"}
-          >
-            <X size={18} />
-          </button>
-        </div>
-        <div className="p-5 space-y-3">{children}</div>
-      </div>
-    </div>
+    <Hoja abierta onCerrar={onClose} titulo={title} tamano="sm">
+      <div className="space-y-3">{children}</div>
+    </Hoja>
   );
 }
 
@@ -50,7 +30,7 @@ function Modal({ title, onClose, children }: {
 function Campo({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>{label}</label>
+      <label className="block text-xs mb-1.5 text-sutil">{label}</label>
       {children}
     </div>
   );
@@ -68,7 +48,24 @@ const inputDisStyle = {
   color: "var(--kipu-subtle)",
 };
 
+// Botón de acción de cada fila (fuera del componente: dentro se montaba de nuevo en cada pintada)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function BtnAccion({ onClick, style, title, children }: any) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="p-1.5 rounded-lg transition-colors flex items-center justify-center"
+      style={style}
+      title={title}
+    >
+      {children}
+    </button>
+  );
+}
+
 export default function TabEstructura({ estructura, onActualizar }: Props) {
+  const avisos    = useAvisos();
 
   // ── Helper: invalida caché local + refresca datos ────────────────────────────
   const invalidarEstructuraLocal = () => {
@@ -99,84 +96,37 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
 
   const cerrar = () => { setModal(null); setError(""); };
 
-  // ── Crear establecimiento ────────────────────────────────────────────────────
-  const crearEstab = async () => {
+  // ── Crear y editar: guardar, olvidar la estructura guardada y cerrar ─────────
+  const BASE = "/api/v1/app/estructura";
+  const enviar = async (metodo: "post" | "put", url: string, body: object, porDefecto: string, despues?: () => void) => {
     setError(""); setSaving(true);
     try {
-      await api.post("/api/v1/app/estructura/establecimientos", estabForm);
-      invalidarEstructuraLocal(); cerrar();
-      setEstabForm({ codigo: "001", nombre_comercial: "", direccion: "" });
-    } catch (e: any) {
-      setError(e?.response?.data?.detail ?? "Error al crear.");
+      await api[metodo](url, body);
+      invalidarEstructuraLocal(); cerrar(); despues?.();
+    } catch (e: unknown) {
+      setError(detalleError(e, porDefecto));
     } finally { setSaving(false); }
   };
+  const crearEstab   = () => enviar("post", `${BASE}/establecimientos`, estabForm, "Error al crear.",
+                                    () => setEstabForm({ codigo: "001", nombre_comercial: "", direccion: "" }));
+  const guardarEstab = (id: number) => enviar("put", `${BASE}/establecimientos/${id}`, editEstab, "Error al actualizar.");
+  const crearPunto   = () => enviar("post", `${BASE}/puntos-emision`, puntoForm, "Error al crear.");
+  const guardarPunto = (id: number) => enviar("put", `${BASE}/puntos-emision/${id}`, editPunto, "Error al actualizar.");
 
-  // ── Editar establecimiento ───────────────────────────────────────────────────
-  const guardarEstab = async (estabId: number) => {
-    setError(""); setSaving(true);
+  // ── Activar o desactivar ─────────────────────────────────────────────────────
+  const alternar = async (url: string, id: number, activo: boolean, porDefecto: string) => {
+    setToggling(id);
     try {
-      await api.put(`/api/v1/app/estructura/establecimientos/${estabId}`, editEstab);
-      invalidarEstructuraLocal(); cerrar();
-    } catch (e: any) {
-      setError(e?.response?.data?.detail ?? "Error al actualizar.");
-    } finally { setSaving(false); }
-  };
-
-  // ── Crear punto ──────────────────────────────────────────────────────────────
-  const crearPunto = async () => {
-    setError(""); setSaving(true);
-    try {
-      await api.post("/api/v1/app/estructura/puntos-emision", puntoForm);
-      invalidarEstructuraLocal(); cerrar();
-    } catch (e: any) {
-      setError(e?.response?.data?.detail ?? "Error al crear.");
-    } finally { setSaving(false); }
-  };
-
-  // ── Editar punto ─────────────────────────────────────────────────────────────
-  const guardarPunto = async (puntoId: number) => {
-    setError(""); setSaving(true);
-    try {
-      await api.put(`/api/v1/app/estructura/puntos-emision/${puntoId}`, editPunto);
-      invalidarEstructuraLocal(); cerrar();
-    } catch (e: any) {
-      setError(e?.response?.data?.detail ?? "Error al actualizar.");
-    } finally { setSaving(false); }
-  };
-
-  // ── Toggle activo ────────────────────────────────────────────────────────────
-  const toggleEstab = async (estabId: number, activo: boolean) => {
-    setToggling(estabId);
-    try {
-      await api.put(`/api/v1/app/estructura/establecimientos/${estabId}`, { is_active: !activo });
+      await api.put(url, { is_active: !activo });
       invalidarEstructuraLocal();
-    } catch (e: any) {
-      alert(e?.response?.data?.detail ?? "Error.");
+    } catch (e: unknown) {
+      avisos.error(detalleError(e, porDefecto));
     } finally { setToggling(null); }
   };
-
-  const togglePunto = async (puntoId: number, activo: boolean) => {
-    setToggling(puntoId);
-    try {
-      await api.put(`/api/v1/app/estructura/puntos-emision/${puntoId}`, { is_active: !activo });
-      invalidarEstructuraLocal();
-    } catch (e: any) {
-      alert(e?.response?.data?.detail ?? "Error.");
-    } finally { setToggling(null); }
-  };
-
-  // ── Botones de acción ────────────────────────────────────────────────────────
-  const BtnAccion = ({ onClick, style, title, children }: any) => (
-    <button
-      type="button"
-      onClick={onClick}
-      className="p-1.5 rounded-lg transition-colors flex items-center justify-center"
-      style={style}
-      title={title}
-    >
-      {children}
-    </button>
-  );
+  const toggleEstab = (id: number, activo: boolean) =>
+    alternar(`${BASE}/establecimientos/${id}`, id, activo, "No se pudo cambiar el establecimiento.");
+  const togglePunto = (id: number, activo: boolean) =>
+    alternar(`${BASE}/puntos-emision/${id}`, id, activo, "No se pudo cambiar el punto de emisión.");
 
   // ── Render ───────────────────────────────────────────────────────────────────
   return (
@@ -184,31 +134,23 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
 
       {/* Lista establecimientos */}
       <div
-        className="rounded-xl overflow-hidden"
-        style={{
-          background: "var(--kipu-surface)",
-          border: "1px solid var(--kipu-border)",
-        }}
+        className="rounded-xl overflow-hidden bg-superficie border border-borde"
       >
         <div
-          className="flex items-center justify-between px-5 py-4"
-          style={{ borderBottom: "1px solid var(--kipu-border)" }}
+          className="flex items-center justify-between px-5 py-4 border-b border-borde"
         >
-          <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>Establecimientos</h2>
+          <h2 className="text-sm font-semibold text-texto">Establecimientos</h2>
           <button
             type="button"
             onClick={() => { setEstabForm({ codigo: "001", nombre_comercial: "", direccion: "" }); setModal({ tipo: "crearEstab" }); }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-medium transition-colors"
-            style={{ background: "var(--kipu-accent)" }}
-            onMouseEnter={e => e.currentTarget.style.background = "var(--kipu-accent-h)"}
-            onMouseLeave={e => e.currentTarget.style.background = "var(--kipu-accent)"}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-medium transition-colors bg-acento hover:bg-acento-hover"
           >
             <Plus size={13} /> Agregar
           </button>
         </div>
 
         {estructura.length === 0 ? (
-          <p className="text-sm text-center py-8" style={{ color: "var(--kipu-subtle)" }}>
+          <p className="text-sm text-center py-8 text-sutil">
             Sin establecimientos. Crea uno para poder facturar.
           </p>
         ) : (
@@ -224,15 +166,11 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
                 <div className="flex items-center justify-between mb-1">
                   <div className="flex items-center gap-2">
                     <span
-                      className="font-mono text-xs px-2 py-0.5 rounded"
-                      style={{
-                        background: "color-mix(in srgb, var(--kipu-text) 6%, transparent)",
-                        color: "var(--kipu-muted)",
-                      }}
+                      className="font-mono text-xs px-2 py-0.5 rounded bg-presionado text-tenue"
                     >
                       {estab.codigo}
                     </span>
-                    <span className="text-sm font-medium" style={{ color: "var(--kipu-text)" }}>
+                    <span className="text-sm font-medium text-texto">
                       {estab.nombre_comercial || "Sin nombre"}
                     </span>
                   </div>
@@ -277,21 +215,19 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
                   </div>
                 </div>
 
-                <p className="text-xs mb-3" style={{ color: "var(--kipu-subtle)" }}>{estab.direccion}</p>
+                <p className="text-xs mb-3 text-sutil">{estab.direccion}</p>
 
                 {/* Puntos de emisión */}
                 <div
-                  className="space-y-2 pl-2"
-                  style={{ borderLeft: "1px solid var(--kipu-border)" }}
+                  className="space-y-2 pl-2 border-l border-borde"
                 >
                   {estab.puntos_emision?.map((punto: any) => (
                     <div
                       key={punto.id}
-                      className="flex items-center gap-2 rounded-lg px-3 py-2"
-                      style={{ background: "color-mix(in srgb, var(--kipu-text) 4%, transparent)" }}
+                      className="flex items-center gap-2 rounded-lg px-3 py-2 bg-texto/4"
                     >
-                      <span className="font-mono text-xs shrink-0" style={{ color: "var(--kipu-subtle)" }}>{punto.codigo}</span>
-                      <span className="text-xs flex-1 truncate" style={{ color: "var(--kipu-text)" }}>{punto.nombre}</span>
+                      <span className="font-mono text-xs shrink-0 text-sutil">{punto.codigo}</span>
+                      <span className="text-xs flex-1 truncate text-texto">{punto.nombre}</span>
 
                       {/* Desglose de secuenciales por tipo */}
                       <div className="flex gap-1 shrink-0">
@@ -313,11 +249,7 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
 
                       {punto.es_canal_whatsapp && (
                         <span
-                          className="text-xs px-1.5 py-0.5 rounded shrink-0 font-medium"
-                          style={{
-                            background: "color-mix(in srgb, var(--kipu-success) 20%, transparent)",
-                            color: "var(--kipu-success)",
-                          }}
+                          className="text-xs px-1.5 py-0.5 rounded shrink-0 font-medium bg-exito/20 text-exito"
                         >
                           WS
                         </span>
@@ -378,10 +310,7 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
                       setPuntoForm({ establecimiento_codigo: estab.codigo, codigo: "001", nombre: "" });
                       setModal({ tipo: "crearPunto", estabCodigo: estab.codigo });
                     }}
-                    className="flex items-center gap-1.5 text-xs transition-colors mt-1 font-medium"
-                    style={{ color: "var(--kipu-accent)" }}
-                    onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent-h)"}
-                    onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-accent)"}
+                    className="flex items-center gap-1.5 text-xs transition-colors mt-1 font-medium text-acento hover:text-acento-hover"
                   >
                     <Plus size={12} /> Agregar punto de emisión
                   </button>
@@ -435,11 +364,7 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
           </Campo>
           {error && (
             <p
-              className="text-xs px-3 py-2 rounded-lg"
-              style={{
-                color: "var(--kipu-danger)",
-                background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
-              }}
+              className="text-xs px-3 py-2 rounded-lg text-peligro bg-peligro-suave"
             >
               {error}
             </p>
@@ -448,13 +373,7 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
             <button
               type="button"
               onClick={cerrar}
-              className="flex-1 py-2.5 rounded-lg text-sm transition-colors"
-              style={{
-                border: "1px solid var(--kipu-border)",
-                color: "var(--kipu-muted)",
-              }}
-              onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
-              onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-muted)"}
+              className="flex-1 py-2.5 rounded-lg text-sm transition-colors border border-borde text-tenue hover:text-texto"
             >
               Cancelar
             </button>
@@ -462,14 +381,7 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
               type="button"
               onClick={crearEstab}
               disabled={saving}
-              className="flex-1 py-2.5 rounded-lg text-white text-sm font-medium flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
-              style={{ background: "var(--kipu-accent)" }}
-              onMouseEnter={e => {
-                if (!saving) e.currentTarget.style.background = "var(--kipu-accent-h)";
-              }}
-              onMouseLeave={e => {
-                if (!saving) e.currentTarget.style.background = "var(--kipu-accent)";
-              }}
+              className="flex-1 py-2.5 rounded-lg text-white text-sm font-medium flex items-center justify-center gap-2 transition-colors disabled:opacity-50 bg-acento enabled:hover:bg-acento-hover"
             >
               {saving ? (
                 <div
@@ -515,11 +427,7 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
           </Campo>
           {error && (
             <p
-              className="text-xs px-3 py-2 rounded-lg"
-              style={{
-                color: "var(--kipu-danger)",
-                background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
-              }}
+              className="text-xs px-3 py-2 rounded-lg text-peligro bg-peligro-suave"
             >
               {error}
             </p>
@@ -528,13 +436,7 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
             <button
               type="button"
               onClick={cerrar}
-              className="flex-1 py-2.5 rounded-lg text-sm transition-colors"
-              style={{
-                border: "1px solid var(--kipu-border)",
-                color: "var(--kipu-muted)",
-              }}
-              onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
-              onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-muted)"}
+              className="flex-1 py-2.5 rounded-lg text-sm transition-colors border border-borde text-tenue hover:text-texto"
             >
               Cancelar
             </button>
@@ -542,14 +444,7 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
               type="button"
               onClick={() => guardarEstab(modal.estab.id)}
               disabled={saving}
-              className="flex-1 py-2.5 rounded-lg text-white text-sm font-medium flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
-              style={{ background: "var(--kipu-accent)" }}
-              onMouseEnter={e => {
-                if (!saving) e.currentTarget.style.background = "var(--kipu-accent-h)";
-              }}
-              onMouseLeave={e => {
-                if (!saving) e.currentTarget.style.background = "var(--kipu-accent)";
-              }}
+              className="flex-1 py-2.5 rounded-lg text-white text-sm font-medium flex items-center justify-center gap-2 transition-colors disabled:opacity-50 bg-acento enabled:hover:bg-acento-hover"
             >
               {saving ? (
                 <div
@@ -597,11 +492,7 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
           </Campo>
           {error && (
             <p
-              className="text-xs px-3 py-2 rounded-lg"
-              style={{
-                color: "var(--kipu-danger)",
-                background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
-              }}
+              className="text-xs px-3 py-2 rounded-lg text-peligro bg-peligro-suave"
             >
               {error}
             </p>
@@ -610,13 +501,7 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
             <button
               type="button"
               onClick={cerrar}
-              className="flex-1 py-2.5 rounded-lg text-sm transition-colors"
-              style={{
-                border: "1px solid var(--kipu-border)",
-                color: "var(--kipu-muted)",
-              }}
-              onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
-              onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-muted)"}
+              className="flex-1 py-2.5 rounded-lg text-sm transition-colors border border-borde text-tenue hover:text-texto"
             >
               Cancelar
             </button>
@@ -624,14 +509,7 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
               type="button"
               onClick={crearPunto}
               disabled={saving}
-              className="flex-1 py-2.5 rounded-lg text-white text-sm font-medium flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
-              style={{ background: "var(--kipu-accent)" }}
-              onMouseEnter={e => {
-                if (!saving) e.currentTarget.style.background = "var(--kipu-accent-h)";
-              }}
-              onMouseLeave={e => {
-                if (!saving) e.currentTarget.style.background = "var(--kipu-accent)";
-              }}
+              className="flex-1 py-2.5 rounded-lg text-white text-sm font-medium flex items-center justify-center gap-2 transition-colors disabled:opacity-50 bg-acento enabled:hover:bg-acento-hover"
             >
               {saving ? (
                 <div
@@ -666,11 +544,7 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
           </Campo>
           {error && (
             <p
-              className="text-xs px-3 py-2 rounded-lg"
-              style={{
-                color: "var(--kipu-danger)",
-                background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
-              }}
+              className="text-xs px-3 py-2 rounded-lg text-peligro bg-peligro-suave"
             >
               {error}
             </p>
@@ -679,13 +553,7 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
             <button
               type="button"
               onClick={cerrar}
-              className="flex-1 py-2.5 rounded-lg text-sm transition-colors"
-              style={{
-                border: "1px solid var(--kipu-border)",
-                color: "var(--kipu-muted)",
-              }}
-              onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
-              onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-muted)"}
+              className="flex-1 py-2.5 rounded-lg text-sm transition-colors border border-borde text-tenue hover:text-texto"
             >
               Cancelar
             </button>
@@ -693,14 +561,7 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
               type="button"
               onClick={() => guardarPunto(modal.punto.id)}
               disabled={saving}
-              className="flex-1 py-2.5 rounded-lg text-white text-sm font-medium flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
-              style={{ background: "var(--kipu-accent)" }}
-              onMouseEnter={e => {
-                if (!saving) e.currentTarget.style.background = "var(--kipu-accent-h)";
-              }}
-              onMouseLeave={e => {
-                if (!saving) e.currentTarget.style.background = "var(--kipu-accent)";
-              }}
+              className="flex-1 py-2.5 rounded-lg text-white text-sm font-medium flex items-center justify-center gap-2 transition-colors disabled:opacity-50 bg-acento enabled:hover:bg-acento-hover"
             >
               {saving ? (
                 <div
@@ -720,14 +581,10 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
       {modal?.tipo === "secuencial" && (
         <Modal title={`Secuenciales — Punto ${modal.punto.codigo}`} onClose={cerrar}>
           <div
-            className="flex items-start gap-3 rounded-lg px-3 py-2.5"
-            style={{
-              background: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)",
-              border: "1px solid color-mix(in srgb, var(--kipu-warning) 20%, transparent)",
-            }}
+            className="flex items-start gap-3 rounded-lg px-3 py-2.5 bg-alerta/10 border border-alerta/20"
           >
-            <AlertTriangle size={14} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-warning)" }} />
-            <p className="text-xs" style={{ color: "var(--kipu-warning)" }}>
+            <AlertTriangle size={14} className="shrink-0 mt-0.5 text-alerta" />
+            <p className="text-xs text-alerta">
               Solo modifica si hay un hueco en la secuencia o necesitas reiniciar.
               El SRI puede rechazar comprobantes con secuenciales duplicados.
             </p>
@@ -735,12 +592,12 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
 
           {/* Producción */}
           <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--kipu-success)" }}>
+            <p className="text-xs font-semibold uppercase tracking-wider text-exito">
               Producción
             </p>
             {Object.entries(modal.punto.secuenciales?.produccion || {}).map(([tipo, sec]: [string, any]) => (
               <div key={`prod-${tipo}`} className="flex items-center gap-3">
-                <span className="text-xs font-bold w-10 shrink-0" style={{ color: "var(--kipu-subtle)" }}>{tipo}</span>
+                <span className="text-xs font-bold w-10 shrink-0 text-sutil">{tipo}</span>
                 <input
                   type="number"
                   defaultValue={sec}
@@ -758,15 +615,14 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
 
           {/* Pruebas */}
           <div
-            className="space-y-2 pt-2"
-            style={{ borderTop: "1px solid var(--kipu-border)" }}
+            className="space-y-2 pt-2 border-t border-borde"
           >
-            <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--kipu-info)" }}>
+            <p className="text-xs font-semibold uppercase tracking-wider text-info">
               Pruebas / Sandbox
             </p>
             {Object.entries(modal.punto.secuenciales?.pruebas || {}).map(([tipo, sec]: [string, any]) => (
               <div key={`test-${tipo}`} className="flex items-center gap-3">
-                <span className="text-xs font-bold w-10 shrink-0" style={{ color: "var(--kipu-subtle)" }}>{tipo}</span>
+                <span className="text-xs font-bold w-10 shrink-0 text-sutil">{tipo}</span>
                 <input
                   type="number"
                   defaultValue={sec}
@@ -784,11 +640,7 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
 
           {error && (
             <p
-              className="text-xs px-3 py-2 rounded-lg"
-              style={{
-                color: "var(--kipu-danger)",
-                background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
-              }}
+              className="text-xs px-3 py-2 rounded-lg text-peligro bg-peligro-suave"
             >
               {error}
             </p>
@@ -798,13 +650,7 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
             <button
               type="button"
               onClick={cerrar}
-              className="flex-1 py-2.5 rounded-lg text-sm transition-colors"
-              style={{
-                border: "1px solid var(--kipu-border)",
-                color: "var(--kipu-muted)",
-              }}
-              onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
-              onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-muted)"}
+              className="flex-1 py-2.5 rounded-lg text-sm transition-colors border border-borde text-tenue hover:text-texto"
             >
               Cancelar
             </button>
@@ -832,12 +678,11 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
                   );
                   invalidarEstructuraLocal(); cerrar();
                 } catch (e: any) {
-                  setError(e?.response?.data?.detail ?? "Error al actualizar secuenciales.");
+                  setError(detalleError(e, "Error al actualizar secuenciales."));
                 } finally { setSaving(false); }
               }}
               disabled={saving}
-              className="flex-1 py-2.5 rounded-lg text-white text-sm font-medium flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
-              style={{ background: "var(--kipu-warning)" }}
+              className="flex-1 py-2.5 rounded-lg text-white text-sm font-medium flex items-center justify-center gap-2 transition-colors disabled:opacity-50 bg-alerta"
             >
               {saving ? (
                 <div

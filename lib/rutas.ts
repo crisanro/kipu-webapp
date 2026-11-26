@@ -4,8 +4,8 @@
 // en la ruta (/documentos/123): la app nativa es un export estático y no puede
 // tener rutas dinámicas. Todo enlace a un detalle debe salir de aquí.
 //
-// Las direcciones viejas (/documentos/123) siguen funcionando en la web: las
-// páginas `[id]/page.web.tsx` redirigen. Para lo que llega del backend
+// Las direcciones viejas (/documentos/123) siguen funcionando en la web: los
+// `[id]/route.web.ts` redirigen (redirigirVieja). Para lo que llega del backend
 // (notificaciones, push) está `rutaInterna`, que también sirve en la app.
 
 import { ES_APP_NATIVA, esRutaSoloWeb } from "./plataforma";
@@ -34,6 +34,21 @@ export function conQuery(
   }
   const s = p.toString();
   return s ? `${destino}&${s}` : destino;
+}
+
+/**
+ * GET de una dirección vieja (app/…/[id]/route.web.ts, solo en la web): redirige
+ * con 307 a la nueva conservando el resto de la query, para que los enlaces
+ * guardados, los correos y lo que manda el backend sigan funcionando.
+ *   export const GET = redirigirVieja(rutas.cuenta);
+ */
+export function redirigirVieja(destino: (valor: string) => string) {
+  return async (request: Request, { params }: { params: Promise<Record<string, string>> }) => {
+    const [valor] = Object.values(await params);   // el único segmento: id, periodo o anio
+    const query   = Object.fromEntries(new URL(request.url).searchParams);
+    // Location relativa: detrás de Traefik request.url no trae el dominio público
+    return new Response(null, { status: 307, headers: { Location: conQuery(destino(valor), query) } });
+  };
 }
 
 // Ruta vieja → nueva. El orden importa: /documentos/recibidos/… antes que

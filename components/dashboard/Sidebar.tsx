@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import LogoKipu from "@/components/auth/LogoKipu";
+import { ATAJO_PALETA, EVENTO_PALETA } from "@/components/shell/PaletaComandos";
 import {
   X,
   ChevronUp,
@@ -16,19 +17,20 @@ import {
   LogOut,
   HelpCircle,
   Lock,
+  Search,
 } from "lucide-react";
-import { clsx } from "clsx";
+import { cn } from "@/components/ui/cn";
 import { NAV_GROUPS, aplicaALaEmpresa, bloqueadoPorPlan, tienePermiso } from "./DashboardNav";
 import { ThemeToggle } from "./ThemeToggle";
 import { useAuthStore } from "@/store/auth.store";
-import { ES_APP_NATIVA, rutaFueraDelPlan } from "@/lib/plataforma";
+import { ES_APP_NATIVA, nombrePlan, rutaFueraDelPlan } from "@/lib/plataforma";
 
 // Tarjeta del plan: enlace a /planes en la web; en la app de las tiendas no se
 // ofrecen planes, así que es solo un recuadro informativo
 function EnlacePlan({ children }: { children: React.ReactNode }) {
   if (ES_APP_NATIVA) {
     return (
-      <div className="block rounded-lg px-3 py-2.5" style={{ background: "var(--kipu-bg)" }}>
+      <div className="block rounded-lg px-3 py-2.5 bg-fondo">
         {children}
       </div>
     );
@@ -36,13 +38,7 @@ function EnlacePlan({ children }: { children: React.ReactNode }) {
   return (
     <Link
       href="/planes"
-      className="block rounded-lg px-3 py-2.5 transition-colors"
-      style={{ background: "var(--kipu-bg)" }}
-      onMouseEnter={(e) =>
-        (e.currentTarget.style.background =
-          "color-mix(in srgb, var(--kipu-border) 60%, transparent)")
-      }
-      onMouseLeave={(e) => (e.currentTarget.style.background = "var(--kipu-bg)")}
+      className="block rounded-lg px-3 py-2.5 transition-colors bg-fondo hover:bg-borde/60"
     >
       {children}
     </Link>
@@ -52,8 +48,6 @@ function EnlacePlan({ children }: { children: React.ReactNode }) {
 interface SidebarProps {
   sidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
-  mounted: boolean;
-  resolvedTheme?: string;
   empresa: any;
   empresas: any[];
   role: string | null;
@@ -71,8 +65,6 @@ interface SidebarProps {
 export function Sidebar({
   sidebarOpen,
   setSidebarOpen,
-  mounted,
-  resolvedTheme,
   empresa,
   empresas,
   role,
@@ -110,8 +102,8 @@ export function Sidebar({
   };
 
   const planGratis = !empresa.suscripcion_activa && !!empresa.emision_gratis;   // plan gratis encendido
-  // Nombre visible del plan (el backend manda PRO o AL_DIA). Sin suscripción es "Gratis", tenga o no créditos
-  const planLabel = !empresa.suscripcion_activa ? "Gratis" : empresa.suscripcion?.plan === "AL_DIA" ? "Kipu Al Día" : "Kipu Pro";
+  // Mismo nombre que en Más: en la app, sin "Gratis" ni "Kipu Pro" (null = sin nombre)
+  const planLabel = nombrePlan(empresa);
   // Con el plan gratis el panel emite sin créditos: no hay que alarmar por no tenerlos
   const sinCreditos = !empresa.suscripcion_activa && !planGratis && (empresa.balance_api ?? 0) === 0;
 
@@ -123,7 +115,7 @@ export function Sidebar({
 
   return (
     <aside
-      className={clsx(
+      className={cn(
         "fixed lg:static inset-y-0 left-0 z-30 w-64 flex flex-col transition-transform duration-200",
         // En móvil es un panel fijo de alto completo: dentro del área segura (globals.css)
         "max-lg:pt-[var(--sa-top)] max-lg:pb-[var(--sa-bottom)]",
@@ -136,54 +128,51 @@ export function Sidebar({
     >
       {/* Logo */}
       <div
-        className="flex items-center gap-2 px-5 py-5"
-        style={{ borderBottom: "2px solid var(--kipu-border)" }}
+        className="flex items-center gap-2 px-5 py-5 border-b-2 border-borde"
       >
-        {mounted ? (
-          <Image
-            src={resolvedTheme === "dark" ? "/images/logo-dark.svg" : "/images/logo.svg"}
-            alt="Kipu"
-            width={100}
-            height={32}
-            priority
-          />
-        ) : (
-          <div className="w-[100px] h-[32px]" />
-        )}
+        <LogoKipu className="h-7" />
         <button
-          className="ml-auto lg:hidden"
-          style={{ color: "var(--kipu-muted)" }}
+          className="ml-auto lg:hidden text-tenue"
           onClick={() => setSidebarOpen(false)}
         >
           <X size={18} />
         </button>
       </div>
 
+      {/* Paleta de comandos (Ctrl+K / ⌘K) */}
+      <div className="px-3 pt-3">
+        <button
+          type="button"
+          onClick={() => window.dispatchEvent(new Event(EVENTO_PALETA))}
+          className="flex h-9 w-full items-center gap-2 rounded-lg border border-borde bg-fondo px-3 text-sm text-sutil transition-colors hover:text-texto"
+        >
+          <Search size={15} aria-hidden />
+          <span className="flex-1 text-left">Buscar…</span>
+          <kbd className="rounded border border-borde bg-superficie px-1.5 py-px font-sans text-[10px] text-tenue">{ATAJO_PALETA}</kbd>
+        </button>
+      </div>
+
       {/* Selector empresa */}
       <button
         onClick={onOpenSelectorEmp}
-        className="px-4 py-3 text-left transition-colors w-full group"
-        style={{ borderBottom: "2px solid var(--kipu-border)" }}
-        onMouseEnter={(e) => (e.currentTarget.style.background = "var(--kipu-bg)")}
-        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+        className="px-4 py-3 text-left transition-colors w-full group border-b-2 border-borde hover:bg-fondo"
       >
-        <p className="text-xs mb-0.5" style={{ color: "var(--kipu-subtle)" }}>
+        <p className="text-xs mb-0.5 text-sutil">
           Empresa activa
         </p>
         <div className="flex items-center justify-between">
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium truncate" style={{ color: "var(--kipu-text)" }}>
+            <p className="text-sm font-medium truncate text-texto">
               {empresa.nombre_comercial || empresa.razon_social}
             </p>
-            <p className="text-xs" style={{ color: "var(--kipu-muted)" }}>
+            <p className="text-xs text-tenue">
               {empresa.ruc}
             </p>
           </div>
           {empresas.length > 1 && (
             <ChevronUp
               size={12}
-              className="rotate-180 ml-2 shrink-0"
-              style={{ color: "var(--kipu-subtle)" }}
+              className="rotate-180 ml-2 shrink-0 text-sutil"
             />
           )}
         </div>
@@ -207,7 +196,7 @@ export function Sidebar({
         {NAV_GROUPS.map((group, gi) => (
           <div key={gi}>
             {group.separator && (
-              <div className="my-2" style={{ borderTop: "2px solid var(--kipu-border)" }} />
+              <div className="my-2 border-t-2 border-borde" />
             )}
             {"children" in group && group.children ? (
               tienePermiso(empresa, group.permiso ?? null) && (
@@ -241,8 +230,7 @@ export function Sidebar({
                   </button>
                   {(gruposAbiertos[group.base ?? ""] ?? false) && (
                     <div
-                      className="mt-0.5 ml-4 pl-3 space-y-0.5"
-                      style={{ borderLeft: "2px solid var(--kipu-border)" }}
+                      className="mt-0.5 ml-4 pl-3 space-y-0.5 border-l-2 border-borde"
                     >
                       {group.children
                         .filter((child) => tienePermiso(empresa, (child as any).permiso ?? null)
@@ -328,7 +316,7 @@ export function Sidebar({
         {/* Equipo de Kipu Al Día: superadmin y contadores (solo en la web) */}
         {equipoAlDia && !ES_APP_NATIVA && (
           <>
-            <div className="my-2" style={{ borderTop: "2px solid var(--kipu-border)" }} />
+            <div className="my-2 border-t-2 border-borde" />
             <Link
               href="/equipo"
               onClick={() => setSidebarOpen(false)}
@@ -344,7 +332,7 @@ export function Sidebar({
 
         {role === "superadmin" && !ES_APP_NATIVA && (
           <>
-            <div className="my-2" style={{ borderTop: "2px solid var(--kipu-border)" }} />
+            <div className="my-2 border-t-2 border-borde" />
             <Link
               href="/admin"
               onClick={() => setSidebarOpen(false)}
@@ -360,33 +348,35 @@ export function Sidebar({
       </nav>
 
       {/* Footer sidebar */}
-      <div className="px-4 py-4 space-y-3" style={{ borderTop: "2px solid var(--kipu-border)" }}>
+      <div className="px-4 py-4 space-y-3 border-t-2 border-borde">
         {/* Plan activo: en la web lleva a /planes; en la app solo informa */}
         <EnlacePlan>
-          <p className="text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>
-            Plan activo
+          <p className="text-xs mb-1 text-sutil">
+            {planLabel ? "Plan activo" : "Tu cuenta"}
           </p>
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-bold" style={{ color: "var(--kipu-text)" }}>
-                {planLabel}
-              </p>
-              <p className="text-xs" style={{ color: "var(--kipu-muted)" }}>
-                {empresa.suscripcion?.estado === "TRIAL"
-                  ? "⏳ En prueba"
-                  : empresa.suscripcion_activa
-                  ? "✅ Activo"
-                  : planGratis
-                  ? "🆓 Facturas gratis desde el panel"
-                  : "🆓 Emitiendo con créditos"}
-              </p>
-            </div>
+            {planLabel && (
+              <div>
+                <p className="text-sm font-bold text-texto">
+                  {planLabel}
+                </p>
+                <p className="text-xs text-tenue">
+                  {empresa.suscripcion?.estado === "TRIAL"
+                    ? "⏳ En prueba"
+                    : empresa.suscripcion_activa
+                    ? "✅ Activo"
+                    : planGratis
+                    ? "🆓 Facturas gratis desde el panel"
+                    : "🆓 Emitiendo con créditos"}
+                </p>
+              </div>
+            )}
             {empresa.suscripcion_activa && empresa.balance_api > 0 && (
               <div className="text-right">
-                <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+                <p className="text-xs text-sutil">
                   Créditos
                 </p>
-                <p className="text-sm font-bold" style={{ color: "var(--kipu-warning)" }}>
+                <p className="text-sm font-bold text-alerta">
                   {empresa.balance_api}
                 </p>
               </div>
@@ -394,20 +384,20 @@ export function Sidebar({
           </div>
           {sinCreditos && (
             <div className="flex items-center gap-1 mt-1.5">
-              <AlertTriangle size={11} style={{ color: "var(--kipu-danger)" }} />
-              <span className="text-xs" style={{ color: "var(--kipu-danger)" }}>
+              <AlertTriangle className="text-peligro" size={11} />
+              <span className="text-xs text-peligro">
                 {ES_APP_NATIVA ? "Sin comprobantes disponibles" : "Sin créditos — activa tu plan"}
               </span>
             </div>
           )}
           {planGratis && !ES_APP_NATIVA && (
-            <p className="text-xs mt-1.5 font-medium" style={{ color: "var(--kipu-accent)" }}>
+            <p className="text-xs mt-1.5 font-medium text-acento">
               ✨ Pásate a Pro: sin límite y el 104 completo
             </p>
           )}
           {!empresa.suscripcion_activa && !planGratis && !sinCreditos && (
             <div className="flex items-center gap-1 mt-1.5">
-              <span className="text-xs" style={{ color: "var(--kipu-warning)" }}>
+              <span className="text-xs text-alerta">
                 ⚡ {empresa.balance_api} crédito{empresa.balance_api !== 1 ? "s" : ""} disponible
                 {empresa.balance_api !== 1 ? "s" : ""}
               </span>
@@ -459,12 +449,7 @@ export function Sidebar({
           </button>
         ) : (
           <div
-            className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs"
-            style={{
-              background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
-              border: "1px solid color-mix(in srgb, var(--kipu-danger) 20%, transparent)",
-              color: "var(--kipu-danger)",
-            }}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs bg-peligro-suave border border-peligro/20 text-peligro"
           >
             <AlertTriangle size={13} className="shrink-0" />
             <span>Sin firma — no puedes emitir</span>
@@ -473,29 +458,18 @@ export function Sidebar({
 
         {/* Barra de iconos: Notificaciones · Soporte · Tema · Cerrar sesión */}
         <div
-          className="flex items-center justify-between pt-2"
-          style={{ borderTop: "1px solid var(--kipu-border)" }}
+          className="flex items-center justify-between pt-2 border-t border-borde"
         >
           {/* Notificaciones */}
           <button
             onClick={onOpenDrawer}
-            className="relative p-2 rounded-lg transition-colors"
-            style={{ color: "var(--kipu-muted)" }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.color = "var(--kipu-text)";
-              e.currentTarget.style.background = "var(--kipu-border)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.color = "var(--kipu-muted)";
-              e.currentTarget.style.background = "transparent";
-            }}
+            className="relative p-2 rounded-lg transition-colors text-tenue hover:text-texto hover:bg-borde"
             title="Notificaciones"
           >
             <Bell size={18} />
             {noLeidas > 0 && (
               <span
-                className="absolute -top-0.5 -right-0.5 flex items-center justify-center w-4 h-4 rounded-full text-white text-[9px] font-bold"
-                style={{ background: "var(--kipu-accent)" }}
+                className="absolute -top-0.5 -right-0.5 flex items-center justify-center w-4 h-4 rounded-full text-white text-[9px] font-bold bg-acento"
               >
                 {noLeidas > 9 ? "9+" : noLeidas}
               </span>
@@ -529,17 +503,7 @@ export function Sidebar({
           {/* Cerrar sesión */}
           <button
             onClick={onOpenLogoutModal}
-            className="p-2 rounded-lg transition-colors"
-            style={{ color: "var(--kipu-muted)" }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.color = "var(--kipu-danger)";
-              e.currentTarget.style.background =
-                "color-mix(in srgb, var(--kipu-danger) 10%, transparent)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.color = "var(--kipu-muted)";
-              e.currentTarget.style.background = "transparent";
-            }}
+            className="p-2 rounded-lg transition-colors text-tenue hover:text-peligro hover:bg-peligro-suave"
             title="Cerrar sesión"
           >
             <LogOut size={18} />

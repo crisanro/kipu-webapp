@@ -27,13 +27,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     <div>
       <div className="max-w-6xl mx-auto px-4 md:px-6 pt-4 md:pt-6">
         <div className="mb-4">
-          <h1 className="text-xl font-bold" style={{ color: "var(--kipu-text)" }}>Panel Admin</h1>
-          <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>Gestión interna de Kipu</p>
+          <h1 className="text-xl font-bold text-texto">Panel Admin</h1>
+          <p className="text-sm text-sutil">Gestión interna de Kipu</p>
         </div>
 
         <nav
-          className="flex gap-1 overflow-x-auto"
-          style={{ borderBottom: "1px solid var(--kipu-border)" }}
+          className="flex gap-1 overflow-x-auto border-b border-borde"
         >
           {NAV.map(({ href, label, icon: Icon, exact }) => {
             const active = isActive(href, exact);

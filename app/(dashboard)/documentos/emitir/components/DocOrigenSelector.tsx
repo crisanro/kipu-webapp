@@ -1,8 +1,22 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+// Documento que se modifica o se retiene (notas de crédito y débito, retención).
+//   - Sin elegir: buscador dentro de la tarjeta; si no se ha escrito nada, los
+//     últimos documentos (casi siempre es uno reciente). En la compu, Enter elige
+//     el primero.
+//   - Documento que no está en Kipu ("externo"): en una hoja con campos grandes y
+//     el teclado correcto.
+//   - Elegido: una tarjeta con número, nombre, fecha y total; la X lo cambia.
+import { useEffect, useState } from "react";
 import api from "@/lib/api";
-import { Search, FileText, X, ToggleLeft, ToggleRight, AlertTriangle } from "lucide-react";
-import { tecladoIdentificacion, formatoNumeroDoc } from "@/lib/teclado";
+import { Search, FileText, X, Loader2, Clock, FilePlus2, AlertTriangle } from "lucide-react";
+import { formatoNumeroDoc } from "@/lib/teclado";
+import Hoja from "@/components/ui/Hoja";
+import Boton from "@/components/ui/Boton";
+import BotonIcono from "@/components/ui/BotonIcono";
+import ChipsFiltro from "@/components/ui/ChipsFiltro";
+import { Campo, Entrada, type Teclado } from "@/components/ui/Campo";
+import { cn } from "@/components/ui/cn";
+import { dosDecimales } from "@/lib/dinero";
 
 export interface DocOrigenKipu {
   id:             string;
@@ -41,18 +55,12 @@ interface Props {
   value:        DocOrigen;
   onChange:     (doc: DocOrigen) => void;
   label?:       string;
-  colorAccent?: string;
-  nota?:        string;           // ← mensaje informativo opcional
+  nota?:        string;           // mensaje informativo opcional
   /** Si viene, no se ofrece "Externo" (documento que no está en Kipu): en su lugar, este texto. */
   externoNoDisponible?: string;
 }
 
-const fmt = (n: number) => parseFloat(String(n || 0)).toFixed(2);
-
-// Helper para formatear automáticamente número de comprobante SRI (001-001-000000001)
-const formatNumeroDoc = formatoNumeroDoc;
-
-// Helper para formatear fecha automáticamente a dd/mm/yyyy
+// dd/mm/aaaa mientras se escribe
 const formatFechaDoc = (val: string): string => {
   const solo = val.replace(/[^0-9]/g, "");
   if (solo.length <= 2) return solo;
@@ -61,542 +69,418 @@ const formatFechaDoc = (val: string): string => {
 };
 
 const TODOS_TIPOS_COD = [
-  { value: "01", label: "Factura",                tipos: ["FAC"] },
-  { value: "03", label: "Liquidación de compra", tipos: ["LIQ"] },
-  { value: "05", label: "Nota de débito",        tipos: ["NDB"] },
+  { valor: "01", etiqueta: "Factura",               tipos: ["FAC"], corto: "FAC" },
+  { valor: "03", etiqueta: "Liquidación de compra", tipos: ["LIQ"], corto: "LIQ" },
+  { valor: "05", etiqueta: "Nota de débito",        tipos: ["NDB"], corto: "NDB" },
 ];
 
 const TIPOS_ID = [
-  { value: "04", label: "RUC"       },
-  { value: "05", label: "Cédula"    },
-  { value: "06", label: "Pasaporte" },
-  { value: "08", label: "Exterior"  },
+  { valor: "04", etiqueta: "RUC"       },
+  { valor: "05", etiqueta: "Cédula"    },
+  { valor: "06", etiqueta: "Pasaporte" },
+  { valor: "08", etiqueta: "Exterior"  },
 ];
 
+const TECLADO_ID: Record<string, Teclado> = { "04": "ruc", "05": "cedula", "06": "pasaporte", "08": "pasaporte" };
+
 const TIPO_DOC_LABEL: Record<string, string> = {
-  FAC: "Factura",
-  LIQ: "Liquidación",
-  NCR: "Nota de crédito",
-  NDB: "Nota de débito",
-  RET: "Retención",
+  FAC: "factura",
+  LIQ: "liquidación",
+  NCR: "nota de crédito",
+  NDB: "nota de débito",
+  RET: "retención",
 };
+
+const FECHA_OK = /^\d{2}\/\d{2}\/\d{4}$/;
+const NUMERO_OK = /^\d{3}-\d{3}-\d{9}$/;
+
+/** Fila del API (emitidos o recibidos: traen nombres distintos). */
+type FilaApi = Partial<DocOrigenKipu> & { id: string; numero_doc: string; fecha_emision: string; importe_total: number;
+  razon_social_proveedor?: string; ruc_proveedor?: string };
+
+function aDocKipu(d: FilaApi): DocOrigenKipu {
+  return {
+    id:              d.id,
+    numero_doc:      d.numero_doc,
+    tipo_doc:        d.tipo_doc || "FAC",
+    cod_doc:         d.cod_doc  || "01",
+    fecha_emision:   d.fecha_emision,
+    importe_total:   d.importe_total,
+    subtotal_base:   d.subtotal_base,
+    valor_iva_total: d.valor_iva_total,
+    razon_social:    d.razon_social || d.razon_social_proveedor || "",
+    identificacion:  d.identificacion || d.ruc_proveedor || "",
+    estado_sri:      d.estado_sri || "",
+  };
+}
+
+const manualVacio = (cod_doc: string): DocOrigenManual => ({
+  numero: "", fecha: "", cod_doc,
+  cliente: { tipo_id: "05", identificacion: "", razon_social: "", email: "" },
+});
+
+// ── Lo que las pantallas de emitir hacen con el documento elegido ─────────────
+
+const CONSUMIDOR_FINAL = "9999999999999";
+
+/** El documento es a Consumidor Final: el SRI no deja modificarlo con notas de crédito ni de débito. */
+export function esConsumidorFinal(doc: DocOrigen): boolean {
+  if (doc?.tipo === "kipu")   return doc.data.identificacion === CONSUMIDOR_FINAL;
+  if (doc?.tipo === "manual") return doc.data.cliente?.identificacion === CONSUMIDOR_FINAL;
+  return false;
+}
+
+/** "001-002-000000123": usePuntoEmision propone esa misma serie. */
+export function numeroDocOrigen(doc: DocOrigen): string | null {
+  if (doc?.tipo === "kipu")   return doc.data.numero_doc;
+  if (doc?.tipo === "manual") return doc.data.numero;
+  return null;
+}
+
+/** Campos del payload que dicen qué documento se modifica (el de Kipu por su id; el externo, completo). */
+export function payloadDocOrigen(doc: NonNullable<DocOrigen>, campoId = "doc_origen_id"): Record<string, unknown> {
+  if (doc.tipo === "kipu") return { [campoId]: doc.data.id };
+  return {
+    doc_origen_numero:  doc.data.numero,
+    doc_origen_fecha:   doc.data.fecha,
+    doc_origen_cod_doc: doc.data.cod_doc,
+    cliente_origen:     doc.data.cliente,
+  };
+}
+
+interface InfoXml {
+  razonSocialComprador?: string; razonSocialProveedor?: string;
+  identificacionComprador?: string; identificacionProveedor?: string;
+}
+/** Lo que se usa de GET /documentos/{id}. */
+interface DocumentoApi {
+  id: string; numero_doc: string; tipo_doc?: string; cod_doc?: string;
+  fecha_emision: string; importe_total: number; estado_sri: string;
+  datos?: { infoFactura?: InfoXml; infoLiquidacionCompra?: InfoXml };
+}
+
+/** Documento emitido tal como lo devuelve GET /documentos/{id} (con ?doc_id= la pantalla llega con él). */
+export function docOrigenDeDocumento(d: DocumentoApi): DocOrigen {
+  const info: InfoXml = d.datos?.infoFactura || d.datos?.infoLiquidacionCompra || {};
+  return {
+    tipo: "kipu",
+    data: {
+      id:             d.id,
+      numero_doc:     d.numero_doc,
+      tipo_doc:       d.tipo_doc || "FAC",
+      cod_doc:        d.cod_doc || "01",
+      fecha_emision:  d.fecha_emision,
+      importe_total:  d.importe_total,
+      razon_social:   info.razonSocialComprador || info.razonSocialProveedor || "",
+      identificacion: info.identificacionComprador || info.identificacionProveedor || "",
+      estado_sri:     d.estado_sri,
+    },
+  };
+}
+
+/** Aviso cuando el documento elegido es a Consumidor Final (notas de crédito y débito). */
+export function AvisoOrigenConsumidorFinal() {
+  return (
+    <div className="flex items-start gap-3 rounded-xl border border-peligro/20 bg-peligro-suave px-4 py-3" role="alert">
+      <AlertTriangle size={16} className="mt-0.5 shrink-0 text-peligro" aria-hidden />
+      <div>
+        <p className="text-sm font-medium text-peligro-texto">No disponible para Consumidor Final</p>
+        <p className="mt-1 text-xs text-tenue">
+          Por normativa del SRI, los comprobantes emitidos a Consumidor Final no se modifican con notas de crédito ni de débito.
+        </p>
+      </div>
+    </div>
+  );
+}
 
 export default function DocOrigenSelector({
   tiposDoc,
   tabla,
   value,
   onChange,
-  label       = "Documento origen",
-  colorAccent = "indigo",
+  label = "Documento origen",
   nota,
   externoNoDisponible,
 }: Props) {
-  const [modo,     setModo]     = useState<"kipu" | "manual">("kipu");
   const [query,    setQuery]    = useState("");
   const [results,  setResults]  = useState<DocOrigenKipu[]>([]);
   const [loading,  setLoading]  = useState(false);
-  const [showDrop, setShowDrop] = useState(false);
-  const dropRef = useRef<HTMLDivElement>(null);
+  const [ultimos,  setUltimos]  = useState<DocOrigenKipu[]>([]);
 
-  // Tipos permitidos como array
   const tiposPermitidos = tiposDoc.split(",").map(t => t.trim().toUpperCase());
+  const tiposCod = TODOS_TIPOS_COD.filter(t => t.tipos.some(tipo => tiposPermitidos.includes(tipo)));
+  const codDocInicial = tiposCod[0]?.valor ?? "01";
 
-  // Tipos de cod para el formulario manual — filtrados según tiposDoc
-  const tiposCodFiltrados = TODOS_TIPOS_COD.filter(t =>
-    t.tipos.some(tipo => tiposPermitidos.includes(tipo))
-  );
+  // Hoja "documento externo": se edita un borrador y se entrega al confirmar
+  const [manual, setManual] = useState<DocOrigenManual | null>(null);
 
-  // cod_doc inicial para el formulario manual
-  const codDocInicial = tiposCodFiltrados[0]?.value ?? "01";
+  const url = (q: string, limit: number) => {
+    const tipoParam = tiposPermitidos.length > 0 ? `&tipo_doc=${tiposPermitidos.join(",")}` : "";
+    const qParam = q ? `&q=${encodeURIComponent(q)}` : "";
+    return tabla === "emitidos"
+      ? `/api/v1/app/documentos?estado_sri=AUTORIZADO${tipoParam}${qParam}&limit=${limit}`
+      : `/api/v1/app/recibidos?limit=${limit}${qParam}`;
+  };
+  const filtrar = (rows: FilaApi[]) => rows.filter((d) =>
+    tabla === "recibidos" || tiposPermitidos.includes((d.tipo_doc ?? "").toUpperCase()));
 
-  const [manual, setManual] = useState<DocOrigenManual>({
-    numero:  "",
-    fecha:   "",
-    cod_doc: codDocInicial,
-    cliente: { tipo_id: "05", identificacion: "", razon_social: "", email: "" },
-  });
-
-  const accentColor = colorAccent === "amber" 
-    ? "var(--kipu-warning)" 
-    : colorAccent === "blue" 
-    ? "var(--kipu-info)" 
-    : "var(--kipu-accent)";
-
-  const accentBorder = colorAccent === "amber"
-    ? "color-mix(in srgb, var(--kipu-warning) 30%, transparent)"
-    : colorAccent === "blue"
-    ? "color-mix(in srgb, var(--kipu-info) 30%, transparent)"
-    : "color-mix(in srgb, var(--kipu-accent) 30%, transparent)";
-
-  const accentBg = colorAccent === "amber"
-    ? "color-mix(in srgb, var(--kipu-warning) 10%, transparent)"
-    : colorAccent === "blue"
-    ? "color-mix(in srgb, var(--kipu-info) 10%, transparent)"
-    : "color-mix(in srgb, var(--kipu-accent) 10%, transparent)";
-
-  // Cerrar dropdown al hacer clic fuera
+  // Los últimos documentos, para elegir sin escribir
   useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (dropRef.current && !dropRef.current.contains(e.target as Node)) {
-        setShowDrop(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
+    if (value) return;
+    let vivo = true;
+    api.get(url("", 5))
+      .then(res => { if (vivo) setUltimos(filtrar(res.data.data ?? []).map(aDocKipu)); })
+      .catch(() => {});
+    return () => { vivo = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tabla, tiposDoc, !!value]);
 
-  // Buscar documentos — filtrar por tiposDoc en el cliente
+  // Buscar mientras se escribe
+  const buscando = query.trim().length >= 3;
   useEffect(() => {
-    if (modo !== "kipu" || !query || query.length < 3) { setResults([]); return; }
+    if (!buscando) return;
     const t = setTimeout(async () => {
       setLoading(true);
       try {
-        const tipoParam = tiposPermitidos.length > 0
-          ? `&tipo_doc=${tiposPermitidos.join(",")}`
-          : "";
-
-        const endpoint = tabla === "emitidos"
-          ? `/api/v1/app/documentos?estado_sri=AUTORIZADO${tipoParam}&q=${encodeURIComponent(query)}&limit=8`
-          : `/api/v1/app/recibidos?q=${encodeURIComponent(query)}&limit=8`;
-
-        const res  = await api.get(endpoint);
-        const rows = res.data.data ?? [];
-
-        const filtrados = rows.filter((d: any) => {
-          if (tabla === "recibidos") return true;
-          return tiposPermitidos.includes(d.tipo_doc?.toUpperCase());
-        });
-
-        setResults(filtrados.map((d: any) => ({
-          id:             d.id,
-          numero_doc:     d.numero_doc,
-          tipo_doc:       d.tipo_doc    || "FAC",
-          cod_doc:        d.cod_doc     || "01",
-          fecha_emision: d.fecha_emision,
-          importe_total: d.importe_total,
-          subtotal_base:   d.subtotal_base,
-          valor_iva_total: d.valor_iva_total,
-          razon_social:   d.razon_social || d.razon_social_proveedor || "",
-          identificacion: d.identificacion || d.ruc_proveedor || "",
-          estado_sri:     d.estado_sri || "",
-        })));
-        setShowDrop(true);
+        const res = await api.get(url(query.trim(), 8));
+        setResults(filtrar(res.data.data ?? []).map(aDocKipu));
       } catch { setResults([]); }
       finally { setLoading(false); }
     }, 350);
     return () => clearTimeout(t);
-  }, [query, modo, tabla, tiposDoc]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, tabla, tiposDoc]);
 
   const seleccionar = (doc: DocOrigenKipu) => {
     onChange({ tipo: "kipu", data: doc });
     setQuery("");
-    setShowDrop(false);
+    setResults([]);
   };
 
   const limpiar = () => {
     onChange(null);
     setQuery("");
     setResults([]);
-    setManual({
-      numero: "", fecha: "", cod_doc: codDocInicial,
-      cliente: { tipo_id: "05", identificacion: "", razon_social: "", email: "" },
-    });
   };
+
+  const abrirManual = () => {
+    const m = manualVacio(codDocInicial);
+    // Si en el buscador se escribió un número de comprobante, la hoja ya lo trae
+    if (/^[\d-]+$/.test(query.trim())) m.numero = formatoNumeroDoc(query.trim());
+    setManual(m);
+  };
+
+  const errNumero = manual && manual.numero && !NUMERO_OK.test(manual.numero) ? "Formato 001-001-000000001." : null;
+  const errFecha  = manual && manual.fecha  && !FECHA_OK.test(manual.fecha)   ? "Formato dd/mm/aaaa." : null;
+  const puedeConfirmar = !!manual && NUMERO_OK.test(manual.numero) && FECHA_OK.test(manual.fecha)
+    && !!manual.cliente.identificacion.trim() && !!manual.cliente.razon_social.trim();
 
   const confirmarManual = () => {
-    if (!manual.numero.trim() || !manual.fecha.trim()) return;
-    if (!manual.cliente.identificacion.trim() || !manual.cliente.razon_social.trim()) return;
-    onChange({ tipo: "manual", data: manual });
+    if (!manual || !puedeConfirmar) return;
+    onChange({
+      tipo: "manual",
+      data: { ...manual, cliente: { ...manual.cliente, email: manual.cliente.email.trim().toLowerCase() } },
+    });
+    setManual(null);
+    setQuery("");
   };
 
+  const quien = tabla === "recibidos" ? "proveedor" : "cliente";
+  const queBusca = tiposPermitidos.map(t => TIPO_DOC_LABEL[t] ?? t).join(" o ");
+  const lista = buscando ? results : ultimos;
+
   return (
-    <div
-      className="rounded-xl p-4 space-y-3"
-      style={{
-        background: "var(--kipu-surface)",
-        border: "1px solid var(--kipu-border)",
-      }}
-    >
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <FileText size={15} style={{ color: accentColor }} />
-          <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>{label}</h2>
-          {/* Badge tipos permitidos */}
-          <div className="flex gap-1">
-            {tiposPermitidos.map(t => (
-              <span
-                key={t}
-                className="text-[10px] px-1.5 py-0.5 rounded font-bold"
-                style={{
-                  background: "color-mix(in srgb, var(--kipu-text) 8%, transparent)",
-                  color: "var(--kipu-muted)",
-                }}
-              >
-                {t}
-              </span>
-            ))}
-          </div>
-        </div>
-        {/* Toggle Kipu / Manual (o el aviso, si el externo no está disponible) */}
-        {!value && externoNoDisponible && (
-          <span className="text-[11px] text-right" style={{ color: "var(--kipu-subtle)" }}>
-            {externoNoDisponible}
-          </span>
-        )}
-        {!value && !externoNoDisponible && (
-          <div className="flex items-center gap-2">
-            <span className="text-xs" style={{ color: modo === "kipu" ? "var(--kipu-text)" : "var(--kipu-subtle)" }}>
-              En Kipu
-            </span>
-            <button
-              type="button"
-              onClick={() => { setModo(modo === "kipu" ? "manual" : "kipu"); limpiar(); }}
-              className="transition-colors"
-              style={{ color: "var(--kipu-subtle)" }}
-              onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
-              onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-subtle)"}
-            >
-              {modo === "kipu"
-                ? <ToggleLeft size={22} style={{ color: "var(--kipu-subtle)" }} />
-                : <ToggleRight size={22} style={{ color: accentColor }} />
-              }
-            </button>
-            <span className="text-xs" style={{ color: modo === "manual" ? "var(--kipu-text)" : "var(--kipu-subtle)" }}>
-              Externo
-            </span>
-          </div>
-        )}
-      </div>
+    <section className="rounded-xl border border-borde bg-superficie p-4">
+      <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-texto">
+        <FileText size={16} className="text-acento" aria-hidden /> {label}
+      </h2>
 
-      {/* Nota informativa */}
       {nota && !value && (
-        <div
-          className="flex items-center gap-2 rounded-lg px-3 py-2"
-          style={{
-            background: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)",
-            border: "1px solid color-mix(in srgb, var(--kipu-warning) 20%, transparent)",
-          }}
-        >
-          <AlertTriangle size={12} className="shrink-0" style={{ color: "var(--kipu-warning)" }} />
-          <p className="text-xs" style={{ color: "var(--kipu-warning)" }}>{nota}</p>
-        </div>
+        <p className="mb-3 flex items-start gap-2 rounded-lg bg-alerta-suave px-3 py-2 text-xs text-alerta-texto">
+          <AlertTriangle size={13} className="mt-0.5 shrink-0" aria-hidden /> {nota}
+        </p>
       )}
 
-      {/* Doc seleccionado */}
-      {value && (
-        <div
-          className="flex items-start gap-3 rounded-lg px-3 py-2.5"
-          style={{
-            background: accentBg,
-            border: `1px solid ${accentBorder}`,
-          }}
-        >
-          <div className="flex-1 min-w-0">
-            {value.tipo === "kipu" ? (
-              <>
-                <div className="flex items-center gap-2">
-                  <span
-                    className="text-xs px-1.5 py-0.5 rounded font-bold"
-                    style={{
-                      background: "color-mix(in srgb, var(--kipu-text) 10%, transparent)",
-                      color: "var(--kipu-text)",
-                    }}
-                  >
-                    {value.data.tipo_doc}
-                  </span>
-                  <p className="text-sm font-medium font-mono" style={{ color: "var(--kipu-text)" }}>{value.data.numero_doc}</p>
-                </div>
-                <p className="text-xs mt-0.5" style={{ color: "var(--kipu-muted)" }}>{value.data.razon_social}</p>
-                <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
-                  {value.data.fecha_emision} · ${fmt(value.data.importe_total)}
-                </p>
-              </>
-            ) : (
-              <>
-                <div className="flex items-center gap-2">
-                  <span
-                    className="text-xs px-1.5 py-0.5 rounded font-bold"
-                    style={{
-                      background: "color-mix(in srgb, var(--kipu-text) 10%, transparent)",
-                      color: "var(--kipu-text)",
-                    }}
-                  >
-                    {value.data.cod_doc === "01" ? "FAC" :
-                     value.data.cod_doc === "03" ? "LIQ" :
-                     value.data.cod_doc === "05" ? "NDB" : value.data.cod_doc}
-                  </span>
-                  <p className="text-sm font-medium font-mono" style={{ color: "var(--kipu-text)" }}>{value.data.numero}</p>
-                </div>
-                <p className="text-xs mt-0.5" style={{ color: "var(--kipu-muted)" }}>
-                  {value.data.cliente.razon_social} · {value.data.cliente.identificacion}
-                </p>
-                <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>{value.data.fecha} · Externo</p>
-              </>
-            )}
+      {value ? (
+        /* ── Documento elegido ── */
+        <div className="flex items-center gap-3 rounded-lg bg-presionado px-3 py-2.5">
+          <span className="inline-flex h-9 min-w-9 shrink-0 items-center justify-center rounded-lg bg-acento-suave px-1.5 text-[11px] font-bold text-acento">
+            {value.tipo === "kipu" ? value.data.tipo_doc
+              : TODOS_TIPOS_COD.find(t => t.valor === value.data.cod_doc)?.corto ?? value.data.cod_doc}
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="truncate font-mono text-sm font-medium text-texto">
+              {value.tipo === "kipu" ? value.data.numero_doc : value.data.numero}
+            </p>
+            <p className="truncate text-xs text-tenue">
+              {value.tipo === "kipu" ? value.data.razon_social
+                : `${value.data.cliente.razon_social} · ${value.data.cliente.identificacion}`}
+            </p>
+            <p className="text-xs text-sutil">
+              {value.tipo === "kipu"
+                ? <>{value.data.fecha_emision} · <span className="tabular-nums">${dosDecimales(value.data.importe_total)}</span></>
+                : <>{value.data.fecha} · No está en Kipu</>}
+            </p>
           </div>
-          <button
-            type="button"
-            onClick={limpiar}
-            className="p-1 transition-colors shrink-0"
-            style={{ color: "var(--kipu-subtle)" }}
-            onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
-            onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-subtle)"}
-          >
-            <X size={15} />
-          </button>
+          <BotonIcono etiqueta="Cambiar el documento" icono={<X size={18} />} onClick={limpiar} />
         </div>
-      )}
-
-      {/* Modo Kipu — buscador */}
-      {!value && modo === "kipu" && (
-        <div className="relative" ref={dropRef}>
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--kipu-subtle)" }} />
-          <input
+      ) : (
+        /* ── Buscador ── */
+        <div className="space-y-3">
+          <Entrada
+            teclado="buscar"
             value={query}
-            onChange={e => setQuery(e.target.value)}
-            onFocus={(e) => {
-              if (results.length > 0) setShowDrop(true);
-              e.currentTarget.style.borderColor = "var(--kipu-accent)";
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => {
+              // Compu: Enter elige el primero de la lista
+              if (e.key === "Enter" && !e.ctrlKey && !e.metaKey && lista[0]) { e.preventDefault(); seleccionar(lista[0]); }
             }}
-            onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
-            placeholder={`Buscar ${tiposPermitidos.map(t => TIPO_DOC_LABEL[t] ?? t).join(" / ")}...`}
-            className="w-full pl-9 pr-4 py-2.5 rounded-lg text-sm transition-colors focus:outline-none"
-            style={{
-              background: "var(--kipu-surface)",
-              border: "1px solid var(--kipu-border)",
-              color: "var(--kipu-text)",
-            }}
+            placeholder={`Buscar ${queBusca} por número o ${quien}…`}
+            aria-label={`Buscar ${queBusca}`}
+            prefijo={<Search size={16} />}
+            sufijo={loading ? <Loader2 size={16} className="animate-spin" aria-hidden /> : undefined}
           />
-          {loading && (
-            <div
-              className="w-3.5 h-3.5 border-2 border-t-transparent rounded-full animate-spin absolute right-3 top-1/2 -translate-y-1/2"
-              style={{ borderColor: "var(--kipu-accent)", borderTopColor: "transparent" }}
-            />
-          )}
-          {showDrop && results.length > 0 && (
-            <div
-              className="absolute z-10 w-full mt-1 rounded-lg shadow-xl overflow-hidden max-h-60 overflow-y-auto"
-              style={{
-                background: "var(--kipu-surface)",
-                border: "1px solid var(--kipu-border)",
-              }}
-            >
-              {results.map(d => (
-                <button
-                  type="button"
-                  key={d.id}
-                  onClick={() => seleccionar(d)}
-                  className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left transition-colors"
-                  style={{ borderBottom: "1px solid var(--kipu-border)" }}
-                  onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 5%, transparent)"}
-                  onMouseLeave={e => e.currentTarget.style.background = "transparent"}
-                >
-                  <div className="min-w-0 flex items-start gap-2">
-                    <span
-                      className="text-[10px] px-1.5 py-0.5 rounded font-bold shrink-0 mt-0.5"
-                      style={{
-                        background: "color-mix(in srgb, var(--kipu-text) 8%, transparent)",
-                        color: "var(--kipu-muted)",
-                      }}
-                    >
-                      {d.tipo_doc}
-                    </span>
-                    <div>
-                      <p className="text-sm font-mono" style={{ color: "var(--kipu-text)" }}>{d.numero_doc}</p>
-                      <p className="text-xs truncate" style={{ color: "var(--kipu-subtle)" }}>{d.razon_social}</p>
-                    </div>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <p className="text-sm font-bold" style={{ color: accentColor }}>${fmt(d.importe_total)}</p>
-                    <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>{d.fecha_emision}</p>
-                  </div>
-                </button>
-              ))}
+
+          {buscando ? (
+            results.length > 0 ? (
+              <ListaDocs docs={results} onElegir={seleccionar} />
+            ) : !loading && (
+              <p className="px-1 text-xs text-sutil">
+                No está en Kipu (solo aparecen los autorizados).
+                {!externoNoDisponible && " Puedes ingresarlo a mano."}
+              </p>
+            )
+          ) : ultimos.length > 0 && (
+            <div>
+              <p className="mb-1 flex items-center gap-1.5 px-1 text-xs text-sutil">
+                <Clock size={12} aria-hidden /> Últimos
+              </p>
+              <ListaDocs docs={ultimos} onElegir={seleccionar} />
             </div>
           )}
-          {query.length >= 3 && !loading && results.length === 0 && (
-            <p className="text-xs mt-2" style={{ color: "var(--kipu-subtle)" }}>
-              No encontrado en Kipu.{" "}
-              <button
-                type="button"
-                onClick={() => setModo("manual")}
-                className="underline"
-                style={{ color: accentColor }}
-              >
-                Ingresar manualmente
-              </button>
-            </p>
+
+          {externoNoDisponible ? (
+            <p className="px-1 text-xs text-sutil">{externoNoDisponible}</p>
+          ) : (
+            <Boton variante="secundario" tamano="sm" onClick={abrirManual} icono={<FilePlus2 size={14} />}>
+              No está en Kipu
+            </Boton>
           )}
         </div>
       )}
 
-      {/* Modo Manual */}
-      {!value && modo === "manual" && (
-        <div className="space-y-2">
-          <div className="grid grid-cols-2 gap-2">
-            {/* Tipo documento */}
-            <div className="space-y-1">
-              <label className="text-[10px] uppercase font-semibold tracking-wider" style={{ color: "var(--kipu-subtle)" }}>
-                Tipo doc
-              </label>
-              {tiposCodFiltrados.length === 1 ? (
-                <div
-                  className="px-2.5 py-2 rounded-lg text-sm"
-                  style={{
-                    background: "var(--kipu-surface)",
-                    border: "1px solid var(--kipu-border)",
-                    color: "var(--kipu-text)",
-                  }}
-                >
-                  {tiposCodFiltrados[0].label}
-                </div>
-              ) : (
-                <select
-                  value={manual.cod_doc}
-                  onChange={e => setManual({ ...manual, cod_doc: e.target.value })}
-                  className="w-full px-2.5 py-2 rounded-lg text-sm focus:outline-none transition-colors"
-                  style={{
-                    background: "var(--kipu-surface)",
-                    border: "1px solid var(--kipu-border)",
-                    color: "var(--kipu-text)",
-                  }}
-                  onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                  onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
-                >
-                  {tiposCodFiltrados.map(t => (
-                    <option key={t.value} value={t.value}>{t.label}</option>
-                  ))}
-                </select>
-              )}
-            </div>
-            {/* Número */}
-            <div className="space-y-1">
-              <label className="text-[10px] uppercase font-semibold tracking-wider" style={{ color: "var(--kipu-subtle)" }}>
-                Número
-              </label>
-              <input
-                value={manual.numero}
-                inputMode="numeric"
-                onChange={e => setManual({ ...manual, numero: formatNumeroDoc(e.target.value) })}
-                placeholder="001-001-000000001"
-                maxLength={17}
-                className="w-full px-2.5 py-2 rounded-lg text-sm font-mono focus:outline-none transition-colors"
-                style={{
-                  background: "var(--kipu-surface)",
-                  border: "1px solid var(--kipu-border)",
-                  color: "var(--kipu-text)",
-                }}
-                onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+      {/* ── Hoja: documento que no está en Kipu ── */}
+      <Hoja
+        abierta={!!manual}
+        onCerrar={() => setManual(null)}
+        titulo="Documento que no está en Kipu"
+        descripcion={`Los datos tal como salen en el comprobante del ${quien}.`}
+        pie={<>
+          <Boton variante="secundario" onClick={() => setManual(null)}>Cancelar</Boton>
+          <Boton onClick={confirmarManual} disabled={!puedeConfirmar}>Usar este documento</Boton>
+        </>}
+      >
+        {manual && (
+          <div className="space-y-3">
+            {tiposCod.length > 1 && (
+              <ChipsFiltro
+                etiqueta="Tipo de documento"
+                opciones={tiposCod}
+                valor={manual.cod_doc}
+                onCambio={(cod_doc) => setManual({ ...manual, cod_doc })}
               />
+            )}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <Campo etiqueta={`Número de ${tiposCod.length === 1 ? tiposCod[0].etiqueta.toLowerCase() : "documento"}`}
+                     error={errNumero}>
+                <Entrada
+                  inputMode="numeric"
+                  autoComplete="off"
+                  value={manual.numero}
+                  onChange={(e) => setManual({ ...manual, numero: formatoNumeroDoc(e.target.value) })}
+                  placeholder="001-001-000000001"
+                  maxLength={17}
+                  className="font-mono"
+                />
+              </Campo>
+              <Campo etiqueta="Fecha de emisión" error={errFecha}>
+                <Entrada
+                  inputMode="numeric"
+                  autoComplete="off"
+                  value={manual.fecha}
+                  onChange={(e) => setManual({ ...manual, fecha: formatFechaDoc(e.target.value) })}
+                  placeholder="dd/mm/aaaa"
+                  maxLength={10}
+                  className="font-mono"
+                />
+              </Campo>
             </div>
-          </div>
 
-          {/* Fecha */}
-          <div className="space-y-1">
-            <label className="text-[10px] uppercase font-semibold tracking-wider" style={{ color: "var(--kipu-subtle)" }}>
-              Fecha emisión (dd/mm/yyyy)
-            </label>
-            <input
-              type="text"
-              inputMode="numeric"
-              value={manual.fecha}
-              onChange={e => setManual({ ...manual, fecha: formatFechaDoc(e.target.value) })}
-              placeholder="21/08/2026"
-              maxLength={10}
-              className="w-full px-2.5 py-2 rounded-lg text-sm font-mono focus:outline-none transition-colors"
-              style={{
-                background: "var(--kipu-surface)",
-                border: "1px solid var(--kipu-border)",
-                color: "var(--kipu-text)",
-              }}
-              onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-              onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+            <p className="pt-1 text-xs font-medium text-sutil">Datos del {quien}</p>
+            <ChipsFiltro
+              etiqueta="Tipo de identificación"
+              opciones={TIPOS_ID}
+              valor={manual.cliente.tipo_id}
+              onCambio={(tipo_id) => setManual({ ...manual, cliente: { ...manual.cliente, tipo_id, identificacion: "" } })}
             />
-          </div>
-
-          {/* Cliente / Proveedor */}
-          <div className="pt-1" style={{ borderTop: "1px solid var(--kipu-border)" }}>
-            <p className="text-[10px] uppercase font-semibold tracking-wider mb-2" style={{ color: "var(--kipu-subtle)" }}>
-              Datos del {tabla === "recibidos" ? "proveedor" : "cliente"}
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              <select
-                value={manual.cliente.tipo_id}
-                onChange={e => setManual({ ...manual, cliente: { ...manual.cliente, tipo_id: e.target.value } })}
-                className="px-2 py-1.5 rounded-lg text-xs focus:outline-none transition-colors"
-                style={{
-                  background: "var(--kipu-surface)",
-                  border: "1px solid var(--kipu-border)",
-                  color: "var(--kipu-text)",
-                }}
-                onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
-              >
-                {TIPOS_ID.map(t => (
-                  <option key={t.value} value={t.value}>{t.label}</option>
-                ))}
-              </select>
-              <input
+            <Campo etiqueta={TIPOS_ID.find(t => t.valor === manual.cliente.tipo_id)?.etiqueta ?? "Identificación"}>
+              <Entrada
+                teclado={TECLADO_ID[manual.cliente.tipo_id] ?? "texto"}
                 value={manual.cliente.identificacion}
-                inputMode={tecladoIdentificacion(manual.cliente.tipo_id)}
-                onChange={e => setManual({ ...manual, cliente: { ...manual.cliente, identificacion: e.target.value } })}
-                placeholder="RUC / Cédula"
-                className="px-2 py-1.5 rounded-lg text-xs focus:outline-none transition-colors"
-                style={{
-                  background: "var(--kipu-surface)",
-                  border: "1px solid var(--kipu-border)",
-                  color: "var(--kipu-text)",
+                maxLength={manual.cliente.tipo_id === "04" ? 13 : manual.cliente.tipo_id === "05" ? 10 : 20}
+                onChange={(e) => {
+                  const v = ["04", "05"].includes(manual.cliente.tipo_id)
+                    ? e.target.value.replace(/\D/g, "") : e.target.value.toUpperCase();
+                  setManual({ ...manual, cliente: { ...manual.cliente, identificacion: v } });
                 }}
-                onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
               />
-            </div>
-            <input
-              value={manual.cliente.razon_social}
-              onChange={e => setManual({ ...manual, cliente: { ...manual.cliente, razon_social: e.target.value } })}
-              placeholder="Razón social / Nombre *"
-              className="w-full mt-2 px-2.5 py-1.5 rounded-lg text-xs focus:outline-none transition-colors"
-              style={{
-                background: "var(--kipu-surface)",
-                border: "1px solid var(--kipu-border)",
-                color: "var(--kipu-text)",
-              }}
-              onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-              onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
-            />
-            <input
-              value={manual.cliente.email}
-              type="email"
-              onChange={e => setManual({ ...manual, cliente: { ...manual.cliente, email: e.target.value } })}
-              placeholder="Email (opcional)"
-              className="w-full mt-2 px-2.5 py-1.5 rounded-lg text-xs focus:outline-none transition-colors"
-              style={{
-                background: "var(--kipu-surface)",
-                border: "1px solid var(--kipu-border)",
-                color: "var(--kipu-text)",
-              }}
-              onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-              onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
-            />
+            </Campo>
+            <Campo etiqueta="Nombre o razón social">
+              <Entrada
+                teclado="nombre"
+                value={manual.cliente.razon_social}
+                onChange={(e) => setManual({ ...manual, cliente: { ...manual.cliente, razon_social: e.target.value.toUpperCase() } })}
+              />
+            </Campo>
+            <Campo etiqueta="Correo" opcional>
+              <Entrada
+                teclado="email"
+                value={manual.cliente.email}
+                onChange={(e) => setManual({ ...manual, cliente: { ...manual.cliente, email: e.target.value.toLowerCase() } })}
+              />
+            </Campo>
           </div>
+        )}
+      </Hoja>
+    </section>
+  );
+}
 
+function ListaDocs({ docs, onElegir }: { docs: DocOrigenKipu[]; onElegir: (d: DocOrigenKipu) => void }) {
+  return (
+    <ul className="-mx-1 divide-y divide-borde">
+      {docs.map((d) => (
+        <li key={d.id}>
           <button
             type="button"
-            onClick={confirmarManual}
-            disabled={!manual.numero || !manual.fecha || !manual.cliente.identificacion || !manual.cliente.razon_social}
-            className="w-full py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-            style={{
-              background: accentBg,
-              color: accentColor,
-              border: `1px solid ${accentBorder}`,
-            }}
+            onClick={() => onElegir(d)}
+            className={cn("flex min-h-12 w-full items-center gap-3 rounded-lg px-1 py-2 text-left",
+              "transition-colors hover:bg-presionado active:bg-presionado")}
           >
-            Usar este documento
+            <span className="inline-flex h-8 min-w-8 shrink-0 items-center justify-center rounded-lg bg-presionado px-1 text-[10px] font-bold text-tenue">
+              {d.tipo_doc}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate font-mono text-sm text-texto">{d.numero_doc}</span>
+              <span className="block truncate text-xs text-sutil">{d.razon_social}</span>
+            </span>
+            <span className="shrink-0 text-right">
+              <span className="block text-sm font-semibold tabular-nums text-texto">${dosDecimales(d.importe_total)}</span>
+              <span className="block text-xs text-sutil">{d.fecha_emision}</span>
+            </span>
           </button>
-        </div>
-      )}
-    </div>
+        </li>
+      ))}
+    </ul>
   );
 }

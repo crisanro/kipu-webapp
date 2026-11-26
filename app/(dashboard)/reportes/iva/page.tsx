@@ -1,8 +1,10 @@
 "use client";
+import { useConfirmar } from "@/components/ui/Confirmar";
 import { useState, useEffect, useCallback } from "react";
 import { notFound, useRouter, useSearchParams } from "next/navigation";
 import api from "@/lib/api";
 import { ES_APP_NATIVA } from "@/lib/plataforma";
+import { rutas } from "@/lib/rutas";
 import {
   ArrowLeft, RefreshCw, CheckCircle2, AlertTriangle, Info, Calendar,
 } from "lucide-react";
@@ -15,14 +17,13 @@ import ResumenImpositivo   from "../_components/ResumenImpositivo";
 import DocumentosIncluidos from "../_components/DocumentosIncluidos";
 import EstadoBadge, { EstadoReporte } from "../_components/EstadoBadge";
 import PantallaDePago      from "../_components/PantallaDePago";
+import ElegirPeriodo       from "../_components/ElegirPeriodo";
 import Alertas104          from "../_components/Alertas104";
 import AyudaAlDia          from "../_components/AyudaAlDia";
-
-const fmt = (n: number = 0) =>
-  n.toLocaleString("es-EC", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio",
-               "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+import { detalleError } from "@/lib/errores";
+import { montoEC } from "@/lib/dinero";
+import { ModalConfirmar } from "@/components/DeclaracionWidget";
+import { MESES } from "@/lib/fecha";
 
 /** "2026-10-26" → "26 de octubre de 2026" sin pasar por Date */
 function fechaLarga(ymd?: string) {
@@ -58,10 +59,9 @@ export default function ReporteIVAPage() {
 
 // periodo: "2026-08" (o "2026-07" para el 2do semestre)
 function ReporteIVA({ periodo }: { periodo: string }) {
+  const confirmar = useConfirmar();
   const router  = useRouter();
-  // Volvió de pagar el pase en Stripe (?pase=pagado): se espera a que se active
   const busqueda   = useSearchParams();
-  const pasePagado = busqueda.get("pase") === "pagado";
   // "Ver un ejemplo del 104 completo" desde Reportes: datos inventados, sin tocar los reales
   const pedirDemo  = busqueda.get("demo") === "1";
 
@@ -92,7 +92,7 @@ function ReporteIVA({ periodo }: { periodo: string }) {
         setDecl(null);
       }
     } catch (e: any) {
-      setError(e?.response?.data?.detail ?? "Error al cargar el reporte.");
+      setError(detalleError(e, "Error al cargar el reporte."));
     } finally {
       setLoading(false);
       setRegenerando(false);
@@ -100,14 +100,6 @@ function ReporteIVA({ periodo }: { periodo: string }) {
   }, [periodo, pedirDemo]);
 
   useEffect(() => { cargar(); }, [cargar]);
-
-  // Sin la pantalla de carga: para esperar la activación del pase
-  const recargarSilencioso = useCallback(async () => {
-    try {
-      const res = await api.get(`/api/v1/app/declaraciones/iva?periodo=${periodo}`);
-      setData(res.data);
-    } catch {}
-  }, [periodo]);
 
   const guardarCamposManuales = async (valores: Record<string, number | null>) => {
     await api.patch(
@@ -117,15 +109,18 @@ function ReporteIVA({ periodo }: { periodo: string }) {
     await cargar();   // los saldos 605/606 cambian el cálculo: se recalcula en el backend
   };
 
+  const [confirmando, setConfirmando] = useState(false);
   const marcarDeclarado = async () => {
     setMarcando(true);
     setError("");
     try {
       // Siempre con el periodo que se está viendo (antes marcaba "el que toca ahora")
-      await api.post(`/api/v1/app/declaraciones/declarar?tipo=104&periodo=${periodo}`);
+      await api.post("/api/v1/app/declaraciones/declarar", null, { params: { tipo: "104", periodo } });
       setDecl(d => d ? { ...d, declarado: true, estado: "DECLARADO" } : d);
+      setConfirmando(false);
     } catch (e: any) {
-      setError(e?.response?.data?.detail ?? "Error al marcar como declarado.");
+      setError(detalleError(e, "Error al marcar como declarado."));
+      setConfirmando(false);
     } finally {
       setMarcando(false);
     }
@@ -139,7 +134,7 @@ function ReporteIVA({ periodo }: { periodo: string }) {
             className="w-7 h-7 border-2 border-t-transparent rounded-full animate-spin mx-auto"
             style={{ borderColor: "var(--kipu-accent)", borderTopColor: "transparent" }}
           />
-          <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>Calculando casilleros...</p>
+          <p className="text-sm text-sutil">Calculando casilleros...</p>
         </div>
       </div>
     );
@@ -149,30 +144,41 @@ function ReporteIVA({ periodo }: { periodo: string }) {
     return (
       <div className="p-6 max-w-2xl mx-auto">
         <div
-          className="flex items-start gap-3 rounded-xl px-4 py-3"
-          style={{
-            background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
-            border: "1px solid color-mix(in srgb, var(--kipu-danger) 20%, transparent)",
-          }}
+          className="flex items-start gap-3 rounded-xl px-4 py-3 bg-peligro-suave border border-peligro/20"
         >
-          <AlertTriangle size={16} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-danger)" }} />
-          <p className="text-sm" style={{ color: "var(--kipu-danger)" }}>{error}</p>
+          <AlertTriangle size={16} className="shrink-0 mt-0.5 text-peligro" />
+          <p className="text-sm text-peligro">{error}</p>
         </div>
       </div>
     );
   }
 
-  // Plan gratis sin Pro ni pase: el total ya calculado y cómo desbloquear el 104
+  // Pro mensual sin este periodo habilitado: elegir el periodo del ciclo. Como el
+  // plan gratis, ve solo el total y cuántas alertas hay; el 104 completo, al confirmar
+  // (se abre el de ese periodo; si es este mismo, se recarga).
+  if (data?.bloqueado && data?.elegir) {
+    return (
+      <ElegirPeriodo
+        periodoVisto={periodo}
+        periodoVistoFmt={nombrePeriodo(periodo, data?.data?.periodo?.tipo)}
+        totalVisto={data.total ?? null}
+        alertasVisto={data.alertas_cantidad ?? 0}
+        avisoVisto={data.aviso ?? null}
+        onElegido={(p) => (p === periodo ? cargar() : router.push(rutas.reporteIva(p)))}
+        onVolver={() => router.push("/reportes")}
+      />
+    );
+  }
+
+  // Plan gratis sin el periodo habilitado: el total ya calculado y cómo tener el 104
   if (data?.bloqueado) {
     return (
       <PantallaDePago
         periodoFmt={nombrePeriodo(periodo, data?.data?.periodo?.tipo)}
         enCurso={data.en_curso ?? false}
         total={data.total}
-        pase={data.pase}
-        esperandoPago={pasePagado}
         alertasCantidad={data.alertas_cantidad ?? 0}
-        onRecargar={recargarSilencioso}
+        aviso={data.aviso ?? null}
         onVolver={() => router.push("/reportes")}
       />
     );
@@ -212,7 +218,7 @@ function ReporteIVA({ periodo }: { periodo: string }) {
             type="button"
             onClick={() => router.push("/reportes")}
             aria-label="Volver a reportes"
-            className="p-2 rounded-lg transition-colors mt-0.5"
+            className="hidden p-2 rounded-lg transition-colors mt-0.5 lg:inline-flex"
             style={{
               border: "1px solid var(--kipu-border)",
               color: "var(--kipu-subtle)",
@@ -232,16 +238,11 @@ function ReporteIVA({ periodo }: { periodo: string }) {
           <div>
             <div className="flex items-center gap-2 flex-wrap mb-1">
               <span
-                className="text-xs font-bold px-2 py-0.5 rounded-full"
-                style={{
-                  background: "color-mix(in srgb, var(--kipu-accent) 20%, transparent)",
-                  color: "var(--kipu-accent)",
-                  border: "1px solid color-mix(in srgb, var(--kipu-accent) 20%, transparent)",
-                }}
+                className="text-xs font-bold px-2 py-0.5 rounded-full bg-acento/20 text-acento border border-acento/20"
               >
                 IVA 104
               </span>
-              <h1 className="text-xl font-bold capitalize" style={{ color: "var(--kipu-text)" }}>{periodoFmt}</h1>
+              <h1 className="text-xl font-bold capitalize text-texto">{periodoFmt}</h1>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
               {!esDemo && (
@@ -274,12 +275,13 @@ function ReporteIVA({ periodo }: { periodo: string }) {
         {!esDemo && (
           <button
             type="button"
-            onClick={() => {
-              if (declarado && !window.confirm(
-                "Este periodo ya está declarado. Regenerar reemplaza los valores guardados y puede " +
-                "cambiar el saldo a favor de los meses siguientes. Hazlo solo si vas a presentar una " +
-                "declaración sustitutiva. ¿Continuar?"
-              )) return;
+            onClick={async () => {
+              if (declarado && !(await confirmar({
+                titulo: "¿Regenerar un período ya declarado?",
+                mensaje: "Reemplaza los valores guardados y puede cambiar el saldo a favor de los meses " +
+                         "siguientes. Hazlo solo si vas a presentar una declaración sustitutiva.",
+                textoConfirmar: "Regenerar", peligro: true,
+              }))) return;
               cargar(true);
             }}
             disabled={regenerando}
@@ -312,17 +314,13 @@ function ReporteIVA({ periodo }: { periodo: string }) {
       {/* Datos de ejemplo */}
       {esDemo && (
         <div
-          className="flex items-start gap-3 rounded-xl px-4 py-3"
-          style={{
-            background: "color-mix(in srgb, var(--kipu-accent) 10%, transparent)",
-            border: "1px solid color-mix(in srgb, var(--kipu-accent) 20%, transparent)",
-          }}
+          className="flex items-start gap-3 rounded-xl px-4 py-3 bg-acento/10 border border-acento/20"
         >
-          <Info size={15} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-accent)" }} />
-          <p className="text-xs" style={{ color: "var(--kipu-muted)" }}>
-            <span className="font-semibold" style={{ color: "var(--kipu-text)" }}>Estos son datos de ejemplo: </span>
+          <Info size={15} className="shrink-0 mt-0.5 text-acento" />
+          <p className="text-xs text-tenue">
+            <span className="font-semibold text-texto">Estos son datos de ejemplo: </span>
             así se ve el formulario 104 completo. El de tus meses se calcula con tus comprobantes
-            reales{ES_APP_NATIVA ? "." : " y se desbloquea con el pase del mes o con Kipu Pro."}
+            reales{ES_APP_NATIVA ? "." : " y se desbloquea con Kipu Pro."}
           </p>
         </div>
       )}
@@ -330,18 +328,14 @@ function ReporteIVA({ periodo }: { periodo: string }) {
       {/* Alerta error */}
       {error && (
         <div
-          className="flex items-start gap-2 rounded-lg px-3 py-2.5"
-          style={{
-            background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
-            border: "1px solid color-mix(in srgb, var(--kipu-danger) 20%, transparent)",
-          }}
+          className="flex items-start gap-2 rounded-lg px-3 py-2.5 bg-peligro-suave border border-peligro/20"
         >
-          <AlertTriangle size={14} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-danger)" }} />
-          <p className="text-sm" style={{ color: "var(--kipu-danger)" }}>{error}</p>
+          <AlertTriangle size={14} className="shrink-0 mt-0.5 text-peligro" />
+          <p className="text-sm text-peligro">{error}</p>
         </div>
       )}
 
-      {/* Alertas de errores (pase o Pro) */}
+      {/* Alertas de errores (con el periodo habilitado) */}
       {!esDemo && <Alertas104 alertas={data?.alertas ?? []} />}
 
       {/* Se está enredando (vencida sin declarar o varias alertas importantes): Kipu Al Día */}
@@ -353,24 +347,16 @@ function ReporteIVA({ periodo }: { periodo: string }) {
       {/* Resumen rápido top */}
       <div className="grid grid-cols-3 gap-3">
         <div
-          className="rounded-xl p-3 text-center"
-          style={{
-            background: "var(--kipu-surface)",
-            border: "1px solid var(--kipu-border)",
-          }}
+          className="rounded-xl p-3 text-center bg-superficie border border-borde"
         >
-          <p className="text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>Ventas netas</p>
-          <p className="text-base font-bold" style={{ color: "var(--kipu-text)" }}>${fmt(casVentas["419"] ?? 0)}</p>
+          <p className="text-xs mb-1 text-sutil">Ventas netas</p>
+          <p className="text-base font-bold text-texto">${montoEC(casVentas["419"] ?? 0)}</p>
         </div>
         <div
-          className="rounded-xl p-3 text-center"
-          style={{
-            background: "var(--kipu-surface)",
-            border: "1px solid var(--kipu-border)",
-          }}
+          className="rounded-xl p-3 text-center bg-superficie border border-borde"
         >
-          <p className="text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>Compras netas</p>
-          <p className="text-base font-bold" style={{ color: "var(--kipu-text)" }}>${fmt(casCompras["519"] ?? 0)}</p>
+          <p className="text-xs mb-1 text-sutil">Compras netas</p>
+          <p className="text-base font-bold text-texto">${montoEC(casCompras["519"] ?? 0)}</p>
         </div>
         <div
           className="rounded-xl p-3 text-center"
@@ -387,7 +373,7 @@ function ReporteIVA({ periodo }: { periodo: string }) {
                 : "1px solid var(--kipu-border)",
           }}
         >
-          <p className="text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>
+          <p className="text-xs mb-1 text-sutil">
             {ivaAPagar > 0 ? "A pagar" : saldoFavor > 0 ? "Saldo a favor" : "IVA neto"}
           </p>
           <p
@@ -400,7 +386,7 @@ function ReporteIVA({ periodo }: { periodo: string }) {
                   : "var(--kipu-text)",
             }}
           >
-            ${fmt(ivaAPagar > 0 ? ivaAPagar : saldoFavor > 0 ? saldoFavor : 0)}
+            ${montoEC(ivaAPagar > 0 ? ivaAPagar : saldoFavor > 0 ? saldoFavor : 0)}
           </p>
         </div>
       </div>
@@ -465,17 +451,13 @@ function ReporteIVA({ periodo }: { periodo: string }) {
       {/* Notas */}
       {reporte?.notas?.length > 0 && (
         <div
-          className="rounded-xl p-4 space-y-1.5"
-          style={{
-            background: "var(--kipu-surface)",
-            border: "1px solid var(--kipu-border)",
-          }}
+          className="rounded-xl p-4 space-y-1.5 bg-superficie border border-borde"
         >
-          <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: "var(--kipu-subtle)" }}>
+          <p className="text-xs font-semibold uppercase tracking-wider mb-2 text-sutil">
             Notas
           </p>
           {reporte.notas.map((nota: string, i: number) => (
-            <p key={i} className="text-xs" style={{ color: "var(--kipu-subtle)" }}>· {nota}</p>
+            <p key={i} className="text-xs text-sutil">· {nota}</p>
           ))}
         </div>
       )}
@@ -483,23 +465,18 @@ function ReporteIVA({ periodo }: { periodo: string }) {
       {/* Botón marcar declarado */}
       {!esDemo && decl && !declarado && !enCurso && (
         <div
-          className="rounded-xl p-4"
-          style={{
-            background: "var(--kipu-surface)",
-            border: "1px solid var(--kipu-border)",
-          }}
+          className="rounded-xl p-4 bg-superficie border border-borde"
         >
-          <p className="text-sm font-medium mb-1" style={{ color: "var(--kipu-text)" }}>¿Ya declaraste en el SRI?</p>
-          <p className="text-xs mb-3" style={{ color: "var(--kipu-subtle)" }}>
+          <p className="text-sm font-medium mb-1 text-texto">¿Ya declaraste en el SRI?</p>
+          <p className="text-xs mb-3 text-sutil">
             Marca {periodoFmt} como declarado para mantener tu historial al día.
             Esto no declara por ti: solo registra que ya lo hiciste en el portal del SRI.
           </p>
           <button
             type="button"
-            onClick={marcarDeclarado}
+            onClick={() => setConfirmando(true)}
             disabled={marcando}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-white text-sm font-medium transition-colors disabled:opacity-50"
-            style={{ background: "var(--kipu-success)" }}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-white text-sm font-medium transition-colors disabled:opacity-50 bg-exito"
           >
             {marcando ? (
               <>
@@ -518,17 +495,18 @@ function ReporteIVA({ periodo }: { periodo: string }) {
         </div>
       )}
 
+      {/* Mismo aviso que el dashboard y "Declarar el mes anterior" */}
+      {confirmando && (
+        <ModalConfirmar onConfirm={marcarDeclarado} onCancel={() => setConfirmando(false)} loading={marcando} />
+      )}
+
       {/* Ya declarado */}
       {declarado && (
         <div
-          className="flex items-center gap-3 rounded-xl px-4 py-3"
-          style={{
-            background: "color-mix(in srgb, var(--kipu-success) 10%, transparent)",
-            border: "1px solid color-mix(in srgb, var(--kipu-success) 20%, transparent)",
-          }}
+          className="flex items-center gap-3 rounded-xl px-4 py-3 bg-exito/10 border border-exito/20"
         >
-          <CheckCircle2 size={16} className="shrink-0" style={{ color: "var(--kipu-success)" }} />
-          <p className="text-sm font-medium" style={{ color: "var(--kipu-success)" }}>
+          <CheckCircle2 size={16} className="shrink-0 text-exito" />
+          <p className="text-sm font-medium text-exito">
             IVA de {periodoFmt} declarado ante el SRI ✓
           </p>
         </div>

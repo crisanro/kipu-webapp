@@ -1,4 +1,6 @@
 "use client";
+import { useConfirmar } from "@/components/ui/Confirmar";
+import { useAvisos } from "@/components/ui/Avisos";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import api from "@/lib/api";
@@ -9,6 +11,7 @@ import {
   Plus, Trash2, Shield, User, ChevronDown,
   ChevronUp, Check, X, AlertCircle
 } from "lucide-react";
+import { detalleError } from "@/lib/errores";
 
 interface Props {
   empresaId: number;
@@ -49,6 +52,8 @@ function validarEmail(email: string): boolean {
 }
 
 export default function TabUsuarios({ empresaId }: Props) {
+  const confirmar = useConfirmar();
+  const avisos    = useAvisos();
   const [usuarios,          setUsuarios]          = useState<any[]>([]);
   const [cargado,           setCargado]           = useState(false);
   const [invEmail,          setInvEmail]          = useState("");
@@ -105,20 +110,24 @@ export default function TabUsuarios({ empresaId }: Props) {
       setInvEmail("");
       await cargar();
     } catch (err: any) {
-      setInvError(err?.response?.data?.detail ?? "Error al invitar.");
+      setInvError(detalleError(err, "Error al invitar."));
     } finally {
       setInviting(false);
     }
   };
 
   const remover = async (profileId: string, nombre: string) => {
-    if (!confirm(`¿Remover a ${nombre} de la empresa?`)) return;
+    if (!(await confirmar({
+      titulo: `¿Remover a ${nombre} de la empresa?`,
+      mensaje: "Ya no podrá entrar a esta empresa.",
+      textoConfirmar: "Remover", peligro: true,
+    }))) return;
     setRemoviendo(profileId);
     try {
       await api.delete(`/api/v1/app/usuarios/empresas/${empresaId}/usuarios/${profileId}`);
       setUsuarios(prev => prev.filter(u => u.profile_id !== profileId));
     } catch (err: any) {
-      alert(err?.response?.data?.detail ?? "Error al remover usuario.");
+      avisos.error(detalleError(err, "No se pudo remover al usuario."));
     } finally {
       setRemoviendo(null);
     }
@@ -156,7 +165,7 @@ export default function TabUsuarios({ empresaId }: Props) {
         return next;
       });
     } catch (err: any) {
-      alert(err?.response?.data?.detail ?? "Error al guardar permisos.");
+      avisos.error(detalleError(err, "No se pudieron guardar los permisos."));
     } finally {
       setGuardandoPermisos(null);
     }
@@ -174,15 +183,11 @@ export default function TabUsuarios({ empresaId }: Props) {
     <div className="space-y-4">
       {/* Invitar */}
       <div
-        className="rounded-xl p-5"
-        style={{
-          background: "var(--kipu-surface)",
-          border: "1px solid var(--kipu-border)",
-        }}
+        className="rounded-xl p-5 bg-superficie border border-borde"
       >
-        <h2 className="text-sm font-semibold mb-4" style={{ color: "var(--kipu-text)" }}>Invitar usuario</h2>
+        <h2 className="text-sm font-semibold mb-4 text-texto">Invitar usuario</h2>
         {soloPro && (
-          <p className="text-xs mb-3" style={{ color: "var(--kipu-warning)" }}>
+          <p className="text-xs mb-3 text-alerta">
             {ES_APP_NATIVA
               ? "Agregar usuarios no está incluido en tu plan actual. Los que ya tienes siguen entrando normalmente."
               : "Agregar usuarios es del Plan Pro (hasta 5 por empresa). Los que ya tienes siguen entrando normalmente."}{" "}
@@ -215,7 +220,7 @@ export default function TabUsuarios({ empresaId }: Props) {
               }}
             />
             {emailError && (
-              <p className="flex items-center gap-1 mt-1 text-xs" style={{ color: "var(--kipu-danger)" }}>
+              <p className="flex items-center gap-1 mt-1 text-xs text-peligro">
                 <AlertCircle size={10} /> {emailError}
               </p>
             )}
@@ -223,14 +228,7 @@ export default function TabUsuarios({ empresaId }: Props) {
           <select
             value={invRol}
             onChange={(e) => setInvRol(e.target.value)}
-            className="px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none"
-            style={{
-              background: "var(--kipu-surface)",
-              border: "1px solid var(--kipu-border)",
-              color: "var(--kipu-text)",
-            }}
-            onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-            onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+            className="px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none bg-superficie border border-borde text-texto focus:border-acento"
           >
             <option value="emisor">Emisor</option>
             <option value="contador">Contador</option>
@@ -240,8 +238,7 @@ export default function TabUsuarios({ empresaId }: Props) {
             type="button"
             onClick={invitar}
             disabled={soloPro || inviting || !invEmail.trim() || !!emailError}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors disabled:opacity-50"
-            style={{ background: "var(--kipu-accent)" }}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors disabled:opacity-50 bg-acento"
             onMouseEnter={e => {
               if (!inviting && invEmail.trim() && !emailError) e.currentTarget.style.background = "var(--kipu-accent-h)";
             }}
@@ -262,44 +259,31 @@ export default function TabUsuarios({ empresaId }: Props) {
         </div>
         {invMsg && (
           <p
-            className="mt-2 text-xs px-3 py-2 rounded-lg"
-            style={{
-              color: "var(--kipu-success)",
-              background: "color-mix(in srgb, var(--kipu-success) 10%, transparent)",
-            }}
+            className="mt-2 text-xs px-3 py-2 rounded-lg text-exito bg-exito/10"
           >
             ✅ {invMsg}
           </p>
         )}
         {invError && (
           <p
-            className="mt-2 text-xs px-3 py-2 rounded-lg"
-            style={{
-              color: "var(--kipu-danger)",
-              background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
-            }}
+            className="mt-2 text-xs px-3 py-2 rounded-lg text-peligro bg-peligro-suave"
           >
             {invError}
           </p>
         )}
-        <p className="text-xs mt-3" style={{ color: "var(--kipu-subtle)" }}>
+        <p className="text-xs mt-3 text-sutil">
           El usuario recibirá un email con instrucciones para acceder.
         </p>
       </div>
 
       {/* Lista usuarios */}
       <div
-        className="rounded-xl overflow-hidden"
-        style={{
-          background: "var(--kipu-surface)",
-          border: "1px solid var(--kipu-border)",
-        }}
+        className="rounded-xl overflow-hidden bg-superficie border border-borde"
       >
         <div
-          className="px-5 py-3"
-          style={{ borderBottom: "1px solid var(--kipu-border)" }}
+          className="px-5 py-3 border-b border-borde"
         >
-          <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>Usuarios con acceso</h2>
+          <h2 className="text-sm font-semibold text-texto">Usuarios con acceso</h2>
         </div>
         {!cargado ? (
           <div className="flex items-center justify-center py-8">
@@ -309,7 +293,7 @@ export default function TabUsuarios({ empresaId }: Props) {
             />
           </div>
         ) : usuarios.length === 0 ? (
-          <p className="text-sm text-center py-8" style={{ color: "var(--kipu-subtle)" }}>Sin usuarios adicionales.</p>
+          <p className="text-sm text-center py-8 text-sutil">Sin usuarios adicionales.</p>
         ) : (
           <div>
             {usuarios.map((u: any, idx: number) => {
@@ -325,16 +309,15 @@ export default function TabUsuarios({ empresaId }: Props) {
                 >
                   <div className="flex items-center gap-3 px-5 py-3">
                     <div
-                      className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
-                      style={{ background: "color-mix(in srgb, var(--kipu-accent) 20%, transparent)" }}
+                      className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-acento/20"
                     >
-                      <span className="text-xs font-bold" style={{ color: "var(--kipu-accent)" }}>
+                      <span className="text-xs font-bold text-acento">
                         {(u.nombre || u.email)?.[0]?.toUpperCase()}
                       </span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate" style={{ color: "var(--kipu-text)" }}>{u.nombre || u.email}</p>
-                      <p className="text-xs truncate" style={{ color: "var(--kipu-subtle)" }}>{u.email}</p>
+                      <p className="text-sm font-medium truncate text-texto">{u.nombre || u.email}</p>
+                      <p className="text-xs truncate text-sutil">{u.email}</p>
                     </div>
                     <span
                       className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium shrink-0"
@@ -353,16 +336,7 @@ export default function TabUsuarios({ empresaId }: Props) {
                       <button
                         type="button"
                         onClick={() => setExpandido(abierto ? null : u.profile_id)}
-                        className="p-1.5 rounded-lg transition-colors shrink-0"
-                        style={{ color: "var(--kipu-subtle)" }}
-                        onMouseEnter={e => {
-                          e.currentTarget.style.color = "var(--kipu-text)";
-                          e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 5%, transparent)";
-                        }}
-                        onMouseLeave={e => {
-                          e.currentTarget.style.color = "var(--kipu-subtle)";
-                          e.currentTarget.style.background = "transparent";
-                        }}
+                        className="p-1.5 rounded-lg transition-colors shrink-0 text-sutil hover:text-texto hover:bg-texto/5"
                         title="Ver permisos"
                       >
                         {abierto ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
@@ -372,16 +346,7 @@ export default function TabUsuarios({ empresaId }: Props) {
                       type="button"
                       onClick={() => remover(u.profile_id, u.nombre || u.email)}
                       disabled={removiendo === u.profile_id}
-                      className="p-1.5 rounded-lg transition-colors disabled:opacity-40 shrink-0"
-                      style={{ color: "var(--kipu-subtle)" }}
-                      onMouseEnter={e => {
-                        e.currentTarget.style.color = "var(--kipu-danger)";
-                        e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-danger) 10%, transparent)";
-                      }}
-                      onMouseLeave={e => {
-                        e.currentTarget.style.color = "var(--kipu-subtle)";
-                        e.currentTarget.style.background = "transparent";
-                      }}
+                      className="p-1.5 rounded-lg transition-colors disabled:opacity-40 shrink-0 text-sutil enabled:hover:text-peligro enabled:hover:bg-peligro-suave"
                       title="Remover usuario"
                     >
                       {removiendo === u.profile_id ? (
@@ -397,32 +362,16 @@ export default function TabUsuarios({ empresaId }: Props) {
 
                   {abierto && !esAdmin && (
                     <div
-                      className="px-5 pb-4"
-                      style={{
-                        background: "color-mix(in srgb, var(--kipu-text) 2%, transparent)",
-                        borderTop: "1px solid var(--kipu-border)",
-                      }}
+                      className="px-5 pb-4 bg-texto/2 border-t border-borde"
                     >
                       <div className="flex items-center gap-2 py-3">
-                        <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Plantilla:</span>
+                        <span className="text-xs text-sutil">Plantilla:</span>
                         {["emisor", "contador"].map(rol => (
                           <button
                             key={rol}
                             type="button"
                             onClick={() => aplicarPlantilla(u.profile_id, rol)}
-                            className="text-xs px-2 py-1 rounded-lg transition-colors capitalize"
-                            style={{
-                              background: "color-mix(in srgb, var(--kipu-text) 10%, transparent)",
-                              color: "var(--kipu-muted)",
-                            }}
-                            onMouseEnter={e => {
-                              e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 15%, transparent)";
-                              e.currentTarget.style.color = "var(--kipu-text)";
-                            }}
-                            onMouseLeave={e => {
-                              e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 10%, transparent)";
-                              e.currentTarget.style.color = "var(--kipu-muted)";
-                            }}
+                            className="text-xs px-2 py-1 rounded-lg transition-colors capitalize bg-texto/10 text-tenue hover:bg-texto/15 hover:text-texto"
                           >
                             {rol.charAt(0).toUpperCase() + rol.slice(1)}
                           </button>
@@ -483,13 +432,7 @@ export default function TabUsuarios({ empresaId }: Props) {
                               delete next[u.profile_id];
                               return next;
                             })}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors"
-                            style={{
-                              border: "1px solid var(--kipu-border)",
-                              color: "var(--kipu-muted)",
-                            }}
-                            onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
-                            onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-muted)"}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors border border-borde text-tenue hover:text-texto"
                           >
                             <X size={12} /> Descartar
                           </button>
@@ -497,8 +440,7 @@ export default function TabUsuarios({ empresaId }: Props) {
                             type="button"
                             onClick={() => guardarPermisos(u.profile_id)}
                             disabled={guardandoPermisos === u.profile_id}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-medium transition-colors disabled:opacity-50"
-                            style={{ background: "var(--kipu-accent)" }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-medium transition-colors disabled:opacity-50 bg-acento"
                             onMouseEnter={e => {
                               if (guardandoPermisos !== u.profile_id) e.currentTarget.style.background = "var(--kipu-accent-h)";
                             }}

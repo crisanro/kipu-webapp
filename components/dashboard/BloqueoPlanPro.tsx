@@ -20,9 +20,16 @@ interface Props {
   accion?:  { href: string; label: string } | null;
 }
 
+// En la app no se nombra el plan: las tiendas no permiten invitar a comprar fuera
+// de ellas (el mensaje del backend ya llega sin el plan: lib/plataforma.ts)
+const TITULO_POR_DEFECTO  = ES_APP_NATIVA ? "No incluido en tu plan actual" : "Disponible en Kipu Pro";
+const MENSAJE_POR_DEFECTO = ES_APP_NATIVA
+  ? "Las liquidaciones de compra y las retenciones no están incluidas en tu plan actual."
+  : MENSAJE_PLAN_LIQ_RET;
+
 export default function BloqueoPlanPro({
-  titulo  = "Disponible en Kipu Pro",
-  mensaje = MENSAJE_PLAN_LIQ_RET,
+  titulo  = TITULO_POR_DEFECTO,
+  mensaje = MENSAJE_POR_DEFECTO,
   accion,
 }: Props) {
   const salida = accion !== undefined ? accion : ES_APP_NATIVA ? null : { href: "/planes", label: "Ver planes" };
@@ -36,18 +43,16 @@ export default function BloqueoPlanPro({
       }}
     >
       <div
-        className="mx-auto w-11 h-11 rounded-full flex items-center justify-center"
-        style={{ background: "color-mix(in srgb, var(--kipu-accent) 15%, transparent)" }}
+        className="mx-auto w-11 h-11 rounded-full flex items-center justify-center bg-acento/15"
       >
-        <Lock size={20} style={{ color: "var(--kipu-accent)" }} />
+        <Lock className="text-acento" size={20} />
       </div>
-      <h2 className="text-base font-semibold" style={{ color: "var(--kipu-text)" }}>{titulo}</h2>
-      <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>{mensaje}</p>
+      <h2 className="text-base font-semibold text-texto">{titulo}</h2>
+      <p className="text-sm text-tenue">{mensaje}</p>
       {salida && (
         <Link
           href={salida.href}
-          className="inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-white text-sm font-medium"
-          style={{ background: "var(--kipu-accent)" }}
+          className="inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-white text-sm font-medium bg-acento"
         >
           {salida.label} <ArrowRight size={14} />
         </Link>

@@ -1,252 +1,40 @@
 "use client";
+// Registrar la primera empresa (después de verificar el correo). El formulario
+// es el mismo de Nueva empresa (components/auth/FormularioEmpresa.tsx); aquí, el
+// encabezado, la salida a soporte y cerrar sesión (la única salida de la cuenta).
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import api from "@/lib/api";
 import { auth } from "@/lib/firebase";
-import { signOut } from "firebase/auth";
-import { useAuthStore } from "@/store/auth.store";
-import { Zap, Building2, CheckCircle2, Search, Loader2, MessageCircle, ShieldCheck, Upload } from "lucide-react";
-import { consultarRuc } from "@/lib/consultar-ruc";
+import { Zap, CheckCircle2, MessageCircle } from "lucide-react";
 import { enlaceWhatsAppFalla } from "@/lib/soporte";
-import Turnstile, { TURNSTILE_ACTIVO } from "@/components/auth/Turnstile";
-
-const PASOS = ["Empresa", "Confirmar"];
-
-// ── Soporte: fallas que bloquean, para todos (lib/soporte.ts) ─────────────────
-const waSoporte = (texto: string) => enlaceWhatsAppFalla(texto, auth.currentUser?.email);
-
-const limpiarTexto = (texto: string): string => {
-  return texto
-    .toUpperCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^A-Z0-9\s\.\,\-\/\#\&]/g, "")
-    .replace(/\s+/g, " ")
-    .trimStart();
-};
-
-const validarRuc = (ruc: string): string | null => {
-  if (ruc.length !== 13) return "El RUC debe tener 13 dígitos.";
-  if (!ruc.endsWith("001")) return "El RUC debe terminar en 001.";
-  if (!/^\d+$/.test(ruc)) return "El RUC solo debe contener números.";
-  const provincia = parseInt(ruc.substring(0, 2));
-  if ((provincia < 1 || provincia > 24) && provincia !== 30) return "Provincia inválida.";
-  const tercero = parseInt(ruc[2]);
-  if (tercero < 6) {
-    const coef = [2, 1, 2, 1, 2, 1, 2, 1, 2];
-    const suma = ruc.slice(0, 9).split("").reduce((acc, d, i) => {
-      const p = parseInt(d) * coef[i];
-      return acc + (p >= 10 ? p - 9 : p);
-    }, 0);
-    const verificador = suma % 10 === 0 ? 0 : 10 - (suma % 10);
-    if (verificador !== parseInt(ruc[9])) return "El número de cédula del RUC es inválido.";
-  }
-  return null;
-};
-
-type FormEmpresa = {
-  ruc: string; razon_social: string; nombre_comercial: string; direccion_matriz: string;
-  obligado_contabilidad: string; contribuyente_especial: string;
-};
-
-function textoError(err: unknown, porDefecto: string): string {
-  const detail = (err as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail;
-  if (typeof detail === "string") return detail;
-  if (detail && typeof detail === "object" && "mensaje" in detail) return String((detail as { mensaje: unknown }).mensaje);
-  return porDefecto;
-}
-
-// ── RUC registrado en pruebas por otra cuenta: el dueño lo recupera con su firma ─
-function RecuperarConFirma({ form, onListo }: { form: FormEmpresa; onListo: () => void }) {
-  const [archivo,  setArchivo]  = useState<File | null>(null);
-  const [clave,    setClave]    = useState("");
-  const [enviando, setEnviando] = useState(false);
-  const [error,    setError]    = useState("");
-  const [captcha,  setCaptcha]  = useState<string | null>(null);
-  const [intento,  setIntento]  = useState(0);
-  const archivoRef = useRef<HTMLInputElement>(null);
-
-  const recuperar = async () => {
-    if (!archivo || !clave) {
-      setError("Selecciona tu archivo .p12 y escribe su contraseña.");
-      return;
-    }
-    if (TURNSTILE_ACTIVO && !captcha) {
-      setError("Completa la verificación de seguridad.");
-      return;
-    }
-    setEnviando(true);
-    setError("");
-    let ok = false;
-    try {
-      const datos = new FormData();
-      datos.append("datos", JSON.stringify({ ...form, captcha_token: captcha }));
-      datos.append("password", clave);
-      datos.append("file", archivo);
-      await api.post("/api/v1/app/emisor/onboarding/reclamar", datos, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-      ok = true;
-      onListo();
-    } catch (err: unknown) {
-      setError(textoError(err, "No pudimos recuperar la empresa. Intenta de nuevo."));
-    } finally {
-      setEnviando(false);
-      // Cada verificación sirve una sola vez: para reintentar hace falta otra
-      if (!ok) { setCaptcha(null); setIntento(n => n + 1); }
-    }
-  };
-
-  const campo = {
-    background: "var(--kipu-bg)",
-    border:     "1px solid var(--kipu-border)",
-    color:      "var(--kipu-text)",
-  };
-
-  return (
-    <div
-      className="rounded-xl p-4 space-y-3"
-      style={{
-        background: "var(--kipu-surface)",
-        border:     "1px solid color-mix(in srgb, var(--kipu-accent) 35%, transparent)",
-      }}
-    >
-      <div className="flex items-start gap-3">
-        <ShieldCheck size={20} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-accent)" }} />
-        <div className="space-y-1.5">
-          <p className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>
-            Este RUC lo registró otra cuenta, pero aún no lo activa
-          </p>
-          <p className="text-xs leading-relaxed" style={{ color: "var(--kipu-muted)" }}>
-            Si la empresa es tuya, recupérala con tu firma electrónica (.p12): si la firma es de
-            este RUC, la empresa pasa a tu cuenta con la firma ya configurada. La otra cuenta pierde
-            el acceso a su versión de pruebas y le avisamos por correo.
-          </p>
-        </div>
-      </div>
-
-      <button
-        type="button"
-        onClick={() => archivoRef.current?.click()}
-        className="w-full border-2 border-dashed rounded-lg px-3 py-3 text-sm flex items-center justify-center gap-2"
-        style={{
-          borderColor: archivo ? "var(--kipu-accent)" : "var(--kipu-border)",
-          color:       archivo ? "var(--kipu-accent)" : "var(--kipu-muted)",
-        }}
-      >
-        <Upload size={15} />
-        {archivo ? archivo.name : "Seleccionar mi firma (.p12)"}
-      </button>
-      <input
-        ref={archivoRef}
-        type="file"
-        accept=".p12"
-        className="hidden"
-        onChange={(e) => { setArchivo(e.target.files?.[0] ?? null); setError(""); }}
-      />
-      <input
-        type="password"
-        value={clave}
-        onChange={(e) => { setClave(e.target.value); setError(""); }}
-        onKeyDown={(e) => { if (e.key === "Enter") recuperar(); }}
-        placeholder="Contraseña de la firma"
-        autoComplete="off"
-        className="w-full px-3 py-2.5 rounded-lg text-sm focus:outline-none"
-        style={campo}
-      />
-
-      {error && <ErrorBox error={error} ruc={form.ruc} />}
-
-      <Turnstile key={intento} onToken={setCaptcha} />
-
-      <button
-        type="button"
-        onClick={recuperar}
-        disabled={enviando}
-        className="w-full py-2.5 rounded-lg text-white font-medium text-sm flex items-center justify-center gap-2 disabled:opacity-50"
-        style={{ background: "var(--kipu-accent)" }}
-      >
-        {enviando
-          ? <><Loader2 size={15} className="animate-spin" /> Verificando la firma...</>
-          : <><ShieldCheck size={15} /> Recuperar mi empresa</>}
-      </button>
-      <p className="text-xs text-center" style={{ color: "var(--kipu-subtle)" }}>
-        ¿No tienes tu firma a mano?{" "}
-        <a
-          href={waSoporte(`Hola, el RUC ${form.ruc} aparece registrado en Kipu por otra cuenta y no tengo mi firma a mano. ¿Me pueden ayudar?`)}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="underline"
-          style={{ color: "var(--kipu-accent)" }}
-        >
-          Escríbenos
-        </a>
-      </p>
-    </div>
-  );
-}
-
-// ── Caja de error — siempre con salida a soporte ──────────────────────────────
-function ErrorBox({ error, ruc }: { error: string; ruc: string }) {
-  const texto = error.toUpperCase().includes("REGISTRADO")
-    ? `Hola, intento registrar el RUC ${ruc} en Kipu pero dice que ya está registrado. ¿Me pueden ayudar?`
-    : `Hola, estoy configurando mi empresa en Kipu${ruc ? ` (RUC ${ruc})` : ""} y me sale este error: "${error}". ¿Me pueden ayudar?`;
-
-  return (
-    <div
-      className="rounded-lg px-3 py-2.5 space-y-2"
-      style={{ background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)" }}
-    >
-      <p className="text-sm font-medium" style={{ color: "var(--kipu-danger)" }}>
-        {error}
-      </p>
-      <a
-        href={waSoporte(texto)}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="inline-flex items-center gap-1.5 text-xs font-medium transition-colors"
-        style={{ color: "var(--kipu-accent)" }}
-        onMouseEnter={e => e.currentTarget.style.opacity = "0.8"}
-        onMouseLeave={e => e.currentTarget.style.opacity = "1"}
-      >
-        💬 Escríbenos por WhatsApp
-      </a>
-    </div>
-  );
-}
+import FormularioEmpresa from "@/components/auth/FormularioEmpresa";
+import { cerrarSesion } from "@/lib/notifications";
 
 // ── Pie de soporte — visible en todos los pasos ───────────────────────────────
 function SoporteFooter({ ruc }: { ruc: string }) {
   const router = useRouter();
   const texto = `Hola, necesito ayuda para configurar mi empresa en Kipu${ruc ? ` (RUC ${ruc})` : ""}.`;
   // Al verificar el correo se llega directo aquí: es la única salida de la cuenta
-  const cerrarSesion = async () => {
-    await signOut(auth);
-    useAuthStore.getState().logout();
+  const salir = async () => {
+    await cerrarSesion();
     router.replace("/login");
   };
   return (
-    <div className="mt-6 flex flex-col items-center gap-2 text-center">
+    <div className="mt-8 flex flex-col items-center gap-1 pb-6 text-center md:pb-10">
       <a
-        href={waSoporte(texto)}
+        href={enlaceWhatsAppFalla(texto, auth.currentUser?.email)}
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex items-center gap-1.5 text-xs transition-colors"
-        style={{ color: "var(--kipu-subtle)" }}
-        onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent)"}
-        onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-subtle)"}
+        className="inline-flex min-h-11 items-center gap-1.5 text-xs text-sutil transition-colors hover:text-acento"
       >
-        <MessageCircle size={13} />
+        <MessageCircle size={13} aria-hidden />
         ¿Algo falla y no puedes continuar? Escríbenos por WhatsApp
       </a>
       <button
         type="button"
-        onClick={cerrarSesion}
-        className="text-xs transition-colors"
-        style={{ color: "var(--kipu-subtle)" }}
-        onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
-        onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-subtle)"}
+        onClick={salir}
+        className="min-h-11 px-3 text-xs text-sutil transition-colors hover:text-texto"
       >
         Cerrar sesión
       </button>
@@ -256,82 +44,12 @@ function SoporteFooter({ ruc }: { ruc: string }) {
 
 export default function OnboardingPage() {
   const router = useRouter();
-
-  const [paso,    setPaso]    = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [error,   setError]   = useState("");
   const [success, setSuccess] = useState(false);
-  // El RUC está en pruebas con otra cuenta: se ofrece recuperarlo con la firma
-  const [recuperar, setRecuperar] = useState(false);
-  const [captcha,   setCaptcha]   = useState<string | null>(null);
-  const [intentoCaptcha, setIntentoCaptcha] = useState(0);
-
-  const [lookupLoading, setLookupLoading] = useState(false);
-  const [lookupMsg,     setLookupMsg]     = useState("");
-  const ultimoRuc = useRef("");   // último RUC autoconsultado, para no repetir
-
-  const [form, setForm] = useState({
-    ruc:                    "",
-    razon_social:           "",
-    nombre_comercial:       "",
-    direccion_matriz:       "",
-    obligado_contabilidad:  "NO",
-    contribuyente_especial: "",
-    descripcion_negocio:    "",   // opcional: contexto para clasificar las compras
-  });
 
   // Sin correo verificado el backend rechaza el registro: verificar primero
   useEffect(() => {
     if (auth.currentUser && !auth.currentUser.emailVerified) router.replace("/bienvenida");
   }, [router]);
-
-  const rucValido = form.ruc.length === 13 && /^\d+$/.test(form.ruc) && form.ruc.endsWith("001");
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-    setError("");
-  };
-
-  // ── Lookup RUC ─────────────────────────────────────────────────────────────
-  const handleLookup = async (rucArg?: string) => {
-    const ruc = rucArg ?? form.ruc;
-    const valido = ruc.length === 13 && /^\d+$/.test(ruc) && ruc.endsWith("001");
-    if (!valido || lookupLoading) return;
-    ultimoRuc.current = ruc;
-    setLookupLoading(true);
-    setLookupMsg("");
-
-    const { found, datos, error } = await consultarRuc(ruc);
-
-    if (error) {
-      setLookupMsg(error);
-    } else if (found && datos) {
-      setForm((prev) => ({
-        ...prev,
-        razon_social:           datos.razon_social           || prev.razon_social,
-        nombre_comercial:       datos.nombre_comercial       || prev.nombre_comercial,
-        direccion_matriz:       datos.direccion_matriz       || prev.direccion_matriz,
-        obligado_contabilidad:  datos.obligado_contabilidad  || prev.obligado_contabilidad,
-        contribuyente_especial: datos.contribuyente_especial || prev.contribuyente_especial,
-      }));
-      setLookupMsg(datos.estado === "ACTIVO"
-        ? "✓ Datos cargados del SRI — revísalos y corrige si hace falta"
-        : `⚠ Tu RUC figura como ${datos.estado || "no activo"} en el SRI`);
-    } else {
-      setLookupMsg("No encontrado — ingresa los datos manualmente");
-    }
-
-    setLookupLoading(false);
-  };
-
-  const validarPaso0 = () => {
-    const errorRuc = validarRuc(form.ruc);
-    if (errorRuc) { setError(errorRuc); return false; }
-    if (!form.razon_social.trim()) { setError("La razón social es obligatoria."); return false; }
-    if (!form.direccion_matriz.trim()) { setError("La dirección es obligatoria."); return false; }
-    if (form.direccion_matriz.trim().length < 5) { setError("La dirección debe tener al menos 5 caracteres."); return false; }
-    return true;
-  };
 
   const listo = () => {
     setSuccess(true);
@@ -340,403 +58,34 @@ export default function OnboardingPage() {
     setTimeout(() => window.location.replace("/dashboard"), 1500);
   };
 
-  const handleSubmit = async () => {
-    setError("");
-    setRecuperar(false);
-    if (TURNSTILE_ACTIVO && !captcha) {
-      setError("Completa la verificación de seguridad.");
-      return;
-    }
-    setLoading(true);
-    let ok = false;
-    try {
-      await api.post("/api/v1/app/emisor/onboarding", { ...form, captcha_token: captcha });
-      ok = true;
-      listo();
-    } catch (err: any) {
-      const detail = err?.response?.data?.detail;
-      if (err?.response?.status === 403 && typeof detail === "string" && /verificar tu correo/i.test(detail)) {
-        router.replace("/bienvenida");
-        return;
-      }
-      if (detail?.codigo === "RUC_EN_PRUEBAS") {
-        setRecuperar(true);
-        return;
-      }
-      if (typeof detail === "string") {
-        setError(detail);
-      } else if (Array.isArray(detail)) {
-        setError(detail.map((d: any) => d.msg || d.mensaje || "").filter(Boolean).join(". "));
-      } else if (detail && typeof detail === "object") {
-        setError(detail.mensaje || detail.msg || "Error al registrar la empresa.");
-      } else {
-        setError("Error al registrar la empresa.");
-      }
-    } finally {
-      setLoading(false);
-      // Cada verificación sirve una sola vez: para reintentar hace falta otra
-      if (!ok) { setCaptcha(null); setIntentoCaptcha(n => n + 1); }
-    }
-  };
-
   // ── Pantalla de éxito ──────────────────────────────────────────────────────
   if (success) {
     return (
-      <div
-        className="min-h-screen flex items-center justify-center"
-        style={{ background: "var(--kipu-bg)" }}
-      >
+      <main className="flex min-h-screen items-center justify-center bg-fondo px-4" role="status">
         <div className="text-center">
-          <CheckCircle2 size={48} className="mx-auto mb-4" style={{ color: "var(--kipu-success)" }} />
-          <h2 className="text-xl font-bold" style={{ color: "var(--kipu-text)" }}>¡Todo listo!</h2>
-          <p className="mt-1 text-sm" style={{ color: "var(--kipu-subtle)" }}>Redirigiendo a tu panel...</p>
+          <span className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-exito-suave">
+            <CheckCircle2 size={32} className="text-exito" aria-hidden />
+          </span>
+          <h1 className="text-xl font-bold text-texto">¡Todo listo!</h1>
+          <p className="mt-1 text-sm text-tenue">Abriendo tu panel…</p>
         </div>
-      </div>
+      </main>
     );
   }
 
-  // ── Formulario ─────────────────────────────────────────────────────────────
   return (
-    <div
-      className="min-h-screen flex items-center justify-center px-4 py-10"
-      style={{ background: "var(--kipu-bg)" }}
-    >
-      <div className="w-full max-w-md">
-        <div className="flex flex-col items-center mb-8">
-          <div
-            className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4"
-            style={{ background: "var(--kipu-accent)" }}
-          >
-            <Zap size={24} className="text-white" />
-          </div>
-          <h1 className="text-2xl font-bold" style={{ color: "var(--kipu-text)" }}>Configura tu empresa</h1>
-          <p className="text-sm mt-1" style={{ color: "var(--kipu-subtle)" }}>Solo toma 2 minutos</p>
-        </div>
+    <main className="flex min-h-screen flex-col bg-fondo">
+      <div className="mx-auto flex w-full max-w-md flex-1 flex-col px-4 pt-8 md:flex-none md:pt-12">
+        <header className="mb-6 flex flex-col items-center text-center">
+          <span className="mb-4 flex size-12 items-center justify-center rounded-2xl bg-acento text-sobre-acento">
+            <Zap size={24} aria-hidden />
+          </span>
+          <h1 className="text-2xl font-bold text-texto">Configura tu empresa</h1>
+          <p className="mt-1 text-sm text-sutil">Solo toma 2 minutos</p>
+        </header>
 
-        {/* Steps */}
-        <div className="flex items-center gap-2 mb-8">
-          {PASOS.map((label, i) => (
-            <div key={i} className="flex items-center gap-2 flex-1">
-              <div
-                className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-colors shrink-0"
-                style={{
-                  background: i <= paso ? "var(--kipu-accent)" : "color-mix(in srgb, var(--kipu-text) 10%, transparent)",
-                  color: i <= paso ? "#FFFFFF" : "var(--kipu-subtle)",
-                }}
-              >
-                {i + 1}
-              </div>
-              <span
-                className="text-xs font-medium"
-                style={{ color: i <= paso ? "var(--kipu-text)" : "var(--kipu-subtle)" }}
-              >
-                {label}
-              </span>
-              {i < PASOS.length - 1 && (
-                <div
-                  className="flex-1 h-px transition-colors"
-                  style={{
-                    background: i < paso ? "var(--kipu-accent)" : "var(--kipu-border)",
-                  }}
-                />
-              )}
-            </div>
-          ))}
-        </div>
-
-        {/* Paso 0 — Datos */}
-        {paso === 0 && (
-          <div className="space-y-4">
-            {/* RUC + botón buscar */}
-            <div>
-              <label className="block text-sm font-medium mb-1.5" style={{ color: "var(--kipu-subtle)" }}>RUC *</label>
-              <div className="flex gap-2">
-                <input
-                  name="ruc"
-                  value={form.ruc}
-                  inputMode="numeric"
-                  onChange={(e) => {
-                    const val = e.target.value.replace(/\D/g, "");
-                    setForm({ ...form, ruc: val });
-                    setError("");
-                    setLookupMsg("");
-                    // Autobúsqueda al completar un RUC válido (una sola vez por valor)
-                    if (val.length === 13 && val.endsWith("001") && val !== ultimoRuc.current) {
-                      handleLookup(val);
-                    }
-                  }}
-                  placeholder="0000000000001"
-                  maxLength={13}
-                  className="flex-1 px-4 py-2.5 rounded-lg text-sm focus:outline-none transition-colors"
-                  style={{
-                    background: "var(--kipu-surface)",
-                    border: "1px solid var(--kipu-border)",
-                    color: "var(--kipu-text)",
-                  }}
-                  onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                  onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
-                />
-                <button
-                  type="button"
-                  onClick={() => handleLookup()}
-                  disabled={!rucValido || lookupLoading}
-                  className="px-3 rounded-lg transition-colors shrink-0 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
-                  style={{
-                    border: "1px solid var(--kipu-border)",
-                    color: "var(--kipu-subtle)",
-                  }}
-                  onMouseEnter={e => {
-                    if (rucValido && !lookupLoading) {
-                      e.currentTarget.style.color = "var(--kipu-accent)";
-                      e.currentTarget.style.borderColor = "var(--kipu-accent)";
-                    }
-                  }}
-                  onMouseLeave={e => {
-                    if (rucValido && !lookupLoading) {
-                      e.currentTarget.style.color = "var(--kipu-subtle)";
-                      e.currentTarget.style.borderColor = "var(--kipu-border)";
-                    }
-                  }}
-                  title="Buscar razón social por RUC"
-                >
-                  {lookupLoading
-                    ? <Loader2 size={15} className="animate-spin" />
-                    : <Search size={15} />
-                  }
-                  <span className="text-xs hidden sm:inline">Buscar</span>
-                </button>
-              </div>
-              {lookupMsg && (
-                <p
-                  className="text-xs mt-1.5"
-                  style={{
-                    color: lookupMsg.startsWith("✓")
-                      ? "var(--kipu-success)"
-                      : lookupMsg.startsWith("⚠")
-                        ? "var(--kipu-warning)"
-                        : "var(--kipu-subtle)",
-                  }}
-                >
-                  {lookupMsg}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Razón Social *</label>
-              <input
-                name="razon_social"
-                value={form.razon_social}
-                onChange={(e) => { setForm({ ...form, razon_social: limpiarTexto(e.target.value) }); setError(""); }}
-                placeholder="EMPRESA S.A."
-                className="w-full px-4 py-2.5 rounded-lg text-sm focus:outline-none transition-colors"
-                style={{
-                  background: "var(--kipu-surface)",
-                  border: "1px solid var(--kipu-border)",
-                  color: "var(--kipu-text)",
-                }}
-                onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Nombre Comercial</label>
-              <input
-                name="nombre_comercial"
-                value={form.nombre_comercial}
-                onChange={(e) => { setForm({ ...form, nombre_comercial: limpiarTexto(e.target.value) }); setError(""); }}
-                placeholder="Mi Negocio (opcional)"
-                className="w-full px-4 py-2.5 rounded-lg text-sm focus:outline-none transition-colors"
-                style={{
-                  background: "var(--kipu-surface)",
-                  border: "1px solid var(--kipu-border)",
-                  color: "var(--kipu-text)",
-                }}
-                onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Dirección Matriz *</label>
-              <input
-                name="direccion_matriz"
-                value={form.direccion_matriz}
-                onChange={(e) => { setForm({ ...form, direccion_matriz: limpiarTexto(e.target.value) }); setError(""); }}
-                placeholder="Av. Principal 123, Ciudad"
-                className="w-full px-4 py-2.5 rounded-lg text-sm focus:outline-none transition-colors"
-                style={{
-                  background: "var(--kipu-surface)",
-                  border: "1px solid var(--kipu-border)",
-                  color: "var(--kipu-text)",
-                }}
-                onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Obligado Contabilidad</label>
-                <select
-                  name="obligado_contabilidad"
-                  value={form.obligado_contabilidad}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2.5 rounded-lg text-sm focus:outline-none transition-colors"
-                  style={{
-                    background: "var(--kipu-surface)",
-                    border: "1px solid var(--kipu-border)",
-                    color: "var(--kipu-text)",
-                  }}
-                >
-                  <option value="NO">NO</option>
-                  <option value="SI">SI</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Contrib. Especial</label>
-                <input
-                  name="contribuyente_especial"
-                  value={form.contribuyente_especial}
-                  inputMode="numeric"
-                  onChange={handleChange}
-                  placeholder="Opcional"
-                  className="w-full px-4 py-2.5 rounded-lg text-sm focus:outline-none transition-colors"
-                  style={{
-                    background: "var(--kipu-surface)",
-                    border: "1px solid var(--kipu-border)",
-                    color: "var(--kipu-text)",
-                  }}
-                  onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                  onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Describe tu negocio en una línea</label>
-              <input
-                name="descripcion_negocio"
-                value={form.descripcion_negocio}
-                maxLength={120}
-                onChange={(e) => { setForm({ ...form, descripcion_negocio: e.target.value }); setError(""); }}
-                placeholder="Ej.: consultorio odontológico, venta de repuestos de motos"
-                className="w-full px-4 py-2.5 rounded-lg text-sm focus:outline-none transition-colors"
-                style={{
-                  background: "var(--kipu-surface)",
-                  border: "1px solid var(--kipu-border)",
-                  color: "var(--kipu-text)",
-                }}
-                onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
-              />
-              <p className="text-xs mt-1" style={{ color: "var(--kipu-subtle)" }}>
-                Opcional. Ayuda a Kipu a saber qué compras son de tu negocio.
-              </p>
-            </div>
-
-            {error && <ErrorBox error={error} ruc={form.ruc} />}
-
-            <button
-              type="button"
-              onClick={() => { if (validarPaso0()) setPaso(1); }}
-              className="w-full py-2.5 rounded-lg text-white font-medium text-sm transition-colors"
-              style={{ background: "var(--kipu-accent)" }}
-              onMouseEnter={e => e.currentTarget.style.background = "var(--kipu-accent-h)"}
-              onMouseLeave={e => e.currentTarget.style.background = "var(--kipu-accent)"}
-            >
-              Continuar
-            </button>
-          </div>
-        )}
-
-        {/* Paso 1 — Confirmar */}
-        {paso === 1 && (
-          <div className="space-y-4">
-            <div
-              className="rounded-xl p-4 space-y-3"
-              style={{
-                background: "var(--kipu-surface)",
-                border: "1px solid var(--kipu-border)",
-              }}
-            >
-              <div className="flex items-center gap-2 mb-2">
-                <Building2 size={16} style={{ color: "var(--kipu-accent)" }} />
-                <span className="text-sm font-medium" style={{ color: "var(--kipu-text)" }}>Resumen de tu empresa</span>
-              </div>
-              {[
-                { label: "RUC",                  value: form.ruc },
-                { label: "Razón Social",         value: form.razon_social },
-                { label: "Nombre Comercial",     value: form.nombre_comercial || "—" },
-                { label: "Dirección",            value: form.direccion_matriz },
-                { label: "Oblig. Contabilidad",  value: form.obligado_contabilidad },
-                ...(form.descripcion_negocio.trim()
-                  ? [{ label: "Tu negocio", value: form.descripcion_negocio.trim() }] : []),
-              ].map(({ label, value }) => (
-                <div key={label} className="flex justify-between text-sm">
-                  <span style={{ color: "var(--kipu-subtle)" }}>{label}</span>
-                  <span className="text-right max-w-[60%] truncate font-medium" style={{ color: "var(--kipu-text)" }}>{value}</span>
-                </div>
-              ))}
-            </div>
-
-            {error && <ErrorBox error={error} ruc={form.ruc} />}
-            {recuperar && <RecuperarConFirma form={form} onListo={listo} />}
-            {!recuperar && <Turnstile key={intentoCaptcha} onToken={setCaptcha} />}
-
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => { setPaso(0); setRecuperar(false); }}
-                className="flex-1 py-2.5 rounded-lg text-sm transition-colors font-medium"
-                style={{
-                  border: "1px solid var(--kipu-border)",
-                  color: "var(--kipu-subtle)",
-                  background: "transparent",
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.color = "var(--kipu-text)";
-                  e.currentTarget.style.borderColor = "color-mix(in srgb, var(--kipu-text) 30%, transparent)";
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.color = "var(--kipu-subtle)";
-                  e.currentTarget.style.borderColor = "var(--kipu-border)";
-                }}
-              >
-                Atrás
-              </button>
-              {!recuperar && <button
-                type="button"
-                onClick={handleSubmit}
-                disabled={loading}
-                className="flex-1 py-2.5 rounded-lg text-white font-medium text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-                style={{ background: "var(--kipu-accent)" }}
-                onMouseEnter={e => {
-                  if (!loading) e.currentTarget.style.background = "var(--kipu-accent-h)";
-                }}
-                onMouseLeave={e => {
-                  if (!loading) e.currentTarget.style.background = "var(--kipu-accent)";
-                }}
-              >
-                {loading ? (
-                  <>
-                    <div
-                      className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin"
-                      style={{ borderColor: "#FFFFFF", borderTopColor: "transparent" }}
-                    /> Creando...
-                  </>
-                ) : (
-                  "Confirmar y entrar"
-                )}
-              </button>}
-            </div>
-          </div>
-        )}
-
-        {/* Soporte siempre visible */}
-        <SoporteFooter ruc={form.ruc} />
+        <FormularioEmpresa onCreada={listo} pie={(ruc) => <SoporteFooter ruc={ruc} />} />
       </div>
-    </div>
+    </main>
   );
 }

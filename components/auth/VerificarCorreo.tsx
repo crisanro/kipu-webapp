@@ -5,6 +5,7 @@ import { CheckCircle2, Loader2, Mail, MailCheck, MessageCircle, RefreshCw } from
 import { auth } from "@/lib/firebase";
 import { enlaceWhatsAppFalla } from "@/lib/soporte";
 import { useVerificacionCorreo } from "@/hooks/useVerificacionCorreo";
+import Boton from "@/components/ui/Boton";
 
 // Remitente de los correos de cuenta (SMTP_FROM del backend)
 const REMITENTE = "no-reply@kipu.ec";
@@ -29,74 +30,57 @@ export default function VerificarCorreo({ onVerificado, onCambiarCorreo }: Props
     return () => clearTimeout(id);
   }, [v.verificado, onVerificado]);
 
-  const caja = {
-    background: "var(--kipu-surface)",
-    border:     "1px solid var(--kipu-border)",
-  };
-
   if (v.cargando) {
     return (
-      <div className="rounded-xl p-6 flex justify-center" style={caja}>
-        <Loader2 size={20} className="animate-spin" style={{ color: "var(--kipu-subtle)" }} />
+      <div className="flex justify-center rounded-xl border border-borde bg-superficie p-6">
+        <Loader2 size={20} className="animate-spin text-sutil" aria-label="Cargando" />
       </div>
     );
   }
 
   if (v.verificado) {
     return (
-      <div className="rounded-xl p-6 text-center" style={caja}>
-        <CheckCircle2 size={36} className="mx-auto mb-3" style={{ color: "var(--kipu-success)" }} />
-        <p className="font-semibold" style={{ color: "var(--kipu-text)" }}>¡Correo verificado!</p>
-        <p className="text-sm mt-1" style={{ color: "var(--kipu-muted)" }}>Continuemos con tu empresa…</p>
+      <div className="rounded-xl border border-borde bg-superficie p-6 text-center" role="status">
+        <CheckCircle2 size={36} className="mx-auto mb-3 text-exito" aria-hidden />
+        <p className="font-semibold text-texto">¡Correo verificado!</p>
+        <p className="mt-1 text-sm text-tenue">Continuemos con tu empresa…</p>
       </div>
     );
   }
 
   const textoReenviar = v.enviando
-    ? "Enviando..."
+    ? "Enviando…"
     : v.espera > 0
       ? `Reenviar en ${v.espera} s`
       : "Reenviar correo";
 
   return (
-    <div className="rounded-xl p-5" style={caja}>
-      <div
-        className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3"
-        style={{ background: "color-mix(in srgb, var(--kipu-accent) 12%, transparent)" }}
-      >
-        {v.enviado
-          ? <MailCheck size={22} style={{ color: "var(--kipu-accent)" }} />
-          : <Mail size={22} style={{ color: "var(--kipu-accent)" }} />}
-      </div>
+    <div className="rounded-xl border border-borde bg-superficie p-5">
+      <span className="mx-auto mb-3 flex size-12 items-center justify-center rounded-full bg-acento-suave text-acento">
+        {v.enviado ? <MailCheck size={22} aria-hidden /> : <Mail size={22} aria-hidden />}
+      </span>
 
-      <h2 className="text-center font-semibold" style={{ color: "var(--kipu-text)" }}>
+      <h2 className="text-center font-semibold text-texto">
         {v.enviado ? "Revisa tu correo" : "Verifica tu correo electrónico"}
       </h2>
 
       {!v.enviado ? (
-        <p className="text-sm text-center mt-2" style={{ color: "var(--kipu-muted)" }}>
+        <p className="mt-2 text-center text-sm text-tenue">
           Antes de configurar tu empresa necesitamos confirmar que este correo es tuyo:
-          <br />
-          <strong className="break-all" style={{ color: "var(--kipu-text)" }}>{email}</strong>
-          <span className="block text-xs mt-2" style={{ color: "var(--kipu-subtle)" }}>
-            Te llegará desde {REMITENTE}.
-          </span>
+          <strong className="mt-1 block break-all text-texto">{email}</strong>
+          <span className="mt-2 block text-xs text-sutil">Te llegará desde {REMITENTE}.</span>
         </p>
       ) : (
-        <div className="text-sm text-center mt-2 space-y-2" style={{ color: "var(--kipu-muted)" }}>
+        <div className="mt-2 space-y-2 text-center text-sm text-tenue">
           <p>
-            Te enviamos un enlace a{" "}
-            <strong className="break-all" style={{ color: "var(--kipu-text)" }}>{email}</strong>.
+            Te enviamos un enlace a <strong className="break-all text-texto">{email}</strong>.
             Ábrelo y esta pantalla avanzará sola.
           </p>
-          <div
-            className="text-xs text-left rounded-lg px-3 py-2.5 space-y-1"
-            style={{ background: "color-mix(in srgb, var(--kipu-text) 4%, transparent)", color: "var(--kipu-muted)" }}
-          >
+          <div className="space-y-1 rounded-lg bg-presionado px-3 py-2.5 text-left text-xs">
             <p>
-              Busca un correo de <strong style={{ color: "var(--kipu-text)" }}>Kipu</strong>{" "}
-              <span className="break-all">&lt;{REMITENTE}&gt;</span> con el asunto
-              {" "}<strong style={{ color: "var(--kipu-text)" }}>“Verifica tu correo en Kipu”</strong>.
+              Busca un correo de <strong className="text-texto">Kipu</strong>{" "}
+              <span className="break-all">&lt;{REMITENTE}&gt;</span> con el asunto{" "}
+              <strong className="text-texto">“Verifica tu correo en Kipu”</strong>.
             </p>
             <p>¿No lo ves? Revisa las carpetas de Spam o Promociones y márcalo como “No es spam”.</p>
           </div>
@@ -104,60 +88,28 @@ export default function VerificarCorreo({ onVerificado, onCambiarCorreo }: Props
       )}
 
       {v.error && (
-        <p
-          className="text-xs px-3 py-2 rounded-lg mt-4"
-          style={{ color: "var(--kipu-danger)", background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)" }}
-        >
-          {v.error}
-        </p>
+        <p className="mt-4 rounded-lg bg-peligro-suave px-3 py-2 text-xs text-peligro-texto" role="alert">{v.error}</p>
       )}
       {v.aviso && (
-        <p
-          className="text-xs px-3 py-2 rounded-lg mt-4"
-          style={{ color: "var(--kipu-warning)", background: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)" }}
-        >
-          {v.aviso}
-        </p>
+        <p className="mt-4 rounded-lg bg-alerta-suave px-3 py-2 text-xs text-alerta-texto" role="status">{v.aviso}</p>
       )}
 
       <div className="mt-5 space-y-2">
         {!v.enviado ? (
-          <button
-            type="button"
-            onClick={v.enviar}
-            disabled={v.enviando || v.espera > 0}
-            className="w-full py-2.5 rounded-lg font-medium text-sm flex items-center justify-center gap-2 disabled:opacity-50"
-            style={{ background: "var(--kipu-accent)", color: "#ffffff" }}
-          >
-            {v.enviando
-              ? <><Loader2 size={15} className="animate-spin" /> Enviando...</>
-              : v.espera > 0
-                ? `Enviar en ${v.espera} s`
-                : <><Mail size={15} /> Enviar correo de verificación</>}
-          </button>
+          <Boton anchoCompleto tamano="lg" onClick={v.enviar} cargando={v.enviando}
+                 disabled={v.espera > 0} icono={<Mail size={16} />}>
+            {v.enviando ? "Enviando…" : v.espera > 0 ? `Enviar en ${v.espera} s` : "Enviar correo de verificación"}
+          </Boton>
         ) : (
           <>
-            <button
-              type="button"
-              onClick={v.comprobar}
-              disabled={v.comprobando}
-              className="w-full py-2.5 rounded-lg font-medium text-sm flex items-center justify-center gap-2 disabled:opacity-50"
-              style={{ background: "var(--kipu-accent)", color: "#ffffff" }}
-            >
-              {v.comprobando
-                ? <><Loader2 size={15} className="animate-spin" /> Comprobando...</>
-                : <><CheckCircle2 size={15} /> Ya verifiqué mi correo</>}
-            </button>
-            <button
-              type="button"
-              onClick={v.enviar}
-              disabled={v.enviando || v.espera > 0}
-              className="w-full py-2.5 rounded-lg text-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ border: "1px solid var(--kipu-border)", color: "var(--kipu-muted)" }}
-            >
-              <RefreshCw size={14} className={v.enviando ? "animate-spin" : ""} />
+            <Boton anchoCompleto tamano="lg" onClick={v.comprobar} cargando={v.comprobando}
+                   icono={<CheckCircle2 size={16} />}>
+              {v.comprobando ? "Comprobando…" : "Ya verifiqué mi correo"}
+            </Boton>
+            <Boton anchoCompleto variante="secundario" onClick={v.enviar} disabled={v.enviando || v.espera > 0}
+                   icono={<RefreshCw size={14} className={v.enviando ? "animate-spin" : ""} />}>
               {textoReenviar}
-            </button>
+            </Boton>
           </>
         )}
       </div>
@@ -165,24 +117,23 @@ export default function VerificarCorreo({ onVerificado, onCambiarCorreo }: Props
       {/* Falla que bloquea: se atiende a todos (lib/soporte.ts). Solo después de
           pedir el correo, para que primero revise spam y reenvíe */}
       {(v.enviado || v.error) && (
-        <p className="text-xs text-center mt-4" style={{ color: "var(--kipu-subtle)" }}>
+        <p className="mt-4 text-center text-xs text-sutil">
           ¿Sigue sin llegar?{" "}
           <a
             href={enlaceWhatsAppFalla("Hola, no me llega el correo de verificación de Kipu.", email)}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 underline"
-            style={{ color: "var(--kipu-accent)" }}
+            className="inline-flex items-center gap-1 text-acento underline underline-offset-2"
           >
-            <MessageCircle size={12} /> Escríbenos por WhatsApp
+            <MessageCircle size={12} aria-hidden /> Escríbenos por WhatsApp
           </a>
         </p>
       )}
 
       {onCambiarCorreo && (
-        <p className="text-xs text-center mt-4" style={{ color: "var(--kipu-subtle)" }}>
+        <p className="mt-4 text-center text-xs text-sutil">
           ¿Te equivocaste de correo?{" "}
-          <button type="button" onClick={onCambiarCorreo} className="underline" style={{ color: "var(--kipu-accent)" }}>
+          <button type="button" onClick={onCambiarCorreo} className="text-acento underline underline-offset-2">
             Regístrate de nuevo
           </button>
         </p>

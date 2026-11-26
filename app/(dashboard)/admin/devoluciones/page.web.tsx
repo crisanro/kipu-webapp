@@ -8,6 +8,9 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, Loader2, Mail, MessageCircle, RotateCw, Undo2 } from "lucide-react";
 import api from "@/lib/api";
+import { detalleError } from "@/lib/errores";
+import { dolares } from "@/lib/dinero";
+import { enlaceWhatsAppA } from "@/lib/soporte";
 
 interface Devolucion {
   id:                       number;
@@ -36,14 +39,8 @@ const ESTADO: Record<string, { texto: string; color: string }> = {
   PROCESANDO:              { texto: "Procesando",               color: "var(--kipu-info)" },
 };
 
-const dinero = (n: number) => `$${n.toFixed(2)}`;
 const fecha = (iso: string) =>
   new Date(iso).toLocaleDateString("es-EC", { day: "numeric", month: "short", year: "numeric" });
-
-function wa(numero: string): string {
-  const d = numero.replace(/\D/g, "");
-  return d.startsWith("0") ? `593${d.slice(1)}` : d;
-}
 
 type Lectura = { lista?: Devolucion[]; error?: string; prohibido?: boolean };
 
@@ -103,8 +100,7 @@ export default function AdminDevolucionesPage() {
       setRefs((r) => ({ ...r, [d.id]: "" }));
       recargar();
     } catch (e) {
-      const det = (e as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail;
-      setError(typeof det === "string" ? det : "No se pudo marcar la devolución.");
+      setError(detalleError(e, "No se pudo marcar la devolución."));
     } finally {
       setMarcando(null);
     }
@@ -117,15 +113,15 @@ export default function AdminDevolucionesPage() {
     <div className="max-w-6xl mx-auto px-4 md:px-6 py-4 md:py-6 space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-base font-semibold flex items-center gap-2" style={{ color: "var(--kipu-text)" }}>
-            <Undo2 size={16} style={{ color: "var(--kipu-accent)" }} /> Devoluciones por cambio de Pro a Al Día
+          <h2 className="text-base font-semibold flex items-center gap-2 text-texto">
+            <Undo2 className="text-acento" size={16} /> Devoluciones por cambio de Pro a Al Día
           </h2>
-          <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+          <p className="text-xs text-sutil">
             Las de tarjeta las hace Stripe solo. Aquí quedan las que hay que transferir a mano.
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex rounded-lg p-0.5" style={{ border: "1px solid var(--kipu-border)" }}>
+          <div className="flex rounded-lg p-0.5 border border-borde">
             {[{ v: true, t: "Por transferir" }, { v: false, t: "Todas" }].map(({ v, t }) => (
               <button
                 key={t}
@@ -145,8 +141,7 @@ export default function AdminDevolucionesPage() {
             onClick={recargar}
             disabled={cargando}
             aria-label="Actualizar"
-            className="p-2 rounded-lg transition-colors hover:bg-[color-mix(in_srgb,var(--kipu-text)_6%,transparent)]"
-            style={{ color: "var(--kipu-subtle)", border: "1px solid var(--kipu-border)" }}
+            className="p-2 rounded-lg transition-colors hover:bg-[color-mix(in_srgb,var(--kipu-text)_6%,transparent)] text-sutil border border-borde"
           >
             <RotateCw size={14} className={cargando ? "animate-spin" : ""} />
           </button>
@@ -154,31 +149,28 @@ export default function AdminDevolucionesPage() {
       </div>
 
       {soloPendientes && pendientes.length > 0 && (
-        <p className="text-sm" style={{ color: "var(--kipu-text)" }}>
-          <strong>{pendientes.length}</strong> por transferir · <strong>{dinero(porTransferir)}</strong> en total
+        <p className="text-sm text-texto">
+          <strong>{pendientes.length}</strong> por transferir · <strong>{dolares(porTransferir)}</strong> en total
         </p>
       )}
 
       {aviso && (
-        <p className="text-xs rounded-lg px-3 py-2 flex items-center gap-2"
-           style={{ background: "color-mix(in srgb, var(--kipu-success) 10%, transparent)", color: "var(--kipu-text)" }}>
-          <CheckCircle2 size={14} style={{ color: "var(--kipu-success)" }} /> {aviso}
+        <p className="text-xs rounded-lg px-3 py-2 flex items-center gap-2 bg-exito/10 text-texto">
+          <CheckCircle2 className="text-exito" size={14} /> {aviso}
         </p>
       )}
       {error && (
-        <p className="text-xs rounded-lg px-3 py-2"
-           style={{ background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)", color: "var(--kipu-danger)" }}>
+        <p className="text-xs rounded-lg px-3 py-2 bg-peligro-suave text-peligro">
           {error}
         </p>
       )}
 
       {lista === null ? (
         <div className="flex justify-center py-16">
-          <Loader2 size={20} className="animate-spin" style={{ color: "var(--kipu-accent)" }} />
+          <Loader2 size={20} className="animate-spin text-acento" />
         </div>
       ) : lista.length === 0 ? (
-        <div className="rounded-xl p-8 text-center text-sm"
-             style={{ background: "var(--kipu-surface)", border: "1px solid var(--kipu-border)", color: "var(--kipu-subtle)" }}>
+        <div className="rounded-xl p-8 text-center text-sm bg-superficie border border-borde text-sutil">
           {soloPendientes ? "No hay devoluciones por transferir." : "Todavía no hay devoluciones."}
         </div>
       ) : (
@@ -192,19 +184,19 @@ export default function AdminDevolucionesPage() {
                      ? "color-mix(in srgb, var(--kipu-warning) 40%, transparent)" : "var(--kipu-border)"}` }}>
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold truncate" style={{ color: "var(--kipu-text)" }}>{d.empresa}</p>
-                    <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+                    <p className="text-sm font-semibold truncate text-texto">{d.empresa}</p>
+                    <p className="text-xs text-sutil">
                       RUC {d.ruc} · #{d.id} · {fecha(d.created_at)}
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="text-lg font-bold tabular-nums" style={{ color: "var(--kipu-text)" }}>{dinero(d.monto)}</p>
+                    <p className="text-lg font-bold tabular-nums text-texto">{dolares(d.monto)}</p>
                     <span className="text-[11px] font-semibold" style={{ color: e.color }}>{e.texto}</span>
                   </div>
                 </div>
 
-                <p className="text-xs" style={{ color: "var(--kipu-muted)" }}>
-                  Pagó {dinero(d.pagado)} por Kipu Pro{d.dias_no_usados !== null && ` · le quedaban ${d.dias_no_usados} días`}
+                <p className="text-xs text-tenue">
+                  Pagó {dolares(d.pagado)} por Kipu Pro{d.dias_no_usados !== null && ` · le quedaban ${d.dias_no_usados} días`}
                   {" · "}{d.metodo === "TARJETA" ? "pagó con tarjeta" : "pagó por transferencia"}
                   {d.referencia_transferencia && ` · referencia ${d.referencia_transferencia}`}
                 </p>
@@ -217,21 +209,19 @@ export default function AdminDevolucionesPage() {
                 )}
 
                 {pendiente && (
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 pt-1"
-                       style={{ borderTop: "1px solid var(--kipu-border)" }}>
-                    <div className="flex items-center gap-3 text-xs flex-wrap pt-2 sm:pt-0" style={{ color: "var(--kipu-subtle)" }}>
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 pt-1 border-t border-borde">
+                    <div className="flex items-center gap-3 text-xs flex-wrap pt-2 sm:pt-0 text-sutil">
                       <span>{d.contacto ?? "Sin contacto"}</span>
                       {d.whatsapp && (
-                        <a href={`https://wa.me/${wa(d.whatsapp)}?text=${encodeURIComponent(
-                             `Hola, te escribimos de Kipu por la devolución de ${dinero(d.monto)} de tu Kipu Pro. ¿A qué cuenta bancaria te la transferimos?`)}`}
+                        <a href={enlaceWhatsAppA(d.whatsapp,
+                             `Hola, te escribimos de Kipu por la devolución de ${dolares(d.monto)} de tu Kipu Pro. ¿A qué cuenta bancaria te la transferimos?`)}
                            target="_blank" rel="noopener noreferrer"
-                           className="inline-flex items-center gap-1 font-medium hover:underline" style={{ color: "var(--kipu-accent)" }}>
+                           className="inline-flex items-center gap-1 font-medium hover:underline text-acento">
                           <MessageCircle size={12} /> {d.whatsapp}
                         </a>
                       )}
                       {d.email && (
-                        <a href={`mailto:${d.email}`} className="inline-flex items-center gap-1 hover:underline"
-                           style={{ color: "var(--kipu-accent)" }}>
+                        <a href={`mailto:${d.email}`} className="inline-flex items-center gap-1 hover:underline text-acento">
                           <Mail size={12} /> {d.email}
                         </a>
                       )}
@@ -242,15 +232,13 @@ export default function AdminDevolucionesPage() {
                         onChange={(ev) => setRefs((r) => ({ ...r, [d.id]: ev.target.value }))}
                         placeholder="Referencia de la transferencia"
                         maxLength={100}
-                        className="flex-1 sm:w-56 px-3 py-1.5 rounded-lg text-xs outline-none"
-                        style={{ background: "var(--kipu-bg)", border: "1px solid var(--kipu-border)", color: "var(--kipu-text)" }}
+                        className="flex-1 sm:w-56 px-3 py-1.5 rounded-lg text-xs outline-none bg-fondo border border-borde text-texto"
                       />
                       <button
                         type="button"
                         onClick={() => marcar(d)}
                         disabled={marcando === d.id || (refs[d.id] ?? "").trim().length < 3}
-                        className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white whitespace-nowrap flex items-center gap-1.5 transition-opacity hover:opacity-90 disabled:opacity-50"
-                        style={{ background: "var(--kipu-accent)" }}
+                        className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white whitespace-nowrap flex items-center gap-1.5 transition-opacity hover:opacity-90 disabled:opacity-50 bg-acento"
                       >
                         {marcando === d.id && <Loader2 size={12} className="animate-spin" />}
                         Marcar transferida

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { CalendarCheck, CheckCircle2, Loader2, MessageCircle, ShieldCheck } from "lucide-react";
 import api from "@/lib/api";
+import { abrirExterno, esNativo } from "@/lib/nativo";
 import { useAuthStore } from "@/store/auth.store";
 import ClaveSri from "@/components/al-dia/ClaveSri";
 import PanelCliente from "@/components/al-dia/PanelCliente";
@@ -11,15 +12,17 @@ import TextoTerminos from "@/components/al-dia/TextoTerminos";
 import OfertaRenta from "@/components/renta/OfertaRenta";
 import { HeroAlDia, DemoAlDia, ComoFunciona, QueIncluye, Confianza, Preguntas } from "@/components/al-dia/Venta";
 import SoloWeb from "@/components/SoloWeb";
+import SelectorPeriodo, { periodoDisponible, type Periodo, type PreciosPlan } from "@/components/SelectorPeriodo";
 import { ES_APP_NATIVA } from "@/lib/plataforma";
 
 // Contacto de ventas (transferencia, cambio de plan): el mismo número configurado
-import { WHATSAPP_SOPORTE as SOPORTE_WA } from "@/lib/soporte";
+import { enlaceWhatsAppAlDia, enlaceWhatsAppSoporte } from "@/lib/soporte";
+import { detalleError } from "@/lib/errores";
 
-interface Precio { total: number; base: number; iva: number }
 interface Estado {
   disponible:           boolean;
-  precio:               Precio | null;
+  precios:              PreciosPlan;   // mensual y anual, de Stripe (null = no se ofrece)
+  precio_renta:         { total: number } | null;   // Kipu Renta (Stripe), para quien no llega a 6 meses
   motivo_no_elegible:   string | null;
   version_terminos:     string;
   aceptado:             boolean;
@@ -35,13 +38,10 @@ interface Estado {
   } | null;
   period_end:           string | null;
   cancel_at_period_end: boolean;
+  // Terminó Al Día (términos 2.0): la clave espera su borrado y el cliente puede borrarla antes
+  clave_se_borra_el:    string | null;
 }
 interface Terminos { version: string; texto: string; hash: string }
-
-function detalle(err: unknown, porDefecto: string): string {
-  const d = (err as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail;
-  return typeof d === "string" ? d : porDefecto;
-}
 
 export default function KipuAlDiaPage() {
   // Contratar y gestionar el pago es solo del administrador (igual que en el backend)
@@ -55,6 +55,11 @@ export default function KipuAlDiaPage() {
   const [autoriza,  setAutoriza]  = useState(false);
   const [enviando,  setEnviando]  = useState(false);
   const [error,     setError]     = useState("");
+  // Mensual / Anual (anual por defecto). Desde /planes llega con ?periodo= (lo que eligió allá).
+  // Leerlo aquí no descuadra la hidratación: el primer render es el de "cargando".
+  const [periodoElegido, setPeriodo] = useState<Periodo>(() =>
+    typeof window !== "undefined" && new URLSearchParams(window.location.search).get("periodo") === "MENSUAL"
+      ? "MENSUAL" : "ANUAL");
 
   const traer = () => Promise.all([
     api.get("/api/v1/app/al-dia/estado"),
@@ -68,7 +73,7 @@ export default function KipuAlDiaPage() {
       setEstado(e.data.data);
       setTerminos(t.data.data);
     } catch (err: unknown) {
-      setError(detalle(err, "No pudimos cargar Kipu Al Día. Intenta de nuevo."));
+      setError(detalleError(err, "No pudimos cargar Kipu Al Día. Intenta de nuevo."));
     }
   }, []);
 
@@ -80,7 +85,7 @@ export default function KipuAlDiaPage() {
         setEstado(e.data.data);
         setTerminos(t.data.data);
       })
-      .catch((err: unknown) => { if (vivo) setError(detalle(err, "No pudimos cargar Kipu Al Día. Intenta de nuevo.")); })
+      .catch((err: unknown) => { if (vivo) setError(detalleError(err, "No pudimos cargar Kipu Al Día. Intenta de nuevo.")); })
       .finally(() => { if (vivo) setCargando(false); });
     return () => { vivo = false; };
   }, []);
@@ -111,10 +116,16 @@ export default function KipuAlDiaPage() {
           version: terminos.version, hash: terminos.hash, acepta_terminos: true, autoriza_clave_sri: true,
         });
       }
-      const r = await api.post("/api/v1/app/al-dia/checkout");
-      window.location.href = r.data.checkout_url;
+      // Siempre con el periodo explícito (sin cuerpo el backend asume mensual).
+      // Desde la app, Stripe vuelve a /volver-a-la-app: el navegador interno
+      // muestra la web, y las páginas web ofrecen planes (reglas de las tiendas)
+      const r = await api.post("/api/v1/app/al-dia/checkout", { periodo, desde_app: ES_APP_NATIVA });
+      // Web: el pago en esta pestaña (Stripe vuelve aquí). App: navegador dentro de
+      // la app; al cerrarlo se vuelve a consultar si el pago entró
+      await abrirExterno(r.data.checkout_url, { mismaPestana: true, alCerrar: () => void cargar() });
+      if (esNativo()) setEnviando(false);
     } catch (err: unknown) {
-      setError(detalle(err, "No pudimos continuar al pago. Intenta de nuevo."));
+      setError(detalleError(err, "No pudimos continuar al pago. Intenta de nuevo."));
       setEnviando(false);
       void cargar();
     }
@@ -122,21 +133,24 @@ export default function KipuAlDiaPage() {
 
   const gestionarPago = async () => {
     try {
-      const r = await api.post("/api/v1/app/suscripcion/portal?volver=al-dia");
-      window.location.href = r.data.portal_url;
+      const r = await api.post(`/api/v1/app/suscripcion/portal?volver=al-dia${ES_APP_NATIVA ? "&desde_app=true" : ""}`);
+      await abrirExterno(r.data.portal_url, { mismaPestana: true, alCerrar: () => void cargar() });
     } catch (err: unknown) {
-      setError(detalle(err, "No pudimos abrir la gestión del pago."));
+      setError(detalleError(err, "No pudimos abrir la gestión del pago."));
     }
   };
 
   const caja = { background: "var(--kipu-surface)", border: "1px solid var(--kipu-border)" };
-  // Sin el precio de Stripe no se muestra un monto (se ve al pagar)
-  const precio = estado?.precio?.total ?? null;
+  // Si el elegido no se ofrece, el otro. Sin el precio de Stripe no se muestra un monto (se ve al pagar).
+  const periodo = periodoDisponible(estado?.precios, periodoElegido);
+  const precio  = estado?.precios?.[periodo]?.total ?? null;
+  const base    = estado?.precios?.[periodo]?.base  ?? null;   // sin IVA (IVA_RATE del .env del backend)
+  const unidad  = periodo === "ANUAL" ? "al año" : "al mes";
 
   if (cargando) {
     return (
       <div className="flex items-center justify-center py-24">
-        <Loader2 size={22} className="animate-spin" style={{ color: "var(--kipu-subtle)" }} />
+        <Loader2 size={22} className="animate-spin text-sutil" />
       </div>
     );
   }
@@ -154,10 +168,10 @@ export default function KipuAlDiaPage() {
       </div>
     ) : estado?.otra_suscripcion && !estado?.cambio_desde_pro ? (
       <div className="rounded-xl p-4 text-sm space-y-2" style={{ ...caja, color: "var(--kipu-muted)" }}>
-        <p>Ya tienes Kipu Pro activo. Escríbenos y te pasamos a Kipu Al Día sin perder lo que ya pagaste.</p>
-        <a href={`https://wa.me/${SOPORTE_WA}?text=${encodeURIComponent("Hola, tengo Kipu Pro y quiero pasarme a Kipu Al Día.")}`}
+        <p>Ya tienes {ES_APP_NATIVA ? "un plan activo" : "Kipu Pro activo"}. Escríbenos y te pasamos a Kipu Al Día sin perder lo que ya pagaste.</p>
+        <a href={enlaceWhatsAppSoporte(`Hola, tengo ${ES_APP_NATIVA ? "un plan activo" : "Kipu Pro"} y quiero pasarme a Kipu Al Día.`)}
            target="_blank" rel="noopener noreferrer"
-           className="inline-flex items-center gap-1.5 font-medium" style={{ color: "var(--kipu-accent)" }}>
+           className="inline-flex items-center gap-1.5 font-medium text-acento">
           <MessageCircle size={14} /> Escribir por WhatsApp
         </a>
       </div>
@@ -172,48 +186,57 @@ export default function KipuAlDiaPage() {
     ) : terminos && (
       <div className="rounded-xl p-5 space-y-4" style={caja}>
         <div className="flex items-center gap-2">
-          <ShieldCheck size={18} style={{ color: "var(--kipu-accent)" }} />
-          <p className="font-semibold" style={{ color: "var(--kipu-text)" }}>Términos del servicio</p>
-          <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>versión {terminos.version}</span>
+          <ShieldCheck className="text-acento" size={18} />
+          <p className="font-semibold text-texto">Términos del servicio</p>
+          <span className="text-xs text-sutil">versión {terminos.version}</span>
         </div>
-        <div className="max-h-96 overflow-y-auto rounded-lg p-4"
-             style={{ background: "var(--kipu-bg)", border: "1px solid var(--kipu-border)" }}>
+        <div className="max-h-96 overflow-y-auto rounded-lg p-4 bg-fondo border border-borde">
           <TextoTerminos texto={terminos.texto} />
         </div>
 
-        <label className="flex items-start gap-2.5 text-sm cursor-pointer" style={{ color: "var(--kipu-text)" }}>
+        <label className="flex items-start gap-2.5 text-sm cursor-pointer text-texto">
           <input type="checkbox" checked={acepta || !!estado?.aceptado} disabled={!!estado?.aceptado}
-                 onChange={e => setAcepta(e.target.checked)} className="mt-0.5 w-4 h-4"
-                 style={{ accentColor: "var(--kipu-accent)" }} />
+                 onChange={e => setAcepta(e.target.checked)} className="mt-0.5 w-4 h-4 accent-acento" />
           Leí y acepto los términos de Kipu Al Día.
         </label>
-        <label className="flex items-start gap-2.5 text-sm cursor-pointer" style={{ color: "var(--kipu-text)" }}>
+        <label className="flex items-start gap-2.5 text-sm cursor-pointer text-texto">
           <input type="checkbox" checked={autoriza || !!estado?.aceptado} disabled={!!estado?.aceptado}
-                 onChange={e => setAutoriza(e.target.checked)} className="mt-0.5 w-4 h-4"
-                 style={{ accentColor: "var(--kipu-accent)" }} />
+                 onChange={e => setAutoriza(e.target.checked)} className="mt-0.5 w-4 h-4 accent-acento" />
           Autorizo a Kipu a usar mi clave del SRI solo para lo que dice la sección 5
           (declaraciones, descarga de comprobantes y consultas).
         </label>
+
+        <div className="flex flex-col items-center gap-1.5 pt-1">
+          <SelectorPeriodo valor={periodo} onCambio={setPeriodo} precios={estado?.precios} />
+          {precio !== null && (base !== null || periodo === "ANUAL") && (
+            <p className="text-xs text-sutil">
+              {base !== null && `$${base.toFixed(2)} + IVA`}
+              {base !== null && periodo === "ANUAL" && " · "}
+              {periodo === "ANUAL" && `equivale a $${(precio / 12).toFixed(2)} al mes`}
+            </p>
+          )}
+        </div>
 
         {/* Tiene Pro: qué pasa con lo que ya pagó */}
         {estado?.cambio_desde_pro && (() => {
           const c = estado.cambio_desde_pro;
           const dias = c.dias_no_usados ?? 0;
+          // En la app no se nombra Kipu Pro (reglas de las tiendas): "tu plan actual"
+          const tuPlan = ES_APP_NATIVA ? "tu plan actual" : "tu Kipu Pro";
           return (
-            <div className="rounded-lg px-4 py-3 text-sm space-y-1"
-                 style={{ background: "color-mix(in srgb, var(--kipu-accent) 8%, transparent)",
-                          border: "1px solid color-mix(in srgb, var(--kipu-accent) 25%, transparent)",
-                          color: "var(--kipu-text)" }}>
-              <p className="font-semibold">Tienes Kipu Pro: no pierdes lo que ya pagaste</p>
-              <p className="text-xs" style={{ color: "var(--kipu-muted)" }}>
+            <div className="rounded-lg px-4 py-3 text-sm space-y-1 bg-acento/8 border border-acento/25 text-texto">
+              <p className="font-semibold">
+                {ES_APP_NATIVA ? "Ya tienes un plan activo" : "Tienes Kipu Pro"}: no pierdes lo que ya pagaste
+              </p>
+              <p className="text-xs text-tenue">
                 {c.sin_devolucion
-                  ? `A tu Kipu Pro le quedan ${dias} día${dias === 1 ? "" : "s"}: es menos de $${c.minimo.toFixed(2)}, así que no hay devolución.`
+                  ? `A ${tuPlan} le quedan ${dias} día${dias === 1 ? "" : "s"}: es menos de $${c.minimo.toFixed(2)}, así que no hay devolución.`
                   : c.monto_estimado !== null
-                    ? <>Cuando se confirme el pago de Al Día cancelamos tu Pro y te devolvemos <b>unos ${c.monto_estimado.toFixed(2)}</b> por
+                    ? <>Cuando se confirme el pago de Al Día cancelamos {tuPlan} y te devolvemos <b>unos ${c.monto_estimado.toFixed(2)}</b> por
                         los {dias} días que no vas a usar{c.metodo === "TARJETA"
                           ? ", a la tarjeta con la que pagaste (se ve en 5 a 10 días hábiles)."
                           : ": te pediremos tu cuenta bancaria y te lo transferimos."}</>
-                    : "Cuando se confirme el pago de Al Día cancelamos tu Pro y te devolvemos los días que no vas a usar; te confirmamos el monto por correo."}
+                    : `Cuando se confirme el pago de Al Día cancelamos ${tuPlan} y te devolvemos los días que no vas a usar; te confirmamos el monto por correo.`}
                 {ES_APP_NATIVA ? "" : " Kipu Al Día incluye todo lo de Kipu Pro."}
               </p>
             </div>
@@ -224,18 +247,17 @@ export default function KipuAlDiaPage() {
           type="button"
           onClick={contratar}
           disabled={enviando || !(estado?.aceptado || (acepta && autoriza))}
-          className="w-full py-3 rounded-lg text-white font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-50"
-          style={{ background: "var(--kipu-accent)" }}
+          className="w-full py-3 rounded-lg text-white font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-50 bg-acento"
         >
           {enviando
             ? <><Loader2 size={16} className="animate-spin" /> Abriendo el pago...</>
-            : precio !== null ? `Contratar por $${precio.toFixed(0)} al mes` : "Continuar al pago"}
+            : precio !== null ? `Contratar por $${precio.toFixed(2)} ${unidad}` : "Continuar al pago"}
         </button>
-        <p className="text-xs text-center" style={{ color: "var(--kipu-subtle)" }}>
+        <p className="text-xs text-center text-sutil">
           Pagas con tarjeta en Stripe. Te enviamos por correo una copia de los términos que aceptaste.
           ¿Prefieres transferencia?{" "}
-          <a href={`https://wa.me/${SOPORTE_WA}?text=${encodeURIComponent("Hola, quiero contratar Kipu Al Día pagando por transferencia.")}`}
-             target="_blank" rel="noopener noreferrer" className="underline" style={{ color: "var(--kipu-accent)" }}>
+          <a href={enlaceWhatsAppSoporte("Hola, quiero contratar Kipu Al Día pagando por transferencia.")}
+             target="_blank" rel="noopener noreferrer" className="underline text-acento">
             Escríbenos
           </a>.
         </p>
@@ -246,27 +268,61 @@ export default function KipuAlDiaPage() {
   const irAContratar = () =>
     document.getElementById("contratar")?.scrollIntoView({ behavior: "smooth", block: "start" });
 
-  // Sin contratar: página de venta (la demo muestra lo que verá después)
-  if (!estado?.contratado) {
+  // App (reglas de las tiendas): Al Día no se contrata ni se paga dentro de la app.
+  // Solo se explica el servicio y un botón al WhatsApp del equipo, que cierra la
+  // venta y manda el link de pago por fuera. Sin precios, términos ni pago.
+  const whatsappInfo = enlaceWhatsAppAlDia(empresa?.razon_social, "informacion");
+  const whatsappPago = enlaceWhatsAppAlDia(empresa?.razon_social, "pago");
+  if (ES_APP_NATIVA && !estado?.contratado) {
     return (
       <div className="p-4 md:p-6 max-w-3xl mx-auto space-y-8">
         {error && (
-          <p className="text-sm px-3 py-2 rounded-lg"
-             style={{ color: "var(--kipu-danger)", background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)" }}>
+          <p className="text-sm px-3 py-2 rounded-lg text-peligro bg-peligro-suave">
             {error}
           </p>
         )}
-        {/* Si tuvo el servicio, su historial se sigue viendo */}
         <PanelCliente soloHistorial />
-        <HeroAlDia precio={precio} onContratar={irAContratar} />
+        {/* Borrar la clave no es una compra: también en la app */}
+        {estado?.clave_se_borra_el && esAdmin && <ClaveSri contratado={false} />}
+        <HeroAlDia precio={null} onContratar={() => {}} whatsapp={whatsappInfo} />
         <DemoAlDia ruc={empresa?.ruc} semestral={empresa?.periodo_iva === "SEMESTRAL"} enProduccion={enProduccion} />
         <ComoFunciona />
         <QueIncluye />
         <Confianza />
         <Preguntas />
+        <div className="rounded-xl p-5 text-center space-y-3" style={caja}>
+          <p className="text-sm text-tenue">
+            ¿Quieres que tu contador de Kipu se encargue? Escríbenos y te contamos cómo empezar.
+          </p>
+          <a href={whatsappInfo} target="_blank" rel="noopener noreferrer"
+             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-white font-semibold text-sm bg-acento">
+            <MessageCircle size={16} /> Escríbenos por WhatsApp
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  // Sin contratar: página de venta (la demo muestra lo que verá después)
+  if (!estado?.contratado) {
+    return (
+      <div className="p-4 md:p-6 max-w-3xl mx-auto space-y-8">
+        {error && (
+          <p className="text-sm px-3 py-2 rounded-lg text-peligro bg-peligro-suave">
+            {error}
+          </p>
+        )}
+        {/* Si tuvo el servicio, su historial se sigue viendo */}
+        <PanelCliente soloHistorial />
+        <HeroAlDia precio={precio} base={base} periodo={periodo} onContratar={irAContratar} />
+        <DemoAlDia ruc={empresa?.ruc} semestral={empresa?.periodo_iva === "SEMESTRAL"} enProduccion={enProduccion} />
+        <ComoFunciona />
+        <QueIncluye precioRenta={estado?.precio_renta?.total ?? null} />
+        <Confianza />
+        <Preguntas />
 
         <section id="contratar" className="space-y-3 scroll-mt-4">
-          <h2 className="text-lg font-bold" style={{ color: "var(--kipu-text)" }}>Contratar Kipu Al Día</h2>
+          <h2 className="text-lg font-bold text-texto">Contratar Kipu Al Día</h2>
           {contratarBloque}
         </section>
 
@@ -274,7 +330,7 @@ export default function KipuAlDiaPage() {
         <OfertaRenta variante="al-dia" />
 
         <SoloWeb>
-          <p className="text-xs text-center" style={{ color: "var(--kipu-subtle)" }}>
+          <p className="text-xs text-center text-sutil">
             <Link href="/planes" className="underline">Ver todos los planes</Link>
           </p>
         </SoloWeb>
@@ -286,21 +342,19 @@ export default function KipuAlDiaPage() {
     <div className="p-4 md:p-6 max-w-3xl mx-auto space-y-5">
       {/* Encabezado */}
       <div className="flex items-start gap-3">
-        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-             style={{ background: "color-mix(in srgb, var(--kipu-accent) 15%, transparent)" }}>
-          <CalendarCheck size={20} style={{ color: "var(--kipu-accent)" }} />
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-acento/15">
+          <CalendarCheck className="text-acento" size={20} />
         </div>
         <div>
-          <h1 className="text-xl font-bold" style={{ color: "var(--kipu-text)" }}>Kipu Al Día</h1>
-          <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>
+          <h1 className="text-xl font-bold text-texto">Kipu Al Día</h1>
+          <p className="text-sm text-tenue">
             Tú facturas. Nosotros declaramos.
           </p>
         </div>
       </div>
 
       {error && (
-        <p className="text-sm px-3 py-2 rounded-lg"
-           style={{ color: "var(--kipu-danger)", background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)" }}>
+        <p className="text-sm px-3 py-2 rounded-lg text-peligro bg-peligro-suave">
           {error}
         </p>
       )}
@@ -309,30 +363,36 @@ export default function KipuAlDiaPage() {
       {estado?.contratado && (
         <div className="rounded-xl p-5 space-y-2" style={caja}>
           <div className="flex items-center gap-2">
-            <CheckCircle2 size={18} style={{ color: "var(--kipu-success)" }} />
-            <p className="font-semibold" style={{ color: "var(--kipu-text)" }}>Tienes Kipu Al Día activo</p>
+            <CheckCircle2 className="text-exito" size={18} />
+            <p className="font-semibold text-texto">Tienes Kipu Al Día activo</p>
           </div>
-          <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>
+          <p className="text-sm text-tenue">
             {estado.cancel_at_period_end ? "Cancelado: el servicio sigue hasta " : "Próximo cobro: "}
             {estado.period_end ? new Date(estado.period_end).toLocaleDateString("es-EC") : "—"}.
             Cualquier duda, escríbenos por WhatsApp de lunes a viernes, de 8:00 a 17:00.
           </p>
-          {esAdmin && (
-            <button type="button" onClick={gestionarPago} className="text-sm underline" style={{ color: "var(--kipu-accent)" }}>
+          {esAdmin && (ES_APP_NATIVA ? (
+            // App: sin enlaces de pago; tarjeta, cancelación o pagos, por WhatsApp
+            <a href={whatsappPago} target="_blank" rel="noopener noreferrer"
+               className="inline-flex items-center gap-1.5 text-sm font-medium text-acento">
+              <MessageCircle size={14} /> Escríbenos por WhatsApp para cambiar la tarjeta o cancelar
+            </a>
+          ) : (
+            <button type="button" onClick={gestionarPago} className="text-sm underline text-acento">
               Cambiar tarjeta o cancelar
             </button>
-          )}
+          ))}
         </div>
       )}
 
       {/* Lo que el equipo de Kipu hace por él: lo que viene y el historial */}
       {estado?.contratado && <PanelCliente />}
 
-      {/* Clave del SRI: solo con el servicio contratado y para el administrador */}
-      {estado?.contratado && esAdmin && <ClaveSri />}
+      {/* Clave del SRI: con el servicio contratado o mientras espera su borrado, y para el administrador */}
+      {(estado?.contratado || estado?.clave_se_borra_el) && esAdmin && <ClaveSri contratado={!!estado?.contratado} />}
 
       <SoloWeb>
-        <p className="text-xs text-center" style={{ color: "var(--kipu-subtle)" }}>
+        <p className="text-xs text-center text-sutil">
           <Link href="/planes" className="underline">Volver a Plan y créditos</Link>
         </p>
       </SoloWeb>

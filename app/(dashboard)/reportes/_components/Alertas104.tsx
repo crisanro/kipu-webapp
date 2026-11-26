@@ -2,7 +2,10 @@
 
 // Alertas de errores del 104 de un periodo (las calcula el backend al abrir la
 // declaración): retenciones que no llegaron, IVA sin crédito, comprobantes sin
-// autorizar, negocios populares con crédito y cambios después de declarar.
+// autorizar, negocios populares con crédito, cambios después de declarar y
+// SOLO_KIPU (el cálculo solo incluye lo emitido en Kipu). SOLO_KIPU lo ven todos
+// los planes: también va suelto, sin encabezado, en la pantalla del total, al
+// elegir periodo y en el 102.
 
 import Link from "next/link";
 import { AlertTriangle, ArrowRight, Info } from "lucide-react";
@@ -18,14 +21,19 @@ export interface Alerta104 {
   accion:   { texto: string; url: string } | null;
 }
 
-export default function Alertas104({ alertas }: { alertas: Alerta104[] }) {
+export default function Alertas104({ alertas, encabezado = true }: {
+  alertas:     Alerta104[];
+  encabezado?: boolean;            // false: solo las tarjetas (un aviso suelto)
+}) {
   if (!alertas?.length) return null;
 
   return (
     <section className="space-y-2" aria-label="Alertas de tu declaración">
-      <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--kipu-subtle)" }}>
-        {alertas.length === 1 ? "1 alerta en tu declaración" : `${alertas.length} alertas en tu declaración`}
-      </p>
+      {encabezado && (
+        <p className="text-xs font-semibold uppercase tracking-wide text-sutil">
+          {alertas.length === 1 ? "1 alerta en tu declaración" : `${alertas.length} alertas en tu declaración`}
+        </p>
+      )}
       {alertas.map((a) => {
         const importante = a.nivel === "importante";
         const color = importante ? "var(--kipu-danger)" : "var(--kipu-warning)";
@@ -41,8 +49,8 @@ export default function Alertas104({ alertas }: { alertas: Alerta104[] }) {
           >
             <Icono size={16} className="shrink-0 mt-0.5" style={{ color }} />
             <div className="min-w-0 flex-1 space-y-1.5">
-              <p className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>{a.titulo}</p>
-              <p className="text-xs leading-relaxed" style={{ color: "var(--kipu-text)" }}>{a.detalle}</p>
+              <p className="text-sm font-semibold text-texto">{a.titulo}</p>
+              <p className="text-xs leading-relaxed text-texto">{a.detalle}</p>
               {a.ejemplos.length > 0 && (
                 <ul className="text-[11px] space-y-0.5" style={{ color: "var(--kipu-subtle)" }}>
                   {a.ejemplos.map((ej) => <li key={ej} className="truncate">· {ej}</li>)}

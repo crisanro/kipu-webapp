@@ -1,8 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { r2 } from "@/lib/dinero";
-import { Plus, Trash2, AlertTriangle, Info } from "lucide-react";
+import { r2, dosDecimales } from "@/lib/dinero";
+import { Plus, Trash2, AlertTriangle, Info, Wallet } from "lucide-react";
+import Seccion from "@/components/ui/Seccion";
+import Hoja from "@/components/ui/Hoja";
+import Boton from "@/components/ui/Boton";
+import { genId } from "./ItemsEditor";
 
 // ── Tipos ──────────────────────────────────────────────────────────────────────
 export type FormaPagoCode = "01" | "15" | "16" | "17" | "18" | "19" | "20" | "21";
@@ -37,14 +41,26 @@ const LIMITE_EFECTIVO = 500;
 const COD_EFECTIVO: FormaPagoCode = "01";
 const COD_DEFAULT_FINANCIERO: FormaPagoCode = "20"; // fallback cuando se bloquea efectivo
 
-const fmt = (n: number) => r2(n).toFixed(2);
-const genId = () => Math.random().toString(36).slice(2);
+// Nombre corto para el resumen de la sección plegada
+const NOMBRE_CORTO: Record<FormaPagoCode, string> = {
+  "01": "Efectivo", "15": "Compensación", "16": "Débito", "17": "Dinero electrónico",
+  "18": "Prepago", "19": "Crédito", "20": "Transferencia", "21": "Endoso",
+};
 
-export const PAGO_INICIAL: PagoItem = {
+/** Un pago en efectivo por el saldo (cubre todo por defecto), con su propio _id. */
+export const pagoInicial = (): PagoItem => ({
   _id:        genId(),
   forma_pago: "01",
   total:      null, // saldo restante — cubre todo por defecto
-};
+});
+
+/** Error si los pagos pasan del total. Redondeado: 1.10 + 2.20 en coma flotante da 3.3000000000000003 > 3.30. */
+export function errorPagos(pagos: PagoItem[], total: number): string | null {
+  const cubierto = r2(pagos.reduce((s, p) => s + (p.total ?? 0), 0));
+  return cubierto > total
+    ? `Los pagos ($${dosDecimales(cubierto)}) superan el total ($${dosDecimales(total)}).`
+    : null;
+}
 
 // ── Componente ─────────────────────────────────────────────────────────────────
 export default function PagosMixtos({
@@ -80,7 +96,8 @@ export default function PagosMixtos({
     : FORMAS_PAGO;
 
   // Calcular saldo cubierto y restante
-  const totalCubierto = pagos.reduce((s, p) => s + (p.total ?? 0), 0);
+  // Redondeado: 1.10 + 2.20 en coma flotante da 3.3000000000000003 > 3.30
+  const totalCubierto = r2(pagos.reduce((s, p) => s + (p.total ?? 0), 0));
   const saldoRestante = r2(totalFactura - totalCubierto);
 
   const editPago = (id: string, field: keyof PagoItem, value: any) => {
@@ -118,28 +135,22 @@ export default function PagosMixtos({
 
   const esSaldoValido = saldoRestante >= 0;
 
+  // Plegada se ve la forma (o cuántas); se abre sola si hay algo que revisar
+  const resumen = !esSaldoValido ? "Revisa los montos"
+    : (pagos.length === 1 ? NOMBRE_CORTO[pagos[0].forma_pago] : `${pagos.length} formas`)
+      + (propina ? " · con propina" : "");
+
   return (
-    <div
-      className="rounded-xl p-4 space-y-4"
-      style={{
-        background: "var(--kipu-surface)",
-        border: "1px solid var(--kipu-border)",
-      }}
-    >
-      <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>Forma de pago</h2>
+    <Seccion titulo="Forma de pago" icono={Wallet} resumen={resumen} abierta={efectivoBloqueado || !esSaldoValido}>
+    <div className="space-y-4">
 
       {/* Alerta $500 */}
       {efectivoBloqueado && (
         <div
-          className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg"
-          style={{
-            color: "var(--kipu-accent)",
-            background: "color-mix(in srgb, var(--kipu-accent) 8%, transparent)",
-            border: "1px solid color-mix(in srgb, var(--kipu-accent) 20%, transparent)",
-          }}
+          className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg text-acento bg-acento/8 border border-acento/20"
         >
           <Info size={13} className="shrink-0" />
-          Transacciones ≥ ${fmt(LIMITE_EFECTIVO)} deben utilizar el sistema financiero.
+          Transacciones ≥ ${dosDecimales(LIMITE_EFECTIVO)} deben utilizar el sistema financiero.
         </div>
       )}
 
@@ -217,14 +228,7 @@ export default function PagosMixtos({
               <select
                 value={pago.forma_pago}
                 onChange={(e) => editPago(pago._id, "forma_pago", e.target.value as FormaPagoCode)}
-                className="w-full sm:w-auto sm:flex-1 min-w-0 px-2.5 py-2 rounded-lg text-sm transition-colors focus:outline-none"
-                style={{
-                  background: "var(--kipu-surface)",
-                  border: "1px solid var(--kipu-border)",
-                  color: "var(--kipu-text)",
-                }}
-                onFocus={(e) => (e.currentTarget.style.borderColor = "var(--kipu-accent)")}
-                onBlur={(e) => (e.currentTarget.style.borderColor = "var(--kipu-border)")}
+                className="w-full sm:w-auto sm:flex-1 min-w-0 px-2.5 py-2 rounded-lg text-sm transition-colors focus:outline-none bg-superficie border border-borde text-texto focus:border-acento"
               >
                 {formasPagoDisponibles.map(({ value, label }) => (
                   <option key={value} value={value}>{label}</option>
@@ -235,15 +239,15 @@ export default function PagosMixtos({
               {esSaldo ? (
                 <div className="flex items-center gap-2 shrink-0 ml-auto sm:ml-0">
                   <div className="text-right">
-                    <p className="text-xs font-medium" style={{ color: "var(--kipu-accent)" }}>
-                      ${fmt(Math.max(0, saldoRestante))}
+                    <p className="text-xs font-medium text-acento">
+                      ${dosDecimales(Math.max(0, saldoRestante))}
                     </p>
                     <p className="text-[10px]" style={{ color: "var(--kipu-subtle)" }}>saldo restante</p>
                   </div>
                 </div>
               ) : (
                 <div className="flex items-center gap-1.5 shrink-0 ml-auto sm:ml-0">
-                  <span className="text-sm" style={{ color: "var(--kipu-subtle)" }}>$</span>
+                  <span className="text-sm text-sutil">$</span>
                   <input
                     type="number"
                     value={pago.total ?? ""}
@@ -251,24 +255,14 @@ export default function PagosMixtos({
                     min={0}
                     step={0.01}
                     placeholder="0.00"
-                    className="w-24 px-2 py-2 rounded-lg text-sm text-right transition-colors focus:outline-none"
-                    style={{
-                      background: "var(--kipu-surface)",
-                      border: "1px solid var(--kipu-border)",
-                      color: "var(--kipu-text)",
-                    }}
-                    onFocus={(e) => (e.currentTarget.style.borderColor = "var(--kipu-accent)")}
-                    onBlur={(e) => (e.currentTarget.style.borderColor = "var(--kipu-border)")}
+                    className="w-24 px-2 py-2 rounded-lg text-sm text-right transition-colors focus:outline-none bg-superficie border border-borde text-texto focus:border-acento"
                   />
                   {/* Convertir a saldo restante */}
                   <button
                     type="button"
                     onClick={() => convertirASaldo(pago._id)}
                     title="Usar como saldo restante"
-                    className="text-xs px-1 transition-colors"
-                    style={{ color: "var(--kipu-subtle)" }}
-                    onMouseEnter={(e) => (e.currentTarget.style.color = "var(--kipu-accent)")}
-                    onMouseLeave={(e) => (e.currentTarget.style.color = "var(--kipu-subtle)")}
+                    className="text-xs px-1 transition-colors text-sutil hover:text-acento"
                   >
                     ↔
                   </button>
@@ -280,8 +274,7 @@ export default function PagosMixtos({
                 type="button"
                 onClick={() => removePago(pago._id)}
                 disabled={pagos.length === 1}
-                className="p-1.5 rounded-lg transition-colors shrink-0 disabled:opacity-20"
-                style={{ color: "var(--kipu-subtle)" }}
+                className="p-1.5 rounded-lg transition-colors shrink-0 disabled:opacity-20 text-sutil"
                 onMouseEnter={(e) => {
                   if (pagos.length > 1) {
                     e.currentTarget.style.color = "var(--kipu-danger)";
@@ -306,22 +299,18 @@ export default function PagosMixtos({
       {/* Error si pagos superan el total */}
       {!esSaldoValido && (
         <div
-          className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg"
-          style={{
-            color: "var(--kipu-danger)",
-            background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
-          }}
+          className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg text-peligro bg-peligro-suave"
         >
           <AlertTriangle size={13} />
-          Los pagos (${fmt(totalCubierto)}) superan el total (${fmt(totalFactura)}).
+          Los pagos (${dosDecimales(totalCubierto)}) superan el total (${dosDecimales(totalFactura)}).
         </div>
       )}
 
       {/* Resumen si hay múltiples pagos */}
       {pagos.length > 1 && esSaldoValido && (
-        <div className="flex justify-between text-xs px-1" style={{ color: "var(--kipu-subtle)" }}>
+        <div className="flex justify-between text-xs px-1 text-sutil">
           <span>Cubierto con monto fijo</span>
-          <span className="font-medium" style={{ color: "var(--kipu-text)" }}>${fmt(totalCubierto)}</span>
+          <span className="font-medium text-texto">${dosDecimales(totalCubierto)}</span>
         </div>
       )}
 
@@ -354,11 +343,10 @@ export default function PagosMixtos({
 
       {/* Propina */}
       <div
-        className="pt-2 flex items-center justify-between gap-3"
-        style={{ borderTop: "1px solid var(--kipu-border)" }}
+        className="pt-2 flex items-center justify-between gap-3 border-t border-borde"
       >
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 min-w-0">
-          <span className="text-sm font-medium" style={{ color: "var(--kipu-muted)" }}>
+          <span className="text-sm font-medium text-tenue">
             Propina (10%)
           </span>
           <span
@@ -395,57 +383,24 @@ export default function PagosMixtos({
         </button>
       </div>
 
-      {/* Modal advertencia propina */}
-      {showPropinaWarning && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <div
-            className="rounded-xl p-5 max-w-sm w-full space-y-4 shadow-2xl"
-            style={{
-              background: "var(--kipu-surface)",
-              border: "1px solid var(--kipu-border)",
-            }}
-          >
-            <div className="flex items-start gap-3">
-              <AlertTriangle size={20} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-warning)" }} />
-              <div>
-                <p className="font-semibold text-sm" style={{ color: "var(--kipu-text)" }}>
-                  Autorización requerida
-                </p>
-                <p className="text-xs mt-1 leading-relaxed" style={{ color: "var(--kipu-muted)" }}>
-                  La propina del 10% requiere autorización previa del SRI.
-                  Solo aplica para establecimientos de alimentos y bebidas autorizados.
-                  ¿Confirmas que tienes esta autorización?
-                </p>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setShowPropinaWarning(false)}
-                className="flex-1 py-2 rounded-lg text-sm transition-colors"
-                style={{
-                  border: "1px solid var(--kipu-border)",
-                  color: "var(--kipu-muted)",
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = "var(--kipu-text)")}
-                onMouseLeave={(e) => (e.currentTarget.style.color = "var(--kipu-muted)")}
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={() => { onPropinaChange(true); setShowPropinaWarning(false); }}
-                className="flex-1 py-2 rounded-lg text-white text-sm font-medium transition-colors"
-                style={{ background: "var(--kipu-accent)" }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = "var(--kipu-accent-h)")}
-                onMouseLeave={(e) => (e.currentTarget.style.background = "var(--kipu-accent)")}
-              >
-                Sí, tengo autorización
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Advertencia de propina (Hoja) */}
+      <Hoja
+        abierta={showPropinaWarning}
+        onCerrar={() => setShowPropinaWarning(false)}
+        titulo={<span className="inline-flex items-center gap-2"><AlertTriangle size={18} className="text-alerta" /> Autorización requerida</span>}
+        tamano="sm"
+        pie={<>
+          <Boton variante="secundario" onClick={() => setShowPropinaWarning(false)}>Cancelar</Boton>
+          <Boton onClick={() => { onPropinaChange(true); setShowPropinaWarning(false); }}>Sí, tengo autorización</Boton>
+        </>}
+      >
+        <p className="text-sm leading-relaxed text-tenue">
+          La propina del 10% requiere autorización previa del SRI.
+          Solo aplica para establecimientos de alimentos y bebidas autorizados.
+          ¿Confirmas que tienes esta autorización?
+        </p>
+      </Hoja>
     </div>
+    </Seccion>
   );
 }

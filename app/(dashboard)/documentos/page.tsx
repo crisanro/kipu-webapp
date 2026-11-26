@@ -1,17 +1,32 @@
 "use client";
 import { rutas } from "@/lib/rutas";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useSandboxStore } from "@/store/sandbox.store";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { usePermiso } from "@/hooks/usePermiso";
 import SinAcceso from "@/components/SinAcceso";
-import api from "@/lib/api";
+import { useLista, useFiltrosUrl, useBusquedaUrl } from "@/lib/useLista";
+import { SegmentosDocumentos } from "@/components/shell/BarraPestanas";
 import {
-  Search, Plus, FileText, CheckCircle2, Clock,
-  XCircle, AlertTriangle, RefreshCw, ChevronDown, ChevronUp,
-  TrendingUp, FlaskConical, Ban, ChevronLeft, ChevronRight
+  Search, Plus, FileText, ChevronDown, ChevronUp, TrendingUp, FlaskConical,
 } from "lucide-react";
+import Paginacion, { type InfoPaginacion } from "@/components/ui/Paginacion";
+import { AvisoRango, AyudaAtajos, BotonActualizar, useNavegacionLista, usePeriodo } from "./_comun";
+import FilaLista, { GrupoFilas } from "@/components/ui/FilaLista";
+import { InsigniaSri, InsigniaCobro } from "@/components/ui/InsigniaEstado";
+import { EsqueletoFilas } from "@/components/ui/Esqueleto";
+import Vacio, { VacioError } from "@/components/ui/Vacio";
+import ChipsFiltro from "@/components/ui/ChipsFiltro";
+import PeriodoFechas, { etiquetaPeriodo } from "@/components/ui/PeriodoFechas";
+import TirarParaRefrescar from "@/components/ui/TirarParaRefrescar";
+import { Entrada } from "@/components/ui/Campo";
+import { clasesBoton } from "@/components/ui/Boton";
+import PanelDetalle from "@/components/ui/PanelDetalle";
+import { cn } from "@/components/ui/cn";
+import DetalleDocumento from "./ver/components/DetalleDocumento";
+import { ESTADOS_SRI, TIPOS_COMPROBANTE, tipoComprobante } from "@/lib/estados";
+import { dosDecimales } from "@/lib/dinero";
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 interface Documento {
@@ -28,61 +43,14 @@ interface Documento {
   estado_cobro:  string | null;
 }
 
-interface PaginationInfo {
-  page:        number;
-  limit:       number;
-  total_items: number;
-  total_pages: number;
-  has_next:    boolean;
-  has_prev:    boolean;
-}
+// Chips de filtro (las etiquetas salen de lib/estados.ts)
+const ESTADOS_FILTRO = ["TODOS", "AUTORIZADO", "RECIBIDA", "DEVUELTA", "RECHAZADO", "ANULADO"]
+  .map(v => ({ valor: v, etiqueta: v === "TODOS" ? "Todos" : ESTADOS_SRI[v]?.etiqueta ?? v }));
+const TIPOS_FILTRO = ["TODOS", "FAC", "NCR", "NDB", "RET", "LIQ"]
+  .map(v => ({ valor: v, etiqueta: v === "TODOS" ? "Todos los tipos" : TIPOS_COMPROBANTE[v]?.etiqueta ?? v }));
 
-// ── Configs ───────────────────────────────────────────────────────────────────
-const ESTADO_CONFIG: Record<string, { label: string; color: string; bg: string; icon: any }> = {
-  AUTORIZADO: { label: "Autorizado", color: "var(--kipu-success)", bg: "color-mix(in srgb, var(--kipu-success) 10%, transparent)", icon: CheckCircle2 },
-  RECIBIDA:   { label: "En proceso", color: "var(--kipu-info)", bg: "color-mix(in srgb, var(--kipu-info) 10%, transparent)", icon: Clock },
-  EN_REVISION:{ label: "En revisión", color: "var(--kipu-info)", bg: "color-mix(in srgb, var(--kipu-info) 10%, transparent)", icon: Clock },
-  POR_FIRMAR: { label: "Firmando",   color: "var(--kipu-info)", bg: "color-mix(in srgb, var(--kipu-info) 10%, transparent)", icon: Clock },
-  FIRMADO:    { label: "En cola",    color: "var(--kipu-info)", bg: "color-mix(in srgb, var(--kipu-info) 10%, transparent)", icon: Clock },
-  ERROR_FIRMA:{ label: "Error de firma", color: "var(--kipu-danger)", bg: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)", icon: AlertTriangle },
-  DEVUELTA:   { label: "Devuelto",   color: "var(--kipu-warning)", bg: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)", icon: AlertTriangle },
-  RECHAZADO:  { label: "Rechazado",  color: "var(--kipu-danger)", bg: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)", icon: XCircle },
-  ANULADO:    { label: "Anulado",    color: "var(--kipu-muted)", bg: "color-mix(in srgb, var(--kipu-muted) 10%, transparent)", icon: Ban },
-  PENDIENTE:  { label: "Pendiente",  color: "var(--kipu-subtle)", bg: "color-mix(in srgb, var(--kipu-subtle) 10%, transparent)", icon: Clock },
-  SANDBOX:    { label: "Prueba",     color: "#22d3ee", bg: "color-mix(in srgb, #22d3ee 10%, transparent)", icon: FlaskConical },
-};
-
-const TIPO_COMPROBANTE: Record<string, { label: string; color: string; bg: string }> = {
-  FAC: { label: "Factura",          color: "var(--kipu-muted)", bg: "color-mix(in srgb, var(--kipu-muted) 10%, transparent)" },
-  NCR: { label: "Nota de Crédito",  color: "var(--kipu-muted)", bg: "color-mix(in srgb, var(--kipu-muted) 10%, transparent)" },
-  NDB: { label: "Nota de Débito",   color: "#fb923c", bg: "color-mix(in srgb, #fb923c 10%, transparent)" },
-  RET: { label: "Retención",        color: "#facc15", bg: "color-mix(in srgb, #facc15 10%, transparent)" },
-  LIQ: { label: "Liquidación",      color: "#22d3ee", bg: "color-mix(in srgb, #22d3ee 10%, transparent)" },
-};
-
-const COBRO_CONFIG: Record<string, { label: string; color: string }> = {
-  PENDIENTE: { label: "Por cobrar", color: "var(--kipu-warning)" },
-  PAGADO:    { label: "Cobrado",    color: "var(--kipu-success)" },
-  PARCIAL:   { label: "Parcial",    color: "var(--kipu-info)" },
-  ANULADO:   { label: "Anulado",    color: "var(--kipu-danger)" },
-};
-
-const fmt = (n: any) => parseFloat(n ?? 0).toFixed(2);
-
-// ── Storage helpers ────────────────────────────────────────────────────────────
-const SS_KEY_INICIO = "kipu_emitidos_fecha_inicio";
-const SS_KEY_FIN    = "kipu_emitidos_fecha_fin";
-
-function getHoy() {
-  return new Date().toLocaleDateString("en-CA", { timeZone: "America/Guayaquil" });
-}
-function leerFecha(key: string): string {
-  try { return sessionStorage.getItem(key) || getHoy(); }
-  catch { return getHoy(); }
-}
-function guardarFecha(key: string, val: string) {
-  try { sessionStorage.setItem(key, val); } catch {}
-}
+// Estos tipos llevan estado de cobro
+const CON_COBRO = ["FAC", "LIQ", "NDB"];
 
 // ── Componente ResumenTipoCard ─────────────────────────────────────────────────
 const COLOR_MAP: Record<string, { color: string; bg: string }> = {
@@ -103,11 +71,7 @@ function ResumenTipoCard({ tipo, label, color, data }: {
   const c = COLOR_MAP[color] ?? COLOR_MAP.indigo;
   return (
     <div
-      className="rounded-xl p-4"
-      style={{
-        background: "color-mix(in srgb, var(--kipu-surface) 60%, transparent)",
-        border: "1px solid var(--kipu-border)",
-      }}
+      className="rounded-xl p-4 bg-superficie/60 border border-borde"
     >
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
@@ -117,35 +81,34 @@ function ResumenTipoCard({ tipo, label, color, data }: {
           >
             {tipo}
           </span>
-          <h3 className="text-xs font-semibold" style={{ color: "var(--kipu-text)" }}>{label}</h3>
+          <h3 className="text-xs font-semibold text-texto">{label}</h3>
         </div>
         <span className="text-[10px]" style={{ color: "var(--kipu-subtle)" }}>{data.num_docs} docs</span>
       </div>
       <div className="space-y-1.5">
         {data.desglose_iva.length === 0 ? (
-          <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Sin desglose disponible</p>
+          <p className="text-xs text-sutil">Sin desglose disponible</p>
         ) : (
           data.desglose_iva.map((imp, i) => (
             <div key={i} className="space-y-0.5">
-              <div className="flex justify-between text-xs" style={{ color: "var(--kipu-muted)" }}>
+              <div className="flex justify-between text-xs text-tenue">
                 <span>Subtotal {imp.tarifa}%</span>
-                <span>${fmt(imp.subtotal)}</span>
+                <span>${dosDecimales(imp.subtotal)}</span>
               </div>
               {imp.iva > 0 && (
-                <div className="flex justify-between text-xs pl-3" style={{ color: "var(--kipu-subtle)" }}>
+                <div className="flex justify-between text-xs pl-3 text-sutil">
                   <span>IVA {imp.tarifa}%</span>
-                  <span>${fmt(imp.iva)}</span>
+                  <span>${dosDecimales(imp.iva)}</span>
                 </div>
               )}
             </div>
           ))
         )}
         <div
-          className="flex justify-between font-bold text-xs pt-2 mt-2"
-          style={{ borderTop: "1px solid var(--kipu-border)" }}
+          className="flex justify-between font-bold text-xs pt-2 mt-2 border-t border-borde"
         >
-          <span style={{ color: "var(--kipu-muted)" }}>Total</span>
-          <span style={{ color: c.color }}>${fmt(data.total)}</span>
+          <span className="text-tenue">Total</span>
+          <span style={{ color: c.color }}>${dosDecimales(data.total)}</span>
         </div>
       </div>
     </div>
@@ -155,252 +118,146 @@ function ResumenTipoCard({ tipo, label, color, data }: {
 // ── Página ─────────────────────────────────────────────────────────────────────
 export default function HistorialPage() {
   const puedeVer = usePermiso("descargar");
-  const searchParams = useSearchParams();
+  const router = useRouter();
 
-  const [documentos,   setDocumentos]   = useState<Documento[]>([]);
-  const [resumen,      setResumen]      = useState<any>(null);
-  const [loading,      setLoading]      = useState(true);
   const [resumenOpen,  setResumenOpen]  = useState(false);
-  const [query,        setQuery]        = useState("");
-  const [filtroEstado, setFiltroEstado] = useState("TODOS");
-  const [filtroTipo,   setFiltroTipo]   = useState("TODOS");
-
-  // Paginación
-  const [page, setPage]             = useState(1);
-  const [pagination, setPagination] = useState<PaginationInfo | null>(null);
+  // Búsqueda, filtros y página en la URL: al volver de un comprobante la lista
+  // queda igual (lib/useLista.ts). Se buscan en el servidor, en todo el rango.
+  // sel: el comprobante abierto en el panel de la derecha (compu, 1280 px o más)
+  const [filtros, cambiarFiltros] = useFiltrosUrl({ q: "", estado: "TODOS", tipo: "TODOS", page: "1", sel: "" });
+  const queryActivo  = filtros.q;
+  const filtroEstado = filtros.estado;
+  const filtroTipo   = filtros.tipo;
+  const page         = Math.max(1, Number(filtros.page) || 1);
+  const irAPagina    = (n: number) => cambiarFiltros({ page: String(n) });
+  const [query, cambiarQuery] = useBusquedaUrl("q", { page: "" });   // se busca 400 ms después
+  const periodo = usePeriodo("emitidos", () => irAPagina(1));
 
   const { activo: sandboxGlobal } = useSandboxStore();
   const [sandbox, setSandbox]     = useState(sandboxGlobal);
-
-  // Estados temporales de inputs de fecha
-  const [tempFechaInicio, setTempFechaInicio] = useState<string>(() => {
-    const fromUrl = searchParams.get("fecha_inicio");
-    return fromUrl || leerFecha(SS_KEY_INICIO);
-  });
-  const [tempFechaFin, setTempFechaFin] = useState<string>(() => {
-    const fromUrl = searchParams.get("fecha_fin");
-    return fromUrl || leerFecha(SS_KEY_FIN);
-  });
-
-  // Fechas activas para peticiones HTTP
-  const [fechaInicio, setFechaInicio] = useState<string>(tempFechaInicio);
-  const [fechaFin, setFechaFin]       = useState<string>(tempFechaFin);
-
   useEffect(() => { setSandbox(sandboxGlobal); }, [sandboxGlobal]);
 
-  const diasRango = fechaInicio && fechaFin
-    ? Math.ceil((new Date(fechaFin).getTime() - new Date(fechaInicio).getTime()) / (1000 * 60 * 60 * 24))
-    : 0;
+  // Lista paginada (25 por página) y resumen fiscal del rango: con caché, al
+  // volver aparecen al instante y se actualizan por detrás (lib/useLista.ts)
+  const paramsFechas = new URLSearchParams();
+  if (periodo.inicio) paramsFechas.append("fecha_inicio", periodo.inicio);
+  if (periodo.fin)    paramsFechas.append("fecha_fin",    periodo.fin);
+  const paramsLista = new URLSearchParams(paramsFechas);
+  if (sandbox)     paramsLista.append("sandbox", "true");
+  if (queryActivo) paramsLista.append("q",       queryActivo);
+  if (filtroEstado !== "TODOS") paramsLista.append("estado_sri", filtroEstado);
+  if (filtroTipo   !== "TODOS") paramsLista.append("tipo_doc",   filtroTipo);
+  paramsLista.append("page",  String(page));
+  paramsLista.append("limit", "25");
 
-  // Cargar lista paginada (25 elementos por página)
-  const cargar = useCallback(async () => {
-    if (diasRango > 365) return;
-    setLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (fechaInicio) params.append("fecha_inicio", fechaInicio);
-      if (fechaFin)    params.append("fecha_fin",    fechaFin);
-      if (sandbox)     params.append("sandbox",      "true");
-      params.append("page", String(page));
-      params.append("limit", "25");
+  const lista = useLista<{ data?: Documento[]; pagination?: InfoPaginacion | null }>(
+    periodo.valido ? `/api/v1/app/documentos?${paramsLista.toString()}` : null);
+  const resumenLista = useLista<{ data?: any }>(
+    periodo.valido ? `/api/v1/app/documentos/resumen?${paramsFechas.toString()}` : null);
 
-      const res = await api.get(`/api/v1/app/documentos?${params.toString()}`);
-      setDocumentos(res.data.data ?? []);
-      setPagination(res.data.pagination ?? null);
-    } catch (e) { console.error(e); }
-    finally { setLoading(false); }
-  }, [fechaInicio, fechaFin, diasRango, sandbox, page]);
+  const documentos = lista.datos?.data ?? [];
+  const pagination = lista.datos?.pagination ?? null;
+  const loading    = lista.cargando;
+  const resumen    = resumenLista.datos?.data ?? null;
+  const recargarTodo = () => Promise.all([lista.recargar(), resumenLista.recargar()]);
 
-  // Cargar resumen fiscal global del rango completo
-  const cargarResumen = useCallback(async () => {
-    if (diasRango > 365) return;
-    try {
-      const params = new URLSearchParams();
-      if (fechaInicio) params.append("fecha_inicio", fechaInicio);
-      if (fechaFin)    params.append("fecha_fin",    fechaFin);
-      const res = await api.get(`/api/v1/app/documentos/resumen?${params.toString()}`);
-      setResumen(res.data.data);
-    } catch (e) { console.error(e); }
-  }, [fechaInicio, fechaFin, diasRango]);
-
-  useEffect(() => {
-    cargar();
-    cargarResumen();
-  }, [cargar, cargarResumen]);
-
-  // Manejador del botón "Buscar"
-  const handleBuscar = () => {
-    setPage(1); // Reiniciar a la primera página al cambiar fechas
-    guardarFecha(SS_KEY_INICIO, tempFechaInicio);
-    guardarFecha(SS_KEY_FIN, tempFechaFin);
-    setFechaInicio(tempFechaInicio);
-    setFechaFin(tempFechaFin);
-  };
+  // ── Compu: panel de detalle y atajos de teclado ──────────────────────────────
+  const sel = filtros.sel;
+  const { buscadorRef, marcada, setMarcada, abrir, refFila } = useNavegacionLista({
+    ids:        documentos.map(d => d.id),
+    sel,
+    cambiarSel: (id) => cambiarFiltros({ sel: id }),
+    rutaDe:     rutas.documento,
+    nuevo:      () => router.push("/documentos/emitir/fac"),
+    textoNuevo: "Nueva factura",
+  });
 
   if (!puedeVer) return <SinAcceso />;
-
-  const filtrados = documentos.filter((d) => {
-    const matchEstado = filtroEstado === "TODOS" || d.estado_sri === filtroEstado;
-    const matchTipo   = filtroTipo   === "TODOS" || d.tipo_doc   === filtroTipo;
-    const matchQuery  = !query ||
-      d.razon_social?.toLowerCase().includes(query.toLowerCase()) ||
-      d.identificacion?.includes(query) ||
-      d.numero_doc?.includes(query);
-    return matchEstado && matchTipo && matchQuery;
-  });
 
   const tieneResumen = resumen && (
     Object.keys(resumen.por_tipo ?? {}).length > 0 ||
     (resumen.retenciones?.num_docs ?? 0) > 0
   );
 
+  const docSel = documentos.find(d => d.id === sel);
+
   return (
-    <div className="p-4 md:p-6 space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold" style={{ color: "var(--kipu-text)" }}>Comprobantes Emitidos</h1>
-          <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>
+    <div className={cn(sel && "xl:flex xl:items-start")}>
+    <div className="min-w-0 flex-1 space-y-4 p-4 md:p-6">
+      <SegmentosDocumentos />
+      {/* Encabezado: en el celular el título ya está en la barra superior */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="mr-auto hidden lg:block">
+          <h1 className="text-xl font-bold text-texto">Comprobantes emitidos</h1>
+          <p className="text-sm text-sutil">
             {pagination ? `${pagination.total_items} comprobantes encontrados` : `${documentos.length} comprobantes`}
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => { setPage(1); setSandbox(!sandbox); }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
-            style={{
-              background: sandbox
-                ? "color-mix(in srgb, #22d3ee 20%, transparent)"
-                : "var(--kipu-surface)",
-              color: sandbox ? "#22d3ee" : "var(--kipu-muted)",
-              border: sandbox
-                ? "1px solid color-mix(in srgb, #22d3ee 30%, transparent)"
-                : "1px solid var(--kipu-border)",
-            }}
-          >
-            <FlaskConical size={14} />
-            {sandbox ? "Sandbox" : "Producción"}
-          </button>
-          <button
-            onClick={() => { cargar(); cargarResumen(); }}
-            disabled={diasRango > 365}
-            className="p-2 rounded-lg transition-colors disabled:opacity-40"
-            style={{
-              background: "var(--kipu-surface)",
-              border: "1px solid var(--kipu-border)",
-              color: "var(--kipu-muted)",
-            }}
-          >
-            <RefreshCw size={16} />
-          </button>
-          <Link
-            href="/documentos/emitir/fac"
-            className="flex items-center gap-2 px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors"
-            style={{ background: "var(--kipu-accent)" }}
-          >
-            <Plus size={15} /> Nueva
-          </Link>
-        </div>
+        <PeriodoFechas inicio={periodo.inicio} fin={periodo.fin} onCambio={periodo.cambiar} className="mr-auto lg:mr-0" />
+        <button
+          onClick={() => { irAPagina(1); setSandbox(!sandbox); }}
+          aria-pressed={sandbox}
+          className={`inline-flex h-9 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors tactil:h-10 ${
+            sandbox ? "border-sandbox/30 bg-sandbox-suave text-sandbox" : "border-borde bg-superficie text-tenue"}`}
+        >
+          <FlaskConical size={14} aria-hidden />
+          {sandbox ? "Sandbox" : "Producción"}
+        </button>
+        <BotonActualizar onClick={() => void recargarTodo()} deshabilitado={!periodo.valido}
+                         girando={lista.actualizando || resumenLista.actualizando} />
+        <Link href="/documentos/emitir/fac" className={`${clasesBoton("principal", "md")} hidden lg:inline-flex`}>
+          <Plus size={16} aria-hidden /> Nueva
+        </Link>
       </div>
 
-      {/* Búsqueda y Rango de Fechas con Botón Buscar */}
-      <div className="flex flex-col md:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--kipu-subtle)" }} />
-          <input
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-            placeholder="Buscar en esta página por cliente, RUC o número..."
-            className="w-full pl-9 pr-4 py-2.5 rounded-lg text-sm transition-colors focus:outline-none"
-            style={{
-              background: "var(--kipu-surface)",
-              border: "1px solid var(--kipu-border)",
-              color: "var(--kipu-text)",
-            }}
-          />
-        </div>
-        <div className="flex gap-2 items-center shrink-0">
-          <input
-            type="date"
-            value={tempFechaInicio}
-            onChange={e => setTempFechaInicio(e.target.value)}
-            className="px-3 py-2 rounded-lg text-sm focus:outline-none transition-colors"
-            style={{
-              background: "var(--kipu-surface)",
-              border: "1px solid var(--kipu-border)",
-              color: "var(--kipu-text)",
-            }}
-          />
-          <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>—</span>
-          <input
-            type="date"
-            value={tempFechaFin}
-            onChange={e => setTempFechaFin(e.target.value)}
-            className="px-3 py-2 rounded-lg text-sm focus:outline-none transition-colors"
-            style={{
-              background: "var(--kipu-surface)",
-              border: "1px solid var(--kipu-border)",
-              color: "var(--kipu-text)",
-            }}
-          />
-          <button
-            type="button"
-            onClick={handleBuscar}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold text-white transition-colors"
-            style={{ background: "var(--kipu-accent)" }}
-          >
-            <Search size={13} /> Buscar
-          </button>
-        </div>
-      </div>
+      <Entrada
+        teclado="buscar"
+        value={query}
+        onChange={e => cambiarQuery(e.target.value)}
+        placeholder="Buscar por cliente, RUC o número…"
+        aria-label="Buscar comprobantes"
+        prefijo={<Search size={16} />}
+        ref={buscadorRef}
+      />
 
-      {diasRango > 365 && (
-        <p className="text-xs font-medium" style={{ color: "var(--kipu-warning)" }}>
-          El rango máximo de consulta es de 365 días (1 año).
-        </p>
-      )}
+      <AvisoRango valido={periodo.valido} />
 
       {/* Resumen fiscal */}
       {!sandbox && tieneResumen && (
         <div
-          className="rounded-xl overflow-hidden"
-          style={{
-            background: "var(--kipu-surface)",
-            border: "1px solid var(--kipu-border)",
-          }}
+          className="rounded-xl overflow-hidden bg-superficie border border-borde"
         >
           <button
             onClick={() => setResumenOpen(!resumenOpen)}
             className="w-full flex items-center justify-between px-4 py-3 transition-colors"
           >
             <div className="flex items-center gap-2">
-              <TrendingUp size={15} style={{ color: "var(--kipu-accent)" }} />
-              <span className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>Resumen fiscal</span>
-              <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+              <TrendingUp className="text-acento" size={15} />
+              <span className="text-sm font-semibold text-texto">Resumen fiscal</span>
+              <span className="text-xs text-sutil">
                 {resumen.periodo?.desde} → {resumen.periodo?.hasta}
               </span>
             </div>
             <div className="flex items-center gap-3">
               {resumen.por_tipo?.FAC && (
-                <span className="text-xs hidden sm:block" style={{ color: "var(--kipu-muted)" }}>
-                  FAC <span className="font-medium" style={{ color: "var(--kipu-text)" }}>${fmt(resumen.por_tipo.FAC.total)}</span>
+                <span className="text-xs hidden sm:block text-tenue">
+                  FAC <span className="font-medium text-texto">${dosDecimales(resumen.por_tipo.FAC.total)}</span>
                 </span>
               )}
               {resumen.retenciones?.num_docs > 0 && (
-                <span className="text-xs hidden sm:block" style={{ color: "var(--kipu-muted)" }}>
-                  RET <span className="font-medium" style={{ color: "var(--kipu-warning)" }}>${fmt(resumen.retenciones.total)}</span>
+                <span className="text-xs hidden sm:block text-tenue">
+                  RET <span className="font-medium text-alerta">${dosDecimales(resumen.retenciones.total)}</span>
                 </span>
               )}
               {resumenOpen
-                ? <ChevronUp size={16} style={{ color: "var(--kipu-subtle)" }} />
-                : <ChevronDown size={16} style={{ color: "var(--kipu-subtle)" }} />
+                ? <ChevronUp className="text-sutil" size={16} />
+                : <ChevronDown className="text-sutil" size={16} />
               }
             </div>
           </button>
           {resumenOpen && (
             <div
-              className="px-4 pb-4 space-y-3"
-              style={{ borderTop: "2px solid var(--kipu-border)" }}
+              className="px-4 pb-4 space-y-3 border-t-2 border-borde"
             >
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 pt-3">
                 {resumen.por_tipo?.FAC && (
@@ -417,11 +274,7 @@ export default function HistorialPage() {
                 )}
                 {resumen.retenciones?.num_docs > 0 && (
                   <div
-                    className="rounded-xl p-4"
-                    style={{
-                      background: "color-mix(in srgb, var(--kipu-surface) 60%, transparent)",
-                      border: "1px solid var(--kipu-border)",
-                    }}
+                    className="rounded-xl p-4 bg-superficie/60 border border-borde"
                   >
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2">
@@ -434,29 +287,28 @@ export default function HistorialPage() {
                         >
                           RET
                         </span>
-                        <h3 className="text-xs font-semibold" style={{ color: "var(--kipu-text)" }}>Retenciones Emitidas</h3>
+                        <h3 className="text-xs font-semibold text-texto">Retenciones Emitidas</h3>
                       </div>
                       <span className="text-[10px]" style={{ color: "var(--kipu-subtle)" }}>{resumen.retenciones.num_docs} docs</span>
                     </div>
                     <div className="space-y-1.5">
                       {Object.entries(resumen.retenciones.por_tipo).map(([tipo, data]: [string, any]) => (
                         <div key={tipo} className="space-y-0.5">
-                          <div className="flex justify-between text-xs" style={{ color: "var(--kipu-muted)" }}>
+                          <div className="flex justify-between text-xs text-tenue">
                             <span>Retención {tipo}</span>
-                            <span style={{ color: "var(--kipu-text)" }}>${fmt(data.valor_retenido)}</span>
+                            <span className="text-texto">${dosDecimales(data.valor_retenido)}</span>
                           </div>
-                          <div className="flex justify-between text-xs pl-3" style={{ color: "var(--kipu-subtle)" }}>
+                          <div className="flex justify-between text-xs pl-3 text-sutil">
                             <span>Base imponible</span>
-                            <span>${fmt(data.base)}</span>
+                            <span>${dosDecimales(data.base)}</span>
                           </div>
                         </div>
                       ))}
                       <div
-                        className="flex justify-between font-bold text-xs pt-2 mt-2"
-                        style={{ borderTop: "1px solid var(--kipu-border)" }}
+                        className="flex justify-between font-bold text-xs pt-2 mt-2 border-t border-borde"
                       >
-                        <span style={{ color: "var(--kipu-muted)" }}>Total retenido</span>
-                        <span style={{ color: "var(--kipu-warning)" }}>${fmt(resumen.retenciones.total)}</span>
+                        <span className="text-tenue">Total retenido</span>
+                        <span className="text-alerta">${dosDecimales(resumen.retenciones.total)}</span>
                       </div>
                     </div>
                   </div>
@@ -467,253 +319,122 @@ export default function HistorialPage() {
         </div>
       )}
 
-      {/* Filtros por estado y tipo */}
+      {/* Filtros: una fila por filtro, que se desliza de lado en el celular */}
       <div className="space-y-2">
-        <div className="flex gap-2 flex-wrap">
-          {["TODOS", "AUTORIZADO", "RECIBIDA", "DEVUELTA", "RECHAZADO", "ANULADO"].map(estado => {
-            const isSelected = filtroEstado === estado;
-            return (
-              <button
-                key={estado}
-                onClick={() => setFiltroEstado(estado)}
-                className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
-                style={{
-                  background: isSelected ? "var(--kipu-accent)" : "var(--kipu-surface)",
-                  color: isSelected ? "#FFFFFF" : "var(--kipu-muted)",
-                  border: isSelected ? "1px solid var(--kipu-accent)" : "1px solid var(--kipu-border)",
-                }}
-              >
-                {estado === "TODOS" ? "Todos" : ESTADO_CONFIG[estado]?.label ?? estado}
-              </button>
-            );
-          })}
-        </div>
-        <div className="flex gap-2 flex-wrap">
-          {["TODOS", "FAC", "NCR", "NDB", "RET", "LIQ"].map(tipo => {
-            const isSelected = filtroTipo === tipo;
-            return (
-              <button
-                key={tipo}
-                onClick={() => setFiltroTipo(tipo)}
-                className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
-                style={{
-                  background: isSelected ? "var(--kipu-accent)" : "var(--kipu-surface)",
-                  color: isSelected ? "#FFFFFF" : "var(--kipu-muted)",
-                  border: isSelected ? "1px solid var(--kipu-accent)" : "1px solid var(--kipu-border)",
-                }}
-              >
-                {tipo === "TODOS" ? "Todos los tipos" : TIPO_COMPROBANTE[tipo]?.label ?? tipo}
-              </button>
-            );
-          })}
-        </div>
+        <ChipsFiltro etiqueta="Estado" opciones={ESTADOS_FILTRO} valor={filtroEstado}
+                     onCambio={estado => cambiarFiltros({ estado, page: "1" })} />
+        <ChipsFiltro etiqueta="Tipo de comprobante" opciones={TIPOS_FILTRO} valor={filtroTipo}
+                     onCambio={tipo => cambiarFiltros({ tipo, page: "1" })} />
       </div>
 
       {/* Lista */}
       {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <div
-            className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin"
-            style={{ borderColor: "var(--kipu-accent)", borderTopColor: "transparent" }}
-          />
-        </div>
-      ) : filtrados.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <FileText size={40} className="mb-3" style={{ color: "var(--kipu-subtle)" }} />
-          <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>
-            {query || filtroEstado !== "TODOS" || filtroTipo !== "TODOS"
-              ? "No hay comprobantes que coincidan con el filtro en esta página."
-              : `Sin comprobantes de ${sandbox ? "prueba (Sandbox)" : "producción"} en este rango.`}
-          </p>
-        </div>
+        <EsqueletoFilas filas={8} />
+      ) : lista.fallo ? (
+        <VacioError que="tus comprobantes" onReintentar={lista.recargar} />
+      ) : documentos.length === 0 ? (
+        queryActivo || filtroEstado !== "TODOS" || filtroTipo !== "TODOS" ? (
+          <Vacio icono={Search} titulo="Nada coincide con la búsqueda"
+                 descripcion="Prueba con otro texto, otro filtro u otro período." />
+        ) : (
+          <Vacio icono={FileText}
+                 titulo={`Sin comprobantes de ${sandbox ? "prueba" : "producción"} en este período`}
+                 descripcion="Prueba con otro período o emite tu primera factura."
+                 accion={<Link href="/documentos/emitir/fac" className={clasesBoton()}><Plus size={16} aria-hidden /> Emitir factura</Link>} />
+        )
       ) : (
-        <div
-          className="rounded-xl overflow-hidden space-y-0"
-          style={{
-            background: "var(--kipu-surface)",
-            border: "1px solid var(--kipu-border)",
-          }}
-        >
-          {/* Vista Escritorio */}
-          <div className="hidden md:block overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr
-                  className="text-xs"
-                  style={{
-                    color: "var(--kipu-subtle)",
-                    borderBottom: "2px solid var(--kipu-border)",
-                  }}
-                >
-                  <th className="text-left px-4 py-3 font-medium">Número</th>
-                  <th className="text-left px-4 py-3 font-medium">Tipo</th>
-                  <th className="text-left px-4 py-3 font-medium">Cliente</th>
-                  <th className="text-left px-4 py-3 font-medium">Fecha</th>
-                  <th className="text-left px-4 py-3 font-medium">Estado</th>
-                  <th className="text-left px-4 py-3 font-medium">Cobro</th>
-                  <th className="text-right px-4 py-3 font-medium">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtrados.map((d, index) => {
-                  const estado = ESTADO_CONFIG[d.estado_sri] ?? ESTADO_CONFIG.PENDIENTE;
-                  const tipo   = TIPO_COMPROBANTE[d.tipo_doc] ?? TIPO_COMPROBANTE.FAC;
-                  const cobro  = d.estado_cobro ? COBRO_CONFIG[d.estado_cobro] : null;
-                  const Icon   = estado.icon;
-                  return (
+        <>
+          {/* Escritorio: tabla; se abre tocando cualquier parte de la fila */}
+          <div className="hidden overflow-hidden rounded-xl border border-borde bg-superficie md:block">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b-2 border-borde text-xs text-sutil">
+                    <th className="px-4 py-3 text-left font-medium">Número</th>
+                    <th className={`px-4 py-3 text-left font-medium ${sel ? "xl:hidden" : ""}`}>Tipo</th>
+                    <th className="px-4 py-3 text-left font-medium">Cliente</th>
+                    <th className={`px-4 py-3 text-left font-medium ${sel ? "xl:hidden 2xl:table-cell" : ""}`}>Fecha</th>
+                    <th className="px-4 py-3 text-left font-medium">Estado</th>
+                    <th className={`px-4 py-3 text-left font-medium ${sel ? "xl:hidden" : ""}`}>Cobro</th>
+                    <th className="px-4 py-3 text-right font-medium">Total</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-borde">
+                  {documentos.map((d, i) => (
                     <tr
                       key={d.id}
-                      className="transition-colors"
-                      style={{
-                        borderTop: index > 0 ? "1px solid var(--kipu-border)" : "none",
-                      }}
-                      onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 4%, transparent)"}
-                      onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                      ref={refFila(d.id)}
+                      onClick={() => { setMarcada(i); abrir(d.id); }}
+                      aria-selected={d.id === sel || undefined}
+                      className={cn(
+                        "cursor-pointer transition-colors hover:bg-presionado",
+                        d.estado_sri === "ANULADO" && "opacity-60",
+                        d.id === sel && "bg-acento-suave hover:bg-acento-suave",
+                        i === marcada && "outline-2 -outline-offset-2 outline-acento/50",
+                      )}
                     >
                       <td className="px-4 py-3">
-                        <Link
-                          href={rutas.documento(d.id)}
-                          className="font-mono text-xs transition-colors hover:underline underline-offset-2"
-                          style={{ color: "var(--kipu-accent)" }}
-                        >
+                        <Link href={rutas.documento(d.id)} onClick={e => e.stopPropagation()}
+                              className="whitespace-nowrap font-mono text-xs text-acento underline-offset-2 hover:underline">
                           {d.numero_doc ?? "—"}
                         </Link>
                       </td>
+                      <td className={`px-4 py-3 text-xs text-tenue ${sel ? "xl:hidden" : ""}`}>{tipoComprobante(d.tipo_doc).etiqueta}</td>
                       <td className="px-4 py-3">
-                        <span
-                          className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
-                          style={{ color: tipo.color, background: tipo.bg }}
-                        >
-                          {tipo.label}
-                        </span>
+                        <p className={`max-w-[220px] truncate font-medium text-texto ${sel ? "xl:max-w-[150px] 2xl:max-w-[220px]" : ""}`}>{d.razon_social}</p>
+                        <p className="text-xs text-sutil">{d.identificacion}</p>
                       </td>
-                      <td className="px-4 py-3">
-                        <p className="font-medium truncate max-w-[160px]" style={{ color: "var(--kipu-text)" }}>{d.razon_social}</p>
-                        <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>{d.identificacion}</p>
+                      <td className={`whitespace-nowrap px-4 py-3 text-xs text-tenue ${sel ? "xl:hidden 2xl:table-cell" : ""}`}>{d.fecha_emision}</td>
+                      <td className="px-4 py-3"><InsigniaSri estado={d.estado_sri} /></td>
+                      <td className={`px-4 py-3 ${sel ? "xl:hidden" : ""}`}>
+                        {CON_COBRO.includes(d.tipo_doc) && <InsigniaCobro estado={d.estado_cobro} />}
                       </td>
-                      <td className="px-4 py-3 text-xs" style={{ color: "var(--kipu-muted)" }}>{d.fecha_emision}</td>
-                      <td className="px-4 py-3">
-                        <span
-                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium"
-                          style={{ color: estado.color, background: estado.bg }}
-                        >
-                          <Icon size={11} />
-                          {estado.label}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        {cobro && ["FAC", "LIQ", "NDB"].includes(d.tipo_doc) && (
-                          <span className="text-xs font-medium" style={{ color: cobro.color }}>
-                            {cobro.label}
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-right font-semibold" style={{ color: "var(--kipu-text)" }}>
-                        ${fmt(d.importe_total)}
-                      </td>
+                      <td className="px-4 py-3 text-right font-semibold tabular-nums text-texto">${dosDecimales(d.importe_total)}</td>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
 
-          {/* Vista Móvil */}
-          <div className="md:hidden">
-            {filtrados.map((d, index) => {
-              const estado = ESTADO_CONFIG[d.estado_sri] ?? ESTADO_CONFIG.PENDIENTE;
-              const tipo   = TIPO_COMPROBANTE[d.tipo_doc] ?? TIPO_COMPROBANTE.FAC;
-              const Icon   = estado.icon;
-              return (
-                <div
+          {/* Celular: filas que se tocan enteras; deslizar hacia abajo actualiza */}
+          <TirarParaRefrescar alRefrescar={recargarTodo} className="md:hidden">
+            <GrupoFilas>
+              {documentos.map(d => (
+                <FilaLista
                   key={d.id}
-                  className="px-4 py-3 space-y-1.5"
-                  style={{
-                    borderTop: index > 0 ? "1px solid var(--kipu-border)" : "none",
-                  }}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <Link
-                      href={rutas.documento(d.id)}
-                      className="font-mono text-xs transition-colors"
-                      style={{ color: "var(--kipu-accent)" }}
-                    >
-                      {d.numero_doc ?? "—"}
-                    </Link>
-                    <div className="flex items-center gap-1.5">
-                      <span
-                        className="px-1.5 py-0.5 rounded text-[10px] font-medium"
-                        style={{ color: tipo.color, background: tipo.bg }}
-                      >
-                        {tipo.label}
-                      </span>
-                      <span
-                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium"
-                        style={{ color: estado.color, background: estado.bg }}
-                      >
-                        <Icon size={10} />
-                        {estado.label}
-                      </span>
-                    </div>
-                  </div>
-                  <p className="text-sm font-medium" style={{ color: "var(--kipu-text)" }}>{d.razon_social}</p>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>{d.fecha_emision}</span>
-                    <span className="text-sm font-bold" style={{ color: "var(--kipu-text)" }}>${fmt(d.importe_total)}</span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+                  href={rutas.documento(d.id)}
+                  titulo={d.razon_social || "Consumidor final"}
+                  subtitulo={`${tipoComprobante(d.tipo_doc).corta} ${d.numero_doc ?? ""} · ${etiquetaPeriodo(d.fecha_emision, d.fecha_emision)}`}
+                  fin={`$${dosDecimales(d.importe_total)}`}
+                  finAbajo={
+                    <span className="flex flex-wrap justify-end gap-1">
+                      {CON_COBRO.includes(d.tipo_doc) && <InsigniaCobro estado={d.estado_cobro} />}
+                      <InsigniaSri estado={d.estado_sri} />
+                    </span>
+                  }
+                  apagada={d.estado_sri === "ANULADO"}
+                />
+              ))}
+            </GrupoFilas>
+          </TirarParaRefrescar>
+        </>
       )}
 
-      {/* Barra de Controles de Paginación */}
-      {pagination && pagination.total_pages > 1 && (
-        <div
-          className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 rounded-xl"
-          style={{
-            background: "var(--kipu-surface)",
-            border: "1px solid var(--kipu-border)",
-          }}
-        >
-          <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
-            Mostrando <span className="font-semibold" style={{ color: "var(--kipu-text)" }}>{documentos.length}</span> de{" "}
-            <span className="font-semibold" style={{ color: "var(--kipu-text)" }}>{pagination.total_items}</span> comprobantes
-          </p>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setPage(p => Math.max(p - 1, 1))}
-              disabled={!pagination.has_prev || loading}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors disabled:opacity-40"
-              style={{
-                background: "var(--kipu-surface)",
-                border: "1px solid var(--kipu-border)",
-                color: "var(--kipu-text)",
-              }}
-            >
-              <ChevronLeft size={14} /> Anterior
-            </button>
-            <span className="text-xs font-medium px-2" style={{ color: "var(--kipu-subtle)" }}>
-              Página {pagination.page} de {pagination.total_pages}
-            </span>
-            <button
-              type="button"
-              onClick={() => setPage(p => Math.min(p + 1, pagination.total_pages))}
-              disabled={!pagination.has_next || loading}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors disabled:opacity-40"
-              style={{
-                background: "var(--kipu-surface)",
-                border: "1px solid var(--kipu-border)",
-                color: "var(--kipu-text)",
-              }}
-            >
-              Siguiente <ChevronRight size={14} />
-            </button>
-          </div>
-        </div>
-      )}
+      <Paginacion info={pagination} enPantalla={documentos.length} cargando={loading} onCambio={irAPagina} />
+      <AyudaAtajos nuevo="nueva factura" />
+    </div>
+
+    {/* Compu (1280 px o más): el comprobante elegido, a la derecha */}
+    {sel && (
+      <PanelDetalle
+        titulo={docSel ? `${tipoComprobante(docSel.tipo_doc).etiqueta} ${docSel.numero_doc ?? ""}` : "Comprobante"}
+        hrefCompleto={rutas.documento(sel)}
+        onCerrar={() => cambiarFiltros({ sel: "" })}
+      >
+        <DetalleDocumento key={sel} id={sel} enPanel />
+      </PanelDetalle>
+    )}
     </div>
   );
 }

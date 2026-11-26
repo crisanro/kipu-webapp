@@ -50,7 +50,7 @@ function TipoBadge({ u }: { u: any }) {
 // ── Chips de empresas ──────────────────────────────────────────────────────────
 function EmpresasChips({ emisores, linkable = true }: { emisores: any[]; linkable?: boolean }) {
   if (!emisores?.length) {
-    return <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>—</span>;
+    return <span className="text-xs text-sutil">—</span>;
   }
   const visibles = emisores.slice(0, 2);
   const resto    = emisores.length - visibles.length;
@@ -85,7 +85,7 @@ function EmpresasChips({ emisores, linkable = true }: { emisores: any[]; linkabl
         )
       )}
       {resto > 0 && (
-        <span className="text-xs px-1.5 py-0.5" style={{ color: "var(--kipu-subtle)" }}>
+        <span className="text-xs px-1.5 py-0.5 text-sutil">
           +{resto}
         </span>
       )}
@@ -191,19 +191,12 @@ export default function AdminUsuariosPage() {
       {/* Búsqueda + segmentos */}
       <div className="flex flex-col lg:flex-row gap-3">
         <div className="relative flex-1">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--kipu-subtle)" }} />
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-sutil" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Buscar por email o nombre..."
-            className="w-full pl-9 pr-4 py-2.5 rounded-lg text-sm focus:outline-none transition-colors"
-            style={{
-              background: "var(--kipu-surface)",
-              border: "1px solid var(--kipu-border)",
-              color: "var(--kipu-text)",
-            }}
-            onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-            onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+            className="w-full pl-9 pr-4 py-2.5 rounded-lg text-sm focus:outline-none transition-colors bg-superficie border border-borde text-texto focus:border-acento"
           />
         </div>
         <div className="flex gap-2 overflow-x-auto">
@@ -244,30 +237,21 @@ export default function AdminUsuariosPage() {
       {/* Error */}
       {error && (
         <div
-          className="flex items-start gap-3 rounded-xl p-4"
-          style={{
-            background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
-            border:     "1px solid color-mix(in srgb, var(--kipu-danger) 40%, transparent)",
-          }}
+          className="flex items-start gap-3 rounded-xl p-4 bg-peligro-suave border border-peligro/40"
         >
-          <AlertTriangle size={16} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-danger)" }} />
+          <AlertTriangle size={16} className="shrink-0 mt-0.5 text-peligro" />
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium" style={{ color: "var(--kipu-danger)" }}>
+            <p className="text-sm font-medium text-peligro">
               No se pudieron cargar los usuarios
             </p>
-            <p className="text-xs mt-1 font-mono break-all" style={{ color: "var(--kipu-text)" }}>
+            <p className="text-xs mt-1 font-mono break-all text-texto">
               {error}
             </p>
           </div>
           <button
             type="button"
             onClick={() => setReload(r => r + 1)}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium shrink-0"
-            style={{
-              background: "var(--kipu-surface)",
-              border:     "1px solid var(--kipu-border)",
-              color:      "var(--kipu-text)",
-            }}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium shrink-0 bg-superficie border border-borde text-texto"
           >
             <RotateCw size={12} /> Reintentar
           </button>
@@ -288,11 +272,7 @@ export default function AdminUsuariosPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr
-                  className="text-xs"
-                  style={{
-                    borderBottom: "1px solid var(--kipu-border)",
-                    color: "var(--kipu-subtle)",
-                  }}
+                  className="text-xs border-b border-borde text-sutil"
                 >
                   <th className="text-left px-4 py-3 font-medium">Usuario</th>
                   <th className="text-left px-4 py-3 font-medium">Empresas</th>
@@ -305,17 +285,15 @@ export default function AdminUsuariosPage() {
                 {usuarios.map((u, idx) => (
                   <tr
                     key={u.id}
-                    className="transition-colors"
+                    className="transition-colors hover:bg-texto/4"
                     style={{ borderBottom: idx < usuarios.length - 1 ? "1px solid var(--kipu-border)" : "none" }}
-                    onMouseEnter={ev => ev.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 4%, transparent)"}
-                    onMouseLeave={ev => ev.currentTarget.style.background = "transparent"}
                   >
                     <td className="px-4 py-3">
-                      <p className="font-medium truncate max-w-[240px]" style={{ color: "var(--kipu-text)" }}>
+                      <p className="font-medium truncate max-w-[240px] text-texto">
                         {u.nombre || u.email}
                       </p>
                       {u.nombre && (
-                        <p className="text-xs truncate max-w-[240px]" style={{ color: "var(--kipu-subtle)" }}>
+                        <p className="text-xs truncate max-w-[240px] text-sutil">
                           {u.email}
                         </p>
                       )}
@@ -326,16 +304,13 @@ export default function AdminUsuariosPage() {
                     <td className="px-4 py-3">
                       <TipoBadge u={u} />
                     </td>
-                    <td className="px-4 py-3 text-xs whitespace-nowrap" style={{ color: "var(--kipu-subtle)" }}>
+                    <td className="px-4 py-3 text-xs whitespace-nowrap text-sutil">
                       {fmtFecha(u.created_at)}
                     </td>
                     <td className="px-4 py-3 text-right">
                       <Link
                         href={`/admin/usuarios/${u.id}`}
-                        className="inline-flex items-center gap-1 text-xs transition-colors font-medium"
-                        style={{ color: "var(--kipu-accent)" }}
-                        onMouseEnter={ev => ev.currentTarget.style.color = "var(--kipu-accent-h)"}
-                        onMouseLeave={ev => ev.currentTarget.style.color = "var(--kipu-accent)"}
+                        className="inline-flex items-center gap-1 text-xs transition-colors font-medium text-acento hover:text-acento-hover"
                       >
                         Ver <ChevronRight size={12} />
                       </Link>
@@ -352,17 +327,15 @@ export default function AdminUsuariosPage() {
               <Link
                 key={u.id}
                 href={`/admin/usuarios/${u.id}`}
-                className="flex items-center gap-3 px-4 py-3 transition-colors"
+                className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-texto/4"
                 style={{ borderTop: idx > 0 ? "1px solid var(--kipu-border)" : "none" }}
-                onMouseEnter={ev => ev.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 4%, transparent)"}
-                onMouseLeave={ev => ev.currentTarget.style.background = "transparent"}
               >
                 <div className="flex-1 min-w-0 space-y-1">
-                  <p className="text-sm font-medium truncate" style={{ color: "var(--kipu-text)" }}>
+                  <p className="text-sm font-medium truncate text-texto">
                     {u.nombre || u.email}
                   </p>
                   {u.nombre && (
-                    <p className="text-xs truncate" style={{ color: "var(--kipu-subtle)" }}>{u.email}</p>
+                    <p className="text-xs truncate text-sutil">{u.email}</p>
                   )}
                   <EmpresasChips emisores={u.emisores} linkable={false} />
                 </div>
@@ -370,15 +343,15 @@ export default function AdminUsuariosPage() {
                   <TipoBadge u={u} />
                   <p className="text-[11px]" style={{ color: "var(--kipu-subtle)" }}>{fmtFecha(u.created_at)}</p>
                 </div>
-                <ChevronRight size={14} className="shrink-0" style={{ color: "var(--kipu-subtle)" }} />
+                <ChevronRight size={14} className="shrink-0 text-sutil" />
               </Link>
             ))}
           </div>
 
           {usuarios.length === 0 && (
             <div className="text-center py-12">
-              <Users size={32} className="mx-auto mb-2" style={{ color: "var(--kipu-subtle)" }} />
-              <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>No hay usuarios que coincidan</p>
+              <Users size={32} className="mx-auto mb-2 text-sutil" />
+              <p className="text-sm text-sutil">No hay usuarios que coincidan</p>
             </div>
           )}
         </div>
@@ -387,7 +360,7 @@ export default function AdminUsuariosPage() {
       {/* Paginación */}
       {!error && total > 0 && (
         <div className="flex items-center justify-between">
-          <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+          <p className="text-xs text-sutil">
             {desde}–{hasta} de {total}
           </p>
           <div className="flex items-center gap-2">
@@ -400,7 +373,7 @@ export default function AdminUsuariosPage() {
             >
               <ChevronLeft size={13} /> Anterior
             </button>
-            <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+            <span className="text-xs text-sutil">
               {page} / {totalPages}
             </span>
             <button

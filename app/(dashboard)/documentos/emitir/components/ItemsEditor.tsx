@@ -2,13 +2,14 @@
 
 import { useRef, useCallback, useState, useEffect, lazy, Suspense } from "react";
 import { etiquetaIva, opcionesIva } from "@/lib/iva";
-import { r2 } from "@/lib/dinero";
+import { dosDecimales, r2 } from "@/lib/dinero";
 import {
   calcularLinea, aplicarIvaIncluido, conIvaIncluido, sinIvaIncluido,
   totalEsperadoConIva, tarifaPct,
 } from "@/lib/precios";
 import api from "@/lib/api";
-import { Search, Plus, Trash2, Camera } from "lucide-react";
+import { Search, Plus, Trash2, Camera, ChevronRight } from "lucide-react";
+import HojaItem, { InputDecimal } from "./HojaItem";
 
 const BarcodeScanner = lazy(() => import("@/components/BarcodeScanner"));
 
@@ -49,11 +50,54 @@ interface Props {
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
-const fmt = (n: number) => r2(n).toFixed(2);
 
 /** Subtotal, descuento (en dólares sin IVA), base, IVA y total de la línea. */
 export function calcItem(item: Item) {
   return calcularLinea(item);
+}
+
+/**
+ * Ítems como los espera el backend (descuento en dólares sin IVA, aunque se haya
+ * escrito en %). Con `catalogo` (factura) va también "guardar en el catálogo".
+ */
+export function itemsParaEnviar(items: Item[], { catalogo = false } = {}) {
+  return items.map(i => ({
+    codigo:          i.codigo || undefined,
+    descripcion:     i.descripcion,
+    cantidad:        i.cantidad,
+    precio_unitario: i.precio,
+    descuento:       calcItem(i).descuento,
+    tipo_iva:        i.tipo_iva,
+    unidad_medida:   i.unidad,
+    ...(catalogo ? {
+      guardar_catalogo: !!i.guardar_catalogo,
+      // Al guardarlo en el catálogo, conserva el precio final que se escribió
+      ...(i.guardar_catalogo && i.precio_iva !== undefined ? { precio_con_iva: i.precio_iva } : {}),
+    } : {}),
+  }));
+}
+
+/** Totales del comprobante por tarifa (factura, liquidación, nota de crédito). Propina: 10 % del subtotal. */
+export function calcTotales(items: Item[], incluirPropina = false) {
+  const base = items.reduce(
+    (acc, item) => {
+      const c = calcItem(item);
+      acc.subtotal    = r2(acc.subtotal + c.base);
+      acc.descuento   = r2(acc.descuento + c.descuento);
+      acc.iva         = r2(acc.iva + c.iva);
+      acc.subtotal_0  = r2(acc.subtotal_0  + (item.tipo_iva === "0"  ? c.base : 0));
+      acc.subtotal_no_objeto = r2(acc.subtotal_no_objeto + (item.tipo_iva === "NA" ? c.base : 0));
+      acc.subtotal_exento    = r2(acc.subtotal_exento    + (item.tipo_iva === "EX" ? c.base : 0));
+      acc.subtotal_5  = r2(acc.subtotal_5  + (item.tipo_iva === "5"  ? c.base : 0));
+      acc.subtotal_15 = r2(acc.subtotal_15 + (item.tipo_iva === "15" ? c.base : 0));
+      acc.iva_5       = r2(acc.iva_5  + (item.tipo_iva === "5"  ? c.iva : 0));
+      acc.iva_15      = r2(acc.iva_15 + (item.tipo_iva === "15" ? c.iva : 0));
+      return acc;
+    },
+    { subtotal: 0, descuento: 0, iva: 0, subtotal_0: 0, subtotal_no_objeto: 0, subtotal_exento: 0, subtotal_5: 0, subtotal_15: 0, iva_5: 0, iva_15: 0 }
+  );
+  const propina = incluirPropina ? r2(base.subtotal * 0.10) : 0;
+  return { ...base, propina, total: r2(base.subtotal + base.iva + propina) };
 }
 
 // Preferencia de la persona: "Sumar IVA" o "IVA incluido" (vale para todos los comprobantes)
@@ -77,63 +121,6 @@ export const EMPTY_ITEM: Omit<Item, "_id"> = {
   unidad:         "UNIDAD",
 };
 
-// ── Subcomponente de Input Decimal ─────────────────────────────────────────────
-function InputDecimal({
-  value,
-  onChange,
-  placeholder = "0",
-  className = "",
-  style = {},
-  defaultValueOnBlur = 0,
-}: {
-  value: number;
-  onChange: (val: number) => void;
-  placeholder?: string;
-  className?: string;
-  style?: React.CSSProperties;
-  defaultValueOnBlur?: number;
-}) {
-  const [valStr, setValStr] = useState<string>(value === 0 ? "" : String(value));
-
-  useEffect(() => {
-    setValStr(value === 0 ? "" : String(value));
-  }, [value]);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let raw = e.target.value;
-    raw = raw.replace(/[^0-9.,]/g, "");
-    const parts = raw.split(/[.,]/);
-    if (parts.length > 2) return;
-    setValStr(raw);
-    const num = parseFloat(raw.replace(",", "."));
-    onChange(isNaN(num) ? 0 : num);
-  };
-
-  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-    if (!valStr.trim()) {
-      onChange(defaultValueOnBlur);
-      setValStr(defaultValueOnBlur === 0 ? "" : String(defaultValueOnBlur));
-    }
-    e.currentTarget.style.borderColor = "var(--kipu-border)";
-  };
-
-  return (
-    <input
-      type="text"
-      inputMode="decimal"
-      value={valStr}
-      onChange={handleChange}
-      onFocus={(e) => {
-        e.currentTarget.style.borderColor = "var(--kipu-accent)";
-      }}
-      onBlur={handleBlur}
-      placeholder={placeholder}
-      className={className}
-      style={style}
-    />
-  );
-}
-
 // ── Componente Principal ───────────────────────────────────────────────────────
 export default function ItemsEditor({ items, onChange }: Props) {
   const [productoQuery,     setProductoQuery]     = useState("");
@@ -151,6 +138,9 @@ export default function ItemsEditor({ items, onChange }: Props) {
 
   const timer       = useRef<ReturnType<typeof setTimeout> | null>(null);
   const productoRef = useRef<HTMLDivElement>(null);
+  const listaRef    = useRef<HTMLDivElement>(null);
+  // Celular: el ítem que se está editando en la hoja (HojaItem)
+  const [editando, setEditando] = useState<string | null>(null);
 
   // Ítems nuevos o que llegan de fuera (proforma, factura original, catálogo) toman el
   // modo por defecto; mostrarlos con IVA incluido no cambia lo que se envía.
@@ -317,27 +307,34 @@ export default function ItemsEditor({ items, onChange }: Props) {
   };
 
   const addItem = () => {
-    emitir([...items, { _id: genId(), ...EMPTY_ITEM }]);
+    const nuevo = { _id: genId(), ...EMPTY_ITEM };
+    emitir([...items, nuevo]);
+    if (window.matchMedia("(max-width: 767.98px)").matches) setEditando(nuevo._id);
+    else setTimeout(() => listaRef.current?.querySelector<HTMLInputElement>(`[data-descripcion="${nuevo._id}"]`)?.focus(), 50);
   };
+
+  // Celular: quitar el ítem que está abierto en la hoja
+  const quitarEditando = () => {
+    if (!editando) return;
+    removeItem(editando);
+    setEditando(null);
+  };
+  const itemEditando = items.find(i => i._id === editando) ?? null;
 
   // ── Render ───────────────────────────────────────────────────────────────────
   return (
     <div
-      className="rounded-xl p-4 space-y-4"
-      style={{
-        background: "var(--kipu-surface)",
-        border: "1px solid var(--kipu-border)",
-      }}
+      className="rounded-xl p-4 space-y-4 bg-superficie border border-borde"
     >
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Search size={15} style={{ color: "var(--kipu-accent)" }} />
-          <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>
+          <Search className="text-acento" size={15} />
+          <h2 className="text-sm font-semibold text-texto">
             Productos / Servicios
           </h2>
         </div>
-        <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+        <span className="text-xs text-sutil">
           {items.length} ítem(s)
         </span>
       </div>
@@ -347,21 +344,13 @@ export default function ItemsEditor({ items, onChange }: Props) {
         <div className="relative">
           <Search
             size={15}
-            className="absolute left-3 top-1/2 -translate-y-1/2"
-            style={{ color: "var(--kipu-subtle)" }}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-sutil"
           />
           <input
             value={productoQuery}
             onChange={(e) => { setProductoQuery(e.target.value); setShowProductos(true); }}
             placeholder="Buscar en catálogo para agregar..."
-            className="w-full pl-9 pr-10 py-2 rounded-lg text-sm transition-colors focus:outline-none"
-            style={{
-              background: "var(--kipu-surface)",
-              border: "1px solid var(--kipu-border)",
-              color: "var(--kipu-text)",
-            }}
-            onFocus={(e) => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-            onBlur={(e) => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+            className="w-full pl-9 pr-10 py-2 rounded-lg text-sm transition-colors focus:outline-none bg-superficie border border-borde text-texto focus:border-acento"
           />
           {productoLoading ? (
             <div
@@ -375,10 +364,7 @@ export default function ItemsEditor({ items, onChange }: Props) {
                 setScanForItemId(null);
                 setShowScanner(true);
               }}
-              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded transition-colors"
-              style={{ color: "var(--kipu-subtle)" }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = "var(--kipu-accent)")}
-              onMouseLeave={(e) => (e.currentTarget.style.color = "var(--kipu-subtle)")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded transition-colors text-sutil hover:text-acento"
               title="Escanear código de barras o QR"
             >
               <Camera size={16} />
@@ -388,37 +374,25 @@ export default function ItemsEditor({ items, onChange }: Props) {
 
         {showProductos && productoResults.length > 0 && (
           <div
-            className="absolute z-10 w-full mt-1 rounded-lg shadow-xl overflow-hidden max-h-48 overflow-y-auto"
-            style={{
-              background: "var(--kipu-surface)",
-              border: "1px solid var(--kipu-border)",
-            }}
+            className="mt-1 max-h-64 overflow-y-auto rounded-lg md:absolute md:z-10 md:w-full md:shadow-xl bg-superficie border border-borde"
           >
             {productoResults.map((p) => (
               <button
                 type="button"
                 key={p.id}
                 onClick={() => seleccionarProducto(p)}
-                className="w-full flex items-center justify-between gap-3 px-4 py-2.5 text-left transition-colors"
-                style={{
-                  borderBottom: "1px solid var(--kipu-border)",
-                }}
-                onMouseEnter={(e) =>
-                  (e.currentTarget.style.background =
-                    "color-mix(in srgb, var(--kipu-text) 5%, transparent)")
-                }
-                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                className="w-full flex min-h-12 items-center justify-between gap-3 px-4 py-2.5 text-left transition-colors border-b border-borde hover:bg-texto/5"
               >
                 <div>
-                  <p className="text-sm" style={{ color: "var(--kipu-text)" }}>
+                  <p className="text-sm text-texto">
                     {p.descripcion}
                   </p>
-                  <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+                  <p className="text-xs text-sutil">
                     {p.codigo || p.unidad} · IVA {etiquetaIva(p.tipo_iva)}
                   </p>
                 </div>
-                <span className="text-sm font-medium shrink-0" style={{ color: "var(--kipu-accent)" }}>
-                  ${fmt(p.precio)}
+                <span className="text-sm font-medium shrink-0 text-acento">
+                  ${dosDecimales(p.precio)}
                 </span>
               </button>
             ))}
@@ -426,8 +400,39 @@ export default function ItemsEditor({ items, onChange }: Props) {
         )}
       </div>
 
-      {/* Lista de ítems */}
-      <div className="space-y-3">
+      {/* Celular: cada ítem en una fila; tocarla abre su hoja (HojaItem) */}
+      <ul className="-mx-1 divide-y divide-borde md:hidden">
+        {items.map((item) => {
+          const c = calcItem(item);
+          const conIva = item.precio_iva !== undefined;
+          const precio = conIva ? item.precio_iva ?? 0 : item.precio;
+          return (
+            <li key={item._id}>
+              <button
+                type="button"
+                onClick={() => setEditando(item._id)}
+                className="flex min-h-14 w-full items-center gap-3 rounded-lg px-1 py-2.5 text-left transition-colors active:bg-presionado"
+              >
+                <span className="min-w-0 flex-1">
+                  <span className={`block truncate text-sm ${item.descripcion.trim() ? "text-texto" : "italic text-sutil"}`}>
+                    {item.cantidad !== 1 && <b className="font-semibold">{item.cantidad} × </b>}
+                    {item.descripcion.trim() || "Toca para escribir el ítem"}
+                  </span>
+                  <span className="block text-xs text-sutil">
+                    ${dosDecimales(precio)}{conIva ? " c/IVA" : ""} · IVA {etiquetaIva(item.tipo_iva)}
+                    {c.descuento > 0 && <> · desc. ${dosDecimales(c.descuento)}</>}
+                  </span>
+                </span>
+                <span className="shrink-0 text-sm font-semibold tabular-nums text-texto">${dosDecimales(c.total)}</span>
+                <ChevronRight size={16} className="shrink-0 text-sutil" aria-hidden />
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+
+      {/* Compu: las tarjetas editables (Enter en la descripción del último ítem agrega otro) */}
+      <div className="hidden space-y-3 md:block" ref={listaRef}>
         {items.map((item, index) => {
           const c = calcItem(item);
           const esCodigoDuplicado = codigosExistentes.has(item.codigo.toUpperCase());
@@ -439,22 +444,12 @@ export default function ItemsEditor({ items, onChange }: Props) {
           return (
             <div
               key={item._id}
-              className="p-3.5 rounded-xl space-y-3 transition-colors"
-              style={{
-                background: "color-mix(in srgb, var(--kipu-surface) 60%, transparent)",
-                border: "1px solid var(--kipu-border)",
-              }}
-              onMouseEnter={(e) =>
-                (e.currentTarget.style.borderColor =
-                  "color-mix(in srgb, var(--kipu-text) 20%, transparent)")
-              }
-              onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--kipu-border)")}
+              className="p-3.5 rounded-xl space-y-3 transition-colors bg-superficie/60 border border-borde hover:border-texto/20"
             >
               {/* Fila 1 — índice + cantidad + descripción + eliminar */}
               <div className="flex items-center gap-2">
                 <span
-                  className="text-xs font-semibold w-4 shrink-0 text-center"
-                  style={{ color: "var(--kipu-subtle)" }}
+                  className="text-xs font-semibold w-4 shrink-0 text-center text-sutil"
                 >
                   #{index + 1}
                 </span>
@@ -474,23 +469,22 @@ export default function ItemsEditor({ items, onChange }: Props) {
 
                 <input
                   value={item.descripcion}
+                  data-descripcion={item._id}
                   onChange={(e) => editItem(item._id, "descripcion", e.target.value)}
-                  placeholder="Descripción del producto o servicio"
-                  className="flex-1 px-3 py-2 rounded-lg text-sm font-medium min-w-0 transition-colors focus:outline-none"
-                  style={{
-                    background: "var(--kipu-surface)",
-                    border: "1px solid var(--kipu-border)",
-                    color: "var(--kipu-text)",
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.ctrlKey && !e.metaKey && index === items.length - 1 && item.descripcion.trim()) {
+                      e.preventDefault();
+                      addItem();
+                    }
                   }}
-                  onFocus={(e) => (e.currentTarget.style.borderColor = "var(--kipu-accent)")}
-                  onBlur={(e) => (e.currentTarget.style.borderColor = "var(--kipu-border)")}
+                  placeholder="Descripción del producto o servicio"
+                  className="flex-1 px-3 py-2 rounded-lg text-sm font-medium min-w-0 transition-colors focus:outline-none bg-superficie border border-borde text-texto focus:border-acento"
                 />
                 <button
                   type="button"
                   onClick={() => removeItem(item._id)}
                   disabled={items.length === 1}
-                  className="p-2 rounded-lg transition-colors shrink-0 disabled:opacity-20"
-                  style={{ color: "var(--kipu-subtle)" }}
+                  className="p-2 rounded-lg transition-colors shrink-0 disabled:opacity-20 text-sutil"
                   onMouseEnter={(e) => {
                     if (items.length > 1) {
                       e.currentTarget.style.color = "var(--kipu-danger)";
@@ -517,11 +511,7 @@ export default function ItemsEditor({ items, onChange }: Props) {
                   <div
                     role="group"
                     aria-label="Precio: sin IVA o con IVA incluido"
-                    className="flex w-full rounded-md p-px text-[10px] font-semibold"
-                    style={{
-                      background: "color-mix(in srgb, var(--kipu-text) 6%, transparent)",
-                      border: "1px solid var(--kipu-border)",
-                    }}
+                    className="flex w-full rounded-md p-px text-[10px] font-semibold bg-presionado border border-borde"
                   >
                     {([
                       [false, "s/IVA", "Precio sin IVA: Kipu le suma el IVA"],
@@ -576,14 +566,7 @@ export default function ItemsEditor({ items, onChange }: Props) {
                           e.target.value as "$" | "%"
                         )
                       }
-                      className="w-10 px-1 py-1.5 rounded-lg text-xs shrink-0 font-medium transition-colors focus:outline-none"
-                      style={{
-                        background: "var(--kipu-surface)",
-                        border: "1px solid var(--kipu-border)",
-                        color: "var(--kipu-text)",
-                      }}
-                      onFocus={(e) => (e.currentTarget.style.borderColor = "var(--kipu-accent)")}
-                      onBlur={(e) => (e.currentTarget.style.borderColor = "var(--kipu-border)")}
+                      className="w-10 px-1 py-1.5 rounded-lg text-xs shrink-0 font-medium transition-colors focus:outline-none bg-superficie border border-borde text-texto focus:border-acento"
                     >
                       <option value="$">$</option>
                       <option value="%">%</option>
@@ -632,10 +615,7 @@ export default function ItemsEditor({ items, onChange }: Props) {
                 </div>
 
                 <div
-                  className="col-span-12 sm:col-span-3 flex sm:flex-col justify-between sm:justify-end items-center sm:items-end pt-2 sm:pt-0"
-                  style={{
-                    borderTop: "1px solid var(--kipu-border)",
-                  }}
+                  className="col-span-12 sm:col-span-3 flex sm:flex-col justify-between sm:justify-end items-center sm:items-end pt-2 sm:pt-0 border-t border-borde"
                 >
                   <div className="text-right">
                     <span
@@ -644,8 +624,8 @@ export default function ItemsEditor({ items, onChange }: Props) {
                     >
                       Total Ítem
                     </span>
-                    <span className="text-sm font-bold" style={{ color: "var(--kipu-accent)" }}>
-                      ${fmt(c.total)}
+                    <span className="text-sm font-bold text-acento">
+                      ${dosDecimales(c.total)}
                     </span>
                   </div>
                 </div>
@@ -654,13 +634,13 @@ export default function ItemsEditor({ items, onChange }: Props) {
               {/* IVA incluido — desglose de lo que va en la factura */}
               {conIva && tarifaPct(item.tipo_iva) > 0 && c.total > 0 && (
                 <div className="flex items-center justify-between gap-x-3 gap-y-1 flex-wrap text-[11px]">
-                  <span style={{ color: "var(--kipu-subtle)" }}>
-                    Sin IVA <b style={{ color: "var(--kipu-text)" }}>${fmt(c.base)}</b>
-                    {" · "}IVA {etiquetaIva(item.tipo_iva)} <b style={{ color: "var(--kipu-text)" }}>${fmt(c.iva)}</b>
+                  <span className="text-sutil">
+                    Sin IVA <b className="text-texto">${dosDecimales(c.base)}</b>
+                    {" · "}IVA {etiquetaIva(item.tipo_iva)} <b className="text-texto">${dosDecimales(c.iva)}</b>
                   </span>
                   {redondeado && (
                     <span style={{ color: "color-mix(in srgb, var(--kipu-warning) 70%, var(--kipu-text))" }}>
-                      Queda en ${fmt(c.total)}: el SRI redondea el IVA al centavo
+                      Queda en ${dosDecimales(c.total)}: el SRI redondea el IVA al centavo
                     </span>
                   )}
                 </div>
@@ -674,8 +654,7 @@ export default function ItemsEditor({ items, onChange }: Props) {
                       type="checkbox"
                       checked={!!item.guardar_catalogo}
                       onChange={(e) => editItem(item._id, "guardar_catalogo", e.target.checked)}
-                      className="w-3.5 h-3.5 rounded"
-                      style={{ accentColor: "var(--kipu-accent)" }}
+                      className="w-3.5 h-3.5 rounded accent-acento"
                     />
                     <span className="text-[11px]" style={{ color: "var(--kipu-subtle)" }}>
                       Guardar en mi catálogo
@@ -710,19 +689,7 @@ export default function ItemsEditor({ items, onChange }: Props) {
                             setScanForItemId(item._id);
                             setShowScanner(true);
                           }}
-                          className="px-1.5 rounded-lg transition-colors shrink-0"
-                          style={{
-                            border: "1px solid var(--kipu-border)",
-                            color: "var(--kipu-subtle)",
-                          }}
-                          onMouseEnter={e => {
-                            e.currentTarget.style.color = "var(--kipu-accent)";
-                            e.currentTarget.style.borderColor = "var(--kipu-accent)";
-                          }}
-                          onMouseLeave={e => {
-                            e.currentTarget.style.color = "var(--kipu-subtle)";
-                            e.currentTarget.style.borderColor = "var(--kipu-border)";
-                          }}
+                          className="px-1.5 rounded-lg transition-colors shrink-0 border border-borde text-sutil hover:text-acento hover:border-acento"
                           title="Escanear código"
                         >
                           <Camera size={13} />
@@ -771,6 +738,20 @@ export default function ItemsEditor({ items, onChange }: Props) {
         <Plus size={16} />
         Agregar ítem manualmente
       </button>
+
+      {/* Celular: editar el ítem en una hoja */}
+      <HojaItem
+        item={itemEditando}
+        abierta={!!itemEditando}
+        onCerrar={() => setEditando(null)}
+        onCampo={(campo, valor) => itemEditando && editItem(itemEditando._id, campo, valor)}
+        onModoIva={(incluido) => itemEditando && cambiarModoItem(itemEditando._id, incluido)}
+        onEliminar={quitarEditando}
+        puedeEliminar={items.length > 1}
+        codigoDuplicado={!!itemEditando && codigosExistentes.has(itemEditando.codigo.toUpperCase())}
+        onVerificarCodigo={() => itemEditando && verificarCodigo(itemEditando.codigo)}
+        onEscanearCodigo={() => { if (itemEditando) { setScanForItemId(itemEditando._id); setShowScanner(true); } }}
+      />
 
       {/* Modal Barcode Scanner */}
       {showScanner && (

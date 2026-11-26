@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { CreditCard, Copy, CheckCircle2, ExternalLink, RefreshCw, MessageCircle } from "lucide-react";
 import api from "@/lib/api";
+import { detalleError } from "@/lib/errores";
+import { enlaceWhatsAppA } from "@/lib/soporte";
+import { useCopiar } from "@/lib/useCopiar";
 
 interface LinkPagoData {
   id:              string;
@@ -25,8 +28,6 @@ interface Props {
   onPagado:    () => void;       // recargar la factura cuando se confirma el pago
 }
 
-const detalleError = (e: unknown, porDefecto: string): string =>
-  (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail ?? porDefecto;
 
 const fecha = (iso: string) =>
   new Date(iso).toLocaleDateString("es-EC", { day: "2-digit", month: "short", year: "numeric",
@@ -37,7 +38,7 @@ export default function LinkPago({ documentoId, numero, pendiente, onPagado }: P
   const [conectada,  setConectada]  = useState(false);
   const [cargando,   setCargando]   = useState(true);
   const [trabajando, setTrabajando] = useState(false);
-  const [copiado,    setCopiado]    = useState(false);
+  const { copiar: copiarTexto, copiado } = useCopiar();
   const [error,      setError]      = useState("");
   const [aviso,      setAviso]      = useState("");
 
@@ -76,20 +77,14 @@ export default function LinkPago({ documentoId, numero, pendiente, onPagado }: P
     }
   };
 
-  const copiar = async () => {
-    if (!link) return;
-    await navigator.clipboard.writeText(link.url);
-    setCopiado(true);
-    setTimeout(() => setCopiado(false), 2000);
-  };
+  const copiar = () => { if (link) copiarTexto(link.url); };
 
   if (cargando) return null;
 
   // Pagado en línea
   if (link?.estado === "PAGADO") {
     return (
-      <div className="flex items-start gap-2 text-xs px-3 py-2 rounded-lg mt-2"
-           style={{ color: "var(--kipu-success)", background: "color-mix(in srgb, var(--kipu-success) 8%, transparent)" }}>
+      <div className="flex items-start gap-2 text-xs px-3 py-2 rounded-lg mt-2 text-exito bg-exito/8">
         <CreditCard size={13} className="mt-0.5 shrink-0" />
         <span>
           Pagado en línea con {link.nombre_pasarela}: ${(link.monto_pagado ?? link.monto).toFixed(2)}
@@ -103,9 +98,9 @@ export default function LinkPago({ documentoId, numero, pendiente, onPagado }: P
 
   if (!conectada && !link) {
     return (
-      <p className="text-xs mt-2" style={{ color: "var(--kipu-subtle)" }}>
+      <p className="text-xs mt-2 text-sutil">
         ¿Quieres cobrarla con tarjeta?{" "}
-        <Link href="/configuracion#cobros" className="underline" style={{ color: "var(--kipu-accent)" }}>
+        <Link href="/configuracion#cobros" className="underline text-acento">
           Conecta Payphone o PagoPlux
         </Link>
       </p>
@@ -118,11 +113,11 @@ export default function LinkPago({ documentoId, numero, pendiente, onPagado }: P
     : "";
 
   return (
-    <div className="mt-3 pt-3 space-y-2" style={{ borderTop: "1px solid var(--kipu-border)" }}>
+    <div className="mt-3 pt-3 space-y-2 border-t border-borde">
       <div>
         <div className="flex items-center gap-2">
-          <CreditCard size={13} style={{ color: "var(--kipu-subtle)" }} />
-          <span className="text-xs font-medium" style={{ color: "var(--kipu-text)" }}>Link de pago</span>
+          <CreditCard className="text-sutil" size={13} />
+          <span className="text-xs font-medium text-texto">Link de pago</span>
         </div>
         {link && vigente && (
           <p className="text-[11px] mt-0.5" style={{ color: "var(--kipu-subtle)" }}>
@@ -139,26 +134,22 @@ export default function LinkPago({ documentoId, numero, pendiente, onPagado }: P
                   style={{ background: "color-mix(in srgb, var(--kipu-text) 5%, transparent)", color: "var(--kipu-text)" }}>
               {link.url}
             </code>
-            <button onClick={copiar} title="Copiar link" className="p-2 rounded-lg shrink-0"
-                    style={{ border: "1px solid var(--kipu-border)", color: "var(--kipu-muted)" }}>
-              {copiado ? <CheckCircle2 size={14} style={{ color: "var(--kipu-success)" }} /> : <Copy size={14} />}
+            <button onClick={copiar} title="Copiar link" className="p-2 rounded-lg shrink-0 border border-borde text-tenue">
+              {copiado ? <CheckCircle2 className="text-exito" size={14} /> : <Copy size={14} />}
             </button>
           </div>
           <div className="flex flex-wrap gap-2">
-            <a href={`https://wa.me/?text=${encodeURIComponent(mensajeWa)}`} target="_blank" rel="noopener noreferrer"
-               className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg"
-               style={{ border: "1px solid var(--kipu-border)", color: "var(--kipu-muted)" }}>
+            <a href={enlaceWhatsAppA(null, mensajeWa)} target="_blank" rel="noopener noreferrer"
+               className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-borde text-tenue">
               <MessageCircle size={12} /> WhatsApp
             </a>
             <a href={link.url} target="_blank" rel="noopener noreferrer"
-               className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg"
-               style={{ border: "1px solid var(--kipu-border)", color: "var(--kipu-muted)" }}>
+               className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-borde text-tenue">
               <ExternalLink size={12} /> Abrir
             </a>
             {link.proveedor === "PAYPHONE" && (
               <button onClick={verificar} disabled={trabajando}
-                      className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg disabled:opacity-50"
-                      style={{ border: "1px solid var(--kipu-border)", color: "var(--kipu-accent)" }}>
+                      className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg disabled:opacity-50 border border-borde text-acento">
                 <RefreshCw size={12} className={trabajando ? "animate-spin" : ""} /> ¿Ya pagó?
               </button>
             )}
@@ -174,8 +165,7 @@ export default function LinkPago({ documentoId, numero, pendiente, onPagado }: P
 
       {aviso && <p className="text-[11px]" style={{ color: "var(--kipu-subtle)" }}>{aviso}</p>}
       {error && (
-        <p className="text-xs px-3 py-2 rounded-lg"
-           style={{ color: "var(--kipu-danger)", background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)" }}>
+        <p className="text-xs px-3 py-2 rounded-lg text-peligro bg-peligro-suave">
           {error}
         </p>
       )}

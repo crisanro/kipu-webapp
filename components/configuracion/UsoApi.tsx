@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Gauge } from "lucide-react";
 import api from "@/lib/api";
+import { numeroEC } from "@/lib/dinero";
+import { MESES } from "@/lib/fecha";
 
 interface Uso {
   plan_pro:  boolean;
@@ -16,10 +18,6 @@ interface Uso {
   mes:       string;
   reinicia:  string;
 }
-
-const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto",
-               "septiembre", "octubre", "noviembre", "diciembre"];
-const num = (n: number) => n.toLocaleString("es-EC");
 
 export default function UsoApi() {
   const [uso, setUso] = useState<Uso | null>(null);
@@ -34,22 +32,22 @@ export default function UsoApi() {
   const nombreMes = MESES[mes - 1];
   const reinicia = new Date(`${uso.reinicia}T12:00:00`);
   const fechaReinicio = `${reinicia.getDate()} de ${MESES[reinicia.getMonth()]}`;
-  const creditos = `${num(uso.creditos)} crédito${uso.creditos === 1 ? "" : "s"}`;
+  const creditos = `${numeroEC(uso.creditos)} crédito${uso.creditos === 1 ? "" : "s"}`;
 
   // Sin plan Pro: cada comprobante por API usa 1 crédito
   if (!uso.plan_pro) {
     return (
-      <div className="rounded-xl p-4 space-y-1" style={{ background: "var(--kipu-surface)", border: "1px solid var(--kipu-border)" }}>
+      <div className="rounded-xl p-4 space-y-1 bg-superficie border border-borde">
         <div className="flex items-center gap-2">
-          <Gauge size={15} style={{ color: "var(--kipu-subtle)" }} />
-          <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>Uso de la API</h2>
+          <Gauge className="text-sutil" size={15} />
+          <h2 className="text-sm font-semibold text-texto">Uso de la API</h2>
         </div>
-        <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>
-          Cada comprobante por API usa 1 crédito. Te quedan <strong style={{ color: "var(--kipu-text)" }}>{creditos}</strong>.
+        <p className="text-sm text-tenue">
+          Cada comprobante por API usa 1 crédito. Te quedan <strong className="text-texto">{creditos}</strong>.
         </p>
-        <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
-          Con el Plan Pro tienes {num(uso.cupo_plan_pro)} comprobantes por API incluidos cada mes.{" "}
-          <Link href="/planes" className="underline" style={{ color: "var(--kipu-accent)" }}>Ver planes</Link>
+        <p className="text-xs text-sutil">
+          Con el Plan Pro tienes {numeroEC(uso.cupo_plan_pro)} comprobantes por API incluidos cada mes.{" "}
+          <Link href="/planes" className="underline text-acento">Ver planes</Link>
         </p>
       </div>
     );
@@ -61,24 +59,23 @@ export default function UsoApi() {
   const color = agotado ? "var(--kipu-danger)" : cerca ? "var(--kipu-warning)" : "var(--kipu-accent)";
 
   return (
-    <div className="rounded-xl p-4 space-y-3" style={{ background: "var(--kipu-surface)", border: "1px solid var(--kipu-border)" }}>
+    <div className="rounded-xl p-4 space-y-3 bg-superficie border border-borde">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
         <div className="flex items-center gap-2">
-          <Gauge size={15} style={{ color: "var(--kipu-subtle)" }} />
-          <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>
+          <Gauge className="text-sutil" size={15} />
+          <h2 className="text-sm font-semibold text-texto">
             Uso de la API · {nombreMes} {anio}
           </h2>
         </div>
-        <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Se renueva el {fechaReinicio}</span>
+        <span className="text-xs text-sutil">Se renueva el {fechaReinicio}</span>
       </div>
 
       <div>
-        <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>
-          Llevas <strong style={{ color: "var(--kipu-text)" }}>{num(uso.usados)}</strong> de{" "}
-          <strong style={{ color: "var(--kipu-text)" }}>{num(uso.limite)}</strong> comprobantes por API incluidos en tu Plan Pro
+        <p className="text-sm text-tenue">
+          Llevas <strong className="text-texto">{numeroEC(uso.usados)}</strong> de{" "}
+          <strong className="text-texto">{numeroEC(uso.limite)}</strong> comprobantes por API incluidos en tu Plan Pro
         </p>
-        <div className="mt-2 h-2 rounded-full overflow-hidden"
-             style={{ background: "color-mix(in srgb, var(--kipu-text) 8%, transparent)" }}
+        <div className="mt-2 h-2 rounded-full overflow-hidden bg-texto/8"
              role="progressbar" aria-valuemin={0} aria-valuemax={uso.limite} aria-valuenow={Math.min(uso.usados, uso.limite)}>
           <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: color }} />
         </div>
@@ -91,9 +88,9 @@ export default function UsoApi() {
             <Link href="/planes" className="underline">Recargar créditos</Link>
           </>
         ) : cerca ? (
-          <>Te quedan {num(uso.restantes)}. Al llegar a {num(uso.limite)} se usarán tus créditos (tienes {creditos}).</>
+          <>Te quedan {numeroEC(uso.restantes)}. Al llegar a {numeroEC(uso.limite)} se usarán tus créditos (tienes {creditos}).</>
         ) : (
-          <>Te quedan {num(uso.restantes)} este mes. Desde el panel web la emisión es ilimitada.</>
+          <>Te quedan {numeroEC(uso.restantes)} este mes. Desde el panel web la emisión es ilimitada.</>
         )}
       </p>
     </div>

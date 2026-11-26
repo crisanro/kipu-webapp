@@ -1,54 +1,27 @@
 "use client";
+// Nueva proforma (cotización): documento referencial, no va al SRI. Mismo
+// esqueleto que emitir (EmisionLayout): en el celular, barra fija con el total
+// y "Guardar"; lo escrito queda como borrador si se sale de la pantalla.
 import { rutas } from "@/lib/rutas";
-import { useState, useEffect } from "react";
-import { r2 } from "@/lib/dinero";
+import { useState, useMemo } from "react";
+import { dosDecimales } from "@/lib/dinero";
+import { detalleError } from "@/lib/errores";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
-import { ClipboardList, AlertTriangle } from "lucide-react";
+import { useBorrador } from "@/lib/borradores";
+import { ClipboardList, CalendarDays } from "lucide-react";
 import { hoyEC } from "@/lib/fecha";
-import SoloWeb from "@/components/SoloWeb";
 import { ES_APP_NATIVA } from "@/lib/plataforma";
+import BloqueoPlanPro from "@/components/dashboard/BloqueoPlanPro";
+import Boton from "@/components/ui/Boton";
+import { Campo, Entrada } from "@/components/ui/Campo";
 
 // ── Componentes reutilizados de factura ────────────────────────────────────────
-import ClienteSelector from "../../documentos/emitir/components/ClienteSelector";
-import ItemsEditor, { Item, calcItem, genId, EMPTY_ITEM } from "../../documentos/emitir/components/ItemsEditor";
+import ClienteSelector, { type Cliente, type ClienteNuevo } from "../../documentos/emitir/components/ClienteSelector";
+import ItemsEditor, { Item, calcItem, calcTotales, genId, EMPTY_ITEM } from "../../documentos/emitir/components/ItemsEditor";
 import CamposAdicionales, { CampoAdicional } from "../../documentos/emitir/components/CamposAdicionales";
-
-// ── Tipos ──────────────────────────────────────────────────────────────────────
-interface Cliente {
-  id:                      string;
-  razon_social:            string;
-  identificacion:          string;
-  tipo_identificacion_sri: string;
-  email:                   string;
-  direccion:               string;
-}
-
-interface ClienteNuevo {
-  tipo_identificacion_sri: string;
-  identificacion:          string;
-  razon_social:            string;
-  email:                   string;
-}
-
-// ── Helpers ────────────────────────────────────────────────────────────────────
-const fmt = (n: number) => r2(n).toFixed(2);
-
-function calcTotales(items: Item[]) {
-  return items.reduce(
-    (acc, item) => {
-      const c = calcItem(item);
-      return {
-        subtotal:  r2(acc.subtotal  + c.base),
-        descuento: r2(acc.descuento + c.descuento),
-        iva:       r2(acc.iva       + c.iva),
-        total:     r2(acc.total     + c.total),
-      };
-    },
-    { subtotal: 0, descuento: 0, iva: 0, total: 0 }
-  );
-}
+import EmisionLayout from "../../documentos/emitir/components/EmisionLayout";
 
 // ── Página ─────────────────────────────────────────────────────────────────────
 export default function NuevaProformaPage() {
@@ -62,7 +35,7 @@ export default function NuevaProformaPage() {
   const [clienteNuevo,      setClienteNuevo]      = useState<ClienteNuevo | null>(null);
 
   // ── Estado items ─────────────────────────────────────────────────────────────
-  const [items, setItems] = useState<Item[]>([{ _id: genId(), ...EMPTY_ITEM }]);
+  const [items, setItems] = useState<Item[]>(() => [{ _id: genId(), ...EMPTY_ITEM }]);
 
   // ── Estado campos adicionales ────────────────────────────────────────────────
   const [camposAdicionales, setCamposAdicionales] = useState<CampoAdicional[]>([]);
@@ -78,42 +51,24 @@ export default function NuevaProformaPage() {
   // ── Totales ──────────────────────────────────────────────────────────────────
   const totales = calcTotales(items);
 
-  // ── Prefill desde proforma existente (si viene de "clonar") ──────────────────
-  useEffect(() => {
-    const prefill = sessionStorage.getItem("kipu:prefill");
-    if (!prefill) return;
-    try {
-      const data = JSON.parse(prefill);
-      if (data.items && Array.isArray(data.items)) {
-        setItems(data.items.map((i: any) => ({
-          _id:            genId(),
-          codigo:         String(i.codigo           ?? ""),
-          descripcion:    String(i.descripcion     ?? ""),
-          cantidad:       parseFloat(i.cantidad)  || 1,
-          precio:         parseFloat(i.precio     ) || parseFloat(i.precio_unitario) || 0,
-          descuento:      parseFloat(i.descuento) || 0,
-          tipo_descuento: (i.tipo_descuento === "%" ? "%" : "$") as "$" | "%",
-          tipo_iva:       ["0","5","15"].includes(String(i.tipo_iva)) ? String(i.tipo_iva) : "15",
-          unidad:         String(i.unidad ?? "UNIDAD"),
-        })));
-      }
-      if (data.camposAdicionales) setCamposAdicionales(data.camposAdicionales);
-      if (data.cliente) {
-        setClienteSelected({
-          id:                      data.cliente.id || "",
-          razon_social:            data.cliente.razon_social || "",
-          identificacion:          data.cliente.identificacion || "",
-          tipo_identificacion_sri: data.cliente.tipo_id || "05",
-          email:                   "",
-          direccion:               "",
-        });
-      }
-    } catch (e) {
-      console.error("Error al procesar prefill", e);
-    } finally {
-      sessionStorage.removeItem("kipu:prefill");
-    }
-  }, []);
+  // ── Borrador ─────────────────────────────────────────────────────────────────
+  const datosBorrador = useMemo(() => ({
+    clienteSelected, esConsumidorFinal, clienteNuevo, items, camposAdicionales, fechaValidez,
+  }), [clienteSelected, esConsumidorFinal, clienteNuevo, items, camposAdicionales, fechaValidez]);
+  const borrador = useBorrador("PROFORMA", datosBorrador, {
+    vacio: !clienteSelected && !esConsumidorFinal && !clienteNuevo && camposAdicionales.length === 0
+      && items.every(i => !i.descripcion?.trim() && !i.codigo?.trim() && !i.precio),
+  });
+  const seguirBorrador = () => {
+    const d = borrador.recuperar();
+    if (!d) return;
+    setClienteSelected(d.clienteSelected ?? null);
+    setEsConsumidorFinal(!!d.esConsumidorFinal);
+    setClienteNuevo(d.clienteNuevo ?? null);
+    if (Array.isArray(d.items) && d.items.length) setItems(d.items);
+    setCamposAdicionales(Array.isArray(d.camposAdicionales) ? d.camposAdicionales : []);
+    setFechaValidez(d.fechaValidez ?? "");
+  };
 
   // ── Guardar ──────────────────────────────────────────────────────────────────
   const guardar = async () => {
@@ -166,263 +121,140 @@ export default function NuevaProformaPage() {
             cantidad:        i.cantidad,
             precio_unitario: i.precio,
             descuento:       calcItem(i).descuento,   // en dólares, aunque se haya ingresado en %
-            tipo_iva:        parseInt(i.tipo_iva) || 0,
+            tipo_iva:        i.tipo_iva === "NA" || i.tipo_iva === "EX" ? i.tipo_iva : parseInt(i.tipo_iva) || 0,
           };
         }),
       });
 
+      borrador.borrar();
       router.push(rutas.proforma(res.data.id));
-    } catch (err: any) {
-      const detail = err?.response?.data?.detail;
-      setError(
-        Array.isArray(detail)
-          ? detail.map((e: any) => e.mensaje ?? e.msg ?? JSON.stringify(e)).join(", ")
-          : detail ?? "Error al guardar la proforma."
-      );
+    } catch (err: unknown) {
+      setError(detalleError(err, "Error al guardar la proforma."));
     } finally {
       setSubmitting(false);
     }
   };
 
+  // ── Sin suscripción: las proformas son del plan ──────────────────────────────
+  if (!tieneSub) {
+    return (
+      <div className="p-4 md:p-6">
+        <BloqueoPlanPro
+          mensaje={ES_APP_NATIVA
+            ? "Crear proformas no está incluido en tu plan actual."
+            : "Crear proformas es del Plan Pro. Con créditos solo se emiten comprobantes."}
+        />
+      </div>
+    );
+  }
+
   // ── Render ───────────────────────────────────────────────────────────────────
   return (
-    <div className="p-4 md:p-6 max-w-4xl mx-auto space-y-6">
-
-      {/* Header */}
-      <div>
-        <h1 className="text-xl font-bold" style={{ color: "var(--kipu-text)" }}>Nueva Proforma</h1>
-        <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>
-          {empresa?.razon_social} · Documento no tributario
-        </p>
-      </div>
-
-      {/* Bloqueo sin suscripción */}
-      {!tieneSub && (
-        <div
-          className="flex flex-col items-center justify-center py-16 text-center rounded-xl"
-          style={{
-            background: "var(--kipu-surface)",
-            border: "1px solid var(--kipu-border)",
-          }}
-        >
-          <AlertTriangle size={36} className="mb-3" style={{ color: "var(--kipu-warning)" }} />
-          <h2 className="font-semibold mb-1" style={{ color: "var(--kipu-text)" }}>
-            {ES_APP_NATIVA ? "No incluido en tu plan actual" : "Función del Plan Pro"}
+    <EmisionLayout
+      titulo="Nueva proforma"
+      subtitulo={<>{empresa?.razon_social} · Documento no tributario</>}
+      borrador={borrador.pendiente && {
+        hace: borrador.pendiente.hace, que: "una proforma",
+        onSeguir: seguirBorrador, onDescartar: borrador.descartar,
+      }}
+      lateral={<>
+        {/* Fechas */}
+        <section className="space-y-3 rounded-xl border border-borde bg-superficie p-4">
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-texto">
+            <CalendarDays size={16} className="text-acento" aria-hidden /> Fechas
           </h2>
-          <p className="text-sm mb-4 max-w-xs" style={{ color: "var(--kipu-subtle)" }}>
-            {ES_APP_NATIVA
-              ? "Crear proformas no está incluido en tu plan actual."
-              : "Crear proformas es del Plan Pro. Con créditos solo se emiten comprobantes."}
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-1">
+            <Campo etiqueta="Fecha de emisión">
+              <Entrada type="date" value={fechaEmision} onChange={(e) => setFechaEmision(e.target.value)} />
+            </Campo>
+            <Campo etiqueta="Válida hasta" opcional ayuda="Si no, no vence.">
+              <Entrada type="date" value={fechaValidez} onChange={(e) => setFechaValidez(e.target.value)} />
+            </Campo>
+          </div>
+        </section>
+
+        {/* Resumen */}
+        <section className="space-y-3 rounded-xl border border-borde bg-superficie p-4 lg:sticky lg:top-4">
+          <h2 className="text-sm font-semibold text-texto">Resumen</h2>
+          <div className="space-y-2 text-sm">
+            {totales.subtotal > 0 && (
+              <div className="flex justify-between text-tenue">
+                <span>Subtotal</span>
+                <span className="tabular-nums">${dosDecimales(totales.subtotal)}</span>
+              </div>
+            )}
+            {totales.descuento > 0 && (
+              <div className="flex justify-between text-alerta-texto">
+                <span>Descuento</span>
+                <span className="tabular-nums">-${dosDecimales(totales.descuento)}</span>
+              </div>
+            )}
+            {totales.iva > 0 && (
+              <div className="flex justify-between text-tenue">
+                <span>IVA</span>
+                <span className="tabular-nums">${dosDecimales(totales.iva)}</span>
+              </div>
+            )}
+            <div className="flex justify-between border-t border-borde pt-2 text-base font-bold text-texto">
+              <span>Total</span>
+              <span className="tabular-nums">${dosDecimales(totales.total)}</span>
+            </div>
+          </div>
+
+          <p className="flex items-center gap-2 rounded-lg bg-presionado px-3 py-2 text-xs text-sutil">
+            <ClipboardList size={12} aria-hidden />
+            Documento referencial: no tiene validez tributaria
           </p>
-          <div className="flex gap-3">
-            <button
-              onClick={() => router.back()}
-              className="px-4 py-2 rounded-lg text-sm transition-colors"
-              style={{
-                border: "1px solid var(--kipu-border)",
-                color: "var(--kipu-muted)",
-              }}
-              onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
-              onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-muted)"}
-            >
-              Volver
-            </button>
-            <SoloWeb>
-              <button
-                onClick={() => router.push("/planes")}
-                className="px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors"
-                style={{ background: "var(--kipu-warning)" }}
-              >
-                Ver planes
-              </button>
-            </SoloWeb>
-          </div>
-        </div>
-      )}
 
-      {/* Formulario — solo si tiene suscripción */}
-      {tieneSub && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {error && (
+            <p className="rounded-lg bg-peligro-suave px-3 py-2 text-xs text-peligro-texto" role="alert">{error}</p>
+          )}
 
-          {/* ── Columna principal ── */}
-          <div className="lg:col-span-2 space-y-6">
+          <Boton anchoCompleto tamano="lg" onClick={guardar} cargando={submitting}
+                 className="hidden h-auto min-h-11 whitespace-normal py-2.5 lg:flex">
+            {`Guardar proforma · $${dosDecimales(totales.total)}`}
+          </Boton>
+        </section>
+      </>}
+      barra={{
+        total:    totales.total,
+        texto:    "Guardar proforma",
+        onEmitir: guardar,
+        enviando: submitting,
+        error,
+      }}
+    >
+      <ClienteSelector
+        clienteSelected={clienteSelected}
+        esConsumidorFinal={esConsumidorFinal}
+        clienteNuevo={clienteNuevo}
+        onSelectCliente={(c) => {
+          setClienteSelected(c);
+          setEsConsumidorFinal(false);
+          setClienteNuevo(null);
+        }}
+        onSelectConsumidorFinal={() => {
+          setClienteSelected(null);
+          setEsConsumidorFinal(true);
+          setClienteNuevo(null);
+        }}
+        onClienteNuevo={(c) => {
+          setClienteNuevo(c);
+          if (c) {
+            setClienteSelected(null);
+            setEsConsumidorFinal(false);
+          }
+        }}
+        onClear={() => {
+          setClienteSelected(null);
+          setEsConsumidorFinal(false);
+        }}
+      />
 
-            {/* Cliente */}
-            <ClienteSelector
-              clienteSelected={clienteSelected}
-              esConsumidorFinal={esConsumidorFinal}
-              clienteNuevo={clienteNuevo}
-              onSelectCliente={(c) => {
-                setClienteSelected(c);
-                setEsConsumidorFinal(false);
-                setClienteNuevo(null);
-              }}
-              onSelectConsumidorFinal={() => {
-                setClienteSelected(null);
-                setEsConsumidorFinal(true);
-                setClienteNuevo(null);
-              }}
-              onClienteNuevo={(c) => {
-                setClienteNuevo(c);
-                if (c) {
-                  setClienteSelected(null);
-                  setEsConsumidorFinal(false);
-                }
-              }}
-              onClear={() => {
-                setClienteSelected(null);
-                setEsConsumidorFinal(false);
-              }}
-            />
+      <ItemsEditor items={items} onChange={setItems} />
 
-            {/* Items */}
-            <ItemsEditor items={items} onChange={setItems} />
-
-            {/* Campos adicionales — usados como observaciones en el PDF */}
-            <CamposAdicionales
-              campos={camposAdicionales}
-              onChange={setCamposAdicionales}
-            />
-          </div>
-
-          {/* ── Panel lateral ── */}
-          <div className="space-y-4">
-
-            {/* Fechas */}
-            <div
-              className="rounded-xl p-4 space-y-3"
-              style={{
-                background: "var(--kipu-surface)",
-                border: "1px solid var(--kipu-border)",
-              }}
-            >
-              <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>Fechas</h2>
-              <div>
-                <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Fecha emisión</label>
-                <input
-                  type="date"
-                  value={fechaEmision}
-                  onChange={(e) => setFechaEmision(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none"
-                  style={{
-                    background: "var(--kipu-surface)",
-                    border: "1px solid var(--kipu-border)",
-                    color: "var(--kipu-text)",
-                  }}
-                  onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                  onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
-                />
-              </div>
-              <div>
-                <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Válida hasta</label>
-                <input
-                  type="date"
-                  value={fechaValidez}
-                  onChange={(e) => setFechaValidez(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none"
-                  style={{
-                    background: "var(--kipu-surface)",
-                    border: "1px solid var(--kipu-border)",
-                    color: "var(--kipu-text)",
-                  }}
-                  onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                  onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
-                />
-                <p className="text-xs mt-1" style={{ color: "var(--kipu-subtle)" }}>Opcional — si no, no vence</p>
-              </div>
-            </div>
-
-            {/* Resumen */}
-            <div
-              className="rounded-xl p-4 sticky top-4"
-              style={{
-                background: "var(--kipu-surface)",
-                border: "1px solid var(--kipu-border)",
-              }}
-            >
-              <h2 className="text-sm font-semibold mb-4" style={{ color: "var(--kipu-text)" }}>Resumen</h2>
-              <div className="space-y-2 text-sm">
-                {totales.subtotal > 0 && (
-                  <div className="flex justify-between" style={{ color: "var(--kipu-muted)" }}>
-                    <span>Subtotal</span>
-                    <span>${fmt(totales.subtotal)}</span>
-                  </div>
-                )}
-                {totales.descuento > 0 && (
-                  <div className="flex justify-between" style={{ color: "var(--kipu-warning)" }}>
-                    <span>Descuento</span>
-                    <span>-${fmt(totales.descuento)}</span>
-                  </div>
-                )}
-                {totales.iva > 0 && (
-                  <div className="flex justify-between" style={{ color: "var(--kipu-muted)" }}>
-                    <span>IVA</span>
-                    <span>${fmt(totales.iva)}</span>
-                  </div>
-                )}
-                <div
-                  className="pt-2 flex justify-between font-bold text-base"
-                  style={{
-                    borderTop: "1px solid var(--kipu-border)",
-                    color: "var(--kipu-text)",
-                  }}
-                >
-                  <span>Total</span>
-                  <span>${fmt(totales.total)}</span>
-                </div>
-              </div>
-
-              <div
-                className="mt-3 px-3 py-2 rounded-lg text-xs flex items-center gap-2"
-                style={{
-                  background: "color-mix(in srgb, var(--kipu-text) 5%, transparent)",
-                  color: "var(--kipu-subtle)",
-                }}
-              >
-                <ClipboardList size={12} />
-                Documento referencial — no tiene validez tributaria
-              </div>
-
-              {error && (
-                <p
-                  className="mt-3 text-xs px-3 py-2 rounded-lg"
-                  style={{
-                    color: "var(--kipu-danger)",
-                    background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
-                  }}
-                >
-                  {error}
-                </p>
-              )}
-
-              <button
-                onClick={guardar}
-                disabled={submitting}
-                className="mt-4 w-full py-3 rounded-lg text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ background: "var(--kipu-accent)" }}
-                onMouseEnter={e => {
-                  if (!submitting) e.currentTarget.style.background = "var(--kipu-accent-h)";
-                }}
-                onMouseLeave={e => {
-                  if (!submitting) e.currentTarget.style.background = "var(--kipu-accent)";
-                }}
-              >
-                {submitting ? (
-                  <>
-                    <div
-                      className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin"
-                      style={{ borderColor: "#FFFFFF", borderTopColor: "transparent" }}
-                    />
-                    Guardando...
-                  </>
-                ) : (
-                  `Guardar proforma · $${fmt(totales.total)}`
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+      {/* Campos adicionales — salen como observaciones en el PDF */}
+      <CamposAdicionales campos={camposAdicionales} onChange={setCamposAdicionales} />
+    </EmisionLayout>
   );
 }

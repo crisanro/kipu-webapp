@@ -5,5 +5,11 @@
 	<!-- Notificaciones push. Al publicar, Xcode lo cambia solo a "production" -->
 	<key>aps-environment</key>
 	<string>development</string>
+	<!-- Enlaces de app.kipu.ec que abren la app (Universal Links). iOS los verifica con
+	     https://app.kipu.ec/.well-known/apple-app-site-association (qué rutas entran). -->
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:app.kipu.ec</string>
+	</array>
 </dict>
 </plist>

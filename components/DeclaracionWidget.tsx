@@ -6,6 +6,9 @@ import { useState } from "react";
 import Link from "next/link";
 import api from "@/lib/api";
 import { CheckCircle2, AlertTriangle, Clock, XCircle, ExternalLink } from "lucide-react";
+import Hoja from "@/components/ui/Hoja";
+import Boton from "@/components/ui/Boton";
+import { detalleError } from "@/lib/errores";
 
 export interface DeclaracionData {
   periodo:         string;
@@ -21,6 +24,7 @@ export interface DeclaracionData {
   saldo_a_favor?:       number;
   formulario_completo?: boolean;   // false: el 104 casillero por casillero es de pago
   periodo_key?:         string;    // "2026-10": la página del 104 de ese periodo
+  solo_kipu?:           boolean;   // sin declarar y quizá facturó con otro sistema: guía del mes anterior
 }
 
 interface Props {
@@ -28,90 +32,32 @@ interface Props {
   onDeclarado: () => void; 
 }
 
-// ── Modal de confirmación ──────────────────────────────────────────────────────
-function ModalConfirmar({ onConfirm, onCancel, loading }: {
+// ── Modal de confirmación (también en /declarar-mes-anterior) ──────────────────
+export function ModalConfirmar({ onConfirm, onCancel, loading }: {
   onConfirm: () => void;
   onCancel:  () => void;
   loading:   boolean;
 }) {
+  // Se monta solo al confirmar (por eso abierta fija)
   return (
-    <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-      <div
-        className="rounded-xl p-5 max-w-sm w-full space-y-4"
-        style={{
-          background: "var(--kipu-surface)",
-          border: "1px solid var(--kipu-border)",
-        }}
-      >
-        <div className="flex items-start gap-3">
-          <div
-            className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
-            style={{
-              background: "color-mix(in srgb, var(--kipu-success) 20%, transparent)",
-            }}
-          >
-            <CheckCircle2 size={16} style={{ color: "var(--kipu-success)" }} />
-          </div>
-          <div>
-            <p className="font-semibold text-sm" style={{ color: "var(--kipu-text)" }}>
-              ¿Ya realizaste tu declaración?
-            </p>
-            <p className="text-xs mt-1" style={{ color: "var(--kipu-subtle)" }}>
-              Al confirmar no recibirás más recordatorios sobre esta declaración
-              hasta el próximo mes.
-            </p>
-          </div>
-        </div>
-        <div
-          className="rounded-lg px-3 py-2.5 text-xs"
-          style={{
-            background: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)",
-            border: "1px solid color-mix(in srgb, var(--kipu-warning) 20%, transparent)",
-            color: "var(--kipu-warning)",
-          }}
-        >
-          ⚠️ Asegúrate de haber declarado en el portal del SRI antes de confirmar.
-          Esta acción solo registra que ya lo hiciste en Kipu.
-        </div>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={onCancel}
-            disabled={loading}
-            className="flex-1 py-2 rounded-lg text-sm transition-colors disabled:opacity-40"
-            style={{
-              border: "1px solid var(--kipu-border)",
-              color: "var(--kipu-muted)",
-            }}
-            onMouseEnter={e => {
-              if (!loading) e.currentTarget.style.color = "var(--kipu-text)";
-            }}
-            onMouseLeave={e => {
-              if (!loading) e.currentTarget.style.color = "var(--kipu-muted)";
-            }}
-          >
-            Cancelar
-          </button>
-          <button
-            type="button"
-            onClick={onConfirm}
-            disabled={loading}
-            className="flex-1 py-2 rounded-lg text-white text-sm font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-            style={{ background: "var(--kipu-success)" }}
-          >
-            {loading ? (
-              <div
-                className="w-3.5 h-3.5 border-2 border-t-transparent rounded-full animate-spin"
-                style={{ borderColor: "#FFFFFF", borderTopColor: "transparent" }}
-              />
-            ) : (
-              <CheckCircle2 size={14} />
-            )}
-            Sí, ya declaré
-          </button>
-        </div>
-      </div>
-    </div>
+    <Hoja
+      abierta
+      onCerrar={onCancel}
+      titulo="¿Ya realizaste tu declaración?"
+      descripcion="Al confirmar no recibirás más recordatorios sobre esta declaración hasta el próximo mes."
+      tamano="sm"
+      cerrable={!loading}
+      pie={<>
+        <Boton variante="secundario" onClick={onCancel} disabled={loading}>Cancelar</Boton>
+        <Boton onClick={onConfirm} cargando={loading} icono={<CheckCircle2 size={16} />}>Sí, ya declaré</Boton>
+      </>}
+    >
+      <p className="flex items-start gap-2 rounded-lg px-3 py-2.5 text-xs text-texto bg-alerta-suave border border-alerta/30">
+        <AlertTriangle size={14} className="mt-0.5 shrink-0 text-alerta" aria-hidden />
+        Asegúrate de haber declarado en el portal del SRI antes de confirmar.
+        Esta acción solo registra que ya lo hiciste en Kipu.
+      </p>
+    </Hoja>
   );
 }
 
@@ -164,11 +110,14 @@ export default function DeclaracionWidget({ data, onDeclarado }: Props) {
     setGuardando(true);
     setError("");
     try {
-      await api.post("/api/v1/app/declaraciones/declarar");
+      // El periodo que se está mostrando: sin él, el backend marca "el que toca
+      // ahora", que puede ser otro (p. ej. el mes ya cambió con la página abierta)
+      await api.post("/api/v1/app/declaraciones/declarar", null,
+                     { params: { tipo: "104", ...(data.periodo_key ? { periodo: data.periodo_key } : {}) } });
       setConfirmando(false);
       onDeclarado(); 
     } catch (e: any) {
-      setError(e?.response?.data?.detail ?? "Error al registrar la declaración.");
+      setError(detalleError(e, "Error al registrar la declaración."));
     } finally {
       setGuardando(false);
     }
@@ -209,7 +158,7 @@ export default function DeclaracionWidget({ data, onDeclarado }: Props) {
           {/* Contenido */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <p className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>
+              <p className="text-sm font-semibold text-texto">
                 Declaración IVA — {data.periodo}
               </p>
               <span
@@ -224,7 +173,7 @@ export default function DeclaracionWidget({ data, onDeclarado }: Props) {
             </div>
 
             {/* Mensaje según estado */}
-            <p className="text-xs mt-0.5" style={{ color: "var(--kipu-subtle)" }}>
+            <p className="text-xs mt-0.5 text-sutil">
               {data.estado === "DECLARADO" && data.fecha_declarado && (
                 `Registrada el ${new Date(data.fecha_declarado).toLocaleDateString("es-EC")}`
               )}
@@ -245,7 +194,7 @@ export default function DeclaracionWidget({ data, onDeclarado }: Props) {
             {/* Total de IVA del periodo */}
             {typeof data.iva_a_pagar === "number" && (
               <div className="mt-2 flex items-baseline gap-x-3 gap-y-1 flex-wrap">
-                <p className="text-sm" style={{ color: "var(--kipu-text)" }}>
+                <p className="text-sm text-texto">
                   {data.iva_a_pagar === 0 && (data.saldo_a_favor ?? 0) > 0
                     ? <>Saldo a favor: <strong>${(data.saldo_a_favor ?? 0).toFixed(2)}</strong></>
                     : <>IVA a pagar: <strong>${data.iva_a_pagar.toFixed(2)}</strong></>}
@@ -263,8 +212,18 @@ export default function DeclaracionWidget({ data, onDeclarado }: Props) {
               </div>
             )}
 
+            {/* Empresa nueva o mes sin ventas en Kipu: la guía para declararlo */}
+            {data.solo_kipu && (
+              <Link
+                href="/declarar-mes-anterior"
+                className="mt-2 inline-block text-xs font-medium underline underline-offset-2 hover:no-underline text-acento"
+              >
+                ¿Facturabas con otro sistema? Te guiamos para declarar {data.periodo} →
+              </Link>
+            )}
+
             {error && (
-              <p className="text-xs mt-1" style={{ color: "var(--kipu-danger)" }}>{error}</p>
+              <p className="text-xs mt-1 text-peligro">{error}</p>
             )}
 
             {/* Acciones */}
@@ -275,20 +234,7 @@ export default function DeclaracionWidget({ data, onDeclarado }: Props) {
                 href="https://srienlinea.sri.gob.ec"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors"
-                style={{
-                  background: "color-mix(in srgb, var(--kipu-text) 5%, transparent)",
-                  border: "1px solid var(--kipu-border)",
-                  color: "var(--kipu-muted)",
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 10%, transparent)";
-                  e.currentTarget.style.color = "var(--kipu-text)";
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 5%, transparent)";
-                  e.currentTarget.style.color = "var(--kipu-muted)";
-                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors bg-texto/5 border border-borde text-tenue hover:bg-texto/10 hover:text-texto"
               >
                 <ExternalLink size={11} />
                 Ir al SRI en Línea
@@ -299,18 +245,7 @@ export default function DeclaracionWidget({ data, onDeclarado }: Props) {
                 <button
                   type="button"
                   onClick={() => setConfirmando(true)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors font-medium"
-                  style={{
-                    background: "color-mix(in srgb, var(--kipu-success) 20%, transparent)",
-                    border: "1px solid color-mix(in srgb, var(--kipu-success) 20%, transparent)",
-                    color: "var(--kipu-success)",
-                  }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-success) 30%, transparent)";
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-success) 20%, transparent)";
-                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors font-medium bg-exito/20 border border-exito/20 text-exito hover:bg-exito/30"
                 >
                   <CheckCircle2 size={11} />
                   Ya declaré

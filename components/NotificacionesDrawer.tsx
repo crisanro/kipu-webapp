@@ -139,43 +139,6 @@ export function useNotificaciones(authLoading: boolean = false) {
   };
 }
 
-// ── Badge ──────────────────────────────────────────────────────────────────────
-export function NotificacionesBadge({
-  noLeidas,
-  onClick,
-}: {
-  noLeidas: number;
-  onClick:  () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="relative flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm transition-colors"
-      style={{ color: "var(--kipu-subtle)" }}
-      onMouseEnter={e => {
-        e.currentTarget.style.color = "var(--kipu-text)";
-        e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 5%, transparent)";
-      }}
-      onMouseLeave={e => {
-        e.currentTarget.style.color = "var(--kipu-subtle)";
-        e.currentTarget.style.background = "transparent";
-      }}
-    >
-      <Bell size={16} />
-      <span>Notificaciones</span>
-      {noLeidas > 0 && (
-        <span
-          className="ml-auto flex items-center justify-center w-5 h-5 rounded-full text-white text-[10px] font-bold"
-          style={{ background: "var(--kipu-accent)" }}
-        >
-          {noLeidas > 9 ? "9+" : noLeidas}
-        </span>
-      )}
-    </button>
-  );
-}
-
 // ── Drawer ─────────────────────────────────────────────────────────────────────
 interface DrawerProps {
   open:           boolean;
@@ -229,16 +192,14 @@ export function NotificacionesDrawer({
       >
         {/* Header */}
         <div
-          className="flex items-center justify-between px-4 py-4"
-          style={{ borderBottom: "1px solid var(--kipu-border)" }}
+          className="flex items-center justify-between px-4 py-4 border-b border-borde"
         >
           <div className="flex items-center gap-2">
-            <Bell size={17} style={{ color: "var(--kipu-text)" }} />
-            <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>Notificaciones</h2>
+            <Bell className="text-texto" size={17} />
+            <h2 className="text-sm font-semibold text-texto">Notificaciones</h2>
             {noLeidas > 0 && (
               <span
-                className="px-2 py-0.5 rounded-full text-white text-xs font-bold"
-                style={{ background: "var(--kipu-accent)" }}
+                className="px-2 py-0.5 rounded-full text-white text-xs font-bold bg-acento"
               >
                 {noLeidas}
               </span>
@@ -250,20 +211,7 @@ export function NotificacionesDrawer({
                 type="button"
                 onClick={onMarcarTodas}
                 disabled={loading}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-colors disabled:opacity-40"
-                style={{ color: "var(--kipu-subtle)" }}
-                onMouseEnter={e => {
-                  if (!loading) {
-                    e.currentTarget.style.color = "var(--kipu-text)";
-                    e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 5%, transparent)";
-                  }
-                }}
-                onMouseLeave={e => {
-                  if (!loading) {
-                    e.currentTarget.style.color = "var(--kipu-subtle)";
-                    e.currentTarget.style.background = "transparent";
-                  }
-                }}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-colors disabled:opacity-40 text-sutil enabled:hover:text-texto enabled:hover:bg-texto/5"
                 title="Marcar todas como leídas"
               >
                 {loading ? (
@@ -280,16 +228,7 @@ export function NotificacionesDrawer({
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 rounded-lg transition-colors"
-              style={{ color: "var(--kipu-subtle)" }}
-              onMouseEnter={e => {
-                e.currentTarget.style.color = "var(--kipu-text)";
-                e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 5%, transparent)";
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.color = "var(--kipu-subtle)";
-                e.currentTarget.style.background = "transparent";
-              }}
+              className="p-1.5 rounded-lg transition-colors text-sutil hover:text-texto hover:bg-texto/5"
             >
               <X size={16} />
             </button>
@@ -307,9 +246,9 @@ export function NotificacionesDrawer({
             </div>
           ) : notificaciones.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-center px-6">
-              <Bell size={36} className="mb-3" style={{ color: "var(--kipu-subtle)" }} />
-              <p className="text-sm font-medium" style={{ color: "var(--kipu-muted)" }}>Sin notificaciones</p>
-              <p className="text-xs mt-1" style={{ color: "var(--kipu-subtle)" }}>
+              <Bell size={36} className="mb-3 text-sutil" />
+              <p className="text-sm font-medium text-tenue">Sin notificaciones</p>
+              <p className="text-xs mt-1 text-sutil">
                 Te avisaremos cuando haya algo importante
               </p>
             </div>
@@ -354,14 +293,13 @@ export function NotificacionesDrawer({
                         {tiempoRelativo(notif.created_at)}
                       </span>
                     </div>
-                    <p className="text-xs mt-0.5 line-clamp-2" style={{ color: "var(--kipu-subtle)" }}>
+                    <p className="text-xs mt-0.5 line-clamp-2 text-sutil">
                       {notif.description}
                     </p>
                   </div>
                   {!notif.is_read && (
                     <div
-                      className="w-2 h-2 rounded-full shrink-0 mt-1.5"
-                      style={{ background: "var(--kipu-accent)" }}
+                      className="w-2 h-2 rounded-full shrink-0 mt-1.5 bg-acento"
                     />
                   )}
                 </button>
@@ -372,10 +310,9 @@ export function NotificacionesDrawer({
 
         {/* Footer */}
         <div
-          className="px-4 py-3 text-center"
-          style={{ borderTop: "1px solid var(--kipu-border)" }}
+          className="px-4 py-3 text-center border-t border-borde"
         >
-          <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+          <p className="text-xs text-sutil">
             {notificaciones.length} notificación{notificaciones.length !== 1 ? "es" : ""}
           </p>
         </div>

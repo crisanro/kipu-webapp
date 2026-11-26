@@ -2,9 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { LogOut, X, CheckCircle2, Plus, Star } from "lucide-react";
+import { LogOut, CheckCircle2, Plus, Star } from "lucide-react";
+import Hoja from "@/components/ui/Hoja";
+import Boton from "@/components/ui/Boton";
 import { useAuthStore } from "@/store/auth.store";
-import { SESSION_EMPRESA_KEY } from "@/app/providers";
+import { abrirEmpresa } from "@/lib/empresa";
+import { detalleError } from "@/lib/errores";
+import { useAvisos } from "@/components/ui/Avisos";
 import api from "@/lib/api";
 
 export function ModalLogout({ onConfirm, onCancel, cerrando = false }: {
@@ -12,72 +16,29 @@ export function ModalLogout({ onConfirm, onCancel, cerrando = false }: {
   onCancel: () => void;
   cerrando?: boolean;
 }) {
+  // Se monta solo al pedir cerrar sesión (por eso abierta fija)
   return (
-    <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-      <div
-        className="rounded-xl p-5 max-w-sm w-full space-y-4"
-        style={{
-          background: "var(--kipu-surface)",
-          border: "1px solid var(--kipu-border)",
-        }}
-      >
-        <div className="flex items-start gap-3">
-          <div
-            className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
-            style={{ background: "color-mix(in srgb, var(--kipu-danger) 15%, transparent)" }}
-          >
-            <LogOut size={16} style={{ color: "var(--kipu-danger)" }} />
-          </div>
-          <div>
-            <p className="font-semibold text-sm" style={{ color: "var(--kipu-text)" }}>
-              ¿Cerrar sesión?
-            </p>
-            <p className="text-xs mt-1" style={{ color: "var(--kipu-muted)" }}>
-              Se cerrará tu sesión en este dispositivo.
-            </p>
-          </div>
-        </div>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={onCancel}
-            disabled={cerrando}
-            className="flex-1 py-2 rounded-lg text-sm font-medium transition-all
-                       border border-[var(--kipu-border)] text-[var(--kipu-muted)]
-                       bg-[color-mix(in_srgb,var(--kipu-text)_4%,transparent)]
-                       hover:bg-[color-mix(in_srgb,var(--kipu-text)_9%,transparent)] hover:text-[var(--kipu-text)]
-                       active:scale-[0.97]
-                       focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--kipu-border)]
-                       disabled:opacity-50 disabled:active:scale-100"
-          >
-            Cancelar
-          </button>
-          <button
-            type="button"
-            onClick={onConfirm}
-            disabled={cerrando}
-            className="flex-1 py-2 rounded-lg text-sm font-medium text-white transition-all
-                       flex items-center justify-center gap-2
-                       bg-[var(--kipu-danger)] shadow-sm
-                       hover:brightness-90 hover:shadow-md
-                       active:scale-[0.97] active:brightness-85
-                       focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--kipu-danger)]
-                       disabled:opacity-80 disabled:hover:brightness-100 disabled:active:scale-100"
-          >
-            {cerrando && (
-              <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            )}
-            {cerrando ? "Cerrando…" : "Cerrar sesión"}
-          </button>
-        </div>
-      </div>
-    </div>
+    <Hoja
+      abierta
+      onCerrar={onCancel}
+      titulo="¿Cerrar sesión?"
+      descripcion="Se cerrará tu sesión en este dispositivo."
+      tamano="sm"
+      cerrable={!cerrando}
+      pie={<>
+        <Boton variante="secundario" onClick={onCancel} disabled={cerrando} data-autofocus>Cancelar</Boton>
+        <Boton variante="peligro" onClick={onConfirm} cargando={cerrando} icono={<LogOut size={16} />}>
+          {cerrando ? "Cerrando…" : "Cerrar sesión"}
+        </Boton>
+      </>}
+    />
   );
 }
 
 export function SelectorEmpresa({ onClose }: { onClose: () => void }) {
   const router = useRouter();
-  const { empresas, empresa, setEmpresa, setEmpresas } = useAuthStore();
+  const { empresas, empresa, setEmpresas } = useAuthStore();
+  const avisos = useAvisos();
   const [cambiando, setCambiando] = useState<number | null>(null);
   const [guardandoDefault, setGuardandoDefault] = useState<number | null>(null);
   const [defaultId, setDefaultId] = useState<number | null>(
@@ -91,37 +52,13 @@ export function SelectorEmpresa({ onClose }: { onClose: () => void }) {
     }
     setCambiando(e.id);
     try {
-      const res = await api.post("/api/v1/app/usuarios/empresas/cambiar", { emisor_id: e.id });
-      const data = res.data.data;
-      setEmpresa({
-        id: e.id,
-        ruc: data.ruc,
-        razon_social: data.razon_social,
-        nombre_comercial: e.nombre_comercial,
-        ambiente: data.ambiente,
-        tipo_emisor: data.tipo_emisor,
-        rol: data.rol,
-        permisos: data.permisos,
-        firma_ok: e.firma_ok,
-        suscripcion_activa: data.suscripcion_activa,
-        suscripcion: data.suscripcion,
-        balance_api: data.balance_api,
-        emision_gratis: data.emision_gratis ?? false,
-        emite_retenciones: data.emite_retenciones ?? false,
-        obligado_contabilidad: data.obligado_contabilidad ?? e.obligado_contabilidad ?? null,
-        periodo_iva: data.periodo_iva ?? e.periodo_iva ?? null,
-      });
-      localStorage.setItem("kipu-ext-emisor", String(e.id));
-      localStorage.setItem("kipu-ext-ruc", data.ruc);
-      localStorage.setItem("kipu-ext-razon", data.razon_social);
-      sessionStorage.clear();
-      // DESPUÉS del clear: recordar la empresa elegida para la recarga
-      sessionStorage.setItem(SESSION_EMPRESA_KEY, String(e.id));
+      // El backend confirma que sigue siendo suya; la recarga trae la empresa
+      // completa del servidor (antes se armaba aquí a mano y se perdía al recargar)
+      await api.post("/api/v1/app/usuarios/empresas/cambiar", { emisor_id: e.id });
       onClose();
-      window.location.href = "/dashboard";
+      abrirEmpresa(e, "/dashboard");
     } catch (err) {
-      console.error(err);
-    } finally {
+      avisos.error(detalleError(err, "No se pudo cambiar de empresa. Intenta de nuevo."));
       setCambiando(null);
     }
   };
@@ -148,27 +85,27 @@ export function SelectorEmpresa({ onClose }: { onClose: () => void }) {
     return (a.nombre_comercial || a.razon_social).localeCompare(b.nombre_comercial || b.razon_social);
   });
 
+  // Se monta solo al abrir el selector (por eso abierta fija)
   return (
-    <div className="fixed inset-0 bg-black/70 z-50 flex items-end sm:items-center justify-center p-4 area-segura-abajo">
-      <div
-        className="rounded-xl w-full max-w-sm"
-        style={{
-          background: "var(--kipu-surface)",
-          border: "1px solid var(--kipu-border)",
-        }}
-      >
-        <div
-          className="flex items-center justify-between px-4 py-3"
-          style={{ borderBottom: "1px solid var(--kipu-border)" }}
+    <Hoja
+      abierta
+      onCerrar={onClose}
+      titulo="Cambiar empresa"
+      tamano="sm"
+      pie={
+        <button
+          onClick={() => {
+            onClose();
+            router.push("/nueva-empresa");
+          }}
+          className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border border-dashed border-borde text-sm text-tenue transition-colors hover:border-tenue hover:text-texto active:bg-presionado"
         >
-          <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>
-            Cambiar empresa
-          </h2>
-          <button onClick={onClose} style={{ color: "var(--kipu-muted)" }}>
-            <X size={16} />
-          </button>
-        </div>
-        <div className="max-h-64 overflow-y-auto">
+          <Plus size={14} /> Agregar empresa
+        </button>
+      }
+    >
+        {/* Filas de borde a borde dentro de la hoja */}
+        <div className="-mx-5 border-t border-borde">
           {empresasOrdenadas.map((e) => {
             const activa = e.id === empresa?.id;
             const esDefault = e.id === defaultId;
@@ -201,10 +138,10 @@ export function SelectorEmpresa({ onClose }: { onClose: () => void }) {
                     {(e.nombre_comercial || e.razon_social)[0]}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate" style={{ color: "var(--kipu-text)" }}>
+                    <p className="text-sm font-medium truncate text-texto">
                       {e.nombre_comercial || e.razon_social}
                     </p>
-                    <p className="text-xs" style={{ color: "var(--kipu-muted)" }}>
+                    <p className="text-xs text-tenue">
                       {e.ruc}
                     </p>
                   </div>
@@ -233,7 +170,7 @@ export function SelectorEmpresa({ onClose }: { onClose: () => void }) {
                     >
                       {e.ambiente === 2 ? "Prod" : "Pruebas"}
                     </span>
-                    {activa && <CheckCircle2 size={14} style={{ color: "var(--kipu-accent)" }} />}
+                    {activa && <CheckCircle2 className="text-acento" size={14} />}
                     {cambiando === e.id && (
                       <div
                         className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin"
@@ -248,7 +185,9 @@ export function SelectorEmpresa({ onClose }: { onClose: () => void }) {
                   onClick={() => toggleDefault(e)}
                   disabled={guardandoDefault !== null}
                   title={esDefault ? "Quitar como predeterminada" : "Abrir esta empresa al iniciar sesión"}
-                  className="shrink-0 pl-1 pr-4 py-3"
+                  aria-label={esDefault ? "Quitar como predeterminada" : "Abrir esta empresa al iniciar sesión"}
+                  aria-pressed={esDefault}
+                  className="shrink-0 pl-2 pr-5 py-3 min-h-11 flex items-center"
                   style={{ color: esDefault ? "var(--kipu-warning)" : "var(--kipu-muted)" }}
                 >
                   {guardandoDefault === e.id ? (
@@ -264,30 +203,6 @@ export function SelectorEmpresa({ onClose }: { onClose: () => void }) {
             );
           })}
         </div>
-        <div className="p-3">
-          <button
-            onClick={() => {
-              onClose();
-              router.push("/nueva-empresa");
-            }}
-            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-dashed text-sm transition-colors"
-            style={{
-              borderColor: "var(--kipu-border)",
-              color: "var(--kipu-muted)",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = "var(--kipu-muted)";
-              e.currentTarget.style.color = "var(--kipu-text)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = "var(--kipu-border)";
-              e.currentTarget.style.color = "var(--kipu-muted)";
-            }}
-          >
-            <Plus size={14} /> Agregar empresa
-          </button>
-        </div>
-      </div>
-    </div>
+    </Hoja>
   );
 }

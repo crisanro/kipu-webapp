@@ -1,63 +1,33 @@
 "use client";
-import { useState } from "react";
-import {
-  CheckCircle2, Eye, Copy,
-} from "lucide-react";
+import { KeyRound, Copy, ExternalLink } from "lucide-react";
 import { type FacturaBase } from "./utils";
+import Seccion from "@/components/ui/Seccion";
+import Boton from "@/components/ui/Boton";
+import { useCopiar } from "@/lib/useCopiar";
+import { abrirExterno } from "@/lib/nativo";
+
+const URL_VALIDEZ_SRI = "https://srienlinea.sri.gob.ec/comprobantes-electronicos-internet/publico/validezComprobantes.jsf";
 
 // Clave de acceso con botón de copiar y enlace de verificación en el SRI.
 export default function ClaveAcceso({ factura }: { factura: FacturaBase }) {
-  const [copiado, setCopiado] = useState(false);
+  const { copiar } = useCopiar();
+  if (!factura.clave_acceso) return null;
 
-  const copiarClave = async () => {
-    if (!factura.clave_acceso) return;
-    await navigator.clipboard.writeText(factura.clave_acceso);
-    setCopiado(true);
-    setTimeout(() => setCopiado(false), 2000);
-  };
+  const copiarClave = () => copiar(factura.clave_acceso, "Clave de acceso copiada");
 
   return (
-    <>
-      {/* Clave de acceso */}
-      <div
-        className="rounded-xl p-4"
-        style={{
-          background: "var(--kipu-surface)",
-          border: "1px solid var(--kipu-border)",
-        }}
-      >
-        <h2 className="text-xs font-semibold mb-2 uppercase tracking-wide" style={{ color: "var(--kipu-subtle)" }}>
-          Clave de acceso
-        </h2>
-        <div
-          className="flex items-center gap-2 rounded-lg px-3 py-2"
-          style={{ background: "color-mix(in srgb, var(--kipu-text) 5%, transparent)" }}
-        >
-          <code className="text-xs flex-1 break-all font-mono" style={{ color: "var(--kipu-text)" }}>{factura.clave_acceso}</code>
-          <button
-            onClick={copiarClave}
-            className="shrink-0 transition-colors"
-            style={{ color: "var(--kipu-subtle)" }}
-            onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
-            onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-subtle)"}
-          >
-            {copiado ? <CheckCircle2 size={14} style={{ color: "var(--kipu-success)" }} /> : <Copy size={14} />}
-          </button>
-        </div>
+    <Seccion titulo="Clave de acceso" icono={KeyRound} resumen={`…${factura.clave_acceso.slice(-8)}`}>
+      <code className="block break-all rounded-lg bg-presionado px-3 py-2 font-mono text-xs text-texto select-all">
+        {factura.clave_acceso}
+      </code>
+      <div className="mt-2 flex flex-wrap gap-2">
+        <Boton variante="secundario" tamano="sm" onClick={copiarClave} icono={<Copy size={14} />}>Copiar</Boton>
         {["AUTORIZADO", "ANULADO"].includes(factura.estado_sri) && (
-          <a
-            href="https://srienlinea.sri.gob.ec/comprobantes-electronicos-internet/publico/validezComprobantes.jsf"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-2 inline-flex items-center gap-1.5 text-xs transition-colors"
-            style={{ color: "var(--kipu-accent)" }}
-            onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent-h)"}
-            onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-accent)"}
-          >
-            <Eye size={12} /> Verificar en portal SRI
-          </a>
+          <Boton variante="fantasma" tamano="sm" onClick={() => void abrirExterno(URL_VALIDEZ_SRI)} icono={<ExternalLink size={14} />}>
+            Verificar en el portal del SRI
+          </Boton>
         )}
       </div>
-    </>
+    </Seccion>
   );
 }

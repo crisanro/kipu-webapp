@@ -30,6 +30,40 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!-- Enlaces de app.kipu.ec que abren la app (App Links, components/shell/PuenteNativo.tsx).
+                 Android los verifica con https://app.kipu.ec/.well-known/assetlinks.json.
+                 Solo las pantallas de la app: planes, renta, admin, equipo, api-keys, blog y
+                 volver-a-la-app siguen en el navegador (las tiendas no permiten vender en la app). -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="app.kipu.ec" />
+                <data android:pathPrefix="/dashboard" />
+                <data android:pathPrefix="/documentos" />
+                <data android:pathPrefix="/personas" />
+                <data android:pathPrefix="/productos" />
+                <data android:pathPrefix="/cuentas" />
+                <data android:pathPrefix="/proformas" />
+                <data android:pathPrefix="/cobros" />
+                <data android:pathPrefix="/reportes" />
+                <data android:pathPrefix="/declarar-mes-anterior" />
+                <data android:pathPrefix="/configuracion" />
+                <data android:pathPrefix="/estructura" />
+                <data android:pathPrefix="/usuarios" />
+                <data android:pathPrefix="/auditoria" />
+                <data android:pathPrefix="/al-dia" />
+                <data android:pathPrefix="/uso-justo" />
+                <data android:pathPrefix="/nueva-empresa" />
+                <data android:pathPrefix="/mas" />
+                <data android:pathPrefix="/login" />
+                <data android:pathPrefix="/register" />
+                <data android:pathPrefix="/reset" />
+                <data android:pathPrefix="/bienvenida" />
+                <data android:pathPrefix="/onboarding" />
+                <data android:pathPrefix="/ayuda" />
+            </intent-filter>
+
         </activity>
 
         <provider

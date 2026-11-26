@@ -1,11 +1,13 @@
 "use client";
 
+import { useConfirmar } from "@/components/ui/Confirmar";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Loader2, UserPlus } from "lucide-react";
 import api from "@/lib/api";
-import { caja, campo, detalle, fecha } from "../_comun";
+import { caja, campo, fecha } from "../_comun";
+import { detalleError } from "@/lib/errores";
 
 interface Contador {
   id: string; nombre: string; identificacion: string; telefono: string | null; email: string;
@@ -15,6 +17,7 @@ interface Contador {
 const VACIO = { email: "", nombre: "", identificacion: "", telefono: "" };
 
 export default function ContadoresPage() {
+  const confirmar = useConfirmar();
   const router = useRouter();
   const [lista,    setLista]    = useState<Contador[] | null>(null);
   const [form,     setForm]     = useState(VACIO);
@@ -27,7 +30,7 @@ export default function ContadoresPage() {
       const r = await api.get("/api/v1/admin/al-dia/contadores");
       setLista(r.data.data);
     } catch (err: unknown) {
-      setError(detalle(err, "No pudimos cargar los contadores."));
+      setError(detalleError(err, "No pudimos cargar los contadores."));
     }
   }, []);
 
@@ -38,7 +41,7 @@ export default function ContadoresPage() {
       .catch((err: unknown) => {
         if (!vivo) return;
         if ((err as { response?: { status?: number } })?.response?.status === 403) router.replace("/equipo");
-        else setError(detalle(err, "No pudimos cargar los contadores."));
+        else setError(detalleError(err, "No pudimos cargar los contadores."));
       });
     return () => { vivo = false; };
   }, [router]);
@@ -53,21 +56,25 @@ export default function ContadoresPage() {
       setForm(VACIO);
       await recargar();
     } catch (err: unknown) {
-      setError(detalle(err, "No se pudo dar de alta."));
+      setError(detalleError(err, "No se pudo dar de alta."));
     } finally {
       setEnviando(false);
     }
   };
 
   const baja = async (c: Contador) => {
-    if (!confirm(`¿Dar de baja a ${c.nombre}? Sus ${c.clientes} clientes quedarán sin contador y deberás reasignarlos. Su historial se conserva.`)) return;
+    if (!(await confirmar({
+      titulo: `¿Dar de baja a ${c.nombre}?`,
+      mensaje: `Sus ${c.clientes} clientes quedarán sin contador y deberás reasignarlos. Su historial se conserva.`,
+      textoConfirmar: "Dar de baja", peligro: true,
+    }))) return;
     setError("");
     try {
       const r = await api.post(`/api/v1/admin/al-dia/contadores/${c.id}/desactivar`);
       setAviso(`${c.nombre} dado de baja. ${r.data.clientes_sin_asignar} clientes quedaron sin contador.`);
       await recargar();
     } catch (err: unknown) {
-      setError(detalle(err, "No se pudo dar de baja."));
+      setError(detalleError(err, "No se pudo dar de baja."));
     }
   };
 
@@ -75,17 +82,17 @@ export default function ContadoresPage() {
 
   return (
     <div className="p-4 md:p-6 max-w-4xl mx-auto space-y-4">
-      <Link href="/equipo" className="inline-flex items-center gap-1 text-sm" style={{ color: "var(--kipu-muted)" }}>
+      <Link href="/equipo" className="inline-flex items-center gap-1 text-sm text-tenue">
         <ArrowLeft size={14} /> Clientes
       </Link>
-      <h1 className="text-xl font-bold" style={{ color: "var(--kipu-text)" }}>Contadores de Kipu Al Día</h1>
+      <h1 className="text-xl font-bold text-texto">Contadores de Kipu Al Día</h1>
 
       {/* Alta */}
       <div className="rounded-xl p-5 space-y-3" style={caja}>
-        <p className="font-semibold text-sm flex items-center gap-2" style={{ color: "var(--kipu-text)" }}>
-          <UserPlus size={16} style={{ color: "var(--kipu-accent)" }} /> Agregar contador
+        <p className="font-semibold text-sm flex items-center gap-2 text-texto">
+          <UserPlus className="text-acento" size={16} /> Agregar contador
         </p>
-        <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+        <p className="text-xs text-sutil">
           Primero debe crear su cuenta en Kipu con su correo. Para entrar al panel, invítalo también a la empresa de Kipu.
         </p>
         <div className="grid sm:grid-cols-2 gap-2">
@@ -99,23 +106,23 @@ export default function ContadoresPage() {
                  inputMode="tel" maxLength={20} placeholder="Teléfono (opcional)" className="px-3 py-2 rounded-lg text-sm" style={campo} />
         </div>
         <button type="button" onClick={alta} disabled={!completo || enviando}
-                className="px-4 py-2 rounded-lg text-white text-sm font-semibold disabled:opacity-50" style={{ background: "var(--kipu-accent)" }}>
+                className="px-4 py-2 rounded-lg text-white text-sm font-semibold disabled:opacity-50 bg-acento">
           {enviando ? "Guardando..." : "Agregar al equipo"}
         </button>
-        {error && <p className="text-sm" style={{ color: "var(--kipu-danger)" }}>{error}</p>}
-        {aviso && <p className="text-sm" style={{ color: "var(--kipu-success)" }}>{aviso}</p>}
+        {error && <p className="text-sm text-peligro">{error}</p>}
+        {aviso && <p className="text-sm text-exito">{aviso}</p>}
       </div>
 
       {/* Lista */}
       <div className="rounded-xl overflow-hidden" style={caja}>
         {!lista ? (
-          <div className="flex justify-center py-8"><Loader2 size={18} className="animate-spin" style={{ color: "var(--kipu-subtle)" }} /></div>
+          <div className="flex justify-center py-8"><Loader2 size={18} className="animate-spin text-sutil" /></div>
         ) : lista.length === 0 ? (
-          <p className="p-5 text-sm" style={{ color: "var(--kipu-muted)" }}>Todavía no hay contadores.</p>
+          <p className="p-5 text-sm text-tenue">Todavía no hay contadores.</p>
         ) : (
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-xs" style={{ color: "var(--kipu-subtle)" }}>
+              <tr className="text-left text-xs text-sutil">
                 <th className="px-4 py-2">Contador</th><th className="px-4 py-2">Cédula</th>
                 <th className="px-4 py-2">Clientes</th><th className="px-4 py-2">Desde / hasta</th><th />
               </tr>
@@ -124,17 +131,17 @@ export default function ContadoresPage() {
               {lista.map(c => (
                 <tr key={c.id} style={{ borderTop: "1px solid var(--kipu-border)", opacity: c.activo ? 1 : 0.55 }}>
                   <td className="px-4 py-2.5">
-                    <p style={{ color: "var(--kipu-text)" }}>{c.nombre}</p>
-                    <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>{c.email}{c.telefono && ` · ${c.telefono}`}</p>
+                    <p className="text-texto">{c.nombre}</p>
+                    <p className="text-xs text-sutil">{c.email}{c.telefono && ` · ${c.telefono}`}</p>
                   </td>
-                  <td className="px-4 py-2.5" style={{ color: "var(--kipu-muted)" }}>{c.identificacion}</td>
-                  <td className="px-4 py-2.5" style={{ color: "var(--kipu-muted)" }}>{c.clientes}</td>
-                  <td className="px-4 py-2.5 text-xs" style={{ color: "var(--kipu-muted)" }}>
+                  <td className="px-4 py-2.5 text-tenue">{c.identificacion}</td>
+                  <td className="px-4 py-2.5 text-tenue">{c.clientes}</td>
+                  <td className="px-4 py-2.5 text-xs text-tenue">
                     {fecha(c.alta_at)} → {c.baja_at ? fecha(c.baja_at) : "activo"}
                   </td>
                   <td className="px-4 py-2.5 text-right">
                     {c.activo && (
-                      <button type="button" onClick={() => baja(c)} className="text-xs underline" style={{ color: "var(--kipu-danger)" }}>
+                      <button type="button" onClick={() => baja(c)} className="text-xs underline text-peligro">
                         Dar de baja
                       </button>
                     )}
@@ -145,7 +152,7 @@ export default function ContadoresPage() {
           </table>
         )}
       </div>
-      <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+      <p className="text-xs text-sutil">
         Para reactivar a alguien dado de baja, vuelve a agregarlo con el mismo correo.
       </p>
     </div>
