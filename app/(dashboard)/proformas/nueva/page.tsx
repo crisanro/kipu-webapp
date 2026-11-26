@@ -4,7 +4,7 @@
 // y "Guardar"; lo escrito queda como borrador si se sale de la pantalla.
 import { rutas } from "@/lib/rutas";
 import { useState, useEffect, useMemo } from "react";
-import { r2, dosDecimales } from "@/lib/dinero";
+import { dosDecimales } from "@/lib/dinero";
 import { detalleError } from "@/lib/errores";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
@@ -19,26 +19,9 @@ import { Campo, Entrada } from "@/components/ui/Campo";
 
 // ── Componentes reutilizados de factura ────────────────────────────────────────
 import ClienteSelector, { type Cliente, type ClienteNuevo } from "../../documentos/emitir/components/ClienteSelector";
-import ItemsEditor, { Item, calcItem, genId, EMPTY_ITEM } from "../../documentos/emitir/components/ItemsEditor";
+import ItemsEditor, { Item, calcItem, calcTotales, genId, EMPTY_ITEM } from "../../documentos/emitir/components/ItemsEditor";
 import CamposAdicionales, { CampoAdicional } from "../../documentos/emitir/components/CamposAdicionales";
 import EmisionLayout from "../../documentos/emitir/components/EmisionLayout";
-
-// ── Helpers ────────────────────────────────────────────────────────────────────
-
-function calcTotales(items: Item[]) {
-  return items.reduce(
-    (acc, item) => {
-      const c = calcItem(item);
-      return {
-        subtotal:  r2(acc.subtotal  + c.base),
-        descuento: r2(acc.descuento + c.descuento),
-        iva:       r2(acc.iva       + c.iva),
-        total:     r2(acc.total     + c.total),
-      };
-    },
-    { subtotal: 0, descuento: 0, iva: 0, total: 0 }
-  );
-}
 
 // ── Página ─────────────────────────────────────────────────────────────────────
 export default function NuevaProformaPage() {
