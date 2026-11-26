@@ -8,11 +8,6 @@ export const ESTADOS: Record<string, { texto: string; color: string }> = {
   NO_PAGADO:       { texto: "Sin pago: no va",   color: "var(--kipu-danger)" },
 };
 
-export function detalle(err: unknown, porDefecto: string): string {
-  const d = (err as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail;
-  return typeof d === "string" ? d : porDefecto;
-}
-
 export function fecha(iso: string | null | undefined): string {
   if (!iso) return "—";
   // Las fechas sin hora (2026-11-30) se leen en hora local para no correrse un día

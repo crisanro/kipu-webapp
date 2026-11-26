@@ -5,6 +5,7 @@
 import { rutas } from "@/lib/rutas";
 import { useState, useEffect, useMemo } from "react";
 import { r2 } from "@/lib/dinero";
+import { detalleError } from "@/lib/errores";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
@@ -56,8 +57,6 @@ function calcTotales(items: Item[]) {
     { subtotal: 0, descuento: 0, iva: 0, total: 0 }
   );
 }
-
-interface DetalleError { mensaje?: string; msg?: string }
 
 // ── Página ─────────────────────────────────────────────────────────────────────
 export default function NuevaProformaPage() {
@@ -205,12 +204,7 @@ export default function NuevaProformaPage() {
       borrador.borrar();
       router.push(rutas.proforma(res.data.id));
     } catch (err: unknown) {
-      const detail = (err as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail;
-      setError(
-        Array.isArray(detail)
-          ? (detail as DetalleError[]).map((e) => e.mensaje ?? e.msg ?? JSON.stringify(e)).join(", ")
-          : typeof detail === "string" ? detail : "Error al guardar la proforma."
-      );
+      setError(detalleError(err, "Error al guardar la proforma."));
     } finally {
       setSubmitting(false);
     }

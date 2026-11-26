@@ -21,6 +21,7 @@ import {
   ArrowLeft, FileText, CheckCircle2, AlertTriangle, Clock, Printer, Zap, Trash2,
   User, StickyNote, MoreVertical, Share2, ListChecks,
 } from "lucide-react";
+import { detalleError } from "@/lib/errores";
 
 const fmt  = (n: number) => `$${n.toFixed(2)}`;
 const fmt2 = (n: number) => n.toFixed(2);
@@ -64,8 +65,7 @@ function DetalleProforma({ id }: { id: string }) {
       avisos.info("Proforma eliminada");
       router.push("/proformas");
     } catch (err: any) {
-      const detalle = err?.response?.data?.detail;
-      avisos.error(typeof detalle === "string" ? detalle : "No se pudo eliminar la proforma.");
+      avisos.error(detalleError(err, "No se pudo eliminar la proforma."));
     }
   };
 

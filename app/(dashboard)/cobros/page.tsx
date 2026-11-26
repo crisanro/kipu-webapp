@@ -22,6 +22,7 @@ import Boton from "@/components/ui/Boton";
 import {
   Link2, Plus, Copy, MessageCircle, RefreshCw, Ban, FileText, Share2, Loader2,
 } from "lucide-react";
+import { detalleError } from "@/lib/errores";
 
 // "Facturar cuando el cliente pague": la factura ya armada espera el pago del link
 interface Cobro {
@@ -136,8 +137,7 @@ function CobrosContenido() {
         avisos.info("Link anulado.");
       }
     } catch (err: unknown) {
-      const detalle = (err as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail;
-      avisos.error(typeof detalle === "string" ? detalle : "No se pudo completar la acción.");
+      avisos.error(detalleError(err, "No se pudo completar la acción."));
     } finally {
       setOcupado(null);
     }

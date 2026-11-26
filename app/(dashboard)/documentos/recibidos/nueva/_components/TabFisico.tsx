@@ -10,6 +10,7 @@ import { ES_APP_NATIVA } from "@/lib/plataforma";
 import SoloWeb from "@/components/SoloWeb";
 import { hoyEC } from "@/lib/fecha";
 import { formatoNumeroDoc } from "@/lib/teclado";
+import { detalleError } from "@/lib/errores";
 
 interface LineaRetencion {
   tipo:            string; // "1"=Renta "2"=IVA "6"=ISD
@@ -203,8 +204,7 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
       resetForm();
       onDone();
     } catch (err: any) {
-      const detail = err?.response?.data?.detail;
-      setError(typeof detail === "string" ? detail : "Error al guardar.");
+      setError(detalleError(err, "Error al guardar."));
     } finally { setSaving(false); }
   };
 

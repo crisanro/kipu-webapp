@@ -6,7 +6,8 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Copy, FileText, KeyRound, Loader2, MessageCircle, Send, Upload } from "lucide-react";
 import api from "@/lib/api";
-import { caja, campo, detalle, Etiqueta, fecha, Vence, type Yo } from "../_comun";
+import { caja, campo, Etiqueta, fecha, Vence, type Yo } from "../_comun";
+import { detalleError } from "@/lib/errores";
 
 interface Gestion {
   id: number; tipo: string; nombre: string; estado: string; vencimiento: string; dias: number;
@@ -52,7 +53,7 @@ function FilaGestion({ g, emisorId, alCambiar }: { g: Gestion; emisorId: number;
       setModo("");
       alCambiar();
     } catch (err: unknown) {
-      setError(detalle(err, "No se pudo guardar."));
+      setError(detalleError(err, "No se pudo guardar."));
     } finally {
       setEnviando(false);
     }
@@ -71,7 +72,7 @@ function FilaGestion({ g, emisorId, alCambiar }: { g: Gestion; emisorId: number;
       const r = await api.get(`${base}/comprobante`);
       window.open(r.data.url, "_blank", "noopener");
     } catch (err: unknown) {
-      setError(detalle(err, "No se pudo abrir el comprobante."));
+      setError(detalleError(err, "No se pudo abrir el comprobante."));
     }
   };
 
@@ -207,7 +208,7 @@ function VerClave({ emisorId, alVer }: { emisorId: number; alVer: () => void }) 
       setMotivo("");
       alVer();
     } catch (err: unknown) {
-      setError(detalle(err, "No se pudo ver la clave."));
+      setError(detalleError(err, "No se pudo ver la clave."));
     }
   };
 
@@ -270,7 +271,7 @@ function Asignar({ emisorId, alCambiar }: { emisorId: number; alCambiar: () => v
       setMotivo("");
       alCambiar();
     } catch (err: unknown) {
-      setError(detalle(err, "No se pudo asignar."));
+      setError(detalleError(err, "No se pudo asignar."));
     }
   };
 
@@ -304,7 +305,7 @@ export default function ClienteAlDiaPage() {
       const r = await api.get(`/api/v1/admin/al-dia/clientes/${emisorId}`);
       setD(r.data.data);
     } catch (err: unknown) {
-      setError(detalle(err, "No pudimos cargar el cliente."));
+      setError(detalleError(err, "No pudimos cargar el cliente."));
     }
   }, [emisorId]);
 
@@ -316,7 +317,7 @@ export default function ClienteAlDiaPage() {
         if (!vivo) return;
         // Sin acceso (no es del equipo o el cliente no está asignado): a la lista
         if ((err as { response?: { status?: number } })?.response?.status === 403) router.replace("/equipo");
-        else setError(detalle(err, "No pudimos cargar el cliente."));
+        else setError(detalleError(err, "No pudimos cargar el cliente."));
       });
     return () => { vivo = false; };
   }, [emisorId, router]);

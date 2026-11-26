@@ -4,16 +4,12 @@ import { useConfirmar } from "@/components/ui/Confirmar";
 import { useEffect, useState } from "react";
 import { Eye, EyeOff, KeyRound, Loader2, Trash2 } from "lucide-react";
 import api from "@/lib/api";
+import { detalleError } from "@/lib/errores";
 
 interface Acceso { accion: "GUARDAR" | "VER" | "BORRAR"; motivo: string; quien: string; fecha: string }
 interface EstadoClave { guardada: boolean; actualizada_at: string | null; accesos: Acceso[] }
 
 const ACCION: Record<Acceso["accion"], string> = { GUARDAR: "Guardó", VER: "Usó", BORRAR: "Borró" };
-
-function detalle(err: unknown, porDefecto: string): string {
-  const d = (err as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail;
-  return typeof d === "string" ? d : porDefecto;
-}
 
 /**
  * Clave del portal del SRI para que el equipo de Kipu declare por el cliente.
@@ -35,7 +31,7 @@ export default function ClaveSri() {
     let vivo = true;
     traer()
       .then(d => { if (vivo) setEstado(d); })
-      .catch((err: unknown) => { if (vivo) setError(detalle(err, "No pudimos cargar tu clave del SRI.")); });
+      .catch((err: unknown) => { if (vivo) setError(detalleError(err, "No pudimos cargar tu clave del SRI.")); });
     return () => { vivo = false; };
   }, []);
 
@@ -55,7 +51,7 @@ export default function ClaveSri() {
       setAviso("Guardada. Ya podemos presentar tus declaraciones.");
       setEstado(await traer());
     } catch (err: unknown) {
-      setError(detalle(err, "No pudimos guardar la clave."));
+      setError(detalleError(err, "No pudimos guardar la clave."));
     } finally {
       setEnviando(false);
     }
@@ -74,7 +70,7 @@ export default function ClaveSri() {
       setAviso("Borramos tu clave. Te recomendamos cambiarla en el portal del SRI.");
       setEstado(await traer());
     } catch (err: unknown) {
-      setError(detalle(err, "No pudimos borrar la clave."));
+      setError(detalleError(err, "No pudimos borrar la clave."));
     } finally {
       setEnviando(false);
     }

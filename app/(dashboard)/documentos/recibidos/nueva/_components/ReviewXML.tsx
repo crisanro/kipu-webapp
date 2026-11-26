@@ -4,6 +4,7 @@ import api from "@/lib/api";
 import {
   X, ChevronDown, ChevronUp, FileText, Link2, AlertTriangle,
 } from "lucide-react";
+import { detalleError } from "@/lib/errores";
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 export interface ItemDetalle {
@@ -128,8 +129,7 @@ export default function ReviewXML({ parsed, xmlFile, onBack, onDone, suscripcion
       await api.patch(`/api/v1/app/recibidos/${docId}`, payload);
       onDone();
     } catch (err: any) {
-      const detail = err?.response?.data?.detail;
-      setError(typeof detail === "string" ? detail : "Error al guardar.");
+      setError(detalleError(err, "Error al guardar."));
     } finally { setSaving(false); }
   };
 

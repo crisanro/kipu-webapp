@@ -28,6 +28,7 @@ import { Esqueleto, EsqueletoFilas } from "@/components/ui/Esqueleto";
 import { InsigniaEstado, InsigniaSri } from "@/components/ui/InsigniaEstado";
 import { etiquetaPeriodo } from "@/components/ui/PeriodoFechas";
 import { cn } from "@/components/ui/cn";
+import { detalleError } from "@/lib/errores";
 
 // "Emitir retención": misma regla que el menú (DashboardNav). Sin retenciones activadas no
 // aparece; sin Kipu Pro / Al Día va con candado y lleva a planes (en la app no aparece).
@@ -77,8 +78,7 @@ function ModalClasificacion({ doc, onClose, onSaved }: {
       onSaved();
       onClose();
     } catch (err: any) {
-      const detalle = err?.response?.data?.detail;
-      setError(typeof detalle === "string" ? detalle : "Error al guardar.");
+      setError(detalleError(err, "Error al guardar."));
     } finally { setSaving(false); }
   };
 

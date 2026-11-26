@@ -17,6 +17,7 @@ import { ES_APP_NATIVA } from "@/lib/plataforma";
 
 // Contacto de ventas (transferencia, cambio de plan): el mismo número configurado
 import { WHATSAPP_SOPORTE as SOPORTE_WA, enlaceWhatsAppAlDia } from "@/lib/soporte";
+import { detalleError } from "@/lib/errores";
 
 interface Estado {
   disponible:           boolean;
@@ -39,11 +40,6 @@ interface Estado {
   cancel_at_period_end: boolean;
 }
 interface Terminos { version: string; texto: string; hash: string }
-
-function detalle(err: unknown, porDefecto: string): string {
-  const d = (err as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail;
-  return typeof d === "string" ? d : porDefecto;
-}
 
 export default function KipuAlDiaPage() {
   // Contratar y gestionar el pago es solo del administrador (igual que en el backend)
@@ -75,7 +71,7 @@ export default function KipuAlDiaPage() {
       setEstado(e.data.data);
       setTerminos(t.data.data);
     } catch (err: unknown) {
-      setError(detalle(err, "No pudimos cargar Kipu Al Día. Intenta de nuevo."));
+      setError(detalleError(err, "No pudimos cargar Kipu Al Día. Intenta de nuevo."));
     }
   }, []);
 
@@ -87,7 +83,7 @@ export default function KipuAlDiaPage() {
         setEstado(e.data.data);
         setTerminos(t.data.data);
       })
-      .catch((err: unknown) => { if (vivo) setError(detalle(err, "No pudimos cargar Kipu Al Día. Intenta de nuevo.")); })
+      .catch((err: unknown) => { if (vivo) setError(detalleError(err, "No pudimos cargar Kipu Al Día. Intenta de nuevo.")); })
       .finally(() => { if (vivo) setCargando(false); });
     return () => { vivo = false; };
   }, []);
@@ -127,7 +123,7 @@ export default function KipuAlDiaPage() {
       await abrirExterno(r.data.checkout_url, { mismaPestana: true, alCerrar: () => void cargar() });
       if (esNativo()) setEnviando(false);
     } catch (err: unknown) {
-      setError(detalle(err, "No pudimos continuar al pago. Intenta de nuevo."));
+      setError(detalleError(err, "No pudimos continuar al pago. Intenta de nuevo."));
       setEnviando(false);
       void cargar();
     }
@@ -138,7 +134,7 @@ export default function KipuAlDiaPage() {
       const r = await api.post(`/api/v1/app/suscripcion/portal?volver=al-dia${ES_APP_NATIVA ? "&desde_app=true" : ""}`);
       await abrirExterno(r.data.portal_url, { mismaPestana: true, alCerrar: () => void cargar() });
     } catch (err: unknown) {
-      setError(detalle(err, "No pudimos abrir la gestión del pago."));
+      setError(detalleError(err, "No pudimos abrir la gestión del pago."));
     }
   };
 

@@ -28,6 +28,7 @@ import {
   ArrowLeft, Save, Ban, AlertTriangle, Wallet, Calendar, FileText,
   ArrowUpCircle, ArrowDownCircle, MoreVertical,
 } from "lucide-react";
+import { detalleError } from "@/lib/errores";
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 const fmt   = (n: number) => `$${n.toFixed(2)}`;
@@ -114,8 +115,7 @@ function DetalleCuenta({ id }: { id: string }) {
       setAbonoForm({ monto: "", fecha: hoyEC(), forma_pago: "EFECTIVO", notas: "" });
       avisos.exito("Abono registrado");
     } catch (err: any) {
-      const detalle = err?.response?.data?.detail;
-      setError(typeof detalle === "string" ? detalle : "Error al registrar el abono.");
+      setError(detalleError(err, "Error al registrar el abono."));
     } finally {
       setSavingAbono(false);
     }
@@ -138,8 +138,7 @@ function DetalleCuenta({ id }: { id: string }) {
       setAjusteForm({ monto: "", motivo: "", fecha: hoyEC() });
       avisos.exito("Ajuste aplicado");
     } catch (err: any) {
-      const detalle = err?.response?.data?.detail;
-      setError(typeof detalle === "string" ? detalle : "Error al registrar el ajuste.");
+      setError(detalleError(err, "Error al registrar el ajuste."));
     } finally {
       setSavingAjuste(false);
     }
@@ -157,8 +156,7 @@ function DetalleCuenta({ id }: { id: string }) {
       await cargar();
       avisos.info("Cuenta anulada");
     } catch (err: any) {
-      const detalle = err?.response?.data?.detail;
-      avisos.error(typeof detalle === "string" ? detalle : "Error al anular.");
+      avisos.error(detalleError(err, "Error al anular."));
     }
   };
 
