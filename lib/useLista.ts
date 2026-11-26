@@ -84,18 +84,20 @@ export function useFiltrosUrl<F extends Record<string, string>>(porDefecto: F) {
  * Búsqueda que filtra al instante mientras se escribe y queda en la URL (?q=)
  * al dejar de escribir: al volver del detalle sigue ahí (antes se perdía).
  *   const [query, setQuery] = useBusquedaUrl();
+ *   useBusquedaUrl("q", { page: "" })   // al buscar, además vuelve a la página 1
  * Como useFiltrosUrl, necesita un <Suspense> encima (useSearchParams).
  */
-export function useBusquedaUrl(clave = "q", esperaMs = 400) {
+export function useBusquedaUrl(clave = "q", ademas?: Record<string, string>, esperaMs = 400) {
   const [filtros, cambiar] = useFiltrosUrl({ [clave]: "" } as Record<string, string>);
   const [texto, setTexto]  = useState(filtros[clave]);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => () => clearTimeout(timer.current), []);
+  const extra = useRef(ademas);
 
   const escribir = useCallback((valor: string) => {
     setTexto(valor);
     clearTimeout(timer.current);
-    timer.current = setTimeout(() => cambiar({ [clave]: valor.trim() }), esperaMs);
+    timer.current = setTimeout(() => cambiar({ [clave]: valor.trim(), ...extra.current }), esperaMs);
   }, [cambiar, clave, esperaMs]);
 
   return [texto, escribir] as const;

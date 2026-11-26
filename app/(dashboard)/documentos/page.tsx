@@ -1,18 +1,18 @@
 "use client";
 import { rutas } from "@/lib/rutas";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useSandboxStore } from "@/store/sandbox.store";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { usePermiso } from "@/hooks/usePermiso";
 import SinAcceso from "@/components/SinAcceso";
-import { useLista, useFiltrosUrl } from "@/lib/useLista";
+import { useLista, useFiltrosUrl, useBusquedaUrl } from "@/lib/useLista";
 import { SegmentosDocumentos } from "@/components/shell/BarraPestanas";
-import { hoyEC, inicioMesEC } from "@/lib/fecha";
 import {
-  Search, Plus, FileText, RefreshCw, ChevronDown, ChevronUp,
-  TrendingUp, FlaskConical, ChevronLeft, ChevronRight
+  Search, Plus, FileText, ChevronDown, ChevronUp, TrendingUp, FlaskConical,
 } from "lucide-react";
+import Paginacion, { type InfoPaginacion } from "@/components/ui/Paginacion";
+import { AvisoRango, AyudaAtajos, BotonActualizar, useNavegacionLista, usePeriodo } from "./_comun";
 import FilaLista, { GrupoFilas } from "@/components/ui/FilaLista";
 import { InsigniaSri, InsigniaCobro } from "@/components/ui/InsigniaEstado";
 import { EsqueletoFilas } from "@/components/ui/Esqueleto";
@@ -24,7 +24,6 @@ import { Entrada } from "@/components/ui/Campo";
 import { clasesBoton } from "@/components/ui/Boton";
 import PanelDetalle from "@/components/ui/PanelDetalle";
 import { cn } from "@/components/ui/cn";
-import { useAtajos } from "@/lib/useAtajos";
 import DetalleDocumento from "./ver/components/DetalleDocumento";
 import { ESTADOS_SRI, TIPOS_COMPROBANTE, tipoComprobante } from "@/lib/estados";
 import { dosDecimales } from "@/lib/dinero";
@@ -44,15 +43,6 @@ interface Documento {
   estado_cobro:  string | null;
 }
 
-interface PaginationInfo {
-  page:        number;
-  limit:       number;
-  total_items: number;
-  total_pages: number;
-  has_next:    boolean;
-  has_prev:    boolean;
-}
-
 // Chips de filtro (las etiquetas salen de lib/estados.ts)
 const ESTADOS_FILTRO = ["TODOS", "AUTORIZADO", "RECIBIDA", "DEVUELTA", "RECHAZADO", "ANULADO"]
   .map(v => ({ valor: v, etiqueta: v === "TODOS" ? "Todos" : ESTADOS_SRI[v]?.etiqueta ?? v }));
@@ -61,22 +51,6 @@ const TIPOS_FILTRO = ["TODOS", "FAC", "NCR", "NDB", "RET", "LIQ"]
 
 // Estos tipos llevan estado de cobro
 const CON_COBRO = ["FAC", "LIQ", "NDB"];
-
-// Lista y detalle lado a lado desde este ancho (components/ui/PanelDetalle.tsx)
-const ANCHO_PANEL = "(min-width: 1280px)";
-
-// ── Storage helpers ────────────────────────────────────────────────────────────
-const SS_KEY_INICIO = "kipu_emitidos_fecha_inicio";
-const SS_KEY_FIN    = "kipu_emitidos_fecha_fin";
-
-// Sin fechas guardadas en la sesión: el mes en curso (solo hoy casi siempre salía vacío)
-function leerFecha(key: string, porDefecto: string): string {
-  try { return sessionStorage.getItem(key) || porDefecto; }
-  catch { return porDefecto; }
-}
-function guardarFecha(key: string, val: string) {
-  try { sessionStorage.setItem(key, val); } catch {}
-}
 
 // ── Componente ResumenTipoCard ─────────────────────────────────────────────────
 const COLOR_MAP: Record<string, { color: string; bg: string }> = {
@@ -150,7 +124,6 @@ function ResumenTipoCard({ tipo, label, color, data }: {
 export default function HistorialPage() {
   const puedeVer = usePermiso("descargar");
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   const [resumenOpen,  setResumenOpen]  = useState(false);
   // Búsqueda, filtros y página en la URL: al volver de un comprobante la lista
@@ -162,29 +135,18 @@ export default function HistorialPage() {
   const filtroTipo   = filtros.tipo;
   const page         = Math.max(1, Number(filtros.page) || 1);
   const irAPagina    = (n: number) => cambiarFiltros({ page: String(n) });
-  const [query,        setQuery]        = useState(filtros.q);   // lo que se escribe (se busca 400 ms después)
-  const debounceRef                     = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [query, cambiarQuery] = useBusquedaUrl("q", { page: "" });   // se busca 400 ms después
+  const periodo = usePeriodo("emitidos", () => irAPagina(1));
 
   const { activo: sandboxGlobal } = useSandboxStore();
   const [sandbox, setSandbox]     = useState(sandboxGlobal);
-
-  // Período: el de la URL (?fecha_inicio=), el de la sesión o el mes en curso
-  const [fechaInicio, setFechaInicio] = useState<string>(() =>
-    searchParams.get("fecha_inicio") || leerFecha(SS_KEY_INICIO, inicioMesEC()));
-  const [fechaFin, setFechaFin] = useState<string>(() =>
-    searchParams.get("fecha_fin") || leerFecha(SS_KEY_FIN, hoyEC()));
-
   useEffect(() => { setSandbox(sandboxGlobal); }, [sandboxGlobal]);
-
-  const diasRango = fechaInicio && fechaFin
-    ? Math.ceil((new Date(fechaFin).getTime() - new Date(fechaInicio).getTime()) / (1000 * 60 * 60 * 24))
-    : 0;
 
   // Lista paginada (25 por página) y resumen fiscal del rango: con caché, al
   // volver aparecen al instante y se actualizan por detrás (lib/useLista.ts)
   const paramsFechas = new URLSearchParams();
-  if (fechaInicio) paramsFechas.append("fecha_inicio", fechaInicio);
-  if (fechaFin)    paramsFechas.append("fecha_fin",    fechaFin);
+  if (periodo.inicio) paramsFechas.append("fecha_inicio", periodo.inicio);
+  if (periodo.fin)    paramsFechas.append("fecha_fin",    periodo.fin);
   const paramsLista = new URLSearchParams(paramsFechas);
   if (sandbox)     paramsLista.append("sandbox", "true");
   if (queryActivo) paramsLista.append("q",       queryActivo);
@@ -193,11 +155,10 @@ export default function HistorialPage() {
   paramsLista.append("page",  String(page));
   paramsLista.append("limit", "25");
 
-  const rangoValido = diasRango <= 365;
-  const lista = useLista<{ data?: Documento[]; pagination?: PaginationInfo | null }>(
-    rangoValido ? `/api/v1/app/documentos?${paramsLista.toString()}` : null);
+  const lista = useLista<{ data?: Documento[]; pagination?: InfoPaginacion | null }>(
+    periodo.valido ? `/api/v1/app/documentos?${paramsLista.toString()}` : null);
   const resumenLista = useLista<{ data?: any }>(
-    rangoValido ? `/api/v1/app/documentos/resumen?${paramsFechas.toString()}` : null);
+    periodo.valido ? `/api/v1/app/documentos/resumen?${paramsFechas.toString()}` : null);
 
   const documentos = lista.datos?.data ?? [];
   const pagination = lista.datos?.pagination ?? null;
@@ -205,51 +166,16 @@ export default function HistorialPage() {
   const resumen    = resumenLista.datos?.data ?? null;
   const recargarTodo = () => Promise.all([lista.recargar(), resumenLista.recargar()]);
 
-  const cambiarQuery = (val: string) => {
-    setQuery(val);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => cambiarFiltros({ q: val.trim(), page: "1" }), 400);
-  };
-  useEffect(() => () => { if (debounceRef.current) clearTimeout(debounceRef.current); }, []);
-
   // ── Compu: panel de detalle y atajos de teclado ──────────────────────────────
   const sel = filtros.sel;
-  const buscadorRef = useRef<HTMLInputElement>(null);
-  const filasRef    = useRef<Map<string, HTMLTableRowElement>>(new Map());
-  const [marcada, setMarcada] = useState(-1);   // fila marcada con j/k (-1: ninguna)
-
-  // Desde 1280 px se abre en el panel; más angosto, la pantalla del detalle
-  const abrir = (id: string) => {
-    if (window.matchMedia(ANCHO_PANEL).matches) cambiarFiltros({ sel: id });
-    else router.push(rutas.documento(id));
-  };
-  const mover = (paso: number) => {
-    if (documentos.length === 0) return;
-    const actual = marcada >= 0 ? marcada : documentos.findIndex(d => d.id === sel);
-    const nueva  = Math.min(documentos.length - 1, Math.max(0, actual + paso));
-    setMarcada(nueva);
-    const doc = documentos[nueva];
-    filasRef.current.get(doc.id)?.scrollIntoView({ block: "nearest" });
-    // Con el panel abierto, el detalle sigue a la fila marcada
-    if (sel && window.matchMedia(ANCHO_PANEL).matches) cambiarFiltros({ sel: doc.id });
-  };
-  useAtajos({
-    "/":         () => buscadorRef.current?.focus(),
-    "n":         () => router.push("/documentos/emitir/fac"),
-    "j":         () => mover(1),  "ArrowDown": () => mover(1),
-    "k":         () => mover(-1), "ArrowUp":   () => mover(-1),
-    "Enter":     () => { const d = documentos[marcada]; if (d) abrir(d.id); },
-    "Escape":    () => { if (sel) cambiarFiltros({ sel: "" }); else setMarcada(-1); },
-  }, true, { n: "Nueva factura" });
-
-  // Nuevo período (PeriodoFechas): se recuerda en la sesión y vuelve a la página 1
-  const cambiarPeriodo = (inicio: string, fin: string) => {
-    guardarFecha(SS_KEY_INICIO, inicio);
-    guardarFecha(SS_KEY_FIN, fin);
-    setFechaInicio(inicio);
-    setFechaFin(fin);
-    irAPagina(1);
-  };
+  const { buscadorRef, marcada, setMarcada, abrir, refFila } = useNavegacionLista({
+    ids:        documentos.map(d => d.id),
+    sel,
+    cambiarSel: (id) => cambiarFiltros({ sel: id }),
+    rutaDe:     rutas.documento,
+    nuevo:      () => router.push("/documentos/emitir/fac"),
+    textoNuevo: "Nueva factura",
+  });
 
   if (!puedeVer) return <SinAcceso />;
 
@@ -272,7 +198,7 @@ export default function HistorialPage() {
             {pagination ? `${pagination.total_items} comprobantes encontrados` : `${documentos.length} comprobantes`}
           </p>
         </div>
-        <PeriodoFechas inicio={fechaInicio} fin={fechaFin} onCambio={cambiarPeriodo} className="mr-auto lg:mr-0" />
+        <PeriodoFechas inicio={periodo.inicio} fin={periodo.fin} onCambio={periodo.cambiar} className="mr-auto lg:mr-0" />
         <button
           onClick={() => { irAPagina(1); setSandbox(!sandbox); }}
           aria-pressed={sandbox}
@@ -282,16 +208,8 @@ export default function HistorialPage() {
           <FlaskConical size={14} aria-hidden />
           {sandbox ? "Sandbox" : "Producción"}
         </button>
-        <button
-          onClick={() => void recargarTodo()}
-          disabled={diasRango > 365}
-          aria-label="Actualizar"
-          title="Actualizar"
-          className="inline-flex size-9 items-center justify-center rounded-full border border-borde bg-superficie text-tenue transition-colors hover:text-texto disabled:opacity-40 tactil:size-10"
-        >
-          {/* Gira mientras se actualiza por detrás (la lista guardada sigue a la vista) */}
-          <RefreshCw size={16} className={lista.actualizando || resumenLista.actualizando ? "animate-spin" : undefined} />
-        </button>
+        <BotonActualizar onClick={() => void recargarTodo()} deshabilitado={!periodo.valido}
+                         girando={lista.actualizando || resumenLista.actualizando} />
         <Link href="/documentos/emitir/fac" className={`${clasesBoton("principal", "md")} hidden lg:inline-flex`}>
           <Plus size={16} aria-hidden /> Nueva
         </Link>
@@ -307,11 +225,7 @@ export default function HistorialPage() {
         ref={buscadorRef}
       />
 
-      {diasRango > 365 && (
-        <p className="text-xs font-medium text-alerta-texto">
-          El rango máximo de consulta es de 365 días (1 año).
-        </p>
-      )}
+      <AvisoRango valido={periodo.valido} />
 
       {/* Resumen fiscal */}
       {!sandbox && tieneResumen && (
@@ -464,7 +378,7 @@ export default function HistorialPage() {
                   {documentos.map((d, i) => (
                     <tr
                       key={d.id}
-                      ref={el => { if (el) filasRef.current.set(d.id, el); else filasRef.current.delete(d.id); }}
+                      ref={refFila(d.id)}
                       onClick={() => { setMarcada(i); abrir(d.id); }}
                       aria-selected={d.id === sel || undefined}
                       className={cn(
@@ -522,59 +436,8 @@ export default function HistorialPage() {
         </>
       )}
 
-      {/* Barra de Controles de Paginación */}
-      {pagination && pagination.total_pages > 1 && (
-        <div
-          className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 rounded-xl"
-          style={{
-            background: "var(--kipu-surface)",
-            border: "1px solid var(--kipu-border)",
-          }}
-        >
-          <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
-            Mostrando <span className="font-semibold" style={{ color: "var(--kipu-text)" }}>{documentos.length}</span> de{" "}
-            <span className="font-semibold" style={{ color: "var(--kipu-text)" }}>{pagination.total_items}</span> comprobantes
-          </p>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => irAPagina(Math.max(page - 1, 1))}
-              disabled={!pagination.has_prev || loading}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors disabled:opacity-40"
-              style={{
-                background: "var(--kipu-surface)",
-                border: "1px solid var(--kipu-border)",
-                color: "var(--kipu-text)",
-              }}
-            >
-              <ChevronLeft size={14} /> Anterior
-            </button>
-            <span className="text-xs font-medium px-2" style={{ color: "var(--kipu-subtle)" }}>
-              Página {pagination.page} de {pagination.total_pages}
-            </span>
-            <button
-              type="button"
-              onClick={() => irAPagina(Math.min(page + 1, pagination.total_pages))}
-              disabled={!pagination.has_next || loading}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors disabled:opacity-40"
-              style={{
-                background: "var(--kipu-surface)",
-                border: "1px solid var(--kipu-border)",
-                color: "var(--kipu-text)",
-              }}
-            >
-              Siguiente <ChevronRight size={14} />
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Compu con mouse: los atajos, a la vista */}
-      <p className="hidden text-center text-[11px] text-sutil raton:lg:block">
-        Atajos: <kbd className="font-mono">/</kbd> buscar · <kbd className="font-mono">n</kbd> nueva factura ·{" "}
-        <kbd className="font-mono">j</kbd> <kbd className="font-mono">k</kbd> moverse · <kbd className="font-mono">Enter</kbd> abrir ·{" "}
-        <kbd className="font-mono">Esc</kbd> cerrar
-      </p>
+      <Paginacion info={pagination} enPantalla={documentos.length} cargando={loading} onCambio={irAPagina} />
+      <AyudaAtajos nuevo="nueva factura" />
     </div>
 
     {/* Compu (1280 px o más): el comprobante elegido, a la derecha */}
