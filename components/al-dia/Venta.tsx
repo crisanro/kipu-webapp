@@ -42,17 +42,16 @@ export function CajaHero({ icono, nombre, children }: { icono: ReactNode; nombre
 export function PasosNumerados({ pasos }: { pasos: { titulo: string; texto: string }[] }) {
   return (
     <section className="space-y-3">
-      <h2 className="text-lg font-bold" style={{ color: "var(--kipu-text)" }}>Cómo funciona</h2>
+      <h2 className="text-lg font-bold text-texto">Cómo funciona</h2>
       <ol className="grid sm:grid-cols-2 gap-3">
         {pasos.map((p, i) => (
           <li key={p.titulo} className="rounded-xl p-4 flex gap-3" style={caja}>
-            <span className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-sm font-bold"
-                  style={{ color: "var(--kipu-accent)", background: "color-mix(in srgb, var(--kipu-accent) 12%, transparent)" }}>
+            <span className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-sm font-bold text-acento bg-acento-suave">
               {i + 1}
             </span>
             <div>
-              <p className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>{p.titulo}</p>
-              <p className="text-xs mt-0.5" style={{ color: "var(--kipu-muted)" }}>{p.texto}</p>
+              <p className="text-sm font-semibold text-texto">{p.titulo}</p>
+              <p className="text-xs mt-0.5 text-tenue">{p.texto}</p>
             </div>
           </li>
         ))}
@@ -67,7 +66,7 @@ export function ListaConMarca({ items, incluido }: { items: string[]; incluido: 
   return (
     <ul className="space-y-2">
       {items.map((t) => (
-        <li key={t} className="flex gap-2 text-sm" style={{ color: "var(--kipu-text)" }}>
+        <li key={t} className="flex gap-2 text-sm text-texto">
           <Marca size={15} className="shrink-0 mt-0.5"
                  style={{ color: incluido ? "var(--kipu-success)" : "var(--kipu-subtle)" }} /> {t}
         </li>
@@ -80,10 +79,10 @@ export function ListaConMarca({ items, incluido }: { items: string[]; incluido: 
 export function TarjetaInfo({ icono, titulo, children }: { icono: ReactNode; titulo: string; children: ReactNode }) {
   return (
     <div className="rounded-xl p-5 space-y-2" style={caja}>
-      <p className="flex items-center gap-2 text-base font-bold" style={{ color: "var(--kipu-text)" }}>
+      <p className="flex items-center gap-2 text-base font-bold text-texto">
         <span className="inline-flex text-acento">{icono}</span> {titulo}
       </p>
-      <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>{children}</p>
+      <p className="text-sm text-tenue">{children}</p>
     </div>
   );
 }
@@ -92,16 +91,15 @@ export function TarjetaInfo({ icono, titulo, children }: { icono: ReactNode; tit
 export function ListaPreguntas({ preguntas }: { preguntas: [string, string][] }) {
   return (
     <section className="space-y-3">
-      <h2 className="text-lg font-bold" style={{ color: "var(--kipu-text)" }}>Preguntas frecuentes</h2>
+      <h2 className="text-lg font-bold text-texto">Preguntas frecuentes</h2>
       <div className="rounded-xl overflow-hidden" style={caja}>
         {preguntas.map(([p, r], i) => (
           <details key={p} className="group px-4 py-3" style={{ borderTop: i ? "1px solid var(--kipu-border)" : "none" }}>
-            <summary className="text-sm font-medium list-none flex items-center justify-between gap-3"
-                     style={{ color: "var(--kipu-text)" }}>
+            <summary className="text-sm font-medium list-none flex items-center justify-between gap-3 text-texto">
               {p}
-              <span className="text-lg leading-none transition-transform group-open:rotate-45" style={{ color: "var(--kipu-subtle)" }}>+</span>
+              <span className="text-lg leading-none transition-transform group-open:rotate-45 text-sutil">+</span>
             </summary>
-            <p className="text-sm mt-2" style={{ color: "var(--kipu-muted)" }}>{r}</p>
+            <p className="text-sm mt-2 text-tenue">{r}</p>
           </details>
         ))}
       </div>
@@ -182,10 +180,10 @@ export function HeroAlDia({ precio, base = null, periodo = "MENSUAL", onContrata
           la web conserva su texto */}
       {ES_APP_NATIVA ? (
         <>
-          <h1 className="text-2xl md:text-3xl font-extrabold leading-tight" style={{ color: "var(--kipu-text)" }}>
+          <h1 className="text-2xl md:text-3xl font-extrabold leading-tight text-texto">
             Tú facturas.<br />Tu contador declara.
           </h1>
-          <p className="text-sm md:text-base max-w-xl" style={{ color: "var(--kipu-muted)" }}>
+          <p className="text-sm md:text-base max-w-xl text-tenue">
             Un contador del equipo de Kipu revisa cada mes tus ventas y compras, presenta tus
             declaraciones de IVA y renta en el SRI, revisa tu buzón del SRI y te responde por WhatsApp.
             Tú sigues con tu negocio.
@@ -193,10 +191,10 @@ export function HeroAlDia({ precio, base = null, periodo = "MENSUAL", onContrata
         </>
       ) : (
         <>
-          <h1 className="text-2xl md:text-3xl font-extrabold leading-tight" style={{ color: "var(--kipu-text)" }}>
+          <h1 className="text-2xl md:text-3xl font-extrabold leading-tight text-texto">
             Tú facturas.<br />Nosotros declaramos.
           </h1>
-          <p className="text-sm md:text-base max-w-xl" style={{ color: "var(--kipu-muted)" }}>
+          <p className="text-sm md:text-base max-w-xl text-tenue">
             Cada mes revisamos tus ventas y compras, te mandamos el resumen por WhatsApp y presentamos
             tus declaraciones de IVA y renta al SRI. Tú sigues con tu negocio.
           </p>
@@ -213,17 +211,17 @@ export function HeroAlDia({ precio, base = null, periodo = "MENSUAL", onContrata
       <div className="flex flex-wrap items-center gap-4 pt-1">
         {precio !== null ? (
           <div>
-            <span className="text-3xl font-extrabold" style={{ color: "var(--kipu-text)" }}>${precio.toFixed(2)}</span>
-            <span className="text-sm ml-1.5" style={{ color: "var(--kipu-muted)" }}>
+            <span className="text-3xl font-extrabold text-texto">${precio.toFixed(2)}</span>
+            <span className="text-sm ml-1.5 text-tenue">
               {periodo === "ANUAL" ? "al año" : "al mes"}, IVA incluido
             </span>
             {/* La base sin IVA, como en /planes */}
             {base !== null && (
-              <p className="text-xs mt-0.5" style={{ color: "var(--kipu-subtle)" }}>${base.toFixed(2)} + IVA</p>
+              <p className="text-xs mt-0.5 text-sutil">${base.toFixed(2)} + IVA</p>
             )}
           </div>
         ) : (
-          <span className="text-sm" style={{ color: "var(--kipu-subtle)" }}>
+          <span className="text-sm text-sutil">
             {periodo === "ANUAL" ? "Anual" : "Mensual"} · el precio lo ves al pagar
           </span>
         )}
@@ -234,7 +232,7 @@ export function HeroAlDia({ precio, base = null, periodo = "MENSUAL", onContrata
         </button>
       </div>
       )}
-      <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+      <p className="text-xs text-sutil">
         {/* En la app: el servicio del contador (Apple/Google: servicio profesional,
             no contenido digital), sin precios ni condiciones de pago */}
         {ES_APP_NATIVA
@@ -256,10 +254,10 @@ export function DemoAlDia({ ruc, semestral, enProduccion }: {
   return (
     <section className="space-y-3">
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-lg font-bold" style={{ color: "var(--kipu-text)" }}>Así se ve tu Kipu Al Día</h2>
+        <h2 className="text-lg font-bold text-texto">Así se ve tu Kipu Al Día</h2>
         <EtiquetaEjemplo />
       </div>
-      <p className="text-xs -mt-2" style={{ color: "var(--kipu-subtle)" }}>
+      <p className="text-xs -mt-2 text-sutil">
         {ventas
           ? "Con tu fecha de vencimiento del SRI y tus ventas reales del mes pasado. El historial es de ejemplo."
           : "Con tu fecha de vencimiento del SRI. Los valores y el historial son de ejemplo."}
@@ -268,11 +266,11 @@ export function DemoAlDia({ ruc, semestral, enProduccion }: {
       <div className="grid md:grid-cols-2 gap-3">
         {/* Próxima declaración */}
         <div className="rounded-xl p-4 space-y-2" style={caja}>
-          <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--kipu-subtle)" }}>
+          <p className="text-xs font-semibold uppercase tracking-wider text-sutil">
             Tu primera declaración si contratas hoy
           </p>
-          <p className="text-base font-bold" style={{ color: "var(--kipu-text)" }}>{proxima.nombre}</p>
-          <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>
+          <p className="text-base font-bold text-texto">{proxima.nombre}</p>
+          <p className="text-sm text-tenue">
             Vence el {proxima.vence.getDate()} de {MESES[proxima.vence.getMonth()]}
             {diasFaltan >= 0 && ` · en ${diasFaltan} día${diasFaltan !== 1 ? "s" : ""}`}
           </p>
@@ -286,7 +284,7 @@ export function DemoAlDia({ ruc, semestral, enProduccion }: {
             <Clock size={11} />
             {proxima.cerrado ? "En revisión por el equipo de Kipu" : "Lo vamos revisando; al cerrar el periodo te mandamos el resumen"}
           </span>
-          <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+          <p className="text-xs text-sutil">
             Las de meses anteriores no están incluidas: las presentas tú o, si nos avisas con tiempo,
             las hacemos como extra ($10 por periodo).
           </p>
@@ -294,7 +292,7 @@ export function DemoAlDia({ ruc, semestral, enProduccion }: {
 
         {/* Resumen por WhatsApp */}
         <div className="rounded-xl p-4 space-y-2" style={caja}>
-          <p className="text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5" style={{ color: "var(--kipu-subtle)" }}>
+          <p className="text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5 text-sutil">
             <MessageCircle size={12} /> Resumen que te llega por WhatsApp
           </p>
           <div className="rounded-xl rounded-tl-sm px-3 py-2.5 text-sm leading-relaxed"
@@ -320,20 +318,20 @@ export function DemoAlDia({ ruc, semestral, enProduccion }: {
 
       {/* Historial */}
       <div className="rounded-xl overflow-hidden" style={caja}>
-        <p className="text-xs font-semibold uppercase tracking-wider px-4 pt-3 pb-2" style={{ color: "var(--kipu-subtle)" }}>
+        <p className="text-xs font-semibold uppercase tracking-wider px-4 pt-3 pb-2 text-sutil">
           Historial
         </p>
         {[
           ...anteriores.map((p) => ({ nombre: p.nombre, fecha: new Date(p.vence.getTime() - 2 * 86400000) })),
           { nombre: `Impuesto a la renta ${anioRenta}`, fecha: new Date(anioRenta + 1, 2, 15) },
         ].map((h) => (
-          <div key={h.nombre} className="flex items-center gap-3 px-4 py-2.5" style={{ borderTop: "1px solid var(--kipu-border)" }}>
-            <CheckCircle2 size={16} style={{ color: "var(--kipu-success)" }} />
+          <div key={h.nombre} className="flex items-center gap-3 px-4 py-2.5 border-t border-borde">
+            <CheckCircle2 className="text-exito" size={16} />
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate" style={{ color: "var(--kipu-text)" }}>{h.nombre}</p>
-              <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Presentada el {fechaCorta(h.fecha)}</p>
+              <p className="text-sm font-medium truncate text-texto">{h.nombre}</p>
+              <p className="text-xs text-sutil">Presentada el {fechaCorta(h.fecha)}</p>
             </div>
-            <span className="text-xs font-medium flex items-center gap-1" style={{ color: "var(--kipu-accent)" }}>
+            <span className="text-xs font-medium flex items-center gap-1 text-acento">
               <FileCheck2 size={13} /> Comprobante
             </span>
           </div>
@@ -397,7 +395,7 @@ export function QueIncluye({ precioRenta = null }: { precioRenta?: number | null
   return (
     <section className="grid md:grid-cols-2 gap-3">
       <div className="rounded-xl p-5 space-y-3" style={caja}>
-        <h2 className="text-base font-bold" style={{ color: "var(--kipu-text)" }}>
+        <h2 className="text-base font-bold text-texto">
           {ES_APP_NATIVA ? "Qué hace tu contador" : "Qué incluye"}
         </h2>
         <ListaConMarca items={INCLUYE} incluido />
@@ -406,13 +404,13 @@ export function QueIncluye({ precioRenta = null }: { precioRenta?: number | null
             revisor leería como una compra de funciones fuera de la tienda */}
         {!ES_APP_NATIVA && (
           <>
-            <p className="text-xs font-semibold pt-1" style={{ color: "var(--kipu-accent)" }}>
+            <p className="text-xs font-semibold pt-1 text-acento">
               Y además, todo Kipu Pro:
             </p>
             <ul className="space-y-1.5">
               {SISTEMA.map((t) => (
-                <li key={t} className="flex gap-2 text-xs" style={{ color: "var(--kipu-muted)" }}>
-                  <CheckCircle2 size={13} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-accent)" }} /> {t}
+                <li key={t} className="flex gap-2 text-xs text-tenue">
+                  <CheckCircle2 size={13} className="shrink-0 mt-0.5 text-acento" /> {t}
                 </li>
               ))}
             </ul>
@@ -420,21 +418,21 @@ export function QueIncluye({ precioRenta = null }: { precioRenta?: number | null
         )}
       </div>
       <div className="rounded-xl p-5 space-y-3" style={caja}>
-        <h2 className="text-base font-bold" style={{ color: "var(--kipu-text)" }}>Aparte, solo si lo pides</h2>
-        <p className="text-xs" style={{ color: "var(--kipu-muted)" }}>
+        <h2 className="text-base font-bold text-texto">Aparte, solo si lo pides</h2>
+        <p className="text-xs text-tenue">
           Antes de empezar te confirmamos el precio y esperamos tu visto bueno. IVA incluido.
         </p>
         <ul className="space-y-2">
           {extras.map(([t, p]) => (
-            <li key={t} className="flex items-start justify-between gap-3 text-sm" style={{ color: "var(--kipu-text)" }}>
+            <li key={t} className="flex items-start justify-between gap-3 text-sm text-texto">
               <span className="flex gap-2">
-                <XCircle size={15} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-subtle)" }} /> {t}
+                <XCircle size={15} className="shrink-0 mt-0.5 text-sutil" /> {t}
               </span>
-              <span className="shrink-0 font-medium" style={{ color: "var(--kipu-muted)" }}>{p}</span>
+              <span className="shrink-0 font-medium text-tenue">{p}</span>
             </li>
           ))}
         </ul>
-        <p className="text-xs pt-1" style={{ color: "var(--kipu-subtle)" }}>
+        <p className="text-xs pt-1 text-sutil">
           Para personas naturales no obligadas a llevar contabilidad (régimen general o RIMPE Emprendedor).
         </p>
       </div>

@@ -152,17 +152,15 @@ export default function BarcodeScanner({ onScan, onClose }: Props) {
     // Sobre la Hoja: se abre desde formularios que ya están en una (p. ej. Nuevo producto)
     <div className="fixed inset-0 bg-black/80 z-(--capa-sobre-hoja) flex items-center justify-center p-4">
       <div
-        className="rounded-xl w-full max-w-sm overflow-hidden"
-        style={{ background: "var(--kipu-surface)", border: "1px solid var(--kipu-border)" }}
+        className="rounded-xl w-full max-w-sm overflow-hidden bg-superficie border border-borde"
       >
         {/* Encabezado */}
         <div
-          className="flex items-center justify-between px-4 py-3"
-          style={{ borderBottom: "1px solid var(--kipu-border)" }}
+          className="flex items-center justify-between px-4 py-3 border-b border-borde"
         >
           <div className="flex items-center gap-2">
-            <Camera size={16} style={{ color: "var(--kipu-accent)" }} />
-            <h3 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>
+            <Camera className="text-acento" size={16} />
+            <h3 className="text-sm font-semibold text-texto">
               Escanear código
             </h3>
           </div>
@@ -171,8 +169,7 @@ export default function BarcodeScanner({ onScan, onClose }: Props) {
               <button
                 type="button"
                 onClick={switchCamera}
-                className="p-1.5 rounded-lg transition-colors"
-                style={{ color: "var(--kipu-subtle)" }}
+                className="p-1.5 rounded-lg transition-colors text-sutil"
                 onMouseEnter={(e) => {
                   e.currentTarget.style.color = "var(--kipu-text)";
                   e.currentTarget.style.background = "var(--kipu-bg)";
@@ -200,8 +197,7 @@ export default function BarcodeScanner({ onScan, onClose }: Props) {
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 rounded-lg transition-colors"
-              style={{ color: "var(--kipu-subtle)" }}
+              className="p-1.5 rounded-lg transition-colors text-sutil"
               onMouseEnter={(e) => {
                 e.currentTarget.style.color = "var(--kipu-danger)";
                 e.currentTarget.style.background =
@@ -242,7 +238,7 @@ export default function BarcodeScanner({ onScan, onClose }: Props) {
               className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin"
               style={{ borderColor: "var(--kipu-accent)", borderTopColor: "transparent" }}
             />
-            <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+            <span className="text-xs text-sutil">
               Iniciando cámara...
             </span>
           </div>
@@ -250,18 +246,14 @@ export default function BarcodeScanner({ onScan, onClose }: Props) {
 
         {error && (
           <div
-            className="px-4 py-3 text-xs text-center"
-            style={{
-              color: "var(--kipu-danger)",
-              background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
-            }}
+            className="px-4 py-3 text-xs text-center text-peligro bg-peligro-suave"
           >
             {error}
           </div>
         )}
 
         <div className="px-4 py-3 text-center">
-          <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+          <p className="text-xs text-sutil">
             Centra el código dentro de la retícula
           </p>
           <p className="text-[10px] mt-1" style={{ color: "var(--kipu-subtle)" }}>

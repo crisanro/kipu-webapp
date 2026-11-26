@@ -79,10 +79,10 @@ export default function EliminarCuenta({ onCancelar }: { onCancelar?: () => void
   }, []);
 
   if (error && !resumen) {
-    return <p className="text-sm" style={{ color: "var(--kipu-danger)" }}>{error}</p>;
+    return <p className="text-sm text-peligro">{error}</p>;
   }
   if (!resumen) {
-    return <Loader2 size={18} className="animate-spin mx-auto" style={{ color: "var(--kipu-accent)" }} />;
+    return <Loader2 size={18} className="animate-spin mx-auto text-acento" />;
   }
 
   const fecha       = fechaLarga(resumen.fecha_eliminacion);
@@ -165,11 +165,9 @@ export default function EliminarCuenta({ onCancelar }: { onCancelar?: () => void
 
   return (
     <div className="space-y-4">
-      <div className="flex items-start gap-3 rounded-xl px-4 py-3"
-           style={{ background: "color-mix(in srgb, var(--kipu-danger) 8%, transparent)",
-                    border: "1px solid color-mix(in srgb, var(--kipu-danger) 25%, transparent)" }}>
-        <AlertTriangle size={16} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-danger)" }} />
-        <p className="text-sm" style={{ color: "var(--kipu-text)" }}>
+      <div className="flex items-start gap-3 rounded-xl px-4 py-3 bg-peligro/8 border border-peligro/25">
+        <AlertTriangle size={16} className="shrink-0 mt-0.5 text-peligro" />
+        <p className="text-sm text-texto">
           Tu cuenta se bloquea en este momento y el <strong>{fecha}</strong> borramos tus datos
           para siempre. Si cambias de opinión antes de esa fecha, escríbenos a soporte.
         </p>
@@ -177,7 +175,7 @@ export default function EliminarCuenta({ onCancelar }: { onCancelar?: () => void
 
       {resumen.empresas.length > 0 && (
         <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--kipu-subtle)" }}>
+          <p className="text-xs font-semibold uppercase tracking-wider text-sutil">
             Qué pasa con tus empresas
           </p>
           {resumen.empresas.map((e) => {
@@ -185,22 +183,22 @@ export default function EliminarCuenta({ onCancelar }: { onCancelar?: () => void
             const final = accionFinal(e);
             return (
               <div key={e.emisor_id} className="rounded-xl p-3 space-y-2" style={caja}>
-                <p className="flex items-center gap-2 text-sm font-medium" style={{ color: "var(--kipu-text)" }}>
-                  <Building2 size={14} style={{ color: "var(--kipu-subtle)" }} />
+                <p className="flex items-center gap-2 text-sm font-medium text-texto">
+                  <Building2 className="text-sutil" size={14} />
                   {e.razon_social}
-                  <span className="text-xs font-normal" style={{ color: "var(--kipu-subtle)" }}>{e.ruc}</span>
+                  <span className="text-xs font-normal text-sutil">{e.ruc}</span>
                 </p>
 
                 {e.accion === "SALIR" && (
-                  <p className="flex items-start gap-1.5 text-xs" style={{ color: "var(--kipu-muted)" }}>
+                  <p className="flex items-start gap-1.5 text-xs text-tenue">
                     <LogOut size={13} className="shrink-0 mt-px" />
                     Sales de esta empresa. Sigue funcionando para los demás usuarios.
                   </p>
                 )}
 
                 {e.accion === null && (
-                  <div className="space-y-2 text-xs" style={{ color: "var(--kipu-text)" }}>
-                    <p style={{ color: "var(--kipu-muted)" }}>
+                  <div className="space-y-2 text-xs text-texto">
+                    <p className="text-tenue">
                       Eres el único administrador y hay más usuarios. Elige qué pasa:
                     </p>
                     <label className="flex items-start gap-2 cursor-pointer">
@@ -236,7 +234,7 @@ export default function EliminarCuenta({ onCancelar }: { onCancelar?: () => void
                 )}
 
                 {final === "ELIMINAR" && (
-                  <div className="text-xs space-y-1" style={{ color: "var(--kipu-danger)" }}>
+                  <div className="text-xs space-y-1 text-peligro">
                     <p className="flex items-start gap-1.5">
                       <Trash2 size={13} className="shrink-0 mt-px" />
                       Se elimina con sus comprobantes (XML y PDF), clientes, productos, cuentas y reportes.
@@ -245,7 +243,7 @@ export default function EliminarCuenta({ onCancelar }: { onCancelar?: () => void
                     {e.suscripcion && (
                       <p className="pl-5">La suscripción de esta empresa se cancela hoy.</p>
                     )}
-                    <p className="pl-5" style={{ color: "var(--kipu-muted)" }}>
+                    <p className="pl-5 text-tenue">
                       Los comprobantes autorizados siguen disponibles en el SRI; recuerda que debes conservarlos.
                     </p>
                   </div>
@@ -268,25 +266,24 @@ export default function EliminarCuenta({ onCancelar }: { onCancelar?: () => void
         </button>
       )}
       {exportable && ES_APP_NATIVA && (
-        <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+        <p className="text-xs text-sutil">
           Si necesitas tus comprobantes en XML, descárgalos antes desde app.kipu.ec.
         </p>
       )}
 
-      <label className="flex items-start gap-2 text-sm cursor-pointer" style={{ color: "var(--kipu-text)" }}>
+      <label className="flex items-start gap-2 text-sm cursor-pointer text-texto">
         <input type="checkbox" className="mt-1" checked={entiendo} onChange={(e) => setEntiendo(e.target.checked)} />
         Entiendo que después del {fecha} no se puede recuperar nada.
       </label>
 
-      {error && <p className="text-xs" style={{ color: "var(--kipu-danger)" }}>{error}</p>}
+      {error && <p className="text-xs text-peligro">{error}</p>}
 
       <div className="flex gap-3">
         {onCancelar && (
           <button
             type="button"
             onClick={onCancelar}
-            className="flex-1 py-2.5 rounded-lg text-sm transition-colors"
-            style={{ border: "1px solid var(--kipu-border)", color: "var(--kipu-muted)" }}
+            className="flex-1 py-2.5 rounded-lg text-sm transition-colors border border-borde text-tenue"
           >
             Cancelar
           </button>
@@ -295,8 +292,7 @@ export default function EliminarCuenta({ onCancelar }: { onCancelar?: () => void
           type="button"
           disabled={!entiendo || faltaElegir || enviando}
           onClick={() => (resumen.requiere_pin ? setPaso("pin") : sinPin())}
-          className="flex-1 py-2.5 rounded-lg text-sm font-semibold text-white flex items-center justify-center gap-2 transition-opacity disabled:opacity-50"
-          style={{ background: "var(--kipu-danger)" }}
+          className="flex-1 py-2.5 rounded-lg text-sm font-semibold text-white flex items-center justify-center gap-2 transition-opacity disabled:opacity-50 bg-peligro"
         >
           {enviando && <Loader2 size={14} className="animate-spin" />}
           Eliminar mi cuenta

@@ -60,8 +60,8 @@ export default function PanelCliente({ soloHistorial = false }: { soloHistorial?
 
   if (!datos) {
     if (soloHistorial) return null;
-    return error ? <p className="text-sm" style={{ color: "var(--kipu-danger)" }}>{error}</p> : (
-      <div className="flex justify-center py-6"><Loader2 size={18} className="animate-spin" style={{ color: "var(--kipu-subtle)" }} /></div>
+    return error ? <p className="text-sm text-peligro">{error}</p> : (
+      <div className="flex justify-center py-6"><Loader2 size={18} className="animate-spin text-sutil" /></div>
     );
   }
   if (soloHistorial && datos.historial.length === 0) return null;
@@ -73,33 +73,32 @@ export default function PanelCliente({ soloHistorial = false }: { soloHistorial?
       {/* Lo que viene */}
       {!soloHistorial && (
         <section className="space-y-2">
-          <h2 className="text-sm font-semibold flex items-center gap-2" style={{ color: "var(--kipu-text)" }}>
-            <CalendarClock size={16} style={{ color: "var(--kipu-accent)" }} /> Lo que viene
+          <h2 className="text-sm font-semibold flex items-center gap-2 text-texto">
+            <CalendarClock className="text-acento" size={16} /> Lo que viene
           </h2>
           <div className="rounded-xl p-4 space-y-2" style={caja}>
             {p ? (
               <>
-                <p className="text-sm" style={{ color: "var(--kipu-text)" }}>
+                <p className="text-sm text-texto">
                   <strong className="capitalize">{p.nombre}</strong>:{" "}
                   {p.estado === "RESUMEN_ENVIADO"
                     ? <>te enviamos el resumen para que lo revises. La presentamos antes del <strong>{p.vencimiento_fmt}</strong>.</>
                     : <>la presentamos antes del <strong>{p.vencimiento_fmt}</strong>. Unos días antes te enviamos el resumen por WhatsApp para que lo revises.</>}
                 </p>
                 {p.estado === "RESUMEN_ENVIADO" && p.valor_a_pagar !== null && (
-                  <p className="text-sm" style={{ color: "var(--kipu-text)" }}>
+                  <p className="text-sm text-texto">
                     Valor a pagar: <strong>{dolares(p.valor_a_pagar)}</strong>. Si algo no está bien, respóndenos por WhatsApp.
                   </p>
                 )}
               </>
             ) : (
-              <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>
+              <p className="text-sm text-tenue">
                 Estás al día. La próxima declaración aparece aquí apenas empiece su periodo.
               </p>
             )}
             {!datos.clave_sri_guardada && (
-              <a href="#clave-sri" className="flex items-start gap-2 rounded-lg px-3 py-2 text-xs"
-                 style={{ background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)", color: "var(--kipu-text)" }}>
-                <AlertTriangle size={14} className="shrink-0 mt-px" style={{ color: "var(--kipu-danger)" }} />
+              <a href="#clave-sri" className="flex items-start gap-2 rounded-lg px-3 py-2 text-xs bg-peligro-suave text-texto">
+                <AlertTriangle size={14} className="shrink-0 mt-px text-peligro" />
                 <span><strong>Falta tu clave del SRI.</strong> Sin ella no podemos presentar tus declaraciones: guárdala abajo.</span>
               </a>
             )}
@@ -109,8 +108,8 @@ export default function PanelCliente({ soloHistorial = false }: { soloHistorial?
 
       {/* Historial */}
       <section className="space-y-2">
-        <h2 className="text-sm font-semibold flex items-center gap-2" style={{ color: "var(--kipu-text)" }}>
-          <FileText size={16} style={{ color: "var(--kipu-accent)" }} />
+        <h2 className="text-sm font-semibold flex items-center gap-2 text-texto">
+          <FileText className="text-acento" size={16} />
           {soloHistorial ? "Tus declaraciones con el equipo de Kipu" : "Tu historial"}
         </h2>
         {datos.historial.length === 0 ? (
@@ -122,14 +121,14 @@ export default function PanelCliente({ soloHistorial = false }: { soloHistorial?
             {datos.historial.map((g) => {
               const e = ESTADO[g.estado] ?? ESTADO.PENDIENTE;
               return (
-                <div key={g.id} className="p-4 space-y-1.5" style={{ borderColor: "var(--kipu-border)" }}>
+                <div key={g.id} className="p-4 space-y-1.5 border-borde">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-sm font-medium capitalize" style={{ color: "var(--kipu-text)" }}>{g.nombre}</p>
+                    <p className="text-sm font-medium capitalize text-texto">{g.nombre}</p>
                     <span className="inline-flex items-center gap-1 text-[11px] font-semibold" style={{ color: e.color }}>
                       <e.Icono size={12} /> {e.texto}
                     </span>
                   </div>
-                  <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+                  <p className="text-xs text-sutil">
                     {g.estado === "PRESENTADO" && g.presentado_at
                       ? `Presentada el ${dia(g.presentado_at)}`
                       : `Vence el ${g.vencimiento_fmt}`}
@@ -137,13 +136,11 @@ export default function PanelCliente({ soloHistorial = false }: { soloHistorial?
                     {g.numero_formulario && ` · formulario n.º ${g.numero_formulario}`}
                   </p>
                   {g.estado === "RESUMEN_ENVIADO" && g.resumen && (
-                    <p className="text-xs whitespace-pre-line rounded-md px-3 py-2"
-                       style={{ background: "var(--kipu-bg)", color: "var(--kipu-text)" }}>{g.resumen}</p>
+                    <p className="text-xs whitespace-pre-line rounded-md px-3 py-2 bg-fondo text-texto">{g.resumen}</p>
                   )}
                   {g.tiene_comprobante && (
                     <button type="button" onClick={() => descargar(g)} disabled={bajando === g.id}
-                            className="inline-flex items-center gap-1.5 text-xs font-semibold hover:underline underline-offset-2 disabled:opacity-60"
-                            style={{ color: "var(--kipu-accent)" }}>
+                            className="inline-flex items-center gap-1.5 text-xs font-semibold hover:underline underline-offset-2 disabled:opacity-60 text-acento">
                       {bajando === g.id ? <Loader2 size={12} className="animate-spin" /> : <Download size={12} />}
                       Descargar comprobante del SRI
                     </button>
@@ -153,7 +150,7 @@ export default function PanelCliente({ soloHistorial = false }: { soloHistorial?
             })}
           </div>
         )}
-        {error && <p className="text-xs" style={{ color: "var(--kipu-danger)" }}>{error}</p>}
+        {error && <p className="text-xs text-peligro">{error}</p>}
       </section>
     </div>
   );

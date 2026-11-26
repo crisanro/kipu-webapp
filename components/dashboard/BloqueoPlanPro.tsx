@@ -43,18 +43,16 @@ export default function BloqueoPlanPro({
       }}
     >
       <div
-        className="mx-auto w-11 h-11 rounded-full flex items-center justify-center"
-        style={{ background: "color-mix(in srgb, var(--kipu-accent) 15%, transparent)" }}
+        className="mx-auto w-11 h-11 rounded-full flex items-center justify-center bg-acento/15"
       >
-        <Lock size={20} style={{ color: "var(--kipu-accent)" }} />
+        <Lock className="text-acento" size={20} />
       </div>
-      <h2 className="text-base font-semibold" style={{ color: "var(--kipu-text)" }}>{titulo}</h2>
-      <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>{mensaje}</p>
+      <h2 className="text-base font-semibold text-texto">{titulo}</h2>
+      <p className="text-sm text-tenue">{mensaje}</p>
       {salida && (
         <Link
           href={salida.href}
-          className="inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-white text-sm font-medium"
-          style={{ background: "var(--kipu-accent)" }}
+          className="inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-white text-sm font-medium bg-acento"
         >
           {salida.label} <ArrowRight size={14} />
         </Link>

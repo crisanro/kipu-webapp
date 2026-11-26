@@ -88,22 +88,22 @@ export default function ClaveSri({ contratado = true }: { contratado?: boolean }
   return (
     <div id="clave-sri" className="rounded-xl p-5 space-y-4 scroll-mt-6" style={caja}>
       <div className="flex items-center gap-2">
-        <KeyRound size={18} style={{ color: "var(--kipu-accent)" }} />
-        <p className="font-semibold" style={{ color: "var(--kipu-text)" }}>Tu clave del SRI</p>
+        <KeyRound className="text-acento" size={18} />
+        <p className="font-semibold text-texto">Tu clave del SRI</p>
       </div>
 
-      {!estado && !error && <Loader2 size={18} className="animate-spin" style={{ color: "var(--kipu-subtle)" }} />}
+      {!estado && !error && <Loader2 size={18} className="animate-spin text-sutil" />}
 
       {estado?.guardada && !editando && (
         <div className="flex flex-wrap items-center justify-between gap-2">
           {estado.se_borra_el ? (
-            <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>
+            <p className="text-sm text-tenue">
               Tu servicio Kipu Al Día terminó: ya no usamos tu clave y la borraremos el{" "}
               {new Date(`${estado.se_borra_el}T12:00:00`).toLocaleDateString("es-EC")}. Si vuelves a contratar antes,
               no tendrás que ingresarla de nuevo. Si prefieres, bórrala ya.
             </p>
           ) : (
-            <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>
+            <p className="text-sm text-tenue">
               Guardada y cifrada
               {estado.actualizada_at && ` desde el ${new Date(estado.actualizada_at).toLocaleDateString("es-EC")}`}.
               Por seguridad no la mostramos aquí.
@@ -111,13 +111,12 @@ export default function ClaveSri({ contratado = true }: { contratado?: boolean }
           )}
           <div className="flex gap-3 text-sm">
             {!estado.se_borra_el && (
-              <button type="button" onClick={() => { setEditando(true); setAviso(""); }} className="underline"
-                      style={{ color: "var(--kipu-accent)" }}>
+              <button type="button" onClick={() => { setEditando(true); setAviso(""); }} className="underline text-acento">
                 La cambié
               </button>
             )}
             <button type="button" onClick={borrar} disabled={enviando}
-                    className="inline-flex items-center gap-1 underline disabled:opacity-50" style={{ color: "var(--kipu-danger)" }}>
+                    className="inline-flex items-center gap-1 underline disabled:opacity-50 text-peligro">
               <Trash2 size={13} /> Borrar
             </button>
           </div>
@@ -126,7 +125,7 @@ export default function ClaveSri({ contratado = true }: { contratado?: boolean }
 
       {mostrarFormulario && (
         <div className="space-y-2">
-          <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>
+          <p className="text-sm text-tenue">
             La necesitamos para descargar tus comprobantes y presentar tus declaraciones. Se guarda cifrada y
             solo la usa el equipo que atiende tu cuenta; cada uso queda registrado abajo.
           </p>
@@ -140,44 +139,41 @@ export default function ClaveSri({ contratado = true }: { contratado?: boolean }
                 placeholder="Clave del portal del SRI"
                 autoComplete="off"
                 maxLength={64}
-                className="w-full px-3 py-2.5 pr-10 rounded-lg text-sm focus:outline-none"
-                style={{ background: "var(--kipu-bg)", border: "1px solid var(--kipu-border)", color: "var(--kipu-text)" }}
+                className="w-full px-3 py-2.5 pr-10 rounded-lg text-sm focus:outline-none bg-fondo border border-borde text-texto"
               />
               <button type="button" onClick={() => setVer(!ver)} aria-label={ver ? "Ocultar clave" : "Mostrar clave"}
-                      className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: "var(--kipu-subtle)" }}>
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-sutil">
                 {ver ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
             <button type="button" onClick={guardar} disabled={enviando}
-                    className="px-4 rounded-lg text-white text-sm font-semibold disabled:opacity-50 flex items-center gap-1.5"
-                    style={{ background: "var(--kipu-accent)" }}>
+                    className="px-4 rounded-lg text-white text-sm font-semibold disabled:opacity-50 flex items-center gap-1.5 bg-acento">
               {enviando ? <Loader2 size={14} className="animate-spin" /> : null}
               Guardar
             </button>
           </div>
           {editando && (
-            <button type="button" onClick={() => { setEditando(false); setClave(""); }} className="text-xs underline"
-                    style={{ color: "var(--kipu-subtle)" }}>
+            <button type="button" onClick={() => { setEditando(false); setClave(""); }} className="text-xs underline text-sutil">
               Cancelar
             </button>
           )}
         </div>
       )}
 
-      {error && <p className="text-sm" style={{ color: "var(--kipu-danger)" }}>{error}</p>}
-      {aviso && <p className="text-sm" style={{ color: "var(--kipu-success)" }}>{aviso}</p>}
+      {error && <p className="text-sm text-peligro">{error}</p>}
+      {aviso && <p className="text-sm text-exito">{aviso}</p>}
 
       {estado && estado.accesos.length > 0 && (
         <div>
-          <p className="text-xs font-semibold mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Quién la usó</p>
-          <ul className="space-y-1 text-xs" style={{ color: "var(--kipu-muted)" }}>
+          <p className="text-xs font-semibold mb-1.5 text-sutil">Quién la usó</p>
+          <ul className="space-y-1 text-xs text-tenue">
             {estado.accesos.map((a, i) => (
               <li key={i} className="flex flex-wrap gap-x-2">
-                <span style={{ color: "var(--kipu-subtle)" }}>
+                <span className="text-sutil">
                   {new Date(a.fecha).toLocaleString("es-EC", { dateStyle: "short", timeStyle: "short" })}
                 </span>
                 <span>{a.quien} · {ACCION[a.accion] ?? a.accion}</span>
-                <span style={{ color: "var(--kipu-subtle)" }}>— {a.motivo}</span>
+                <span className="text-sutil">— {a.motivo}</span>
               </li>
             ))}
           </ul>

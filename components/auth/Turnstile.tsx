@@ -86,7 +86,7 @@ export default function Turnstile({ onToken }: { onToken: (token: string | null)
     <div className="flex flex-col items-center gap-1">
       <div ref={caja} />
       {fallo && (
-        <p className="text-xs text-center" style={{ color: "var(--kipu-danger)" }}>
+        <p className="text-xs text-center text-peligro">
           No se pudo cargar la verificación de seguridad. Revisa tu conexión y recarga la página.
         </p>
       )}

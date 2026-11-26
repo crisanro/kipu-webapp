@@ -145,14 +145,13 @@ export default function AuditoriaPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div
-            className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
-            style={{ background: "color-mix(in srgb, var(--kipu-accent) 20%, transparent)" }}
+            className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 bg-acento/20"
           >
-            <Shield size={18} style={{ color: "var(--kipu-accent)" }} />
+            <Shield className="text-acento" size={18} />
           </div>
           <div>
-            <h1 className="text-xl font-bold" style={{ color: "var(--kipu-text)" }}>Auditoría</h1>
-            <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>Historial de acciones en tu empresa</p>
+            <h1 className="text-xl font-bold text-texto">Auditoría</h1>
+            <p className="text-sm text-sutil">Historial de acciones en tu empresa</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -171,8 +170,7 @@ export default function AuditoriaPage() {
             <Filter size={16} />
             {hayFiltros && (
               <span
-                className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full"
-                style={{ background: "var(--kipu-accent)" }}
+                className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-acento"
               />
             )}
           </button>
@@ -180,8 +178,7 @@ export default function AuditoriaPage() {
             type="button"
             onClick={cargar}
             disabled={loading}
-            className="p-2 rounded-lg transition-colors disabled:opacity-40"
-            style={{ border: "1px solid var(--kipu-border)", color: "var(--kipu-subtle)" }}
+            className="p-2 rounded-lg transition-colors disabled:opacity-40 border border-borde text-sutil"
             onMouseEnter={e => { if (!loading) { e.currentTarget.style.color = "var(--kipu-text)"; e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 5%, transparent)"; } }}
             onMouseLeave={e => { if (!loading) { e.currentTarget.style.color = "var(--kipu-subtle)"; e.currentTarget.style.background = "transparent"; } }}
           >
@@ -197,16 +194,14 @@ export default function AuditoriaPage() {
       {/* Filtros */}
       {showFiltros && (
         <div
-          className="rounded-xl p-4 space-y-3"
-          style={{ background: "var(--kipu-surface)", border: "1px solid var(--kipu-border)" }}
+          className="rounded-xl p-4 space-y-3 bg-superficie border border-borde"
         >
           <div className="flex items-center justify-between">
-            <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--kipu-subtle)" }}>Filtros</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-sutil">Filtros</p>
             {hayFiltros && (
               <button
                 onClick={limpiarFiltros}
-                className="text-xs flex items-center gap-1 transition-colors"
-                style={{ color: "var(--kipu-danger)" }}
+                className="text-xs flex items-center gap-1 transition-colors text-peligro"
               >
                 <X size={12} /> Limpiar
               </button>
@@ -215,12 +210,11 @@ export default function AuditoriaPage() {
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {/* Acción */}
             <div>
-              <label className="block text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>Acción</label>
+              <label className="block text-xs mb-1 text-sutil">Acción</label>
               <select
                 value={accion}
                 onChange={e => setAccion(e.target.value)}
-                className="w-full rounded-lg px-3 py-2 text-sm outline-none"
-                style={{ background: "var(--kipu-bg)", border: "1px solid var(--kipu-border)", color: "var(--kipu-text)" }}
+                className="w-full rounded-lg px-3 py-2 text-sm outline-none bg-fondo border border-borde text-texto"
               >
                 <option value="">Todas</option>
                 {ACCIONES.map(a => <option key={a} value={a}>{a}</option>)}
@@ -228,12 +222,11 @@ export default function AuditoriaPage() {
             </div>
             {/* Entidad */}
             <div>
-              <label className="block text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>Entidad</label>
+              <label className="block text-xs mb-1 text-sutil">Entidad</label>
               <select
                 value={entidad}
                 onChange={e => setEntidad(e.target.value)}
-                className="w-full rounded-lg px-3 py-2 text-sm outline-none"
-                style={{ background: "var(--kipu-bg)", border: "1px solid var(--kipu-border)", color: "var(--kipu-text)" }}
+                className="w-full rounded-lg px-3 py-2 text-sm outline-none bg-fondo border border-borde text-texto"
               >
                 <option value="">Todas</option>
                 {ENTIDADES.map(e => <option key={e} value={e}>{e}</option>)}
@@ -241,39 +234,36 @@ export default function AuditoriaPage() {
             </div>
             {/* Búsqueda */}
             <div>
-              <label className="block text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>Buscar en detalle</label>
+              <label className="block text-xs mb-1 text-sutil">Buscar en detalle</label>
               <div className="relative">
-                <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2" style={{ color: "var(--kipu-subtle)" }} />
+                <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-sutil" />
                 <input
                   type="text"
                   placeholder="ej: factura, RUC..."
                   value={busqueda}
                   onChange={e => setBusqueda(e.target.value)}
-                  className="w-full rounded-lg pl-8 pr-3 py-2 text-sm outline-none"
-                  style={{ background: "var(--kipu-bg)", border: "1px solid var(--kipu-border)", color: "var(--kipu-text)" }}
+                  className="w-full rounded-lg pl-8 pr-3 py-2 text-sm outline-none bg-fondo border border-borde text-texto"
                 />
               </div>
             </div>
             {/* Fecha inicio */}
             <div>
-              <label className="block text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>Desde</label>
+              <label className="block text-xs mb-1 text-sutil">Desde</label>
               <input
                 type="date"
                 value={fechaInicio}
                 onChange={e => setFechaInicio(e.target.value)}
-                className="w-full rounded-lg px-3 py-2 text-sm outline-none"
-                style={{ background: "var(--kipu-bg)", border: "1px solid var(--kipu-border)", color: "var(--kipu-text)" }}
+                className="w-full rounded-lg px-3 py-2 text-sm outline-none bg-fondo border border-borde text-texto"
               />
             </div>
             {/* Fecha fin */}
             <div>
-              <label className="block text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>Hasta</label>
+              <label className="block text-xs mb-1 text-sutil">Hasta</label>
               <input
                 type="date"
                 value={fechaFin}
                 onChange={e => setFechaFin(e.target.value)}
-                className="w-full rounded-lg px-3 py-2 text-sm outline-none"
-                style={{ background: "var(--kipu-bg)", border: "1px solid var(--kipu-border)", color: "var(--kipu-text)" }}
+                className="w-full rounded-lg px-3 py-2 text-sm outline-none bg-fondo border border-borde text-texto"
               />
             </div>
           </div>
@@ -283,12 +273,7 @@ export default function AuditoriaPage() {
       {/* Error */}
       {error && (
         <div
-          className="flex items-center gap-2 rounded-xl px-4 py-3"
-          style={{
-            background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
-            border: "1px solid color-mix(in srgb, var(--kipu-danger) 20%, transparent)",
-            color: "var(--kipu-danger)",
-          }}
+          className="flex items-center gap-2 rounded-xl px-4 py-3 bg-peligro-suave border border-peligro/20 text-peligro"
         >
           <Shield size={14} className="shrink-0" />
           <p className="text-sm">{error}</p>
@@ -307,8 +292,7 @@ export default function AuditoriaPage() {
         <>
           {/* Tabla */}
           <div
-            className="rounded-xl overflow-hidden"
-            style={{ background: "var(--kipu-surface)", border: "1px solid var(--kipu-border)" }}
+            className="rounded-xl overflow-hidden bg-superficie border border-borde"
           >
             {/* Header tabla */}
             <div
@@ -330,8 +314,8 @@ export default function AuditoriaPage() {
 
             {items.length === 0 ? (
               <div className="text-center py-12">
-                <Shield size={32} className="mx-auto mb-3" style={{ color: "var(--kipu-border)" }} />
-                <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>
+                <Shield size={32} className="mx-auto mb-3 text-borde" />
+                <p className="text-sm text-sutil">
                   {hayFiltros ? "Sin resultados para estos filtros" : "No hay registros de auditoría aún"}
                 </p>
               </div>
@@ -345,8 +329,7 @@ export default function AuditoriaPage() {
                     <button
                       type="button"
                       onClick={() => setExpandedId(expanded ? null : entry.id)}
-                      className="w-full text-left px-4 py-3 transition-colors"
-                      style={{ borderBottom: "1px solid var(--kipu-border)" }}
+                      className="w-full text-left px-4 py-3 transition-colors border-b border-borde"
                       onMouseEnter={e => e.currentTarget.style.background = "var(--kipu-bg)"}
                       onMouseLeave={e => e.currentTarget.style.background = "transparent"}
                     >
@@ -355,15 +338,15 @@ export default function AuditoriaPage() {
                         className="hidden sm:grid items-center text-sm"
                         style={{ gridTemplateColumns: "140px 1fr 90px 110px 1fr 90px", gap: "0.5rem" }}
                       >
-                        <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+                        <span className="text-xs text-sutil">
                           {fmtFecha(entry.created_at)}
                         </span>
                         <div className="min-w-0">
-                          <p className="text-sm truncate" style={{ color: "var(--kipu-text)" }}>
+                          <p className="text-sm truncate text-texto">
                             {entry.usuario_nombre || "—"}
                           </p>
                           {entry.usuario_email && (
-                            <p className="text-xs truncate" style={{ color: "var(--kipu-subtle)" }}>
+                            <p className="text-xs truncate text-sutil">
                               {entry.usuario_email}
                             </p>
                           )}
@@ -374,13 +357,13 @@ export default function AuditoriaPage() {
                         >
                           {entry.accion}
                         </span>
-                        <span className="text-xs" style={{ color: "var(--kipu-muted)" }}>
+                        <span className="text-xs text-tenue">
                           {entry.entidad}
                         </span>
-                        <span className="text-xs truncate" style={{ color: "var(--kipu-subtle)" }}>
+                        <span className="text-xs truncate text-sutil">
                           {resumirDetalle(entry.detalle)}
                         </span>
-                        <span className="text-xs font-mono" style={{ color: "var(--kipu-subtle)" }}>
+                        <span className="text-xs font-mono text-sutil">
                           {entry.ip || "—"}
                         </span>
                       </div>
@@ -394,16 +377,16 @@ export default function AuditoriaPage() {
                           >
                             {entry.accion}
                           </span>
-                          <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+                          <span className="text-xs text-sutil">
                             {fmtFecha(entry.created_at)}
                           </span>
                         </div>
-                        <p className="text-sm" style={{ color: "var(--kipu-text)" }}>
-                          <span style={{ color: "var(--kipu-muted)" }}>{entry.entidad}</span>
+                        <p className="text-sm text-texto">
+                          <span className="text-tenue">{entry.entidad}</span>
                           {" · "}
                           {entry.usuario_nombre || entry.usuario_email || "—"}
                         </p>
-                        <p className="text-xs truncate" style={{ color: "var(--kipu-subtle)" }}>
+                        <p className="text-xs truncate text-sutil">
                           {resumirDetalle(entry.detalle)}
                         </p>
                       </div>
@@ -411,8 +394,8 @@ export default function AuditoriaPage() {
                       {/* Expand indicator */}
                       <div className="flex justify-end mt-1">
                         {expanded
-                          ? <ChevronDown size={12} style={{ color: "var(--kipu-subtle)" }} />
-                          : <ChevronRight size={12} style={{ color: "var(--kipu-subtle)" }} />
+                          ? <ChevronDown className="text-sutil" size={12} />
+                          : <ChevronRight className="text-sutil" size={12} />
                         }
                       </div>
                     </button>
@@ -420,30 +403,26 @@ export default function AuditoriaPage() {
                     {/* Detalle expandido */}
                     {expanded && (
                       <div
-                        className="px-4 py-4 space-y-3"
-                        style={{
-                          background: "var(--kipu-bg)",
-                          borderBottom: "1px solid var(--kipu-border)",
-                        }}
+                        className="px-4 py-4 space-y-3 bg-fondo border-b border-borde"
                       >
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                           <div>
-                            <span style={{ color: "var(--kipu-subtle)" }}>ID Entidad: </span>
-                            <span style={{ color: "var(--kipu-text)" }}>{entry.entidad_id || "—"}</span>
+                            <span className="text-sutil">ID Entidad: </span>
+                            <span className="text-texto">{entry.entidad_id || "—"}</span>
                           </div>
                           <div>
-                            <span style={{ color: "var(--kipu-subtle)" }}>IP: </span>
-                            <span className="font-mono" style={{ color: "var(--kipu-text)" }}>{entry.ip || "—"}</span>
+                            <span className="text-sutil">IP: </span>
+                            <span className="font-mono text-texto">{entry.ip || "—"}</span>
                           </div>
                           {entry.user_agent && (
                             <div className="sm:col-span-2">
-                              <span style={{ color: "var(--kipu-subtle)" }}>User Agent: </span>
-                              <span className="break-all" style={{ color: "var(--kipu-text)" }}>{entry.user_agent}</span>
+                              <span className="text-sutil">User Agent: </span>
+                              <span className="break-all text-texto">{entry.user_agent}</span>
                             </div>
                           )}
                         </div>
                         <div>
-                          <p className="text-xs font-semibold mb-1.5" style={{ color: "var(--kipu-subtle)" }}>
+                          <p className="text-xs font-semibold mb-1.5 text-sutil">
                             Detalle completo
                           </p>
                           <pre
@@ -469,7 +448,7 @@ export default function AuditoriaPage() {
 
           {/* Paginación */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between text-sm" style={{ color: "var(--kipu-subtle)" }}>
+            <div className="flex items-center justify-between text-sm text-sutil">
               <span className="text-xs">
                 {total} registro{total !== 1 ? "s" : ""} · Página {page + 1} de {totalPages}
               </span>
@@ -477,8 +456,7 @@ export default function AuditoriaPage() {
                 <button
                   disabled={page === 0}
                   onClick={() => setPage(p => p - 1)}
-                  className="px-3 py-1.5 rounded-lg text-xs transition-colors disabled:opacity-30"
-                  style={{ border: "1px solid var(--kipu-border)", color: "var(--kipu-text)" }}
+                  className="px-3 py-1.5 rounded-lg text-xs transition-colors disabled:opacity-30 border border-borde text-texto"
                   onMouseEnter={e => { if (page > 0) e.currentTarget.style.background = "var(--kipu-bg)"; }}
                   onMouseLeave={e => e.currentTarget.style.background = "transparent"}
                 >
@@ -487,8 +465,7 @@ export default function AuditoriaPage() {
                 <button
                   disabled={page >= totalPages - 1}
                   onClick={() => setPage(p => p + 1)}
-                  className="px-3 py-1.5 rounded-lg text-xs transition-colors disabled:opacity-30"
-                  style={{ border: "1px solid var(--kipu-border)", color: "var(--kipu-text)" }}
+                  className="px-3 py-1.5 rounded-lg text-xs transition-colors disabled:opacity-30 border border-borde text-texto"
                   onMouseEnter={e => { if (page < totalPages - 1) e.currentTarget.style.background = "var(--kipu-bg)"; }}
                   onMouseLeave={e => e.currentTarget.style.background = "transparent"}
                 >

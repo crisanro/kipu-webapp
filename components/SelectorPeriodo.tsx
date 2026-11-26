@@ -53,8 +53,7 @@ export default function SelectorPeriodo({ valor, onCambio, precios, disponibles 
 
   return (
     <div role="radiogroup" aria-label="Forma de pago"
-         className="inline-flex p-1 rounded-xl"
-         style={{ background: "var(--kipu-surface)", border: "1px solid var(--kipu-border)" }}>
+         className="inline-flex p-1 rounded-xl bg-superficie border border-borde">
       {opciones.map(({ id, texto }) => {
         const activo    = valor === id;
         const apagado   = disponibles ? !disponibles[id] : conocidos && !precios?.[id];

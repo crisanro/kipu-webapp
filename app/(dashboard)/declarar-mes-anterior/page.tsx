@@ -54,14 +54,12 @@ function Paso({ n, titulo, icono, children }: {
   n: number; titulo: string; icono: ReactNode; children: ReactNode;
 }) {
   return (
-    <section className="rounded-2xl p-4 space-y-3"
-             style={{ background: "var(--kipu-surface)", border: "1px solid var(--kipu-border)" }}>
+    <section className="rounded-2xl p-4 space-y-3 bg-superficie border border-borde">
       <div className="flex items-center gap-2.5">
-        <span className="w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center shrink-0"
-              style={{ background: "color-mix(in srgb, var(--kipu-accent) 20%, transparent)", color: "var(--kipu-accent)" }}>
+        <span className="w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center shrink-0 bg-acento/20 text-acento">
           {n}
         </span>
-        <h2 className="text-sm font-semibold flex items-center gap-1.5" style={{ color: "var(--kipu-text)" }}>
+        <h2 className="text-sm font-semibold flex items-center gap-1.5 text-texto">
           {icono} {titulo}
         </h2>
       </div>
@@ -113,8 +111,7 @@ export default function DeclararMesAnteriorPage() {
   };
 
   const volver = (
-    <Link href="/dashboard" className="flex items-center gap-1.5 text-xs hover:underline"
-          style={{ color: "var(--kipu-subtle)" }}>
+    <Link href="/dashboard" className="flex items-center gap-1.5 text-xs hover:underline text-sutil">
       <ArrowLeft size={14} /> Volver al panel
     </Link>
   );
@@ -123,8 +120,8 @@ export default function DeclararMesAnteriorPage() {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
         {error
-          ? <p className="text-sm" style={{ color: "var(--kipu-danger)" }}>{error}</p>
-          : <Loader2 size={22} className="animate-spin" style={{ color: "var(--kipu-accent)" }} />}
+          ? <p className="text-sm text-peligro">{error}</p>
+          : <Loader2 size={22} className="animate-spin text-acento" />}
       </div>
     );
   }
@@ -133,8 +130,7 @@ export default function DeclararMesAnteriorPage() {
     return (
       <div className="p-4 md:p-6 max-w-2xl mx-auto space-y-5">
         {volver}
-        <p className="text-sm rounded-xl p-4" style={{ background: "var(--kipu-surface)",
-           border: "1px solid var(--kipu-border)", color: "var(--kipu-text)" }}>
+        <p className="text-sm rounded-xl p-4 bg-superficie border border-borde text-texto">
           {resp.motivo}
         </p>
       </div>
@@ -157,14 +153,13 @@ export default function DeclararMesAnteriorPage() {
       {volver}
 
       {/* 1. El periodo */}
-      <div className="rounded-2xl p-5 text-center space-y-1.5"
-           style={{ background: "var(--kipu-surface)", border: "1px solid var(--kipu-border)" }}>
-        <CalendarCheck size={22} className="mx-auto" style={{ color: "var(--kipu-accent)" }} />
-        <h1 className="text-lg font-bold" style={{ color: "var(--kipu-text)" }}>
+      <div className="rounded-2xl p-5 text-center space-y-1.5 bg-superficie border border-borde">
+        <CalendarCheck size={22} className="mx-auto text-acento" />
+        <h1 className="text-lg font-bold text-texto">
           Declara {d.nombre} con Kipu
         </h1>
         {d.declarado ? (
-          <p className="text-sm font-medium flex items-center justify-center gap-1.5" style={{ color: "var(--kipu-success)" }}>
+          <p className="text-sm font-medium flex items-center justify-center gap-1.5 text-exito">
             <CheckCircle2 size={15} /> Ya lo marcaste como declarado
           </p>
         ) : (
@@ -176,15 +171,14 @@ export default function DeclararMesAnteriorPage() {
 
       {/* 2. Compras */}
       <Paso n={1} titulo={`Tus compras de ${mes}`} icono={<ShoppingCart size={15} />}>
-        <div className="rounded-xl px-4 py-3 flex items-center justify-between gap-3"
-             style={{ background: "color-mix(in srgb, var(--kipu-accent) 8%, transparent)" }}>
-          <p className="text-sm" style={{ color: "var(--kipu-text)" }}>
+        <div className="rounded-xl px-4 py-3 flex items-center justify-between gap-3 bg-acento/8">
+          <p className="text-sm text-texto">
             Ya tienes <strong>{plural(d.compras.cantidad, "compra", "compras")}</strong> de {mes} en Kipu
-            {d.compras.cantidad > 0 && <span style={{ color: "var(--kipu-subtle)" }}> · ${montoEC(d.compras.total)}</span>}
+            {d.compras.cantidad > 0 && <span className="text-sutil"> · ${montoEC(d.compras.total)}</span>}
           </p>
           {pausado ? (
             <button type="button" onClick={() => { setPausado(false); setRonda((r) => r + 1); }}
-                    className="text-xs font-medium flex items-center gap-1 shrink-0" style={{ color: "var(--kipu-accent)" }}>
+                    className="text-xs font-medium flex items-center gap-1 shrink-0 text-acento">
               <RefreshCw size={12} /> Actualizar
             </button>
           ) : (
@@ -195,28 +189,28 @@ export default function DeclararMesAnteriorPage() {
         {!d.importar_compras ? (
           // Importar compras no está en su plan. En la app, sin nombrar planes ni precios.
           ES_APP_NATIVA ? (
-            <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>
+            <p className="text-sm text-sutil">
               Importar compras no está disponible con tu plan.
             </p>
           ) : (
-            <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>
+            <p className="text-sm text-sutil">
               Importar compras desde el SRI es parte de Kipu Pro.{" "}
-              <Link href="/planes" className="font-medium hover:underline" style={{ color: "var(--kipu-accent)" }}>
+              <Link href="/planes" className="font-medium hover:underline text-acento">
                 Ver planes
               </Link>
             </p>
           )
         ) : ES_APP_NATIVA ? (
-          <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>
+          <p className="text-sm text-sutil">
             Esto se hace desde tu computadora, con la extensión de Kipu en Chrome o Firefox. Las compras que
             importes aparecen aquí.
           </p>
         ) : (
           <>
-            <ol className="space-y-2 text-sm" style={{ color: "var(--kipu-muted)" }}>
+            <ol className="space-y-2 text-sm text-tenue">
               {[
                 <>Entra al <a href={SRI_URL} target="_blank" rel="noopener noreferrer"
-                  className="font-medium hover:underline inline-flex items-center gap-0.5" style={{ color: "var(--kipu-accent)" }}>
+                  className="font-medium hover:underline inline-flex items-center gap-0.5 text-acento">
                   SRI en Línea <ExternalLink size={11} /></a> con el RUC de tu empresa.</>,
                 <>Ve a <strong>Facturación Electrónica → Comprobantes electrónicos recibidos</strong>.</>,
                 <>Elige <strong>{d.nombre}</strong>, el tipo de comprobante y pulsa <strong>Consultar</strong>.</>,
@@ -224,21 +218,19 @@ export default function DeclararMesAnteriorPage() {
                   (facturas, notas de crédito, retenciones).</>,
               ].map((texto, i) => (
                 <li key={i} className="flex items-start gap-2.5">
-                  <span className="text-xs font-bold w-4 shrink-0 mt-0.5" style={{ color: "var(--kipu-accent)" }}>{i + 1}.</span>
+                  <span className="text-xs font-bold w-4 shrink-0 mt-0.5 text-acento">{i + 1}.</span>
                   <span>{texto}</span>
                 </li>
               ))}
             </ol>
             <div className="flex flex-wrap items-center gap-2 pt-1">
-              <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>¿No tienes la extensión? Instálala:</span>
+              <span className="text-xs text-sutil">¿No tienes la extensión? Instálala:</span>
               <a href={CHROME_EXT_URL} target="_blank" rel="noopener noreferrer"
-                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium"
-                 style={{ border: "1px solid var(--kipu-border)", color: "var(--kipu-text)" }}>
+                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-borde text-texto">
                 <Globe size={12} /> Chrome
               </a>
               <a href={FIREFOX_EXT_URL} target="_blank" rel="noopener noreferrer"
-                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium"
-                 style={{ border: "1px solid var(--kipu-border)", color: "var(--kipu-text)" }}>
+                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-borde text-texto">
                 <Puzzle size={12} /> Firefox
               </a>
             </div>
@@ -249,36 +241,34 @@ export default function DeclararMesAnteriorPage() {
       {/* 3. Ventas */}
       <Paso n={2} titulo={`Tus ventas de ${mes}`} icono={<Receipt size={15} />}>
         {d.ventas.cantidad > 0 && (
-          <p className="text-sm" style={{ color: "var(--kipu-text)" }}>
+          <p className="text-sm text-texto">
             Kipu ya tiene tus <strong>{plural(d.ventas.cantidad, "venta", "ventas")}</strong> de {mes} emitidas aquí.
           </p>
         )}
         {d.aviso ? (
-          <p className="text-sm" style={{ color: "var(--kipu-text)" }}>
+          <p className="text-sm text-texto">
             Las ventas que hiciste con otro sistema no están en Kipu: <strong>súmalas en el formulario del SRI
             antes de presentarlo.</strong>
           </p>
         ) : d.ventas.cantidad === 0 && (
-          <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>No tienes ventas de {mes} en Kipu.</p>
+          <p className="text-sm text-sutil">No tienes ventas de {mes} en Kipu.</p>
         )}
       </Paso>
 
       {/* 4. La declaración */}
       <Paso n={3} titulo="Tu declaración" icono={<CalendarCheck size={15} />}>
-        <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>
+        <p className="text-sm text-sutil">
           Con tus compras en Kipu, revisa el formulario 104 de {mes} y cópialo en el SRI.
         </p>
-        {error && <p className="text-xs" style={{ color: "var(--kipu-danger)" }}>{error}</p>}
+        {error && <p className="text-xs text-peligro">{error}</p>}
         <div className="flex flex-wrap gap-2">
           <Link href={rutas.reporteIva(d.periodo)}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-opacity hover:opacity-90"
-                style={{ background: "var(--kipu-accent)" }}>
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-opacity hover:opacity-90 bg-acento">
             Ver mi declaración de {mes} <ArrowRight size={14} />
           </Link>
           {!d.declarado && (
             <button type="button" onClick={() => setConfirmando(true)}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium"
-                    style={{ border: "1px solid var(--kipu-border)", color: "var(--kipu-text)" }}>
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium border border-borde text-texto">
               <CheckCircle2 size={14} /> Ya lo declaré
             </button>
           )}
@@ -286,8 +276,8 @@ export default function DeclararMesAnteriorPage() {
       </Paso>
 
       {/* 5. Cierre */}
-      <p className="text-sm text-center flex items-center justify-center gap-1.5 pt-1" style={{ color: "var(--kipu-subtle)" }}>
-        <Sparkles size={14} style={{ color: "var(--kipu-accent)" }} />
+      <p className="text-sm text-center flex items-center justify-center gap-1.5 pt-1 text-sutil">
+        <Sparkles className="text-acento" size={14} />
         Factura con Kipu y el próximo mes no tienes que subir nada.
       </p>
     </div>

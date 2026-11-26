@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 
 function enLinea(texto: string): ReactNode[] {
   return texto.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/g).filter(Boolean).map((parte, i) => {
-    if (parte.startsWith("**")) return <strong key={i} style={{ color: "var(--kipu-text)" }}>{parte.slice(2, -2)}</strong>;
+    if (parte.startsWith("**")) return <strong className="text-texto" key={i}>{parte.slice(2, -2)}</strong>;
     if (parte.startsWith("*")) return <em key={i}>{parte.slice(1, -1)}</em>;
     return parte;
   });
@@ -14,20 +14,20 @@ function enLinea(texto: string): ReactNode[] {
 export default function TextoTerminos({ texto }: { texto: string }) {
   const bloques = texto.trim().split(/\n\s*\n/);
   return (
-    <div className="space-y-3 text-sm leading-relaxed" style={{ color: "var(--kipu-muted)" }}>
+    <div className="space-y-3 text-sm leading-relaxed text-tenue">
       {bloques.map((bloque, i) => {
         const lineas = bloque.split("\n");
         if (bloque.startsWith("# "))
-          return <h2 key={i} className="text-base font-bold" style={{ color: "var(--kipu-text)" }}>{bloque.slice(2)}</h2>;
+          return <h2 key={i} className="text-base font-bold text-texto">{bloque.slice(2)}</h2>;
         if (bloque.startsWith("## "))
-          return <h3 key={i} className="text-sm font-bold pt-2" style={{ color: "var(--kipu-text)" }}>{bloque.slice(3)}</h3>;
+          return <h3 key={i} className="text-sm font-bold pt-2 text-texto">{bloque.slice(3)}</h3>;
         if (lineas.every(l => l.startsWith("|"))) {
           const filas = lineas.filter(l => !/^\|\s*-/.test(l)).map(l => l.split("|").slice(1, -1).map(c => c.trim()));
           return (
             <table key={i} className="w-full text-xs">
               <tbody>
                 {filas.map((celdas, f) => (
-                  <tr key={f} style={{ borderBottom: "1px solid var(--kipu-border)" }}>
+                  <tr className="border-b border-borde" key={f}>
                     {celdas.map((c, k) => (
                       <td key={k} className="py-1.5 pr-2" style={{ fontWeight: f === 0 ? 600 : 400, color: f === 0 ? "var(--kipu-text)" : undefined }}>
                         {c}

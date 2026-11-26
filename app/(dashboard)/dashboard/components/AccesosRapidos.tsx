@@ -53,13 +53,9 @@ export default function AccesosRapidos() {
   const visibles = accesos.filter(({ href }) => !rutaFueraDelPlan(href, empresa));
   return (
     <div
-      className="rounded-xl p-5 h-full"
-      style={{
-        background: "var(--kipu-surface)",
-        border:     "1px solid var(--kipu-border)",
-      }}
+      className="rounded-xl p-5 h-full bg-superficie border border-borde"
     >
-      <h2 className="text-sm font-semibold mb-4" style={{ color: "var(--kipu-text)" }}>
+      <h2 className="text-sm font-semibold mb-4 text-texto">
         Accesos rápidos
       </h2>
       <div className="grid grid-cols-2 gap-2">

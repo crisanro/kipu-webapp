@@ -36,7 +36,7 @@ export default async function ArticuloAyudaPage({ params }: Props) {
 
   return (
     <article>
-      <nav className="flex items-center gap-1 text-xs mb-4" aria-label="Ruta" style={{ color: "var(--kipu-subtle)" }}>
+      <nav className="flex items-center gap-1 text-xs mb-4 text-sutil" aria-label="Ruta">
         <Link href="/ayuda" className="flex items-center gap-1 hover:underline">
           <ChevronLeft size={14} /> Centro de Ayuda
         </Link>
@@ -44,10 +44,10 @@ export default async function ArticuloAyudaPage({ params }: Props) {
         <Link href={`/ayuda#${cat.id}`} className="hover:underline">{cat.nombre}</Link>
       </nav>
 
-      <h1 className="text-2xl font-bold" style={{ color: "var(--kipu-text)" }}>{articulo.titulo}</h1>
-      <p className="text-sm mt-2" style={{ color: "var(--kipu-subtle)" }}>{articulo.resumen}</p>
+      <h1 className="text-2xl font-bold text-texto">{articulo.titulo}</h1>
+      <p className="text-sm mt-2 text-sutil">{articulo.resumen}</p>
 
-      <div className="mt-6 pt-2" style={{ borderTop: "1px solid var(--kipu-border)" }}>
+      <div className="mt-6 pt-2 border-t border-borde">
         <Contenido />
       </div>
 
@@ -55,7 +55,7 @@ export default async function ArticuloAyudaPage({ params }: Props) {
 
       {relacionados.length > 0 && (
         <section className="mt-10 space-y-2">
-          <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>Más sobre {cat.nombre.toLowerCase()}</h2>
+          <h2 className="text-sm font-semibold text-texto">Más sobre {cat.nombre.toLowerCase()}</h2>
           {relacionados.map((a) => <TarjetaArticulo key={a.slug} articulo={a} />)}
         </section>
       )}

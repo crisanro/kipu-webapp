@@ -35,14 +35,14 @@ export default function LlamadoAlDia() {
       }}
     >
       <div className="flex items-center gap-2">
-        <CalendarCheck size={18} style={{ color: "var(--kipu-accent)" }} />
-        <span className="text-sm font-semibold" style={{ color: "var(--kipu-accent)" }}>Kipu Al Día</span>
+        <CalendarCheck className="text-acento" size={18} />
+        <span className="text-sm font-semibold text-acento">Kipu Al Día</span>
       </div>
 
       {tieneAlDia ? (
         <>
-          <p className="text-xl font-extrabold" style={{ color: "var(--kipu-text)" }}>Esto ya lo hacemos por ti.</p>
-          <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>
+          <p className="text-xl font-extrabold text-texto">Esto ya lo hacemos por ti.</p>
+          <p className="text-sm text-tenue">
             Con Kipu Al Día, nuestro equipo presenta tus declaraciones a tiempo. Puedes ver cómo vas en tu panel.
           </p>
           <Link href="/al-dia" className={BOTON} style={{ border: "1px solid var(--kipu-border)", color: "var(--kipu-accent)" }}>
@@ -51,10 +51,10 @@ export default function LlamadoAlDia() {
         </>
       ) : (
         <>
-          <p className="text-xl md:text-2xl font-extrabold leading-tight" style={{ color: "var(--kipu-text)" }}>
+          <p className="text-xl md:text-2xl font-extrabold leading-tight text-texto">
             Tú facturas. Nosotros declaramos.
           </p>
-          <p className="text-sm max-w-xl" style={{ color: "var(--kipu-muted)" }}>
+          <p className="text-sm max-w-xl text-tenue">
             Cada mes revisamos tus ventas y compras, te mandamos el resumen por WhatsApp y presentamos tus
             declaraciones de IVA y renta al SRI, a tiempo. Incluye todo Kipu Pro. Cancelas cuando quieras.
           </p>
@@ -69,14 +69,14 @@ export default function LlamadoAlDia() {
                   Crear mi cuenta gratis
                 </Link>
                 <Link href="/login" onClick={() => guardarVolver("/al-dia")}
-                      className="text-sm font-medium underline underline-offset-2" style={{ color: "var(--kipu-accent)" }}>
+                      className="text-sm font-medium underline underline-offset-2 text-acento">
                   Ya tengo cuenta
                 </Link>
               </>
             )}
           </div>
           {/* Lo mismo que app/legal/kipu_al_dia_v1.md ("Para quién es") y al_dia_service.motivo_no_elegible */}
-          <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+          <p className="text-xs text-sutil">
             Para personas naturales no obligadas a llevar contabilidad, del régimen general o del RIMPE Emprendedor.
           </p>
         </>

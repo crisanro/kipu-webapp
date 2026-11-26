@@ -33,8 +33,8 @@ export default function RootPage() {
   }, []);
 
   return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--kipu-bg)" }}>
-      <Loader2 size={24} className="animate-spin" style={{ color: "var(--kipu-accent)" }} />
+    <div className="min-h-screen flex items-center justify-center bg-fondo">
+      <Loader2 size={24} className="animate-spin text-acento" />
     </div>
   );
 }
