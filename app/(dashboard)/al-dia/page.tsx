@@ -38,6 +38,8 @@ interface Estado {
   } | null;
   period_end:           string | null;
   cancel_at_period_end: boolean;
+  // Terminó Al Día (términos 2.0): la clave espera su borrado y el cliente puede borrarla antes
+  clave_se_borra_el:    string | null;
 }
 interface Terminos { version: string; texto: string; hash: string }
 
@@ -288,6 +290,8 @@ export default function KipuAlDiaPage() {
           </p>
         )}
         <PanelCliente soloHistorial />
+        {/* Borrar la clave no es una compra: también en la app */}
+        {estado?.clave_se_borra_el && esAdmin && <ClaveSri contratado={false} />}
         <HeroAlDia precio={null} onContratar={() => {}} whatsapp={whatsappInfo} />
         <DemoAlDia ruc={empresa?.ruc} semestral={empresa?.periodo_iva === "SEMESTRAL"} enProduccion={enProduccion} />
         <ComoFunciona />
@@ -396,8 +400,8 @@ export default function KipuAlDiaPage() {
       {/* Lo que el equipo de Kipu hace por él: lo que viene y el historial */}
       {estado?.contratado && <PanelCliente />}
 
-      {/* Clave del SRI: solo con el servicio contratado y para el administrador */}
-      {estado?.contratado && esAdmin && <ClaveSri />}
+      {/* Clave del SRI: con el servicio contratado o mientras espera su borrado, y para el administrador */}
+      {(estado?.contratado || estado?.clave_se_borra_el) && esAdmin && <ClaveSri contratado={!!estado?.contratado} />}
 
       <SoloWeb>
         <p className="text-xs text-center" style={{ color: "var(--kipu-subtle)" }}>
