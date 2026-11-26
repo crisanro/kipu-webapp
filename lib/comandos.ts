@@ -7,8 +7,8 @@
 //               y páginas que solo existen en la web.
 //   - Acciones: cambiar de empresa, modo sandbox, tema, ayuda y cerrar sesión.
 //
-// La búsqueda no distingue tildes ni mayúsculas y pide que estén todas las
-// palabras escritas ("not cre" encuentra "Nueva nota de crédito").
+// La búsqueda no distingue tildes ni mayúsculas y pide que cada palabra escrita
+// sea el comienzo de alguna palabra ("not cre" encuentra "Nueva nota de crédito").
 
 "use client";
 
@@ -149,8 +149,8 @@ export function normalizar(texto: string): string {
 }
 
 /**
- * Los que tienen todas las palabras escritas, mejor los que empiezan igual.
- * Sin texto, la lista tal cual.
+ * Los que tienen todas las palabras escritas (como comienzo de palabra), mejor
+ * los que empiezan igual. Sin texto, la lista tal cual.
  */
 export function filtrarComandos(comandos: Comando[], consulta: string): Comando[] {
   const palabras = normalizar(consulta).split(/\s+/).filter(Boolean);
@@ -158,8 +158,10 @@ export function filtrarComandos(comandos: Comando[], consulta: string): Comando[
   return comandos
     .map((c) => {
       const titulo = normalizar(c.titulo);
-      const todo = `${titulo} ${normalizar(c.claves ?? "")}`;
-      if (!palabras.every(p => todo.includes(p))) return null;
+      // Cada palabra escrita tiene que ser el comienzo de alguna palabra ("and" no
+      // encuentra "sandbox"; "not cre" sí encuentra "nota de crédito")
+      const palabrasDe = `${titulo} ${normalizar(c.claves ?? "")}`.split(/[\s()/]+/);
+      if (!palabras.every(p => palabrasDe.some(w => w.startsWith(p)))) return null;
       // Puntaje: título que empieza con lo escrito > palabra del título que empieza > en las claves
       const p0 = palabras[0];
       const puntos = titulo.startsWith(p0) ? 0

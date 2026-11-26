@@ -5,6 +5,10 @@
 // flechas para moverse, Enter para abrir, Esc para cerrar.
 //   - Compu: ventana arriba al centro. Celular: pantalla completa.
 //   - Sin escribir: lo último que se eligió y luego todo, por grupos.
+//   - Escribiendo (2 letras o más) busca también comprobantes, personas y
+//     productos, según los permisos: el comprobante se abre (en la compu ancha,
+//     en el panel de Documentos), la persona en su ficha y el producto en una
+//     factura nueva ya cargado.
 // Se monta una vez en app/(dashboard)/layout.tsx.
 
 "use client";
@@ -13,12 +17,15 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
-import { CornerDownLeft, Search } from "lucide-react";
+import { CornerDownLeft, FileText, Loader2, Package, Search, User } from "lucide-react";
 import {
   comandosDisponibles, filtrarComandos, leerRecientes, recordarComando, EVENTO_NUEVO,
   type Comando, type GrupoComando,
 } from "@/lib/comandos";
 import { useCapaAtras } from "@/lib/botonAtras";
+import api from "@/lib/api";
+import { rutas } from "@/lib/rutas";
+import { tienePermiso } from "@/components/dashboard/DashboardNav";
 import { useAuthStore } from "@/store/auth.store";
 import { useSandboxStore } from "@/store/sandbox.store";
 import { EVENTO_CERRAR_SESION, EVENTO_SELECTOR_EMPRESA } from "@/components/shell/BarraSuperior";
@@ -60,6 +67,25 @@ export default function PaletaComandos() {
 
 const ORDEN: Exclude<GrupoComando, "Recientes">[] = ["Crear", "Ir a", "Acciones"];
 
+/** Un comando o un dato encontrado (comprobante, persona, producto). */
+type Resultado = Omit<Comando, "grupo"> & { grupo: string; subtitulo?: string; ejecutar?: () => void };
+type Seccion = { grupo: string | null; items: Resultado[] };
+
+const MINIMO_BUSQUEDA = 2;
+const POR_TIPO = 5;
+// Lista y detalle lado a lado desde este ancho (app/(dashboard)/documentos/page.tsx)
+const ANCHO_PANEL = "(min-width: 1280px)";
+const FAC = "/documentos/emitir/fac";
+
+const fmt = (n: unknown) => (Number(n) || 0).toFixed(2);
+
+// Filas de los listados (solo lo que se muestra)
+interface DocFila { id: string; numero_doc: string; tipo_doc?: string; razon_social?: string; importe_total?: number }
+interface PersonaFila { id: string; razon_social: string; identificacion?: string }
+interface ProductoFila {
+  id: string; codigo?: string; descripcion: string; precio: number; tipo_iva?: string; unidad?: string;
+}
+
 function Ventana({ onCerrar }: { onCerrar: () => void }) {
   const router   = useRouter();
   const pathname = usePathname();
@@ -72,6 +98,8 @@ function Ventana({ onCerrar }: { onCerrar: () => void }) {
   const [consulta, setConsulta] = useState("");
   const [marcado,  setMarcado]  = useState(0);
   const [recientes] = useState(leerRecientes);
+  // Lo encontrado en el servidor para la consulta `q` (si es otra, todavía no llegó)
+  const [datos, setDatos] = useState<{ q: string; secciones: Seccion[] } | null>(null);
   const id      = useId();
   const listaRef = useRef<HTMLUListElement>(null);
 
@@ -94,9 +122,66 @@ function Ventana({ onCerrar }: { onCerrar: () => void }) {
     puedeSandbox: !!empresa.firma_ok && empresa.ambiente === 2,
   }) : [], [empresa, varias, sandbox, temaOscuro]);
 
+  // ── Comprobantes, personas y productos (escribiendo) ─────────────────────────
+  const q = consulta.trim();
+  const buscaDocs      = !!empresa && tienePermiso(empresa, "descargar");
+  const buscaPersonas  = !!empresa && tienePermiso(empresa, "clientes");
+  const buscaProductos = !!empresa && tienePermiso(empresa, "productos");
+  const puedeFacturar  = !!empresa && tienePermiso(empresa, "emitir") && pathname !== FAC;
+
+  useEffect(() => {
+    if (q.length < MINIMO_BUSQUEDA || !(buscaDocs || buscaPersonas || buscaProductos)) return;
+    let vigente = true;
+    const t = setTimeout(async () => {
+      const enc = encodeURIComponent(q);
+      const pedir = <T,>(activo: boolean, url: string): Promise<T[]> => !activo ? Promise.resolve([])
+        : api.get(url).then(r => ((r.data?.data ?? r.data ?? []) as T[]).slice(0, POR_TIPO)).catch(() => []);
+      const [docs, personas, productos] = await Promise.all([
+        pedir<DocFila>(buscaDocs, `/api/v1/app/documentos?q=${enc}&limit=${POR_TIPO}`),
+        pedir<PersonaFila>(buscaPersonas, `/api/v1/app/clientes?q=${enc}`),
+        pedir<ProductoFila>(buscaProductos, `/api/v1/app/productos?q=${enc}&limit=${POR_TIPO}&incluir_inactivos=false`),
+      ]);
+      if (!vigente) return;
+
+      const secciones: Seccion[] = [];
+      if (docs.length) secciones.push({ grupo: "Comprobantes", items: docs.map(d => ({
+        id: `doc-${d.id}`, grupo: "Comprobantes", icono: FileText,
+        titulo: `${d.tipo_doc ?? ""} ${d.numero_doc}`.trim(), subtitulo: d.razon_social,
+        detalle: d.importe_total != null ? `$${fmt(d.importe_total)}` : undefined,
+        ejecutar: () => router.push(window.matchMedia(ANCHO_PANEL).matches
+          ? `/documentos?sel=${encodeURIComponent(d.id)}` : rutas.documento(d.id)),
+      })) });
+      if (personas.length) secciones.push({ grupo: "Personas", items: personas.map(p => ({
+        id: `persona-${p.id}`, grupo: "Personas", icono: User, titulo: p.razon_social, subtitulo: p.identificacion,
+        ejecutar: () => router.push(rutas.persona(p.id)),
+      })) });
+      if (productos.length) secciones.push({ grupo: "Productos", items: productos.map(p => ({
+        id: `producto-${p.id}`, grupo: "Productos", icono: Package, titulo: p.descripcion, subtitulo: p.codigo || undefined,
+        detalle: `$${fmt(p.precio)}${puedeFacturar ? " · facturar" : ""}`,
+        ejecutar: () => {
+          if (!puedeFacturar) { router.push("/productos"); return; }
+          // Factura nueva con el producto ya cargado (fac/page.tsx lee kipu:prefill)
+          sessionStorage.setItem("kipu:prefill", JSON.stringify({ items: [{
+            codigo: p.codigo ?? "", descripcion: p.descripcion, cantidad: 1, precio: p.precio,
+            descuento: 0, tipo_descuento: "$", tipo_iva: p.tipo_iva ?? "15", unidad: p.unidad ?? "UNIDAD",
+          }] }));
+          router.push(FAC);
+        },
+      })) });
+      setDatos({ q, secciones });
+    }, 250);
+    return () => { vigente = false; clearTimeout(t); };
+  }, [q, buscaDocs, buscaPersonas, buscaProductos, puedeFacturar, router]);
+
+  const buscandoDatos = q.length >= MINIMO_BUSQUEDA && (buscaDocs || buscaPersonas || buscaProductos) && datos?.q !== q;
+
   // Secciones a la vista: sin escribir, recientes y luego por grupo; escribiendo, por relevancia
-  const secciones = useMemo((): { grupo: GrupoComando | null; items: Comando[] }[] => {
-    if (consulta.trim()) return [{ grupo: null, items: filtrarComandos(comandos, consulta) }];
+  const secciones = useMemo((): Seccion[] => {
+    if (q) {
+      const encontrados = datos?.q === q ? datos.secciones : [];
+      return [{ grupo: null, items: filtrarComandos(comandos, q) as Resultado[] }, ...encontrados]
+        .filter(s => s.items.length > 0);
+    }
     const porId = new Map(comandos.map(c => [c.id, c]));
     const rec = recientes.map(r => porId.get(r)).filter((c): c is Comando => !!c);
     const usados = new Set(rec.map(c => c.id));
@@ -104,7 +189,7 @@ function Ventana({ onCerrar }: { onCerrar: () => void }) {
       { grupo: "Recientes" as GrupoComando, items: rec },
       ...ORDEN.map(g => ({ grupo: g as GrupoComando, items: comandos.filter(c => c.grupo === g && !usados.has(c.id)) })),
     ].filter(s => s.items.length > 0);
-  }, [comandos, consulta, recientes]);
+  }, [comandos, q, datos, recientes]);
 
   const items = useMemo(() => secciones.flatMap(s => s.items), [secciones]);
   // Dónde empieza cada sección en la lista plana (para las flechas)
@@ -119,9 +204,10 @@ function Ventana({ onCerrar }: { onCerrar: () => void }) {
     listaRef.current?.querySelector(`[data-indice="${actual}"]`)?.scrollIntoView({ block: "nearest" });
   }, [actual]);
 
-  const ejecutar = (c: Comando) => {
-    recordarComando(c.id);
+  const ejecutar = (c: Resultado) => {
     onCerrar();
+    if (c.ejecutar) { c.ejecutar(); return; }
+    recordarComando(c.id);
     if (c.href) {
       if (c.nuevo) {
         // Ya está en la página: que abra su "nuevo"; si no, que lo abra al llegar
@@ -200,9 +286,9 @@ function Ventana({ onCerrar }: { onCerrar: () => void }) {
         {/* Resultados */}
         <ul ref={listaRef} id={`${id}-lista`} role="listbox" aria-label="Resultados"
             className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-2 pb-[calc(0.5rem+var(--sa-bottom))] sm:pb-2">
-          {items.length === 0 && (
+          {items.length === 0 && !buscandoDatos && (
             <li className="px-3 py-8 text-center text-sm text-sutil">
-              Nada coincide con «{consulta.trim()}».
+              Nada coincide con «{q}».
             </li>
           )}
           {secciones.map((s, si) => (
@@ -233,9 +319,12 @@ function Ventana({ onCerrar }: { onCerrar: () => void }) {
                                           c.accion === "cerrar-sesion" ? "bg-peligro-suave text-peligro" : "bg-acento-suave text-acento")}>
                         <Icono size={16} aria-hidden />
                       </span>
-                      <span className="min-w-0 flex-1 truncate text-texto">{c.titulo}</span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-texto">{c.titulo}</span>
+                        {c.subtitulo && <span className="block truncate text-xs text-sutil">{c.subtitulo}</span>}
+                      </span>
                       {(c.detalle || (!s.grupo && c.grupo)) && (
-                        <span className="shrink-0 text-xs text-sutil">{c.detalle ?? c.grupo}</span>
+                        <span className="max-w-[45%] shrink-0 truncate text-xs text-sutil">{c.detalle || c.grupo}</span>
                       )}
                       {esActual && <CornerDownLeft size={14} className="hidden shrink-0 text-sutil raton:block" aria-hidden />}
                     </li>
@@ -244,6 +333,11 @@ function Ventana({ onCerrar }: { onCerrar: () => void }) {
               </ul>
             </li>
           ))}
+          {buscandoDatos && (
+            <li className="flex items-center gap-2 px-3 py-3 text-xs text-sutil" role="status">
+              <Loader2 size={14} className="animate-spin" aria-hidden /> Buscando comprobantes, personas y productos…
+            </li>
+          )}
         </ul>
 
         {/* Ayuda del teclado (compu) */}
