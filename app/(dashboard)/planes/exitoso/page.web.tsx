@@ -8,6 +8,7 @@ import {
   CheckCircle2, Zap, CreditCard, ArrowRight,
   FileText, Sparkles, KeyRound,
 } from "lucide-react";
+import { INCLUYE_AL_DIA, INCLUYE_PRO } from "@/lib/planes";
 
 export default function PagoExitosoPage() {
   const params  = useSearchParams();
@@ -216,18 +217,12 @@ export default function PagoExitosoPage() {
           {/* Incluye (suscripción) */}
           {esSuscripcion && (
             <div className="space-y-2 pt-1">
-              {(esAlDia ? [
-                "Todo lo del Plan Pro",
-                "Presentamos tus declaraciones de IVA y renta",
-                "Te avisamos por WhatsApp cuánto pagar",
-                "Soporte de lunes a viernes, de 8:00 a 17:00",
-              ] : [
-                "Emisión ilimitada de comprobantes",
-                "Registro de documentos recibidos",
-                "Reportes IVA y Renta",
-                "Hasta 5 usuarios",
-                "Soporte por WhatsApp",
-              ]).map((item, i) => (
+              {/* Las mismas listas que la página de Planes (lib/planes.ts) */}
+              {(esAlDia
+                // TODO(usuario): confirmar el horario de soporte; ninguna otra pantalla lo promete
+                ? [...INCLUYE_AL_DIA, "Soporte de lunes a viernes, de 8:00 a 17:00"]
+                : INCLUYE_PRO
+              ).map((item, i) => (
                 <div key={i} className="flex items-center gap-2">
                   <CheckCircle2 size={13} className="shrink-0" style={{ color: "var(--kipu-success)" }} />
                   <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>{item}</p>
