@@ -12,7 +12,6 @@
 - Encabezado de las 5 páginas de emisión: mostrar el ambiente efectivo, con un badge de otro color en pruebas.
 - Nueva RET: limpiar las ramas de "créditos" y "plan gratis" del recuadro del resumen; desde que la retención exige Kipu Pro o Al Día ya no se pueden ver (commit aparte).
 - kipu-core1 dashboard_service.py:278: health.suscripcion_activa usa sub_estado in ("ACTIVO","TRIAL") sin fechas, distinto de suscripcion_vigente. Hoy no lo lee el front; unificarlo para que no se use por error.
-- Proformas: el backend guarda `tipo_iva` como entero (kipu-core1 proformas.py:30, proforma_service.py:63), así que un ítem "No objeto" o "Exento" (productos antiguos del catálogo) se guarda como 0 % y al facturar la proforma sale 0 %. Aceptar "NA"/"EX" como texto en la proforma (y el front deja de hacer `parseInt(i.tipo_iva) || 0` en proformas/nueva).
 - Formulario 103: calcular casilleros desde las RET emitidas (usar `casillero_103` del catálogo). Depende de las consultas al contador sobre el periodo del 103 y el casillero del 501.
 
 ## App de las tiendas

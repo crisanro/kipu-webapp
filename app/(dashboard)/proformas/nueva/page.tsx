@@ -22,6 +22,7 @@ import ClienteSelector, { type Cliente, type ClienteNuevo } from "../../document
 import ItemsEditor, { Item, calcItem, calcTotales, genId, EMPTY_ITEM } from "../../documentos/emitir/components/ItemsEditor";
 import CamposAdicionales, { CampoAdicional } from "../../documentos/emitir/components/CamposAdicionales";
 import EmisionLayout from "../../documentos/emitir/components/EmisionLayout";
+import { TIPOS_IVA } from "@/lib/iva";
 
 // ── Página ─────────────────────────────────────────────────────────────────────
 export default function NuevaProformaPage() {
@@ -88,7 +89,8 @@ export default function NuevaProformaPage() {
           precio:         parseFloat(String(i.precio)) || parseFloat(String(i.precio_unitario)) || 0,
           descuento:      parseFloat(String(i.descuento)) || 0,
           tipo_descuento: (i.tipo_descuento === "%" ? "%" : "$") as "$" | "%",
-          tipo_iva:       ["0","5","15"].includes(String(i.tipo_iva)) ? String(i.tipo_iva) : "15",
+          // "NA"/"EX" se conservan: antes un ítem no objeto o exento pasaba a 15 %
+          tipo_iva:       TIPOS_IVA.includes(String(i.tipo_iva).toUpperCase()) ? String(i.tipo_iva).toUpperCase() : "15",
           unidad:         String(i.unidad ?? "UNIDAD"),
         })));
       }
@@ -161,7 +163,7 @@ export default function NuevaProformaPage() {
             cantidad:        i.cantidad,
             precio_unitario: i.precio,
             descuento:       calcItem(i).descuento,   // en dólares, aunque se haya ingresado en %
-            tipo_iva:        parseInt(i.tipo_iva) || 0,
+            tipo_iva:        i.tipo_iva === "NA" || i.tipo_iva === "EX" ? i.tipo_iva : parseInt(i.tipo_iva) || 0,
           };
         }),
       });

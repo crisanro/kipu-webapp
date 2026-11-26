@@ -24,6 +24,7 @@ import {
 import { detalleError } from "@/lib/errores";
 import { dolares, dosDecimales } from "@/lib/dinero";
 import { NOMBRE_TIPO_ID } from "@/lib/identificacion";
+import { etiquetaIva } from "@/lib/iva";
 
 const fecha = (f?: string | null) => (f && /^\d{4}-\d{2}-\d{2}$/.test(f) ? etiquetaPeriodo(f, f) : f || "");
 
@@ -243,7 +244,7 @@ function DetalleProforma({ id }: { id: string }) {
             <div key={i} className="flex items-start justify-between gap-3 px-4 py-3">
               <div className="min-w-0 flex-1">
                 <p className="text-sm text-texto">{it.descripcion}</p>
-                <p className="text-xs text-sutil">{it.cantidad} × {dolares(it.precio_unitario)} · IVA {it.tipo_iva}%</p>
+                <p className="text-xs text-sutil">{it.cantidad} × {dolares(it.precio_unitario)} · IVA {etiquetaIva(it.tipo_iva)}</p>
               </div>
               <div className="shrink-0 text-right tabular-nums">
                 <p className="text-sm font-semibold text-texto">{dolares(it.total)}</p>
@@ -355,7 +356,7 @@ function DetalleProforma({ id }: { id: string }) {
                     <td style={{ padding: "7px 8px", borderBottom: "1px solid #e5e7eb" }}>{it.descripcion}</td>
                     <td style={{ padding: "7px 8px", textAlign: "right", borderBottom: "1px solid #e5e7eb" }}>{it.cantidad}</td>
                     <td style={{ padding: "7px 8px", textAlign: "right", borderBottom: "1px solid #e5e7eb" }}>${dosDecimales(it.precio_unitario)}</td>
-                    <td style={{ padding: "7px 8px", textAlign: "right", borderBottom: "1px solid #e5e7eb" }}>{it.tipo_iva}%</td>
+                    <td style={{ padding: "7px 8px", textAlign: "right", borderBottom: "1px solid #e5e7eb" }}>{etiquetaIva(it.tipo_iva)}</td>
                     <td style={{ padding: "7px 8px", textAlign: "right", borderBottom: "1px solid #e5e7eb" }}>${dosDecimales(it.subtotal)}</td>
                     <td style={{ padding: "7px 8px", textAlign: "right", borderBottom: "1px solid #e5e7eb", fontWeight: "bold" }}>${dosDecimales(it.total)}</td>
                   </tr>
