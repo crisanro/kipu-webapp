@@ -5,6 +5,14 @@ import { ES_APP_NATIVA } from "./plataforma";
 export const URL_SITIO = "https://app.kipu.ec";
 
 /**
+ * Documentos legales publicados en kipu.ec. Se aceptan al crear la cuenta; el
+ * backend guarda qué versión se aceptó (DOCUMENTOS_REGISTRO en registro.py).
+ */
+export const URL_TERMINOS          = "https://kipu.ec/terminos";
+export const URL_PRIVACIDAD        = "https://kipu.ec/politica-de-privacidad";
+export const URL_TRATAMIENTO_DATOS = "https://kipu.ec/tratamiento-de-datos";
+
+/**
  * Dirección del backend. Una sola para todo el panel (axios, enlaces de PDF/XML).
  * Sin NEXT_PUBLIC_API_URL: en producción y en la app nativa, el backend oficial;
  * en desarrollo web, el puerto 8000 del mismo host.

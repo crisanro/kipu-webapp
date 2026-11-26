@@ -15,6 +15,17 @@ import { detalleError } from "@/lib/errores";
 import Turnstile, { TURNSTILE_ACTIVO } from "@/components/auth/Turnstile";
 import Boton from "@/components/ui/Boton";
 import { Campo, Entrada, EntradaClave } from "@/components/ui/Campo";
+import { URL_PRIVACIDAD, URL_TERMINOS, URL_TRATAMIENTO_DATOS } from "@/lib/config";
+
+/** Enlace a un documento de kipu.ec, en otra pestaña (tocarlo no marca la casilla). */
+function EnlaceLegal({ href, children }: { href: string; children: React.ReactNode }) {
+  return (
+    <a href={href} target="_blank" rel="noopener noreferrer"
+       className="text-acento underline underline-offset-2">
+      {children}
+    </a>
+  );
+}
 
 const MINIMO = 8;
 const EMAIL_OK = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -31,7 +42,8 @@ export default function RegisterPage() {
   const [password,       setPassword]       = useState("");
   const [confirm,        setConfirm]        = useState("");
   const [aceptaTerminos, setAceptaTerminos] = useState(false);
-  const [loading,        setLoading]        = useState(false);
+  const [aceptaNovedades, setAceptaNovedades] = useState(false);   // opcional, desmarcada
+  const [loading,       setLoading]        = useState(false);
   const [error,          setError]          = useState("");
   // Errores de cada campo: se muestran al salir del campo o al enviar
   const [tocados,        setTocados]        = useState<Record<string, boolean>>({});
@@ -61,7 +73,7 @@ export default function RegisterPage() {
     if (password.length < MINIMO)      { setError(`La contraseña debe tener al menos ${MINIMO} caracteres.`); return; }
     if (password !== confirm)          { setError("Las contraseñas no coinciden."); return; }
     if (!aceptaTerminos) {
-      setError("Debes aceptar la Política de Privacidad y el Tratamiento de Datos para continuar.");
+      setError("Para crear tu cuenta debes aceptar los Términos y condiciones, la Política de privacidad y el Acuerdo de tratamiento de datos.");
       return;
     }
     if (TURNSTILE_ACTIVO && !captcha) {
@@ -76,6 +88,7 @@ export default function RegisterPage() {
       // el registro directo en Firebase está desactivado
       await api.post("/api/v1/public/registro/cuenta", {
         email: email.trim(), password, captcha_token: captcha,
+        acepta_terminos: aceptaTerminos, acepta_novedades: aceptaNovedades,
       });
       creada = true;
       await signInWithEmailAndPassword(auth, email.trim(), password);
@@ -147,7 +160,8 @@ export default function RegisterPage() {
             />
           </Campo>
 
-          {/* Aceptación LOPDP: toda la fila se toca */}
+          {/* Aceptación (obligatoria) y novedades (opcional): toda la fila se toca.
+              El backend guarda la evidencia en aceptaciones_registro. */}
           <label htmlFor="terminos" className="flex cursor-pointer items-start gap-3 rounded-lg py-1">
             <input
               type="checkbox"
@@ -157,17 +171,23 @@ export default function RegisterPage() {
               className="mt-0.5 size-5 shrink-0 cursor-pointer rounded accent-acento"
             />
             <span className="text-xs leading-relaxed text-tenue tactil:text-sm">
-              He leído y acepto la{" "}
-              <a href="https://kipu.ec/politica-de-privacidad" target="_blank" rel="noopener noreferrer"
-                 className="text-acento underline underline-offset-2">
-                Política de Privacidad
-              </a>{" "}
-              y el{" "}
-              <a href="https://kipu.ec/tratamiento-de-datos-personales" target="_blank" rel="noopener noreferrer"
-                 className="text-acento underline underline-offset-2">
-                Tratamiento de Datos Personales
-              </a>{" "}
-              de Kipu EC.
+              He leído y acepto los <EnlaceLegal href={URL_TERMINOS}>Términos y condiciones</EnlaceLegal>,
+              la <EnlaceLegal href={URL_PRIVACIDAD}>Política de privacidad</EnlaceLegal> y
+              el <EnlaceLegal href={URL_TRATAMIENTO_DATOS}>Acuerdo de tratamiento de datos</EnlaceLegal> de Kipu.
+            </span>
+          </label>
+
+          <label htmlFor="novedades" className="flex cursor-pointer items-start gap-3 rounded-lg py-1">
+            <input
+              type="checkbox"
+              id="novedades"
+              checked={aceptaNovedades}
+              onChange={(e) => setAceptaNovedades(e.target.checked)}
+              className="mt-0.5 size-5 shrink-0 cursor-pointer rounded accent-acento"
+            />
+            <span className="text-xs leading-relaxed text-tenue tactil:text-sm">
+              Quiero recibir por correo consejos y novedades de Kipu, incluidas ofertas. Puedo darme
+              de baja cuando quiera. <span className="text-sutil">(Opcional)</span>
             </span>
           </label>
 
