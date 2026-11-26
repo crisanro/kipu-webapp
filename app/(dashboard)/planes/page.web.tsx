@@ -264,7 +264,7 @@ export default function PlanesPage() {
         </div>
         <button
           type="button"
-          onClick={cargar}
+          onClick={recargar}
           disabled={loading}
           className="p-2 rounded-lg transition-colors disabled:opacity-40"
           style={{

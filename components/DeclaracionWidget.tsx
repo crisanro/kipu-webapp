@@ -110,7 +110,10 @@ export default function DeclaracionWidget({ data, onDeclarado }: Props) {
     setGuardando(true);
     setError("");
     try {
-      await api.post("/api/v1/app/declaraciones/declarar");
+      // El periodo que se está mostrando: sin él, el backend marca "el que toca
+      // ahora", que puede ser otro (p. ej. el mes ya cambió con la página abierta)
+      await api.post("/api/v1/app/declaraciones/declarar", null,
+                     { params: { tipo: "104", ...(data.periodo_key ? { periodo: data.periodo_key } : {}) } });
       setConfirmando(false);
       onDeclarado(); 
     } catch (e: any) {

@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useConfirmar } from "@/components/ui/Confirmar";
 import { useAvisos } from "@/components/ui/Avisos";
 import { useState, useEffect } from "react";
@@ -100,11 +101,6 @@ export default function AdminEmisorDetallePage() {
   }, [emisor]);
 
   // ── Notificación ──────────────────────────────────────────────────────────
-  const [notifTitulo,  setNotifTitulo]  = useState("");
-  const [notifMensaje, setNotifMensaje] = useState("");
-  const [notifTipo,    setNotifTipo]    = useState("SISTEMA");
-  const [enviando,     setEnviando]     = useState(false);
-  const [msgNotif,     setMsgNotif]     = useState("");
 
   const cargar = async () => {
     setLoading(true);
@@ -225,27 +221,6 @@ export default function AdminEmisorDetallePage() {
       setMsgEditar({ ok: false, texto: detalleError(e, "Error al guardar.") });
     } finally {
       setGuardando(false);
-    }
-  };
-
-  const enviarNotificacion = async () => {
-    if (!notifTitulo.trim() || !notifMensaje.trim()) return;
-    setEnviando(true);
-    setMsgNotif("");
-    try {
-      await api.post("/api/v1/admin/panel/notificar", {
-        emisor_id: parseInt(id as string),
-        tipo:      notifTipo,
-        titulo:    notifTitulo,
-        mensaje:   notifMensaje,
-      });
-      setMsgNotif("✅ Notificación enviada.");
-      setNotifTitulo("");
-      setNotifMensaje("");
-    } catch (e: any) {
-      setMsgNotif(`❌ ${detalleError(e, "Error al enviar.")}`);
-    } finally {
-      setEnviando(false);
     }
   };
 
@@ -1280,111 +1255,16 @@ export default function AdminEmisorDetallePage() {
         </div>
       )}
 
-      {/* ── Tab: Notificar ──────────────────────────────────────────────────── */}
+      {/* ── Tab: Notificar: el formulario es el de Notificaciones (mismos tipos y referencia) ── */}
       {tab === "notificar" && (
-        <div
-          className="rounded-xl p-4 space-y-3"
-          style={{
-            background: "var(--kipu-surface)",
-            border: "1px solid var(--kipu-border)",
-          }}
-        >
-          <h2 className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--kipu-subtle)" }}>
-            Enviar notificación a este emisor
-          </h2>
-          <div>
-            <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Tipo</label>
-            <select
-              value={notifTipo}
-              onChange={(e) => setNotifTipo(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none transition-colors"
-              style={{
-                background: "var(--kipu-surface)",
-                border: "1px solid var(--kipu-border)",
-                color: "var(--kipu-text)",
-              }}
-            >
-              <option value="SISTEMA">Sistema</option>
-              <option value="DECLARACION">Declaración</option>
-              <option value="CREDITOS">Créditos</option>
-              <option value="SUSCRIPCION">Suscripción</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Título *</label>
-            <input
-              value={notifTitulo}
-              onChange={(e) => setNotifTitulo(e.target.value)}
-              placeholder="Título de la notificación"
-              className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none transition-colors"
-              style={{
-                background: "var(--kipu-surface)",
-                border: "1px solid var(--kipu-border)",
-                color: "var(--kipu-text)",
-              }}
-              onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-              onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
-            />
-          </div>
-          <div>
-            <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Mensaje *</label>
-            <textarea
-              value={notifMensaje}
-              onChange={(e) => setNotifMensaje(e.target.value)}
-              placeholder="Contenido de la notificación..."
-              rows={3}
-              className="w-full px-3 py-2 rounded-lg text-sm resize-none focus:outline-none transition-colors"
-              style={{
-                background: "var(--kipu-surface)",
-                border: "1px solid var(--kipu-border)",
-                color: "var(--kipu-text)",
-              }}
-              onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-              onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
-            />
-          </div>
-          {msgNotif && (
-            <p
-              className="text-xs px-3 py-2 rounded-lg font-medium"
-              style={{
-                color: msgNotif.startsWith("✅") ? "var(--kipu-success)" : "var(--kipu-danger)",
-                background: msgNotif.startsWith("✅")
-                  ? "color-mix(in srgb, var(--kipu-success) 10%, transparent)"
-                  : "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
-              }}
-            >
-              {msgNotif}
-            </p>
-          )}
-          <button
-            type="button"
-            onClick={enviarNotificacion}
-            disabled={enviando || !notifTitulo.trim() || !notifMensaje.trim()}
-            className="w-full py-2.5 rounded-lg text-white font-medium text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-            style={{ background: "var(--kipu-accent)" }}
-            onMouseEnter={e => {
-              if (!enviando && notifTitulo.trim() && notifMensaje.trim()) {
-                e.currentTarget.style.background = "var(--kipu-accent-h)";
-              }
-            }}
-            onMouseLeave={e => {
-              if (!enviando && notifTitulo.trim() && notifMensaje.trim()) {
-                e.currentTarget.style.background = "var(--kipu-accent)";
-              }
-            }}
-          >
-            {enviando ? (
-              <>
-                <div
-                  className="w-3.5 h-3.5 border-2 border-t-transparent rounded-full animate-spin"
-                  style={{ borderColor: "#FFFFFF", borderTopColor: "transparent" }}
-                />
-                Enviando...
-              </>
-            ) : (
-              <><Send size={14} /> Enviar notificación</>
-            )}
-          </button>
+        <div className="space-y-3 rounded-xl border border-borde bg-superficie p-4">
+          <p className="text-sm text-tenue">
+            Las notificaciones se envían desde Notificaciones, con este emisor ya elegido como destino.
+          </p>
+          <Link href={`/admin/notificaciones?emisor=${id}`}
+                className="inline-flex items-center gap-2 rounded-lg bg-acento px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-acento-hover">
+            <Send size={14} aria-hidden /> Escribir notificación
+          </Link>
         </div>
       )}
     </div>
