@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { ChevronDown, ChevronUp, TrendingUp } from "lucide-react";
 import { montoEC, numeroEC } from "@/lib/dinero";
+import CeldaCasillero from "./CeldaCasillero";
 
 interface DesgloseTarifa {
   tarifa:    number;
@@ -26,54 +27,6 @@ interface CasillerosVentas {
 interface Props {
   desglose:   DesgloseTarifa[];
   casilleros: CasillerosVentas;
-}
-
-function CeldaCasillero({ num, label, value, highlight = false }: {
-  num: string;
-  label: string;
-  value: number;
-  highlight?: boolean;
-}) {
-  return (
-    <div
-      className="p-2.5 rounded-lg flex flex-col justify-between transition-colors"
-      style={{
-        background: highlight
-          ? "color-mix(in srgb, var(--kipu-accent) 10%, transparent)"
-          : "color-mix(in srgb, var(--kipu-text) 3%, transparent)",
-        border: highlight
-          ? "1px solid color-mix(in srgb, var(--kipu-accent) 25%, transparent)"
-          : "1px solid var(--kipu-border)",
-      }}
-    >
-      <div className="flex items-center justify-between gap-1 mb-1">
-        <span
-          className="text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0"
-          style={{
-            background: highlight ? "var(--kipu-accent)" : "color-mix(in srgb, var(--kipu-text) 10%, transparent)",
-            color: highlight ? "#FFFFFF" : "var(--kipu-subtle)",
-          }}
-        >
-          {num}
-        </span>
-        <span className="text-[10px] truncate" style={{ color: "var(--kipu-subtle)" }}>
-          {label}
-        </span>
-      </div>
-      <p
-        className="text-sm font-bold tabular-nums text-right"
-        style={{
-          color: highlight
-            ? "var(--kipu-accent)"
-            : value === 0
-              ? "var(--kipu-subtle)"
-              : "var(--kipu-text)",
-        }}
-      >
-        ${montoEC(value)}
-      </p>
-    </div>
-  );
 }
 
 export default function SeccionVentas({ desglose, casilleros }: Props) {
@@ -165,17 +118,17 @@ export default function SeccionVentas({ desglose, casilleros }: Props) {
                 </div>
 
                 <div className="grid grid-cols-3 gap-2">
-                  <CeldaCasillero
+                  <CeldaCasillero tono="acento"
                     num={brutoNum}
                     label="Valor Bruto"
                     value={d.bruto}
                   />
-                  <CeldaCasillero
+                  <CeldaCasillero tono="acento"
                     num={netoNum}
                     label="Valor Neto"
                     value={d.neto}
                   />
-                  <CeldaCasillero
+                  <CeldaCasillero tono="acento"
                     num={ivaNum}
                     label="Impuesto Generado"
                     value={d.iva_neto}
@@ -199,12 +152,12 @@ export default function SeccionVentas({ desglose, casilleros }: Props) {
               </div>
 
               <div className="grid grid-cols-2 gap-2">
-                <CeldaCasillero
+                <CeldaCasillero tono="acento"
                   num="403"
                   label="Valor Bruto"
                   value={tarifa0.bruto}
                 />
-                <CeldaCasillero
+                <CeldaCasillero tono="acento"
                   num="413"
                   label="Valor Neto"
                   value={tarifa0.neto}
@@ -225,8 +178,8 @@ export default function SeccionVentas({ desglose, casilleros }: Props) {
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-2">
-                <CeldaCasillero num="408" label="Valor Bruto" value={casilleros["408"] ?? 0} />
-                <CeldaCasillero num="418" label="Valor Neto"  value={casilleros["418"] ?? 0} />
+                <CeldaCasillero tono="acento" num="408" label="Valor Bruto" value={casilleros["408"] ?? 0} />
+                <CeldaCasillero tono="acento" num="418" label="Valor Neto"  value={casilleros["418"] ?? 0} />
               </div>
             </div>
           )}
@@ -243,8 +196,8 @@ export default function SeccionVentas({ desglose, casilleros }: Props) {
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-2">
-                <CeldaCasillero num="431" label="Valor Bruto" value={casilleros["431"] ?? 0} />
-                <CeldaCasillero num="441" label="Valor Neto"  value={casilleros["441"] ?? 0} />
+                <CeldaCasillero tono="acento" num="431" label="Valor Bruto" value={casilleros["431"] ?? 0} />
+                <CeldaCasillero tono="acento" num="441" label="Valor Neto"  value={casilleros["441"] ?? 0} />
               </div>
             </div>
           )}
@@ -255,17 +208,17 @@ export default function SeccionVentas({ desglose, casilleros }: Props) {
               Totales de ventas y otras operaciones
             </p>
             <div className="grid grid-cols-3 gap-2">
-              <CeldaCasillero
+              <CeldaCasillero tono="acento"
                 num="409"
                 label="Total Bruto"
                 value={casilleros["409"] ?? 0}
               />
-              <CeldaCasillero
+              <CeldaCasillero tono="acento"
                 num="419"
                 label="Total Neto"
                 value={casilleros["419"] ?? 0}
               />
-              <CeldaCasillero
+              <CeldaCasillero tono="acento"
                 num="429"
                 label="Total IVA Generado"
                 value={casilleros["429"] ?? 0}
