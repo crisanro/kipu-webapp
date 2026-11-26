@@ -661,16 +661,9 @@ export default function PlanesPage() {
                   </button>
 
                   {/* Política de devolución (términos, sección 7): solo la primera compra */}
-                  <p className="flex items-start justify-center gap-1.5 text-center text-xs mt-3" style={{ color: "var(--kipu-subtle)" }}>
-                    <ShieldCheck size={14} className="shrink-0 mt-px" style={{ color: "var(--kipu-success)" }} aria-hidden />
-                    <span>
-                      Si no te convence, te devolvemos el 100% dentro de los 7 días de tu primera compra, sin preguntas.{" "}
-                      <a href={URL_TERMINOS} target="_blank" rel="noopener noreferrer"
-                         className="underline underline-offset-2" style={{ color: "var(--kipu-accent)" }}>
-                        Ver términos
-                      </a>
-                    </span>
-                  </p>
+                  <SelloGarantia titulo="Garantía de 7 días">
+                    Si no te convence, te devolvemos el 100%. Sin preguntas.
+                  </SelloGarantia>
 
                   {(!enProduccion || !esAdmin) && (
                     <p className="text-center text-xs mt-2" style={{ color: "var(--kipu-subtle)" }}>
@@ -682,6 +675,8 @@ export default function PlanesPage() {
 
               </div>
               )}
+
+              {(verPro || verAlDia) && <GarantiaDevolucion verPro={verPro} verAlDia={verAlDia} />}
 
               {/* Plan gratis: solo para quien está en él. Planes muestra el actual y los
                   de arriba, nunca uno inferior (al Pro o Al Día no se le ofrece bajar) */}
@@ -1040,10 +1035,9 @@ function TarjetaAlDia({ estado, precios, periodo: pedido, enProduccion, esAdmin,
         </p>
       )}
       {/* Términos de Al Día v3, sección 9: solo la primera contratación */}
-      <p className="flex items-start justify-center gap-1.5 text-center text-xs mt-2" style={{ color: "var(--kipu-subtle)" }}>
-        <ShieldCheck size={14} className="shrink-0 mt-px" style={{ color: "var(--kipu-success)" }} aria-hidden />
-        <span>La primera vez, si todavía no empezamos a trabajar en tu cuenta, te devolvemos el 100%, sin preguntas.</span>
-      </p>
+      <SelloGarantia titulo="Garantía de devolución">
+        Si todavía no empezamos a trabajar en tu cuenta, te devolvemos el 100%. Sin preguntas.
+      </SelloGarantia>
       <Link
         href="/al-dia"
         className="mt-3 text-center text-sm font-medium flex items-center justify-center gap-1 hover:underline underline-offset-2"
@@ -1097,5 +1091,73 @@ function TarjetaGratis({ actual }: { actual: boolean }) {
         ))}
       </div>
     </div>
+  );
+}
+
+// ── Garantía de devolución ───────────────────────────────────────────────────
+// Política de kipu.ec/terminos (sección 7) y términos de Al Día v3 (sección 9):
+// 100% sin preguntas, solo la primera compra de cada plan. Pro: 7 días.
+// Al Día: mientras no hayamos empezado a trabajar en la cuenta.
+const VERDE_SUAVE  = "color-mix(in srgb, var(--kipu-success) 10%, transparent)";
+const VERDE_BORDE  = "color-mix(in srgb, var(--kipu-success) 40%, transparent)";
+
+/** Sello dentro de cada tarjeta, junto al botón de contratar. */
+function SelloGarantia({ titulo, children }: { titulo: string; children: React.ReactNode }) {
+  return (
+    <div className="mt-3 flex items-start gap-3 rounded-xl p-3"
+         style={{ background: VERDE_SUAVE, border: `1px solid ${VERDE_BORDE}` }}>
+      <ShieldCheck size={22} className="shrink-0" style={{ color: "var(--kipu-success)" }} aria-hidden />
+      <div className="min-w-0">
+        <p className="text-sm font-bold" style={{ color: "var(--kipu-text)" }}>{titulo}</p>
+        <p className="text-xs" style={{ color: "var(--kipu-muted)" }}>{children}</p>
+      </div>
+    </div>
+  );
+}
+
+/** Recuadro grande debajo de las tarjetas: la garantía como promesa principal. */
+function GarantiaDevolucion({ verPro, verAlDia }: { verPro: boolean; verAlDia: boolean }) {
+  return (
+    <section className="mt-6 rounded-2xl p-6 md:p-8 text-center"
+             style={{ background: VERDE_SUAVE, border: `2px solid ${VERDE_BORDE}` }}>
+      <div className="mx-auto mb-3 flex size-14 items-center justify-center rounded-full"
+           style={{ background: "var(--kipu-success)" }}>
+        <ShieldCheck size={30} color="white" aria-hidden />
+      </div>
+      <h2 className="text-xl md:text-2xl font-bold" style={{ color: "var(--kipu-text)" }}>
+        Te devolvemos el 100%. Sin preguntas.
+      </h2>
+      <p className="mx-auto mt-2 max-w-xl text-sm md:text-base" style={{ color: "var(--kipu-muted)" }}>
+        Queremos que contrates tranquilo. Si no te convence, nos escribes y te devolvemos todo tu dinero a
+        la misma tarjeta. Sin trámites ni explicaciones.
+      </p>
+
+      <div className={`mx-auto mt-5 grid max-w-2xl gap-3 text-left ${verPro && verAlDia ? "md:grid-cols-2" : ""}`}>
+        {verAlDia && (
+          <div className="rounded-xl p-4" style={{ background: "var(--kipu-surface)", border: "1px solid var(--kipu-border)" }}>
+            <p className="text-sm font-bold" style={{ color: "var(--kipu-text)" }}>Kipu Al Día</p>
+            <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>
+              Mientras todavía no empecemos a trabajar en tu cuenta.
+            </p>
+          </div>
+        )}
+        {verPro && (
+          <div className="rounded-xl p-4" style={{ background: "var(--kipu-surface)", border: "1px solid var(--kipu-border)" }}>
+            <p className="text-sm font-bold" style={{ color: "var(--kipu-text)" }}>Kipu Pro</p>
+            <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>
+              Dentro de los 7 días después de pagar.
+            </p>
+          </div>
+        )}
+      </div>
+
+      <p className="mt-4 text-xs" style={{ color: "var(--kipu-subtle)" }}>
+        Aplica a la primera compra de cada plan.{" "}
+        <a href={URL_TERMINOS} target="_blank" rel="noopener noreferrer"
+           className="underline underline-offset-2" style={{ color: "var(--kipu-accent)" }}>
+          Ver términos
+        </a>
+      </p>
+    </section>
   );
 }
