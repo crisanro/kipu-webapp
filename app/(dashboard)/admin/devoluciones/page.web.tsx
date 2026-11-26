@@ -10,6 +10,7 @@ import { CheckCircle2, Loader2, Mail, MessageCircle, RotateCw, Undo2 } from "luc
 import api from "@/lib/api";
 import { detalleError } from "@/lib/errores";
 import { dolares } from "@/lib/dinero";
+import { enlaceWhatsAppA } from "@/lib/soporte";
 
 interface Devolucion {
   id:                       number;
@@ -40,11 +41,6 @@ const ESTADO: Record<string, { texto: string; color: string }> = {
 
 const fecha = (iso: string) =>
   new Date(iso).toLocaleDateString("es-EC", { day: "numeric", month: "short", year: "numeric" });
-
-function wa(numero: string): string {
-  const d = numero.replace(/\D/g, "");
-  return d.startsWith("0") ? `593${d.slice(1)}` : d;
-}
 
 type Lectura = { lista?: Devolucion[]; error?: string; prohibido?: boolean };
 
@@ -222,8 +218,8 @@ export default function AdminDevolucionesPage() {
                     <div className="flex items-center gap-3 text-xs flex-wrap pt-2 sm:pt-0" style={{ color: "var(--kipu-subtle)" }}>
                       <span>{d.contacto ?? "Sin contacto"}</span>
                       {d.whatsapp && (
-                        <a href={`https://wa.me/${wa(d.whatsapp)}?text=${encodeURIComponent(
-                             `Hola, te escribimos de Kipu por la devolución de ${dolares(d.monto)} de tu Kipu Pro. ¿A qué cuenta bancaria te la transferimos?`)}`}
+                        <a href={enlaceWhatsAppA(d.whatsapp,
+                             `Hola, te escribimos de Kipu por la devolución de ${dolares(d.monto)} de tu Kipu Pro. ¿A qué cuenta bancaria te la transferimos?`)}
                            target="_blank" rel="noopener noreferrer"
                            className="inline-flex items-center gap-1 font-medium hover:underline" style={{ color: "var(--kipu-accent)" }}>
                           <MessageCircle size={12} /> {d.whatsapp}

@@ -10,6 +10,7 @@ import {
   CheckCircle2, XCircle, LifeBuoy, RotateCw, ChevronRight,
   AtSign
 } from "lucide-react";
+import { enlaceWhatsAppA } from "@/lib/soporte";
 
 // ── Estados del embudo ─────────────────────────────────────────────────────────
 const ESTADOS: Record<string, { label: string; desc: string; color: string }> = {
@@ -44,13 +45,6 @@ const fmtFechaHora = (iso?: string | null) =>
 const errMsg = (e: any) => {
   const d = e?.response?.data?.detail;
   return typeof d === "string" ? d : d ? JSON.stringify(d) : e?.message ?? "Error desconocido";
-};
-
-// 0991234567 → 593991234567
-const waNumero = (num?: string | null) => {
-  if (!num) return "";
-  const d = num.replace(/\D/g, "");
-  return d.startsWith("0") ? `593${d.slice(1)}` : d;
 };
 
 const cardStyle = {
@@ -466,7 +460,7 @@ export default function AdminSoportePage() {
                     <Dato label="WhatsApp">
                       {profile.whatsapp_number ? (
                         <a
-                          href={`https://wa.me/${waNumero(profile.whatsapp_number)}`}
+                          href={enlaceWhatsAppA(profile.whatsapp_number)}
                           target="_blank"
                           rel="noopener noreferrer"
                           style={{ color: "var(--kipu-accent)" }}
@@ -741,7 +735,7 @@ export default function AdminSoportePage() {
                       {copiado ? "Copiado" : "Copiar"}
                     </button>
                     <a
-                      href={`https://wa.me/${waNumero(profile?.whatsapp_number)}?text=${encodeURIComponent(textoWa)}`}
+                      href={enlaceWhatsAppA(profile?.whatsapp_number, textoWa)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium"

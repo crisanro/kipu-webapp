@@ -5,6 +5,7 @@ import Link from "next/link";
 import { CreditCard, Copy, CheckCircle2, ExternalLink, RefreshCw, MessageCircle } from "lucide-react";
 import api from "@/lib/api";
 import { detalleError } from "@/lib/errores";
+import { enlaceWhatsAppA } from "@/lib/soporte";
 
 interface LinkPagoData {
   id:              string;
@@ -144,7 +145,7 @@ export default function LinkPago({ documentoId, numero, pendiente, onPagado }: P
             </button>
           </div>
           <div className="flex flex-wrap gap-2">
-            <a href={`https://wa.me/?text=${encodeURIComponent(mensajeWa)}`} target="_blank" rel="noopener noreferrer"
+            <a href={enlaceWhatsAppA(null, mensajeWa)} target="_blank" rel="noopener noreferrer"
                className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg"
                style={{ border: "1px solid var(--kipu-border)", color: "var(--kipu-muted)" }}>
               <MessageCircle size={12} /> WhatsApp

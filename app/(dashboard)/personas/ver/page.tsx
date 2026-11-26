@@ -28,6 +28,7 @@ import {
 import { detalleError } from "@/lib/errores";
 import { dosDecimales } from "@/lib/dinero";
 import { NOMBRE_TIPO_ID } from "@/lib/identificacion";
+import { enlaceWhatsAppA } from "@/lib/soporte";
 
 const FACTURAS_LIMIT = 10; // ← Cambia a 20 cuando estés listo
 
@@ -44,12 +45,6 @@ const fecha = (f?: string | null) => (f && /^\d{4}-\d{2}-\d{2}$/.test(f) ? etiqu
 function validarEmail(email: string): boolean {
   if (!email) return true;
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-}
-
-/** 0991234567 → 593991234567 (WhatsApp pide el número con código de país). */
-function numeroWhatsApp(telefono: string): string {
-  const d = telefono.replace(/\D/g, "");
-  return d.length === 10 && d.startsWith("0") ? `593${d.slice(1)}` : d;
 }
 
 /** Fila etiqueta → valor (Datos). */
@@ -249,7 +244,7 @@ function DetallePersona({ id }: { id: string }) {
                     <Phone size={18} className="text-acento" aria-hidden /> Llamar
                   </a>
                   <button type="button" className={contacto}
-                          onClick={() => void abrirExterno(`https://wa.me/${numeroWhatsApp(cliente.telefono)}`)}>
+                          onClick={() => void abrirExterno(enlaceWhatsAppA(cliente.telefono))}>
                     <MessageCircle size={18} className="text-acento" aria-hidden /> WhatsApp
                   </button>
                 </>

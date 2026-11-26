@@ -23,6 +23,7 @@ import EmisionLayout from "../components/EmisionLayout";
 import { useEmision } from "../components/useEmision";
 import { useBorrador } from "@/lib/borradores";
 import { tieneAccesoAEmitir } from "@/lib/emision";
+import { enlaceWhatsAppA } from "@/lib/soporte";
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -382,7 +383,7 @@ export default function NuevaFacturaPage() {
                 {linkCopiado ? "Copiado" : "Copiar"}
               </button>
               <a
-                href={`https://wa.me/?text=${encodeURIComponent(`Hola, te comparto el link para tu pago: ${url}`)}`}
+                href={enlaceWhatsAppA(null, `Hola, te comparto el link para tu pago: ${url}`)}
                 target="_blank" rel="noopener noreferrer"
                 className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs py-1.5 rounded-lg"
                 style={{ border: "1px solid var(--kipu-border)", color: "var(--kipu-muted)" }}
@@ -437,7 +438,7 @@ export default function NuevaFacturaPage() {
                 {linkCopiado ? "Copiado" : "Copiar"}
               </button>
               <a
-                href={`https://wa.me/?text=${encodeURIComponent(`Hola, te comparto el link para pagar tu factura: ${resultado.link_pago}`)}`}
+                href={enlaceWhatsAppA(null, `Hola, te comparto el link para pagar tu factura: ${resultado.link_pago}`)}
                 target="_blank" rel="noopener noreferrer"
                 className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs py-1.5 rounded-lg"
                 style={{ border: "1px solid var(--kipu-border)", color: "var(--kipu-muted)" }}

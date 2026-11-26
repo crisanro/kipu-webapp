@@ -61,13 +61,29 @@ export function enlaceWhatsApp(
   return `https://wa.me/${WHATSAPP_SOPORTE}?text=${encodeURIComponent(lineas.join("\n"))}`;
 }
 
+/** 0991234567 → 593991234567: WhatsApp pide el número con código de país. */
+export function numeroWhatsApp(telefono: string | null | undefined): string {
+  const d = (telefono ?? "").replace(/\D/g, "");
+  return d.startsWith("0") ? `593${d.slice(1)}` : d;
+}
+
+/**
+ * Enlace a un chat de WhatsApp con el mensaje prellenado. Sin número, WhatsApp
+ * pide elegir a quién mandarlo (compartir un link con el cliente).
+ */
+export function enlaceWhatsAppA(telefono: string | null | undefined, texto?: string): string {
+  return `https://wa.me/${numeroWhatsApp(telefono)}${texto ? `?text=${encodeURIComponent(texto)}` : ""}`;
+}
+
+/** Enlace al WhatsApp de soporte con el mensaje ya escrito. */
+export const enlaceWhatsAppSoporte = (texto: string): string => enlaceWhatsAppA(WHATSAPP_SOPORTE, texto);
+
 /**
  * WhatsApp para una falla que bloquea (para todos, sin importar el plan).
  * `problema` es el mensaje ya escrito; se le agrega el correo si se conoce.
  */
 export function enlaceWhatsAppFalla(problema: string, email?: string | null): string {
-  const texto = email ? `${problema}\nCorreo: ${email}` : problema;
-  return `https://wa.me/${WHATSAPP_SOPORTE}?text=${encodeURIComponent(texto)}`;
+  return enlaceWhatsAppSoporte(email ? `${problema}\nCorreo: ${email}` : problema);
 }
 
 /**
