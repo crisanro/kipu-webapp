@@ -15,6 +15,7 @@ import { InsigniaSri, InsigniaEstado } from "@/components/ui/InsigniaEstado";
 import { type FacturaBase, TIPO_LABEL, MOTIVO_LABEL, formatearFechaHora, fmt } from "./utils";
 import { useAccionesArchivo } from "./AccionesArchivo";
 import { useAccionesRelacionadas } from "./ComprobantesRelacionados";
+import { detalleError } from "@/lib/errores";
 
 // Estados en los que tiene sentido preguntarle al SRI cómo está el comprobante
 const CONSULTABLES = ["FIRMADO", "RECIBIDA", "EN_REVISION", "DEVUELTA", "RECHAZADO"];
@@ -81,8 +82,7 @@ export default function EstadoDocumento({ factura, onRecargar, consumidorFinal, 
       avisos.exito(res.data?.mensaje || "Listo.");
       onRecargar();
     } catch (e: any) {
-      const detalle = e?.response?.data?.detail;
-      avisos.error(typeof detalle === "string" ? detalle : "No pudimos completar la acción. Intenta de nuevo.");
+      avisos.error(detalleError(e, "No pudimos completar la acción. Intenta de nuevo."));
     } finally {
       setAccion(null);
     }

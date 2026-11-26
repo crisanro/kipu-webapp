@@ -12,6 +12,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, Gauge, Loader2, RotateCw, Search, XCircle } from "lucide-react";
 import api from "@/lib/api";
+import { detalleError } from "@/lib/errores";
 
 interface Criterio {
   ok:             boolean;
@@ -74,11 +75,6 @@ const LIMITES: Record<number, string> = { 1: "300 / 100", 2: "600 / 200", 3: "1.
 
 const fecha = (iso: string) =>
   new Date(iso).toLocaleDateString("es-EC", { day: "numeric", month: "short", year: "numeric" });
-
-const detalle = (e: unknown, porDefecto: string) => {
-  const det = (e as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail;
-  return typeof det === "string" ? det : porDefecto;
-};
 
 function textoCriterio(clave: string, c: Criterio): string {
   if (clave === "dias") return `${c.valor} ${c.texto} (pide ${c.requerido})`;
@@ -168,7 +164,7 @@ export default function AdminUsoJustoPage() {
         : `Solicitud de ${s.razon_social} rechazada. Ya le llegó la notificación.`);
       recargar();
     } catch (e) {
-      setError(detalle(e, "No se pudo resolver la solicitud."));
+      setError(detalleError(e, "No se pudo resolver la solicitud."));
     } finally {
       setResolviendo(null);
     }
@@ -187,7 +183,7 @@ export default function AdminUsoJustoPage() {
       if (lista.length === 1) await abrir(lista[0].id);
     } catch (e) {
       setEncontradas(null);
-      setError(detalle(e, "No se pudo buscar."));
+      setError(detalleError(e, "No se pudo buscar."));
     } finally {
       setBuscando(false);
     }
@@ -201,7 +197,7 @@ export default function AdminUsoJustoPage() {
       setNuevoNivel(res.data.data.nivel);
     } catch (e) {
       setEmpresa(null);
-      setError(detalle(e, "No se encontró la empresa."));
+      setError(detalleError(e, "No se encontró la empresa."));
     }
   };
 
@@ -217,7 +213,7 @@ export default function AdminUsoJustoPage() {
       setNotaNivel("");
       await abrir(empresa.id);
     } catch (e) {
-      setError(detalle(e, "No se pudo cambiar el nivel."));
+      setError(detalleError(e, "No se pudo cambiar el nivel."));
     } finally {
       setGuardando(false);
     }

@@ -19,14 +19,10 @@ import type { EstadoRenta } from "@/components/renta/OfertaRenta";
 
 // Contacto de ventas (transferencia, cambio de plan): el mismo número configurado
 import { WHATSAPP_SOPORTE as SOPORTE_WA } from "@/lib/soporte";
+import { detalleError } from "@/lib/errores";
 const caja = { background: "var(--kipu-surface)", border: "1px solid var(--kipu-border)" };
 
 interface Terminos { version: string; texto: string; hash: string }
-
-function detalle(err: unknown, porDefecto: string): string {
-  const d = (err as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail;
-  return typeof d === "string" ? d : porDefecto;
-}
 
 const whatsapp = (texto: string) => `https://wa.me/${SOPORTE_WA}?text=${encodeURIComponent(texto)}`;
 
@@ -226,7 +222,7 @@ export default function KipuRentaPage() {
       setEstado(e.data.data);
       setTerminos(t.data.data);
     } catch (err: unknown) {
-      setError(detalle(err, "No pudimos cargar Kipu Renta. Intenta de nuevo."));
+      setError(detalleError(err, "No pudimos cargar Kipu Renta. Intenta de nuevo."));
     }
   }, []);
 
@@ -240,7 +236,7 @@ export default function KipuRentaPage() {
         setEstado(e.data.data);
         setTerminos(t.data.data);
       })
-      .catch((err: unknown) => { if (vivo) setError(detalle(err, "No pudimos cargar Kipu Renta. Intenta de nuevo.")); })
+      .catch((err: unknown) => { if (vivo) setError(detalleError(err, "No pudimos cargar Kipu Renta. Intenta de nuevo.")); })
       .finally(() => { if (vivo) setCargando(false); });
     return () => { vivo = false; };
   }, []);
@@ -278,7 +274,7 @@ export default function KipuRentaPage() {
       const r = await api.post("/api/v1/app/renta/checkout");
       window.location.href = r.data.checkout_url;
     } catch (err: unknown) {
-      setError(detalle(err, "No pudimos continuar al pago. Intenta de nuevo."));
+      setError(detalleError(err, "No pudimos continuar al pago. Intenta de nuevo."));
       setEnviando(false);
       void cargar();
     }

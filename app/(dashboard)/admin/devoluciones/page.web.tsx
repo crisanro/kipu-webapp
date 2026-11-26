@@ -8,6 +8,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, Loader2, Mail, MessageCircle, RotateCw, Undo2 } from "lucide-react";
 import api from "@/lib/api";
+import { detalleError } from "@/lib/errores";
 
 interface Devolucion {
   id:                       number;
@@ -103,8 +104,7 @@ export default function AdminDevolucionesPage() {
       setRefs((r) => ({ ...r, [d.id]: "" }));
       recargar();
     } catch (e) {
-      const det = (e as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail;
-      setError(typeof det === "string" ? det : "No se pudo marcar la devolución.");
+      setError(detalleError(e, "No se pudo marcar la devolución."));
     } finally {
       setMarcando(null);
     }

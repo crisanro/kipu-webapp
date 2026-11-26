@@ -25,6 +25,7 @@ import {
   ArrowLeft, User, Mail, Phone, MapPin, FileText, Plus, Pencil, Copy, Save,
   MoreVertical, MessageCircle, Wallet, Key, ChevronDown,
 } from "lucide-react";
+import { detalleError } from "@/lib/errores";
 
 const FACTURAS_LIMIT = 10; // ← Cambia a 20 cuando estés listo
 
@@ -184,8 +185,7 @@ function DetallePersona({ id }: { id: string }) {
       setEditing(false);
       avisos.exito("Datos guardados");
     } catch (err: any) {
-      const detalle = err?.response?.data?.detail;
-      setError(typeof detalle === "string" ? detalle : "Error al guardar.");
+      setError(detalleError(err, "Error al guardar."));
     } finally {
       setSaving(false);
     }

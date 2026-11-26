@@ -6,7 +6,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Loader2, UserPlus } from "lucide-react";
 import api from "@/lib/api";
-import { caja, campo, detalle, fecha } from "../_comun";
+import { caja, campo, fecha } from "../_comun";
+import { detalleError } from "@/lib/errores";
 
 interface Contador {
   id: string; nombre: string; identificacion: string; telefono: string | null; email: string;
@@ -29,7 +30,7 @@ export default function ContadoresPage() {
       const r = await api.get("/api/v1/admin/al-dia/contadores");
       setLista(r.data.data);
     } catch (err: unknown) {
-      setError(detalle(err, "No pudimos cargar los contadores."));
+      setError(detalleError(err, "No pudimos cargar los contadores."));
     }
   }, []);
 
@@ -40,7 +41,7 @@ export default function ContadoresPage() {
       .catch((err: unknown) => {
         if (!vivo) return;
         if ((err as { response?: { status?: number } })?.response?.status === 403) router.replace("/equipo");
-        else setError(detalle(err, "No pudimos cargar los contadores."));
+        else setError(detalleError(err, "No pudimos cargar los contadores."));
       });
     return () => { vivo = false; };
   }, [router]);
@@ -55,7 +56,7 @@ export default function ContadoresPage() {
       setForm(VACIO);
       await recargar();
     } catch (err: unknown) {
-      setError(detalle(err, "No se pudo dar de alta."));
+      setError(detalleError(err, "No se pudo dar de alta."));
     } finally {
       setEnviando(false);
     }
@@ -73,7 +74,7 @@ export default function ContadoresPage() {
       setAviso(`${c.nombre} dado de baja. ${r.data.clientes_sin_asignar} clientes quedaron sin contador.`);
       await recargar();
     } catch (err: unknown) {
-      setError(detalle(err, "No se pudo dar de baja."));
+      setError(detalleError(err, "No se pudo dar de baja."));
     }
   };
 

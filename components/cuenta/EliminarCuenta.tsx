@@ -18,6 +18,7 @@ import { useAuthStore } from "@/store/auth.store";
 import { ES_APP_NATIVA } from "@/lib/plataforma";
 import { CUENTA_ELIMINADA } from "@/lib/cuenta";
 import PinInput from "@/components/PinInput";
+import { detalleError } from "@/lib/errores";
 
 type Accion = "SALIR" | "TRANSFERIR" | "ELIMINAR";
 
@@ -48,11 +49,6 @@ function fechaLarga(iso: string) {
 
 type ErrorApi = { response?: { data?: unknown } };
 
-const detalle = (err: unknown, porDefecto: string): string => {
-  const d = (err as ErrorApi)?.response?.data as { detail?: unknown } | undefined;
-  return typeof d?.detail === "string" ? d.detail : porDefecto;
-};
-
 /** Mensaje del backend aunque la respuesta venga como Blob (descargas). */
 async function conDetalle(err: unknown): Promise<never> {
   const resp = (err as ErrorApi)?.response;
@@ -79,7 +75,7 @@ export default function EliminarCuenta({ onCancelar }: { onCancelar?: () => void
     let vivo = true;
     api.get("/api/v1/app/cuenta/eliminacion")
       .then((r) => { if (vivo) setResumen(r.data); })
-      .catch((e) => { if (vivo) setError(detalle(e, "No pudimos cargar tu cuenta. Intenta de nuevo.")); });
+      .catch((e) => { if (vivo) setError(detalleError(e, "No pudimos cargar tu cuenta. Intenta de nuevo.")); });
     return () => { vivo = false; };
   }, []);
 
@@ -131,7 +127,7 @@ export default function EliminarCuenta({ onCancelar }: { onCancelar?: () => void
     try {
       await eliminar();
     } catch (e) {
-      setError(detalle(e, "No pudimos eliminar tu cuenta. Intenta de nuevo."));
+      setError(detalleError(e, "No pudimos eliminar tu cuenta. Intenta de nuevo."));
       setEnviando(false);
     }
   };

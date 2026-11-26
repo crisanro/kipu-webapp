@@ -293,8 +293,7 @@ export default function Checklist({ health, compact = false, onUpdate }: Props) 
       sessionStorage.removeItem("kipu:estructura");
       setTimeout(() => window.location.href = "/dashboard", 1500);
     } catch (err: unknown) {
-      const detalle = (err as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail;
-      setProdError(typeof detalle === "string" ? detalle : "No se pudo activar producción. Intenta de nuevo.");
+      setProdError(detalleError(err, "No se pudo activar producción. Intenta de nuevo."));
     } finally {
       setActivando(false);
     }

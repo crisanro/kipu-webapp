@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CalendarCheck, KeyRound, Loader2, Users } from "lucide-react";
 import api from "@/lib/api";
-import { caja, detalle, Etiqueta, Vence, type Yo } from "./_comun";
+import { caja, Etiqueta, Vence, type Yo } from "./_comun";
+import { detalleError } from "@/lib/errores";
 
 interface Pendiente { id: number; tipo: string; nombre: string; estado: string; vencimiento: string; dias: number }
 interface Cliente {
@@ -34,7 +35,7 @@ export default function EquipoAlDiaPage() {
       .catch((err: unknown) => {
         if (!vivo) return;
         if ((err as { response?: { status?: number } })?.response?.status === 403) router.replace("/dashboard");
-        else setError(detalle(err, "No pudimos cargar tus clientes."));
+        else setError(detalleError(err, "No pudimos cargar tus clientes."));
       })
       .finally(() => { if (vivo) setCargando(false); });
     return () => { vivo = false; };
