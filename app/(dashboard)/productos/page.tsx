@@ -5,8 +5,9 @@ import Hoja from "@/components/ui/Hoja";
 import Boton from "@/components/ui/Boton";
 import FilaLista, { GrupoFilas } from "@/components/ui/FilaLista";
 import { InsigniaEstado } from "@/components/ui/InsigniaEstado";
+import type { TonoEstado } from "@/lib/estados";
 import { EsqueletoFilas } from "@/components/ui/Esqueleto";
-import Vacio from "@/components/ui/Vacio";
+import Vacio, { VacioError } from "@/components/ui/Vacio";
 import BotonFlotante from "@/components/ui/BotonFlotante";
 import TirarParaRefrescar from "@/components/ui/TirarParaRefrescar";
 import HojaAcciones from "@/components/ui/HojaAcciones";
@@ -58,6 +59,12 @@ const EMPTY_FORM = {
 const UNIDADES = ["UNIDAD", "SERVICIO", "KG", "LB", "LT", "MT", "CM", "CAJA", "PAQUETE", "HORA"];
 const PRODUCTOS_LIMIT = 50;
 
+/** Agotado o bajo el mínimo en rojo; poco (5 o menos) en amarillo. Mismo criterio en celular y compu. */
+function tonoStock(p: { stock: number; stock_minimo: number }): TonoEstado {
+  if (p.stock === 0 || (p.stock_minimo > 0 && p.stock <= p.stock_minimo)) return "peligro";
+  return p.stock <= 5 ? "alerta" : "neutro";
+}
+
 /** Precio que se muestra en la lista: el final si es "IVA incluido", la base si es "+ IVA". */
 const precioVisible = (p: Producto) =>
   p.precio_incluye_iva && p.precio_con_iva != null ? p.precio_con_iva : p.precio;
@@ -81,6 +88,7 @@ export default function ProductosPage() {
   const [loading,      setLoading]      = useState(true);
   const [total,        setTotal]        = useState(0);
   const [loadingMore,  setLoadingMore]  = useState(false);
+  const [fallo,        setFallo]        = useState(false);   // no se pudo cargar (no es "catálogo vacío")
 
   // Búsqueda en el servidor (antes solo filtraba los productos ya cargados)
   const [query,        setQuery]        = useState("");
@@ -113,8 +121,10 @@ export default function ProductosPage() {
       const nuevos = res.data.data ?? [];
       setTotal(res.data.total ?? 0);
       setProductos(prev => append ? [...prev, ...nuevos] : nuevos);
+      setFallo(false);
     } catch (e) {
       console.error(e);
+      if (!append && pedido === pedidoRef.current) setFallo(true);
     } finally {
       if (pedido === pedidoRef.current) {
         if (append) setLoadingMore(false); else setLoading(false);
@@ -314,6 +324,8 @@ export default function ProductosPage() {
       {/* Lista */}
       {loading ? (
         <EsqueletoFilas filas={8} />
+      ) : fallo ? (
+        <VacioError que="tus productos" onReintentar={() => void cargar()} />
       ) : productos.length === 0 ? (
         queryActivo ? (
           <Vacio icono={Search} titulo="Ningún producto coincide" descripcion="Prueba con otra descripción o código." />
@@ -338,9 +350,8 @@ export default function ProductosPage() {
                   finAbajo={
                     <span className="flex flex-wrap justify-end gap-1">
                       {!p.activo && <InsigniaEstado tono="neutro">Inactivo</InsigniaEstado>}
-                      {p.stock === 0 ? <InsigniaEstado tono="peligro">Sin stock</InsigniaEstado>
-                        : p.stock > 0 && p.stock_minimo > 0 && p.stock <= p.stock_minimo ? <InsigniaEstado tono="peligro">Stock {p.stock}</InsigniaEstado>
-                        : p.stock > 0 ? <InsigniaEstado tono={p.stock <= 5 ? "alerta" : "neutro"}>Stock {p.stock}</InsigniaEstado>
+                      {p.stock >= 0
+                        ? <InsigniaEstado tono={tonoStock(p)}>{p.stock === 0 ? "Sin stock" : `Stock ${p.stock}`}</InsigniaEstado>
                         : tarifaPct(p.tipo_iva) > 0 && <span className="text-[11px] text-sutil">{p.precio_incluye_iva ? "IVA incluido" : "+ IVA"}</span>}
                     </span>
                   }
@@ -406,36 +417,10 @@ export default function ProductosPage() {
                     {etiquetaIva(p.tipo_iva)}
                   </span>
                   <span className="hidden md:block col-span-1 text-xs text-center font-medium">
-                    {p.stock === -1 ? (
+                    {p.stock < 0 ? (
                       <span style={{ color: "var(--kipu-subtle)" }}>—</span>
-                    ) : p.stock === 0 ? (
-                      <span
-                        className="px-2 py-0.5 rounded-full"
-                        style={{
-                          color: "var(--kipu-danger)",
-                          background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
-                        }}
-                      >
-                        Sin stock
-                      </span>
                     ) : (
-                      <span
-                        className="px-2 py-0.5 rounded-full"
-                        style={{
-                          color: (p.stock_minimo > 0 && p.stock <= p.stock_minimo)
-                            ? "var(--kipu-danger)"
-                            : p.stock <= 5
-                            ? "var(--kipu-warning)"
-                            : "var(--kipu-success)",
-                          background: (p.stock_minimo > 0 && p.stock <= p.stock_minimo)
-                            ? "color-mix(in srgb, var(--kipu-danger) 10%, transparent)"
-                            : p.stock <= 5
-                            ? "color-mix(in srgb, var(--kipu-warning) 10%, transparent)"
-                            : "color-mix(in srgb, var(--kipu-success) 10%, transparent)",
-                        }}
-                      >
-                        {p.stock}
-                      </span>
+                      <InsigniaEstado tono={tonoStock(p)}>{p.stock === 0 ? "Sin stock" : p.stock}</InsigniaEstado>
                     )}
                   </span>
                   <div className="md:col-span-2 flex items-center justify-end gap-2 shrink-0">

@@ -5,12 +5,14 @@ import {
 } from "lucide-react";
 import api from "@/lib/api";
 import { hoyEC } from "@/lib/fecha";
-import { type FacturaBase, COBRO_CONFIG } from "./utils";
+import { type FacturaBase } from "./utils";
+import { CLASES_TONO } from "@/components/ui/InsigniaEstado";
+import { cn } from "@/components/ui/cn";
 import LinkPago from "@/components/cobros/LinkPago";
 import Seccion from "@/components/ui/Seccion";
 import Boton from "@/components/ui/Boton";
 import { detalleError } from "@/lib/errores";
-import { FORMAS_COBRO } from "@/lib/estados";
+import { ESTADOS_COBRO, FORMAS_COBRO } from "@/lib/estados";
 
 // Estado de cobro (FAC, LIQ, NDB autorizadas) con edición inline.
 export default function SeccionCobro({ factura, onRecargar }: { factura: FacturaBase; onRecargar: () => void }) {
@@ -22,7 +24,7 @@ export default function SeccionCobro({ factura, onRecargar }: { factura: Factura
   const [guardandoCobro,  setGuardandoCobro]  = useState(false);
   const [errorCobro,      setErrorCobro]      = useState("");
 
-  const cobro = factura.estado_cobro ? COBRO_CONFIG[factura.estado_cobro] : null;
+  const cobro = factura.estado_cobro ? ESTADOS_COBRO[factura.estado_cobro] : null;
 
   const abrirEdicionCobro = () => {
     setCobroEstado(factura.estado_cobro ?? "PENDIENTE");
@@ -61,7 +63,7 @@ export default function SeccionCobro({ factura, onRecargar }: { factura: Factura
         <Seccion
           titulo="Cobro"
           icono={DollarSign}
-          resumen={cobro?.label}
+          resumen={cobro?.etiqueta}
           abierta={factura.estado_cobro !== "PAGADO"}
         >
           {!editandoCobro && (
@@ -232,20 +234,11 @@ export default function SeccionCobro({ factura, onRecargar }: { factura: Factura
             /* ── Modo lectura ── */
             <>
               {cobro && (
-                <div
-                  className="flex items-center gap-2 px-3 py-2 rounded-lg mb-2"
-                  style={{
-                    background: cobro.color === "var(--kipu-success)"
-                      ? "color-mix(in srgb, var(--kipu-success) 10%, transparent)"
-                      : "color-mix(in srgb, var(--kipu-warning) 10%, transparent)",
-                  }}
-                >
-                  {factura.estado_cobro === "PAGADO" ? (
-                    <CheckCircle2 size={14} style={{ color: cobro.color }} />
-                  ) : (
-                    <Clock size={14} style={{ color: cobro.color }} />
-                  )}
-                  <span className="text-sm font-medium" style={{ color: cobro.color }}>{cobro.label}</span>
+                <div className={cn("flex items-center gap-2 px-3 py-2 rounded-lg mb-2", CLASES_TONO[cobro.tono])}>
+                  {factura.estado_cobro === "PAGADO"
+                    ? <CheckCircle2 size={14} aria-hidden />
+                    : <Clock size={14} aria-hidden />}
+                  <span className="text-sm font-medium">{cobro.etiqueta}</span>
                 </div>
               )}
               {factura.estado_cobro === "PAGADO" && (
@@ -253,7 +246,9 @@ export default function SeccionCobro({ factura, onRecargar }: { factura: Factura
                   {factura.forma_pago_cobro && (
                     <div className="flex justify-between">
                       <span style={{ color: "var(--kipu-subtle)" }}>Forma de pago</span>
-                      <span style={{ color: "var(--kipu-text)" }}>{factura.forma_pago_cobro}</span>
+                      <span style={{ color: "var(--kipu-text)" }}>
+                        {FORMAS_COBRO.find(f => f.valor === factura.forma_pago_cobro)?.etiqueta ?? factura.forma_pago_cobro}
+                      </span>
                     </div>
                   )}
                   {factura.fecha_pago && (

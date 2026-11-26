@@ -1,7 +1,8 @@
 "use client";
 import { rutas } from "@/lib/rutas";
 import { Link2 } from "lucide-react";
-import { type FacturaBase, TIPO_LABEL } from "./utils";
+import { type FacturaBase } from "./utils";
+import { tipoComprobante } from "@/lib/estados";
 import Seccion from "@/components/ui/Seccion";
 import FilaLista from "@/components/ui/FilaLista";
 import { InsigniaSri } from "@/components/ui/InsigniaEstado";
@@ -21,7 +22,7 @@ export default function DocumentosVinculados({ factura }: { factura: FacturaBase
       href={rutas.documento(d.id)}
       className="-mx-4 w-auto"
       titulo={<span className="font-mono">{d.numero_doc}</span>}
-      subtitulo={[etiqueta, TIPO_LABEL[d.tipo_doc] ?? d.tipo_doc].filter(Boolean).join(" · ")}
+      subtitulo={[etiqueta, tipoComprobante(d.tipo_doc).etiqueta].filter(Boolean).join(" · ")}
       fin={`$${dosDecimales(d.importe_total)}`}
       finAbajo={d.estado_sri ? <InsigniaSri estado={d.estado_sri} conIcono={false} /> : undefined}
     />

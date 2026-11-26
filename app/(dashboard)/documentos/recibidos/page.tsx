@@ -19,15 +19,15 @@ import {
   AlertTriangle, CreditCard
 } from "lucide-react";
 import FilaLista, { GrupoFilas } from "@/components/ui/FilaLista";
-import { InsigniaEstado } from "@/components/ui/InsigniaEstado";
+import { InsigniaEstado, InsigniaPago } from "@/components/ui/InsigniaEstado";
 import { EsqueletoFilas } from "@/components/ui/Esqueleto";
-import Vacio from "@/components/ui/Vacio";
+import Vacio, { VacioError } from "@/components/ui/Vacio";
 import BotonFlotante from "@/components/ui/BotonFlotante";
 import PeriodoFechas, { etiquetaPeriodo } from "@/components/ui/PeriodoFechas";
 import TirarParaRefrescar from "@/components/ui/TirarParaRefrescar";
 import { Entrada } from "@/components/ui/Campo";
 import Boton from "@/components/ui/Boton";
-import { ESTADOS_PAGO, tipoComprobante } from "@/lib/estados";
+import { tipoComprobante } from "@/lib/estados";
 import PanelDetalle from "@/components/ui/PanelDetalle";
 import { cn } from "@/components/ui/cn";
 import { useAtajos } from "@/lib/useAtajos";
@@ -86,18 +86,6 @@ const TIPO_COLOR: Record<string, { color: string; bg: string }> = {
   NCR: { color: "var(--kipu-muted)", bg: "color-mix(in srgb, var(--kipu-muted) 10%, transparent)" },
   NDB: { color: "#fb923c", bg: "color-mix(in srgb, #fb923c 10%, transparent)" },
   RET: { color: "var(--kipu-info)", bg: "color-mix(in srgb, var(--kipu-info) 10%, transparent)" },
-};
-
-const PAGO_COLOR: Record<string, { color: string; bg: string }> = {
-  PENDIENTE: { color: "var(--kipu-warning)", bg: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)" },
-  PAGADO:    { color: "var(--kipu-success)", bg: "color-mix(in srgb, var(--kipu-success) 10%, transparent)" },
-  PARCIAL:   { color: "var(--kipu-info)", bg: "color-mix(in srgb, var(--kipu-info) 10%, transparent)" },
-  ANULADO:   { color: "var(--kipu-danger)", bg: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)" },
-};
-
-const PAGO_LABEL: Record<string, string> = {
-  PENDIENTE: "Por pagar", PAGADO: "Pagado",
-  PARCIAL: "Parcial", ANULADO: "Anulado",
 };
 
 const FUENTE_COLOR: Record<string, { color: string; bg: string }> = {
@@ -267,15 +255,7 @@ function DocExpandido({ doc, onVerDetalle }: { doc: DocRecibido; onVerDetalle: (
             <Receipt size={12} style={{ color: "var(--kipu-subtle)" }} />
             <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Pago proveedor</span>
           </div>
-          <span
-            className="text-[10px] px-2 py-0.5 rounded-full font-medium"
-            style={{
-              color: PAGO_COLOR[doc.estado_pago]?.color ?? "var(--kipu-muted)",
-              background: PAGO_COLOR[doc.estado_pago]?.bg ?? "color-mix(in srgb, var(--kipu-text) 8%, transparent)",
-            }}
-          >
-            {PAGO_LABEL[doc.estado_pago] ?? doc.estado_pago}
-          </span>
+          <InsigniaPago estado={doc.estado_pago} />
         </div>
       )}
 
@@ -410,7 +390,7 @@ export default function FacturasRecibidasPage() {
   if (!puedeVer) return <SinAcceso />;
 
   // Sin Plan Pro y sin compras propias: ejemplos para ver cómo funciona
-  const esDemo    = !loading && !tieneSub && docs.length === 0 && !queryActivo;
+  const esDemo    = !loading && !lista.fallo && !tieneSub && docs.length === 0 && !queryActivo;
   const filtrados = esDemo ? demoRecibidos() : docs;
   const resumenV: Resumen | null = esDemo ? resumenRecibidos(demoRecibidos()) : resumen;
   const verDetalle = (id: string) => { if (esDemo && ES_APP_NATIVA) return; router.push(esDemo ? "/planes" : rutas.recibido(id)); };
@@ -590,6 +570,8 @@ export default function FacturasRecibidasPage() {
       {/* Lista */}
       {loading ? (
         <EsqueletoFilas filas={8} />
+      ) : lista.fallo ? (
+        <VacioError que="tus compras" onReintentar={lista.recargar} />
       ) : filtrados.length === 0 ? (
         queryActivo ? (
           <Vacio icono={Search} titulo="Nada coincide con la búsqueda"
@@ -605,7 +587,6 @@ export default function FacturasRecibidasPage() {
         <TirarParaRefrescar alRefrescar={lista.recargar} className="md:hidden">
           <GrupoFilas>
             {filtrados.map(doc => {
-              const pago = doc.estado_pago && ["FAC", "LIQ"].includes(doc.tipo_doc) ? ESTADOS_PAGO[doc.estado_pago] : undefined;
               return (
                 <FilaLista
                   key={doc.id}
@@ -617,7 +598,7 @@ export default function FacturasRecibidasPage() {
                     <span className="flex flex-wrap justify-end gap-1">
                       {doc.deducible_renta && <InsigniaEstado tono="exito">Deducible</InsigniaEstado>}
                       {doc.credito_tributario_iva && <InsigniaEstado tono="info">Crédito IVA</InsigniaEstado>}
-                      {pago && <InsigniaEstado tono={pago.tono}>{pago.etiqueta}</InsigniaEstado>}
+                      {["FAC", "LIQ"].includes(doc.tipo_doc) && <InsigniaPago estado={doc.estado_pago} />}
                     </span>
                   }
                 />
@@ -699,17 +680,7 @@ export default function FacturasRecibidasPage() {
                     </div>
                     <div className="text-right shrink-0">
                       <p className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>${dosDecimales(doc.importe_total)}</p>
-                      {doc.estado_pago && ["FAC", "LIQ"].includes(doc.tipo_doc) && (
-                        <span
-                          className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
-                          style={{
-                            color: PAGO_COLOR[doc.estado_pago]?.color ?? "var(--kipu-muted)",
-                            background: PAGO_COLOR[doc.estado_pago]?.bg ?? "color-mix(in srgb, var(--kipu-text) 8%, transparent)",
-                          }}
-                        >
-                          {PAGO_LABEL[doc.estado_pago] ?? doc.estado_pago}
-                        </span>
-                      )}
+                      {["FAC", "LIQ"].includes(doc.tipo_doc) && <InsigniaPago estado={doc.estado_pago} />}
                     </div>
                     <button
                       type="button"

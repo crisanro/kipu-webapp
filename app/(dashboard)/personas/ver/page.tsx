@@ -27,16 +27,9 @@ import {
 } from "lucide-react";
 import { detalleError } from "@/lib/errores";
 import { dosDecimales } from "@/lib/dinero";
+import { NOMBRE_TIPO_ID } from "@/lib/identificacion";
 
 const FACTURAS_LIMIT = 10; // ← Cambia a 20 cuando estés listo
-
-const TIPO_ID: Record<string, string> = {
-  "04": "RUC",
-  "05": "Cédula",
-  "06": "Pasaporte",
-  "07": "Consumidor Final",
-  "08": "Exterior",
-};
 
 const ESTADOS_CUENTA: Record<string, { etiqueta: string; tono: TonoEstado }> = {
   PENDIENTE: { etiqueta: "Pendiente", tono: "alerta" },
@@ -238,7 +231,7 @@ function DetallePersona({ id }: { id: string }) {
             <div className="min-w-0 flex-1">
               <h1 className="break-words text-lg font-bold text-texto">{cliente.razon_social}</h1>
               <p className="text-sm text-sutil">
-                {TIPO_ID[cliente.tipo_identificacion_sri] ?? "ID"}: <span className="font-mono">{cliente.identificacion}</span>
+                {NOMBRE_TIPO_ID[cliente.tipo_identificacion_sri] ?? "ID"}: <span className="font-mono">{cliente.identificacion}</span>
               </p>
             </div>
             <BotonIcono etiqueta="Más acciones" icono={<MoreVertical size={20} />} onClick={() => setMenu(true)} className="-mr-2" />
@@ -290,7 +283,7 @@ function DetallePersona({ id }: { id: string }) {
             <h2 className="text-sm font-semibold text-texto">Datos</h2>
             <Boton variante="fantasma" tamano="sm" onClick={abrirEdicion} icono={<Pencil size={14} />}>Editar</Boton>
           </div>
-          <Dato icono={User}     etiqueta="Tipo"           valor={TIPO_ID[cliente.tipo_identificacion_sri] ?? cliente.tipo_identificacion_sri} />
+          <Dato icono={User}     etiqueta="Tipo"           valor={NOMBRE_TIPO_ID[cliente.tipo_identificacion_sri] ?? cliente.tipo_identificacion_sri} />
           <Dato icono={FileText} etiqueta="Identificación" valor={<span className="font-mono">{cliente.identificacion}</span>} />
           <Dato icono={Mail}     etiqueta="Email"          valor={cliente.email} />
           <Dato icono={Phone}    etiqueta="Teléfono"       valor={cliente.telefono} />
@@ -395,7 +388,7 @@ function DetallePersona({ id }: { id: string }) {
           abierta={editing}
           onCerrar={() => setEditing(false)}
           titulo="Editar persona"
-          descripcion={`${TIPO_ID[cliente.tipo_identificacion_sri] ?? "ID"} ${cliente.identificacion}: la identificación no se cambia`}
+          descripcion={`${NOMBRE_TIPO_ID[cliente.tipo_identificacion_sri] ?? "ID"} ${cliente.identificacion}: la identificación no se cambia`}
           cerrable={!saving}
           pie={<>
             <Boton variante="secundario" onClick={() => setEditing(false)} disabled={saving}>Cancelar</Boton>

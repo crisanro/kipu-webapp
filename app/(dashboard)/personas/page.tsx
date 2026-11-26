@@ -11,7 +11,7 @@ import Hoja from "@/components/ui/Hoja";
 import Boton from "@/components/ui/Boton";
 import FilaLista, { GrupoFilas } from "@/components/ui/FilaLista";
 import { EsqueletoFilas } from "@/components/ui/Esqueleto";
-import Vacio from "@/components/ui/Vacio";
+import Vacio, { VacioError } from "@/components/ui/Vacio";
 import BotonFlotante from "@/components/ui/BotonFlotante";
 import TirarParaRefrescar from "@/components/ui/TirarParaRefrescar";
 import { Entrada } from "@/components/ui/Campo";
@@ -21,6 +21,7 @@ import {
   ChevronDown, Save, AlertCircle, Check, Loader2
 } from "lucide-react";
 import { lookupIdentificacion, useBuscaNombres, textoNombreAMano } from "@/lib/identificacion-lookup";
+import { NOMBRE_TIPO_ID, validarIdentificacion } from "@/lib/identificacion";
 import { tecladoIdentificacion } from "@/lib/teclado";
 import { detalleError } from "@/lib/errores";
 
@@ -34,6 +35,7 @@ interface Persona {
   direccion:               string;
 }
 
+// Los que se pueden registrar (Consumidor Final no es una persona que se agrega)
 const TIPO_ID = [
   { value: "04", label: "RUC" },
   { value: "05", label: "Cédula" },
@@ -51,64 +53,6 @@ const EMPTY_FORM = {
 };
 
 // ── Validación ────────────────────────────────────────────────────────────────
-function validarIdentificacion(tipo: string, valor: string): { ok: boolean; error: string } {
-  const v = valor.replace(/\D/g, "");
-  if (!v) return { ok: false, error: "" };
-
-  if (tipo === "05") {
-    if (v.length !== 10) return { ok: false, error: "La cédula debe tener 10 dígitos." };
-    const prov = parseInt(v.substring(0, 2));
-    if ((prov < 1 || prov > 24) && prov !== 30)
-      return { ok: false, error: "Provincia inválida (primeros 2 dígitos)." };
-    if (parseInt(v[2]) >= 6)
-      return { ok: false, error: "Tercer dígito de cédula inválido." };
-    const digitos = v.split("").map(Number);
-    const verificador = digitos[9];
-    let suma = 0;
-    for (let i = 0; i < 9; i++) {
-      let prod = digitos[i] * (i % 2 === 0 ? 2 : 1);
-      if (prod > 9) prod -= 9;
-      suma += prod;
-    }
-    const calc = suma % 10 === 0 ? 0 : 10 - (suma % 10);
-    if (calc !== verificador) return { ok: false, error: "Número de cédula inválido." };
-    return { ok: true, error: "" };
-  }
-
-  if (tipo === "04") {
-    if (v.length !== 13) return { ok: false, error: "El RUC debe tener 13 dígitos." };
-    if (!v.endsWith("001")) return { ok: false, error: "El RUC debe terminar en 001." };
-    const prov = parseInt(v.substring(0, 2));
-    if ((prov < 1 || prov > 24) && prov !== 30)
-      return { ok: false, error: "Provincia inválida (primeros 2 dígitos)." };
-    const tercero = parseInt(v[2]);
-    if (tercero <= 5) {
-      const digitos = v.substring(0, 10).split("").map(Number);
-      const verificador = digitos[9];
-      let suma = 0;
-      for (let i = 0; i < 9; i++) {
-        let prod = digitos[i] * (i % 2 === 0 ? 2 : 1);
-        if (prod > 9) prod -= 9;
-        suma += prod;
-      }
-      const calc = suma % 10 === 0 ? 0 : 10 - (suma % 10);
-      if (calc !== verificador) return { ok: false, error: "RUC de persona natural inválido." };
-    } else if (tercero === 6 || tercero === 9) {
-      // jurídico — no se valida dígito verificador
-    } else {
-      return { ok: false, error: "Tercer dígito de RUC inválido." };
-    }
-    return { ok: true, error: "" };
-  }
-
-  if (tipo === "06" || tipo === "08") {
-    if (valor.trim().length < 2) return { ok: false, error: "Ingresa la identificación." };
-    return { ok: true, error: "" };
-  }
-
-  return { ok: true, error: "" };
-}
-
 function validarEmail(email: string): boolean {
   if (!email) return true;
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -254,6 +198,8 @@ function PersonasContenido() {
       {/* Lista */}
       {loading ? (
         <EsqueletoFilas filas={8} />
+      ) : lista.fallo ? (
+        <VacioError que="tus clientes y proveedores" onReintentar={lista.recargar} />
       ) : filtrados.length === 0 ? (
         query ? (
           <Vacio icono={Search} titulo="Nadie coincide con la búsqueda" descripcion="Prueba con otro nombre o número." />
@@ -275,7 +221,7 @@ function PersonasContenido() {
                   </span>
                 }
                 titulo={c.razon_social}
-                subtitulo={`${TIPO_ID.find(t => t.value === c.tipo_identificacion_sri)?.label ?? "ID"}: ${c.identificacion}`}
+                subtitulo={`${NOMBRE_TIPO_ID[c.tipo_identificacion_sri] ?? "ID"}: ${c.identificacion}`}
                 detalle={c.email || c.telefono || undefined}
               />
             ))}

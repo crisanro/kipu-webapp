@@ -44,6 +44,8 @@ export function useLista<T>(url: string | null) {
     cargando:     isLoading && data === undefined,
     /** Hay datos a la vista y se están actualizando (o llegando los de otro filtro). */
     actualizando: isValidating && data !== undefined,
+    /** Falló y no hay nada que mostrar (sin conexión, error del servidor): no es "lista vacía". */
+    fallo:        !!error && data === undefined,
     recargar:     () => mutate(),
   };
 }

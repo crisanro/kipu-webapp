@@ -21,7 +21,7 @@ import type { TonoEstado } from "@/lib/estados";
 import FilaLista, { GrupoFilas } from "@/components/ui/FilaLista";
 import { InsigniaEstado } from "@/components/ui/InsigniaEstado";
 import { EsqueletoFilas } from "@/components/ui/Esqueleto";
-import Vacio from "@/components/ui/Vacio";
+import Vacio, { VacioError } from "@/components/ui/Vacio";
 import BotonFlotante from "@/components/ui/BotonFlotante";
 import TirarParaRefrescar from "@/components/ui/TirarParaRefrescar";
 import ChipsFiltro from "@/components/ui/ChipsFiltro";
@@ -75,7 +75,8 @@ const FILTROS_ESTADO = [
   { valor: "ANULADO",   etiqueta: "Anuladas" },
 ];
 
-const EMPTY_FORM = {
+// Función y no constante: con la app abierta desde ayer, la fecha debe ser la de hoy
+const formVacio = () => ({
   cliente_id:        "",
   tipo:              "COBRAR",
   concepto:          "",
@@ -83,7 +84,7 @@ const EMPTY_FORM = {
   fecha_emision:     hoyEC(),
   fecha_vencimiento: "",
   notas:             "",
-};
+});
 
 // ── Componente Interno ─────────────────────────────────────────────────────────
 function CuentasContent() {
@@ -98,7 +99,7 @@ function CuentasContent() {
 
   // Modal nueva cuenta
   const [showModal,  setShowModal]  = useState(false);
-  const [form,       setForm]       = useState<any>(EMPTY_FORM);
+  const [form,       setForm]       = useState<any>(formVacio);
   const [saving,     setSaving]     = useState(false);
   const [error,      setError]      = useState("");
 
@@ -153,7 +154,7 @@ function CuentasContent() {
   }, [clienteQuery]);
 
   // Sin Plan Pro y sin cuentas propias: ejemplos para ver cómo funciona
-  const esDemo = !loading && !tieneSub && cuentas.length === 0 && !filtroTipo && !filtroEst;
+  const esDemo = !loading && !datos.fallo && !tieneSub && cuentas.length === 0 && !filtroTipo && !filtroEst;
   const lista  = esDemo ? demoCuentas() : cuentas;
   const totales = esDemo ? resumenCuentas(lista) : resumen;
 
@@ -196,7 +197,7 @@ function CuentasContent() {
   };
 
   const resetModal = () => {
-    setForm(EMPTY_FORM);
+    setForm(formVacio());
     setClienteQuery("");
     setClientesBusq([]);
     setClienteSelec(null);
@@ -312,6 +313,8 @@ function CuentasContent() {
       {/* Lista */}
       {loading ? (
         <EsqueletoFilas filas={6} />
+      ) : datos.fallo ? (
+        <VacioError que="tus cuentas" onReintentar={datos.recargar} />
       ) : filtradas.length === 0 ? (
         query || filtroTipo || filtroEst ? (
           <Vacio icono={Search} titulo="Ninguna cuenta coincide" descripcion="Prueba con otra búsqueda o quita los filtros." />
