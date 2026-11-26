@@ -1,6 +1,6 @@
 "use client";
 import { rutas } from "@/lib/rutas";
-import { useRef, useState } from "react";
+import { useRef, useState, Suspense } from "react";
 import { useAtajos } from "@/lib/useAtajos";
 import { useNuevoDesdePaleta } from "@/lib/comandos";
 import api from "@/lib/api";
@@ -17,7 +17,7 @@ import TirarParaRefrescar from "@/components/ui/TirarParaRefrescar";
 import { Campo, Entrada, Selector } from "@/components/ui/Campo";
 import BotonIcono from "@/components/ui/BotonIcono";
 import { cn } from "@/components/ui/cn";
-import { useLista } from "@/lib/useLista";
+import { useLista, useBusquedaUrl } from "@/lib/useLista";
 import {
   Search, Plus, Users,
   Save, AlertCircle, Check, Loader2
@@ -64,13 +64,14 @@ function validarEmail(email: string): boolean {
 export default function PersonasPage() {
   const puedeVer = usePermiso("clientes");
   if (!puedeVer) return <SinAcceso />;
-  return <PersonasContenido />;
+  // La búsqueda vive en la URL (useSearchParams): necesita un Suspense encima
+  return <Suspense fallback={<div className="p-4 md:p-6"><EsqueletoFilas filas={6} /></div>}><PersonasContenido /></Suspense>;
 }
 
 // Separado del chequeo de permiso: los hooks se llaman siempre en el mismo orden
 // aunque el permiso cambie con la página abierta (antes React lanzaba un error).
 function PersonasContenido() {
-  const [query,     setQuery]     = useState("");
+  const [query,     setQuery]     = useBusquedaUrl();   // en la URL: sigue al volver de una persona
   const [showModal, setShowModal] = useState(false);
   const [form,      setForm]      = useState(EMPTY_FORM);
   const [saving,    setSaving]    = useState(false);

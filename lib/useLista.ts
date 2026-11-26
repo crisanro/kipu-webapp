@@ -14,7 +14,7 @@
 
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import useSWR from "swr";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import api from "@/lib/api";
@@ -78,4 +78,25 @@ export function useFiltrosUrl<F extends Record<string, string>>(porDefecto: F) {
   }, [router, pathname]);
 
   return [filtros, cambiar] as const;
+}
+
+/**
+ * Búsqueda que filtra al instante mientras se escribe y queda en la URL (?q=)
+ * al dejar de escribir: al volver del detalle sigue ahí (antes se perdía).
+ *   const [query, setQuery] = useBusquedaUrl();
+ * Como useFiltrosUrl, necesita un <Suspense> encima (useSearchParams).
+ */
+export function useBusquedaUrl(clave = "q", esperaMs = 400) {
+  const [filtros, cambiar] = useFiltrosUrl({ [clave]: "" } as Record<string, string>);
+  const [texto, setTexto]  = useState(filtros[clave]);
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => () => clearTimeout(timer.current), []);
+
+  const escribir = useCallback((valor: string) => {
+    setTexto(valor);
+    clearTimeout(timer.current);
+    timer.current = setTimeout(() => cambiar({ [clave]: valor.trim() }), esperaMs);
+  }, [cambiar, clave, esperaMs]);
+
+  return [texto, escribir] as const;
 }

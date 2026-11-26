@@ -16,7 +16,7 @@ import SoloWeb from "@/components/SoloWeb";
 import { ES_APP_NATIVA } from "@/lib/plataforma";
 import Hoja from "@/components/ui/Hoja";
 import Boton from "@/components/ui/Boton";
-import { useLista } from "@/lib/useLista";
+import { useLista, useFiltrosUrl, useBusquedaUrl } from "@/lib/useLista";
 import type { TonoEstado } from "@/lib/estados";
 import FilaLista, { GrupoFilas } from "@/components/ui/FilaLista";
 import { InsigniaEstado } from "@/components/ui/InsigniaEstado";
@@ -91,9 +91,13 @@ const formVacio = () => ({
 function CuentasContent() {
   const searchParams = useSearchParams();
 
-  const [query,      setQuery]      = useState("");
-  const [filtroTipo, setFiltroTipo] = useState<"" | "COBRAR" | "PAGAR">("");
-  const [filtroEst,  setFiltroEst]  = useState("");
+  // En la URL: al volver de una cuenta, la lista sigue filtrada (antes se perdía)
+  const [query, setQuery] = useBusquedaUrl();
+  const [filtros, cambiarFiltros] = useFiltrosUrl({ tipo: "", estado: "" });
+  const filtroTipo = (["COBRAR", "PAGAR"].includes(filtros.tipo) ? filtros.tipo : "") as "" | "COBRAR" | "PAGAR";
+  const filtroEst  = filtros.estado;
+  const setFiltroTipo = (tipo: "" | "COBRAR" | "PAGAR") => cambiarFiltros({ tipo });
+  const setFiltroEst  = (estado: string) => cambiarFiltros({ estado });
 
   const empresa  = useAuthStore((s) => s.empresa);
   const tieneSub = empresa?.suscripcion_activa ?? false;
@@ -120,9 +124,11 @@ function CuentasContent() {
   const loading = datos.cargando;
   const cargar  = datos.recargar;
 
-  // Manejo de query param para preseleccionar cliente
+  // ?cliente=… preselecciona el cliente. Depende solo de ese valor: los filtros
+  // también viven en la URL y, con searchParams entero, el modal se volvía a abrir
+  // con cada filtro
+  const clienteId = searchParams.get("cliente");
   useEffect(() => {
-    const clienteId = searchParams.get("cliente");
     if (!clienteId) return;
     const preseleccionar = async () => {
       try {
@@ -138,7 +144,7 @@ function CuentasContent() {
       }
     };
     preseleccionar();
-  }, [searchParams]);
+  }, [clienteId]);
 
   // Buscar clientes para el selector del modal
   useEffect(() => {
