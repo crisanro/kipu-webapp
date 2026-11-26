@@ -8,10 +8,9 @@
 import Link from "next/link";
 import { useTheme } from "next-themes";
 import {
-  BarChart3, Building2, CalendarCheck, ChevronRight, ClipboardList, CreditCard, FlaskConical,
-  HelpCircle, Key, Link2, LogOut, Settings, Shield, ShieldCheck, UserCog, Wallet, type LucideIcon,
+  CalendarCheck, ChevronRight, FlaskConical, HelpCircle, LogOut, ShieldCheck, type LucideIcon,
 } from "lucide-react";
-import { tienePermiso } from "@/components/dashboard/DashboardNav";
+import { itemDelMenu, tienePermiso } from "@/components/dashboard/DashboardNav";
 import { EVENTO_CERRAR_SESION, EVENTO_SELECTOR_EMPRESA } from "@/components/shell/BarraSuperior";
 import { useEsCliente } from "@/components/ui/Hoja";
 import { cn } from "@/components/ui/cn";
@@ -22,23 +21,29 @@ import { useSandboxStore } from "@/store/sandbox.store";
 
 interface Item { href: string; etiqueta: string; icono: LucideIcon; permiso: string | string[] | null }
 
+// Solo el nombre es propio de esta lista: ícono y permiso, los del menú lateral
+function delMenu(href: string, etiqueta: string): Item {
+  const { icon, permiso } = itemDelMenu(href);
+  return { href, etiqueta, icono: icon, permiso };
+}
+
 const GRUPOS: { titulo: string; items: Item[] }[] = [
   { titulo: "Gestión", items: [
-    { href: "/cuentas",   etiqueta: "Cuentas por cobrar y pagar", icono: Wallet,        permiso: "clientes" },
-    { href: "/proformas", etiqueta: "Proformas",                  icono: ClipboardList, permiso: "emitir" },
-    { href: "/cobros",    etiqueta: "Links de cobro",             icono: Link2,         permiso: "emitir" },
-    { href: "/reportes",  etiqueta: "Reportes y declaraciones",   icono: BarChart3,     permiso: "reportes" },
+    delMenu("/cuentas",   "Cuentas por cobrar y pagar"),
+    delMenu("/proformas", "Proformas"),
+    delMenu("/cobros",    "Links de cobro"),
+    delMenu("/reportes",  "Reportes y declaraciones"),
   ]},
   { titulo: "Empresa", items: [
-    { href: "/estructura",    etiqueta: "Establecimientos y puntos", icono: Building2, permiso: ["emitir", "estructura"] },
-    { href: "/usuarios",      etiqueta: "Usuarios",                  icono: UserCog,   permiso: "usuarios" },
-    { href: "/auditoria",     etiqueta: "Auditoría",                 icono: Shield,    permiso: "auditoria" },
-    { href: "/api-keys",      etiqueta: "API Keys",                  icono: Key,       permiso: "api_keys" },
-    { href: "/configuracion", etiqueta: "Configuración",             icono: Settings,  permiso: null },
+    delMenu("/estructura",    "Establecimientos y puntos"),
+    delMenu("/usuarios",      "Usuarios"),
+    delMenu("/auditoria",     "Auditoría"),
+    delMenu("/api-keys",      "API Keys"),
+    delMenu("/configuracion", "Configuración"),
   ]},
   { titulo: "Servicios", items: [
-    { href: "/al-dia", etiqueta: "Kipu Al Día",     icono: CalendarCheck, permiso: null },
-    { href: "/planes", etiqueta: "Planes y pagos",  icono: CreditCard,    permiso: null },
+    delMenu("/al-dia", "Kipu Al Día"),
+    delMenu("/planes", "Planes y pagos"),
   ]},
 ];
 
