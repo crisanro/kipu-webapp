@@ -138,10 +138,10 @@ export function SelectorEmpresa({ onClose }: { onClose: () => void }) {
                     {(e.nombre_comercial || e.razon_social)[0]}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate" style={{ color: "var(--kipu-text)" }}>
+                    <p className="text-sm font-medium truncate text-texto">
                       {e.nombre_comercial || e.razon_social}
                     </p>
-                    <p className="text-xs" style={{ color: "var(--kipu-muted)" }}>
+                    <p className="text-xs text-tenue">
                       {e.ruc}
                     </p>
                   </div>
@@ -170,7 +170,7 @@ export function SelectorEmpresa({ onClose }: { onClose: () => void }) {
                     >
                       {e.ambiente === 2 ? "Prod" : "Pruebas"}
                     </span>
-                    {activa && <CheckCircle2 size={14} style={{ color: "var(--kipu-accent)" }} />}
+                    {activa && <CheckCircle2 className="text-acento" size={14} />}
                     {cambiando === e.id && (
                       <div
                         className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin"

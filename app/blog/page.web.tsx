@@ -12,8 +12,8 @@ export default function BlogPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold" style={{ color: "var(--kipu-text)" }}>Tus dudas con el SRI, resueltas fácil</h1>
-        <p className="text-sm mt-1" style={{ color: "var(--kipu-subtle)" }}>
+        <h1 className="text-2xl font-bold text-texto">Tus dudas con el SRI, resueltas fácil</h1>
+        <p className="text-sm mt-1 text-sutil">
           Respuestas cortas y claras a lo que todos nos preguntamos sobre el RUC, las declaraciones y los impuestos.
         </p>
       </div>
@@ -27,11 +27,10 @@ export default function BlogPage() {
             style={{ background: "var(--kipu-surface)", border: "1px solid var(--kipu-border)" }}
           >
             <div className="flex-1 min-w-0">
-              <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>{a.titulo}</h2>
-              <p className="text-xs mt-0.5" style={{ color: "var(--kipu-subtle)" }}>{a.resumen}</p>
+              <h2 className="text-sm font-semibold text-texto">{a.titulo}</h2>
+              <p className="text-xs mt-0.5 text-sutil">{a.resumen}</p>
             </div>
-            <ChevronRight size={16} className="shrink-0 transition-transform group-hover:translate-x-0.5"
-                          style={{ color: "var(--kipu-subtle)" }} />
+            <ChevronRight size={16} className="shrink-0 transition-transform group-hover:translate-x-0.5 text-sutil" />
           </Link>
         ))}
       </section>

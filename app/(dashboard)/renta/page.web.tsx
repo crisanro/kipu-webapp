@@ -72,23 +72,23 @@ function Venta({ estado, onContratar }: { estado: EstadoRenta; onContratar: () =
   return (
     <>
       <CajaHero icono={<FileCheck2 size={18} />} nombre="Kipu Renta">
-        <h1 className="text-2xl md:text-3xl font-extrabold leading-tight" style={{ color: "var(--kipu-text)" }}>
+        <h1 className="text-2xl md:text-3xl font-extrabold leading-tight text-texto">
           Tu renta {anio},<br />te la declaramos.
         </h1>
-        <p className="text-sm md:text-base max-w-xl" style={{ color: "var(--kipu-muted)" }}>
+        <p className="text-sm md:text-base max-w-xl text-tenue">
           El equipo de Kipu revisa tus ingresos, gastos y retenciones del año, te manda un resumen para que lo
           revises y presenta tu declaración al SRI. Tú solo pagas el impuesto, si sale a pagar.
         </p>
         <div className="flex flex-wrap items-center gap-4 pt-1">
           {estado.precio ? (
             <div>
-              <span className="text-3xl font-extrabold" style={{ color: "var(--kipu-text)" }}>
+              <span className="text-3xl font-extrabold text-texto">
                 ${estado.precio.total.toFixed(2)}
               </span>
-              <span className="text-sm ml-1.5" style={{ color: "var(--kipu-muted)" }}>IVA incluido, un solo pago</span>
+              <span className="text-sm ml-1.5 text-tenue">IVA incluido, un solo pago</span>
             </div>
           ) : (
-            <span className="text-sm" style={{ color: "var(--kipu-subtle)" }}>Un solo pago · el precio lo ves al pagar</span>
+            <span className="text-sm text-sutil">Un solo pago · el precio lo ves al pagar</span>
           )}
           <button type="button" onClick={onContratar}
                   className="px-5 py-2.5 rounded-xl text-white font-semibold text-sm shadow-md transition-all
@@ -96,7 +96,7 @@ function Venta({ estado, onContratar }: { estado: EstadoRenta; onContratar: () =
             Quiero que me la declaren
           </button>
         </div>
-        <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+        <p className="text-xs text-sutil">
           Con gastos personales · Sustitutiva gratis si nos equivocamos · Tu clave se borra al presentar
         </p>
       </CajaHero>
@@ -106,13 +106,13 @@ function Venta({ estado, onContratar }: { estado: EstadoRenta; onContratar: () =
       {/* Qué incluye y qué no */}
       <section className="grid md:grid-cols-2 gap-3">
         <div className="rounded-xl p-5 space-y-3" style={caja}>
-          <h2 className="text-base font-bold" style={{ color: "var(--kipu-text)" }}>Qué incluye</h2>
+          <h2 className="text-base font-bold text-texto">Qué incluye</h2>
           <ListaConMarca items={INCLUYE} incluido />
         </div>
         <div className="rounded-xl p-5 space-y-3" style={caja}>
-          <h2 className="text-base font-bold" style={{ color: "var(--kipu-text)" }}>Qué no incluye</h2>
+          <h2 className="text-base font-bold text-texto">Qué no incluye</h2>
           <ListaConMarca items={NO_INCLUYE} incluido={false} />
-          <p className="text-xs pt-1" style={{ color: "var(--kipu-subtle)" }}>
+          <p className="text-xs pt-1 text-sutil">
             Si necesitas algo de esto, te cotizamos aparte y esperamos tu visto bueno antes de empezar.
           </p>
         </div>
@@ -221,14 +221,13 @@ export default function KipuRentaPage() {
   if (cargando) {
     return (
       <div className="flex items-center justify-center py-24">
-        <Loader2 size={22} className="animate-spin" style={{ color: "var(--kipu-subtle)" }} />
+        <Loader2 size={22} className="animate-spin text-sutil" />
       </div>
     );
   }
 
   const mensajeError = error && (
-    <p className="text-sm px-3 py-2 rounded-lg"
-       style={{ color: "var(--kipu-danger)", background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)" }}>
+    <p className="text-sm px-3 py-2 rounded-lg text-peligro bg-peligro-suave">
       {error}
     </p>
   );
@@ -242,13 +241,12 @@ export default function KipuRentaPage() {
     return (
       <div className="p-4 md:p-6 max-w-3xl mx-auto space-y-5">
         <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-               style={{ background: "color-mix(in srgb, var(--kipu-accent) 15%, transparent)" }}>
-            <FileCheck2 size={20} style={{ color: "var(--kipu-accent)" }} />
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-acento/15">
+            <FileCheck2 className="text-acento" size={20} />
           </div>
           <div>
-            <h1 className="text-xl font-bold" style={{ color: "var(--kipu-text)" }}>Kipu Renta {estado.anio}</h1>
-            <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>El equipo de Kipu prepara y presenta tu renta.</p>
+            <h1 className="text-xl font-bold text-texto">Kipu Renta {estado.anio}</h1>
+            <p className="text-sm text-tenue">El equipo de Kipu prepara y presenta tu renta.</p>
           </div>
         </div>
 
@@ -256,7 +254,7 @@ export default function KipuRentaPage() {
 
         {pago === "exitoso" && (
           <div className="rounded-xl p-4 flex items-start gap-2 text-sm" style={{ ...caja, color: "var(--kipu-text)" }}>
-            <CheckCircle2 size={18} className="shrink-0" style={{ color: "var(--kipu-success)" }} />
+            <CheckCircle2 size={18} className="shrink-0 text-exito" />
             <span>
               <strong>¡Listo, recibimos tu pago!</strong> Te llega la factura por correo.
               {esAdmin && " Ahora guarda tu clave del SRI para que podamos empezar."}
@@ -274,12 +272,12 @@ export default function KipuRentaPage() {
           </p>
           <a href={enlaceWhatsAppSoporte(`Hola, contraté Kipu Renta ${estado.anio} y les envío mis documentos.`)}
              target="_blank" rel="noopener noreferrer"
-             className="inline-flex items-center gap-1.5 font-medium" style={{ color: "var(--kipu-accent)" }}>
+             className="inline-flex items-center gap-1.5 font-medium text-acento">
             <MessageCircle size={14} /> Escribir por WhatsApp
           </a>
         </div>
 
-        <p className="text-xs text-center" style={{ color: "var(--kipu-subtle)" }}>
+        <p className="text-xs text-center text-sutil">
           ¿Quieres que también presentemos tu IVA todo el año?{" "}
           <Link href="/al-dia" className="underline">Conoce Kipu Al Día</Link>
         </p>
@@ -301,7 +299,7 @@ export default function KipuRentaPage() {
     ) : estado.incluida_en_al_dia ? (
       <div className="rounded-xl p-4 text-sm" style={{ ...caja, color: "var(--kipu-muted)" }}>
         Tu renta {estado.anio} ya está incluida en tu Kipu Al Día: no tienes que pagar nada más.{" "}
-        <Link href="/al-dia" className="underline" style={{ color: "var(--kipu-accent)" }}>Ver mis declaraciones</Link>
+        <Link href="/al-dia" className="underline text-acento">Ver mis declaraciones</Link>
       </div>
     ) : !estado.disponible ? (
       <div className="rounded-xl p-4 text-sm" style={{ ...caja, color: "var(--kipu-muted)" }}>
@@ -314,25 +312,22 @@ export default function KipuRentaPage() {
     ) : terminos && (
       <div className="rounded-xl p-5 space-y-4" style={caja}>
         <div className="flex items-center gap-2">
-          <ShieldCheck size={18} style={{ color: "var(--kipu-accent)" }} />
-          <p className="font-semibold" style={{ color: "var(--kipu-text)" }}>Términos del servicio</p>
-          <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>versión {terminos.version}</span>
+          <ShieldCheck className="text-acento" size={18} />
+          <p className="font-semibold text-texto">Términos del servicio</p>
+          <span className="text-xs text-sutil">versión {terminos.version}</span>
         </div>
-        <div className="max-h-96 overflow-y-auto rounded-lg p-4"
-             style={{ background: "var(--kipu-bg)", border: "1px solid var(--kipu-border)" }}>
+        <div className="max-h-96 overflow-y-auto rounded-lg p-4 bg-fondo border border-borde">
           <TextoTerminos texto={terminos.texto} />
         </div>
 
-        <label className="flex items-start gap-2.5 text-sm cursor-pointer" style={{ color: "var(--kipu-text)" }}>
+        <label className="flex items-start gap-2.5 text-sm cursor-pointer text-texto">
           <input type="checkbox" checked={acepta || estado.aceptado} disabled={estado.aceptado}
-                 onChange={e => setAcepta(e.target.checked)} className="mt-0.5 w-4 h-4"
-                 style={{ accentColor: "var(--kipu-accent)" }} />
+                 onChange={e => setAcepta(e.target.checked)} className="mt-0.5 w-4 h-4 accent-acento" />
           Leí y acepto los términos de Kipu Renta.
         </label>
-        <label className="flex items-start gap-2.5 text-sm cursor-pointer" style={{ color: "var(--kipu-text)" }}>
+        <label className="flex items-start gap-2.5 text-sm cursor-pointer text-texto">
           <input type="checkbox" checked={autoriza || estado.aceptado} disabled={estado.aceptado}
-                 onChange={e => setAutoriza(e.target.checked)} className="mt-0.5 w-4 h-4"
-                 style={{ accentColor: "var(--kipu-accent)" }} />
+                 onChange={e => setAutoriza(e.target.checked)} className="mt-0.5 w-4 h-4 accent-acento" />
           Autorizo a Kipu a usar mi clave del SRI solo para lo que dice la sección 5
           (mi declaración de renta {estado.anio}, descarga de comprobantes y consultas).
         </label>
@@ -341,18 +336,17 @@ export default function KipuRentaPage() {
           type="button"
           onClick={contratar}
           disabled={enviando || !(estado.aceptado || (acepta && autoriza))}
-          className="w-full py-3 rounded-lg text-white font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-50"
-          style={{ background: "var(--kipu-accent)" }}
+          className="w-full py-3 rounded-lg text-white font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-50 bg-acento"
         >
           {enviando
             ? <><Loader2 size={16} className="animate-spin" /> Abriendo el pago...</>
             : precio !== null ? `Pagar $${precio.toFixed(2)} y empezar` : "Continuar al pago"}
         </button>
-        <p className="text-xs text-center" style={{ color: "var(--kipu-subtle)" }}>
+        <p className="text-xs text-center text-sutil">
           Pagas con tarjeta en Stripe. Te enviamos por correo la factura y una copia de los términos que aceptaste.
           ¿Prefieres transferencia?{" "}
           <a href={enlaceWhatsAppSoporte(`Hola, quiero contratar Kipu Renta ${estado.anio} pagando por transferencia.`)}
-             target="_blank" rel="noopener noreferrer" className="underline" style={{ color: "var(--kipu-accent)" }}>
+             target="_blank" rel="noopener noreferrer" className="underline text-acento">
             Escríbenos
           </a>.
         </p>
@@ -368,7 +362,7 @@ export default function KipuRentaPage() {
       {mensajeError}
       {pago === "exitoso" && (
         <div className="rounded-xl p-4 flex items-center gap-2 text-sm" style={{ ...caja, color: "var(--kipu-text)" }}>
-          <Loader2 size={16} className="animate-spin shrink-0" style={{ color: "var(--kipu-accent)" }} />
+          <Loader2 size={16} className="animate-spin shrink-0 text-acento" />
           Estamos confirmando tu pago. Esto toma unos segundos; si tarda, recarga la página.
         </div>
       )}
@@ -384,11 +378,11 @@ export default function KipuRentaPage() {
       <Venta estado={estado} onContratar={irAContratar} />
 
       <section id="contratar" className="space-y-3 scroll-mt-4">
-        <h2 className="text-lg font-bold" style={{ color: "var(--kipu-text)" }}>Contratar Kipu Renta {estado.anio}</h2>
+        <h2 className="text-lg font-bold text-texto">Contratar Kipu Renta {estado.anio}</h2>
         {contratarBloque}
       </section>
 
-      <p className="text-xs text-center" style={{ color: "var(--kipu-subtle)" }}>
+      <p className="text-xs text-center text-sutil">
         ¿Quieres que también presentemos tu IVA todo el año?{" "}
         <Link href="/al-dia" className="underline">Conoce Kipu Al Día</Link>
         {" · "}

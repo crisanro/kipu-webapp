@@ -7,27 +7,19 @@ export default function SinAcceso() {
   return (
     <div className="flex flex-col items-center justify-center py-20 text-center px-4">
       <div
-        className="w-14 h-14 rounded-full flex items-center justify-center mb-4"
-        style={{
-          background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
-        }}
+        className="w-14 h-14 rounded-full flex items-center justify-center mb-4 bg-peligro-suave"
       >
-        <ShieldX size={28} style={{ color: "var(--kipu-danger)" }} />
+        <ShieldX className="text-peligro" size={28} />
       </div>
-      <h2 className="font-semibold text-lg mb-1" style={{ color: "var(--kipu-text)" }}>
+      <h2 className="font-semibold text-lg mb-1 text-texto">
         Sin acceso
       </h2>
-      <p className="text-sm mb-6 max-w-xs" style={{ color: "var(--kipu-subtle)" }}>
+      <p className="text-sm mb-6 max-w-xs text-sutil">
         No tienes permisos para ver esta sección. Contacta al administrador de tu empresa.
       </p>
       <Link
         href="/dashboard"
-        className="px-4 py-2 rounded-lg text-sm transition-colors"
-        style={{
-          background: "var(--kipu-surface)",
-          border: "1px solid var(--kipu-border)",
-          color: "var(--kipu-text)",
-        }}
+        className="px-4 py-2 rounded-lg text-sm transition-colors bg-superficie border border-borde text-texto"
         onMouseEnter={e => {
           e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 5%, transparent)";
         }}

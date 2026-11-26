@@ -16,28 +16,22 @@ export default function UltimosDocumentos({ documentos }: Props) {
 
   return (
     <div
-      className="rounded-xl overflow-hidden"
-      style={{
-        background: "var(--kipu-surface)",
-        border: "1px solid var(--kipu-border)",
-      }}
+      className="rounded-xl overflow-hidden bg-superficie border border-borde"
     >
       <div
-        className="flex items-center justify-between px-5 py-4"
-        style={{ borderBottom: "2px solid var(--kipu-border)" }}
+        className="flex items-center justify-between px-5 py-4 border-b-2 border-borde"
       >
         <div>
-          <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>
+          <h2 className="text-sm font-semibold text-texto">
             Últimos emitidos
           </h2>
-          <p className="text-xs mt-0.5" style={{ color: "var(--kipu-subtle)" }}>
+          <p className="text-xs mt-0.5 text-sutil">
             Comprobantes recientes
           </p>
         </div>
         <Link
           href="/documentos"
-          className="flex items-center gap-1 text-xs transition-colors"
-          style={{ color: "var(--kipu-accent)" }}
+          className="flex items-center gap-1 text-xs transition-colors text-acento"
           onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent-h)"}
           onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-accent)"}
         >
@@ -48,13 +42,12 @@ export default function UltimosDocumentos({ documentos }: Props) {
       {recientes.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 text-center">
           <span className="text-3xl mb-2">📄</span>
-          <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>
+          <p className="text-sm text-tenue">
             Sin comprobantes este mes
           </p>
           <Link
             href="/documentos/emitir/fac"
-            className="mt-3 text-xs transition-colors"
-            style={{ color: "var(--kipu-accent)" }}
+            className="mt-3 text-xs transition-colors text-acento"
             onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent-h)"}
             onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-accent)"}
           >
@@ -86,8 +79,7 @@ export default function UltimosDocumentos({ documentos }: Props) {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <p
-                      className="text-sm font-medium truncate"
-                      style={{ color: "var(--kipu-text)" }}
+                      className="text-sm font-medium truncate text-texto"
                     >
                       {d.cliente_nombre || "—"}
                     </p>
@@ -104,16 +96,14 @@ export default function UltimosDocumentos({ documentos }: Props) {
                     )}
                   </div>
                   <p
-                    className="text-xs mt-0.5"
-                    style={{ color: "var(--kipu-subtle)" }}
+                    className="text-xs mt-0.5 text-sutil"
                   >
                     {d.numero ?? d.numero_doc} · {String(d.fecha ?? "").slice(0, 10)}
                   </p>
                 </div>
                 <div className="text-right shrink-0">
                   <p
-                    className="text-sm font-bold"
-                    style={{ color: "var(--kipu-text)" }}
+                    className="text-sm font-bold text-texto"
                   >
                     ${dosDecimales(d.total)}
                   </p>

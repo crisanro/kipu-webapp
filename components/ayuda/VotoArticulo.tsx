@@ -48,13 +48,12 @@ export default function VotoArticulo({ slug }: { slug: string }) {
 
   return (
     <div
-      className="mt-10 rounded-xl px-5 py-4 flex flex-wrap items-center gap-3 text-sm"
-      style={{ border: "1px solid var(--kipu-border)", color: "var(--kipu-muted)" }}
+      className="mt-10 rounded-xl px-5 py-4 flex flex-wrap items-center gap-3 text-sm border border-borde text-tenue"
       aria-live="polite"
     >
       {voto === null ? (
         <>
-          <p className="font-semibold mr-auto" style={{ color: "var(--kipu-text)" }}>¿Te sirvió este artículo?</p>
+          <p className="font-semibold mr-auto text-texto">¿Te sirvió este artículo?</p>
           <button type="button" onClick={() => votar("si")} className={boton}
                   style={{ border: "1px solid var(--kipu-border)", color: "var(--kipu-text)" }}>
             <ThumbsUp size={15} /> Sí

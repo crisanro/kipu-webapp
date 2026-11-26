@@ -210,13 +210,11 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
   let pantalla: React.ReactNode;
   if (errorCarga && !contenido) {
     pantalla = (
-      <div className="h-screen flex flex-col items-center justify-center gap-4 p-6 text-center"
-           style={{ background: "var(--kipu-bg)", color: "var(--kipu-text)" }}>
-        <p className="text-sm max-w-xs" style={{ color: "var(--kipu-muted)" }}>{errorCarga}</p>
+      <div className="h-screen flex flex-col items-center justify-center gap-4 p-6 text-center bg-fondo text-texto">
+        <p className="text-sm max-w-xs text-tenue">{errorCarga}</p>
         <button
           onClick={() => window.location.reload()}
-          className="px-4 py-2 rounded-lg text-sm font-semibold text-white"
-          style={{ background: "var(--kipu-boton)" }}
+          className="px-4 py-2 rounded-lg text-sm font-semibold text-white bg-boton"
         >
           Reintentar
         </button>
@@ -224,7 +222,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
     );
   } else if (!listo && !contenido) {
     pantalla = (
-      <div className="h-screen flex items-center justify-center" style={{ background: "var(--kipu-bg)" }}>
+      <div className="h-screen flex items-center justify-center bg-fondo">
         <div className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin"
              style={{ borderColor: "var(--kipu-accent)", borderTopColor: "transparent" }} />
       </div>

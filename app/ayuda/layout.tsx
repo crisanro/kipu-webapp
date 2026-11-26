@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 
 export default function AyudaLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen" style={{ background: "var(--kipu-bg)" }}>
+    <div className="min-h-screen bg-fondo">
       <EncabezadoAyuda />
       <main className="max-w-3xl mx-auto px-4 py-8 md:py-10">{children}</main>
     </div>

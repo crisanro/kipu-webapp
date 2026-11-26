@@ -158,7 +158,7 @@ export default function DeclaracionWidget({ data, onDeclarado }: Props) {
           {/* Contenido */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <p className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>
+              <p className="text-sm font-semibold text-texto">
                 Declaración IVA — {data.periodo}
               </p>
               <span
@@ -173,7 +173,7 @@ export default function DeclaracionWidget({ data, onDeclarado }: Props) {
             </div>
 
             {/* Mensaje según estado */}
-            <p className="text-xs mt-0.5" style={{ color: "var(--kipu-subtle)" }}>
+            <p className="text-xs mt-0.5 text-sutil">
               {data.estado === "DECLARADO" && data.fecha_declarado && (
                 `Registrada el ${new Date(data.fecha_declarado).toLocaleDateString("es-EC")}`
               )}
@@ -194,7 +194,7 @@ export default function DeclaracionWidget({ data, onDeclarado }: Props) {
             {/* Total de IVA del periodo */}
             {typeof data.iva_a_pagar === "number" && (
               <div className="mt-2 flex items-baseline gap-x-3 gap-y-1 flex-wrap">
-                <p className="text-sm" style={{ color: "var(--kipu-text)" }}>
+                <p className="text-sm text-texto">
                   {data.iva_a_pagar === 0 && (data.saldo_a_favor ?? 0) > 0
                     ? <>Saldo a favor: <strong>${(data.saldo_a_favor ?? 0).toFixed(2)}</strong></>
                     : <>IVA a pagar: <strong>${data.iva_a_pagar.toFixed(2)}</strong></>}
@@ -216,15 +216,14 @@ export default function DeclaracionWidget({ data, onDeclarado }: Props) {
             {data.solo_kipu && (
               <Link
                 href="/declarar-mes-anterior"
-                className="mt-2 inline-block text-xs font-medium underline underline-offset-2 hover:no-underline"
-                style={{ color: "var(--kipu-accent)" }}
+                className="mt-2 inline-block text-xs font-medium underline underline-offset-2 hover:no-underline text-acento"
               >
                 ¿Facturabas con otro sistema? Te guiamos para declarar {data.periodo} →
               </Link>
             )}
 
             {error && (
-              <p className="text-xs mt-1" style={{ color: "var(--kipu-danger)" }}>{error}</p>
+              <p className="text-xs mt-1 text-peligro">{error}</p>
             )}
 
             {/* Acciones */}
@@ -235,12 +234,7 @@ export default function DeclaracionWidget({ data, onDeclarado }: Props) {
                 href="https://srienlinea.sri.gob.ec"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors"
-                style={{
-                  background: "color-mix(in srgb, var(--kipu-text) 5%, transparent)",
-                  border: "1px solid var(--kipu-border)",
-                  color: "var(--kipu-muted)",
-                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors bg-texto/5 border border-borde text-tenue"
                 onMouseEnter={e => {
                   e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 10%, transparent)";
                   e.currentTarget.style.color = "var(--kipu-text)";
@@ -259,12 +253,7 @@ export default function DeclaracionWidget({ data, onDeclarado }: Props) {
                 <button
                   type="button"
                   onClick={() => setConfirmando(true)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors font-medium"
-                  style={{
-                    background: "color-mix(in srgb, var(--kipu-success) 20%, transparent)",
-                    border: "1px solid color-mix(in srgb, var(--kipu-success) 20%, transparent)",
-                    color: "var(--kipu-success)",
-                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors font-medium bg-exito/20 border border-exito/20 text-exito"
                   onMouseEnter={e => {
                     e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-success) 30%, transparent)";
                   }}

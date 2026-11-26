@@ -150,7 +150,7 @@ export default function KipuAlDiaPage() {
   if (cargando) {
     return (
       <div className="flex items-center justify-center py-24">
-        <Loader2 size={22} className="animate-spin" style={{ color: "var(--kipu-subtle)" }} />
+        <Loader2 size={22} className="animate-spin text-sutil" />
       </div>
     );
   }
@@ -171,7 +171,7 @@ export default function KipuAlDiaPage() {
         <p>Ya tienes {ES_APP_NATIVA ? "un plan activo" : "Kipu Pro activo"}. Escríbenos y te pasamos a Kipu Al Día sin perder lo que ya pagaste.</p>
         <a href={enlaceWhatsAppSoporte(`Hola, tengo ${ES_APP_NATIVA ? "un plan activo" : "Kipu Pro"} y quiero pasarme a Kipu Al Día.`)}
            target="_blank" rel="noopener noreferrer"
-           className="inline-flex items-center gap-1.5 font-medium" style={{ color: "var(--kipu-accent)" }}>
+           className="inline-flex items-center gap-1.5 font-medium text-acento">
           <MessageCircle size={14} /> Escribir por WhatsApp
         </a>
       </div>
@@ -186,25 +186,22 @@ export default function KipuAlDiaPage() {
     ) : terminos && (
       <div className="rounded-xl p-5 space-y-4" style={caja}>
         <div className="flex items-center gap-2">
-          <ShieldCheck size={18} style={{ color: "var(--kipu-accent)" }} />
-          <p className="font-semibold" style={{ color: "var(--kipu-text)" }}>Términos del servicio</p>
-          <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>versión {terminos.version}</span>
+          <ShieldCheck className="text-acento" size={18} />
+          <p className="font-semibold text-texto">Términos del servicio</p>
+          <span className="text-xs text-sutil">versión {terminos.version}</span>
         </div>
-        <div className="max-h-96 overflow-y-auto rounded-lg p-4"
-             style={{ background: "var(--kipu-bg)", border: "1px solid var(--kipu-border)" }}>
+        <div className="max-h-96 overflow-y-auto rounded-lg p-4 bg-fondo border border-borde">
           <TextoTerminos texto={terminos.texto} />
         </div>
 
-        <label className="flex items-start gap-2.5 text-sm cursor-pointer" style={{ color: "var(--kipu-text)" }}>
+        <label className="flex items-start gap-2.5 text-sm cursor-pointer text-texto">
           <input type="checkbox" checked={acepta || !!estado?.aceptado} disabled={!!estado?.aceptado}
-                 onChange={e => setAcepta(e.target.checked)} className="mt-0.5 w-4 h-4"
-                 style={{ accentColor: "var(--kipu-accent)" }} />
+                 onChange={e => setAcepta(e.target.checked)} className="mt-0.5 w-4 h-4 accent-acento" />
           Leí y acepto los términos de Kipu Al Día.
         </label>
-        <label className="flex items-start gap-2.5 text-sm cursor-pointer" style={{ color: "var(--kipu-text)" }}>
+        <label className="flex items-start gap-2.5 text-sm cursor-pointer text-texto">
           <input type="checkbox" checked={autoriza || !!estado?.aceptado} disabled={!!estado?.aceptado}
-                 onChange={e => setAutoriza(e.target.checked)} className="mt-0.5 w-4 h-4"
-                 style={{ accentColor: "var(--kipu-accent)" }} />
+                 onChange={e => setAutoriza(e.target.checked)} className="mt-0.5 w-4 h-4 accent-acento" />
           Autorizo a Kipu a usar mi clave del SRI solo para lo que dice la sección 5
           (declaraciones, descarga de comprobantes y consultas).
         </label>
@@ -212,7 +209,7 @@ export default function KipuAlDiaPage() {
         <div className="flex flex-col items-center gap-1.5 pt-1">
           <SelectorPeriodo valor={periodo} onCambio={setPeriodo} precios={estado?.precios} />
           {precio !== null && (base !== null || periodo === "ANUAL") && (
-            <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+            <p className="text-xs text-sutil">
               {base !== null && `$${base.toFixed(2)} + IVA`}
               {base !== null && periodo === "ANUAL" && " · "}
               {periodo === "ANUAL" && `equivale a $${(precio / 12).toFixed(2)} al mes`}
@@ -227,14 +224,11 @@ export default function KipuAlDiaPage() {
           // En la app no se nombra Kipu Pro (reglas de las tiendas): "tu plan actual"
           const tuPlan = ES_APP_NATIVA ? "tu plan actual" : "tu Kipu Pro";
           return (
-            <div className="rounded-lg px-4 py-3 text-sm space-y-1"
-                 style={{ background: "color-mix(in srgb, var(--kipu-accent) 8%, transparent)",
-                          border: "1px solid color-mix(in srgb, var(--kipu-accent) 25%, transparent)",
-                          color: "var(--kipu-text)" }}>
+            <div className="rounded-lg px-4 py-3 text-sm space-y-1 bg-acento/8 border border-acento/25 text-texto">
               <p className="font-semibold">
                 {ES_APP_NATIVA ? "Ya tienes un plan activo" : "Tienes Kipu Pro"}: no pierdes lo que ya pagaste
               </p>
-              <p className="text-xs" style={{ color: "var(--kipu-muted)" }}>
+              <p className="text-xs text-tenue">
                 {c.sin_devolucion
                   ? `A ${tuPlan} le quedan ${dias} día${dias === 1 ? "" : "s"}: es menos de $${c.minimo.toFixed(2)}, así que no hay devolución.`
                   : c.monto_estimado !== null
@@ -253,18 +247,17 @@ export default function KipuAlDiaPage() {
           type="button"
           onClick={contratar}
           disabled={enviando || !(estado?.aceptado || (acepta && autoriza))}
-          className="w-full py-3 rounded-lg text-white font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-50"
-          style={{ background: "var(--kipu-accent)" }}
+          className="w-full py-3 rounded-lg text-white font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-50 bg-acento"
         >
           {enviando
             ? <><Loader2 size={16} className="animate-spin" /> Abriendo el pago...</>
             : precio !== null ? `Contratar por $${precio.toFixed(2)} ${unidad}` : "Continuar al pago"}
         </button>
-        <p className="text-xs text-center" style={{ color: "var(--kipu-subtle)" }}>
+        <p className="text-xs text-center text-sutil">
           Pagas con tarjeta en Stripe. Te enviamos por correo una copia de los términos que aceptaste.
           ¿Prefieres transferencia?{" "}
           <a href={enlaceWhatsAppSoporte("Hola, quiero contratar Kipu Al Día pagando por transferencia.")}
-             target="_blank" rel="noopener noreferrer" className="underline" style={{ color: "var(--kipu-accent)" }}>
+             target="_blank" rel="noopener noreferrer" className="underline text-acento">
             Escríbenos
           </a>.
         </p>
@@ -284,8 +277,7 @@ export default function KipuAlDiaPage() {
     return (
       <div className="p-4 md:p-6 max-w-3xl mx-auto space-y-8">
         {error && (
-          <p className="text-sm px-3 py-2 rounded-lg"
-             style={{ color: "var(--kipu-danger)", background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)" }}>
+          <p className="text-sm px-3 py-2 rounded-lg text-peligro bg-peligro-suave">
             {error}
           </p>
         )}
@@ -299,12 +291,11 @@ export default function KipuAlDiaPage() {
         <Confianza />
         <Preguntas />
         <div className="rounded-xl p-5 text-center space-y-3" style={caja}>
-          <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>
+          <p className="text-sm text-tenue">
             ¿Quieres que tu contador de Kipu se encargue? Escríbenos y te contamos cómo empezar.
           </p>
           <a href={whatsappInfo} target="_blank" rel="noopener noreferrer"
-             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-white font-semibold text-sm"
-             style={{ background: "var(--kipu-accent)" }}>
+             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-white font-semibold text-sm bg-acento">
             <MessageCircle size={16} /> Escríbenos por WhatsApp
           </a>
         </div>
@@ -317,8 +308,7 @@ export default function KipuAlDiaPage() {
     return (
       <div className="p-4 md:p-6 max-w-3xl mx-auto space-y-8">
         {error && (
-          <p className="text-sm px-3 py-2 rounded-lg"
-             style={{ color: "var(--kipu-danger)", background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)" }}>
+          <p className="text-sm px-3 py-2 rounded-lg text-peligro bg-peligro-suave">
             {error}
           </p>
         )}
@@ -332,7 +322,7 @@ export default function KipuAlDiaPage() {
         <Preguntas />
 
         <section id="contratar" className="space-y-3 scroll-mt-4">
-          <h2 className="text-lg font-bold" style={{ color: "var(--kipu-text)" }}>Contratar Kipu Al Día</h2>
+          <h2 className="text-lg font-bold text-texto">Contratar Kipu Al Día</h2>
           {contratarBloque}
         </section>
 
@@ -340,7 +330,7 @@ export default function KipuAlDiaPage() {
         <OfertaRenta variante="al-dia" />
 
         <SoloWeb>
-          <p className="text-xs text-center" style={{ color: "var(--kipu-subtle)" }}>
+          <p className="text-xs text-center text-sutil">
             <Link href="/planes" className="underline">Ver todos los planes</Link>
           </p>
         </SoloWeb>
@@ -352,21 +342,19 @@ export default function KipuAlDiaPage() {
     <div className="p-4 md:p-6 max-w-3xl mx-auto space-y-5">
       {/* Encabezado */}
       <div className="flex items-start gap-3">
-        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-             style={{ background: "color-mix(in srgb, var(--kipu-accent) 15%, transparent)" }}>
-          <CalendarCheck size={20} style={{ color: "var(--kipu-accent)" }} />
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-acento/15">
+          <CalendarCheck className="text-acento" size={20} />
         </div>
         <div>
-          <h1 className="text-xl font-bold" style={{ color: "var(--kipu-text)" }}>Kipu Al Día</h1>
-          <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>
+          <h1 className="text-xl font-bold text-texto">Kipu Al Día</h1>
+          <p className="text-sm text-tenue">
             Tú facturas. Nosotros declaramos.
           </p>
         </div>
       </div>
 
       {error && (
-        <p className="text-sm px-3 py-2 rounded-lg"
-           style={{ color: "var(--kipu-danger)", background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)" }}>
+        <p className="text-sm px-3 py-2 rounded-lg text-peligro bg-peligro-suave">
           {error}
         </p>
       )}
@@ -375,10 +363,10 @@ export default function KipuAlDiaPage() {
       {estado?.contratado && (
         <div className="rounded-xl p-5 space-y-2" style={caja}>
           <div className="flex items-center gap-2">
-            <CheckCircle2 size={18} style={{ color: "var(--kipu-success)" }} />
-            <p className="font-semibold" style={{ color: "var(--kipu-text)" }}>Tienes Kipu Al Día activo</p>
+            <CheckCircle2 className="text-exito" size={18} />
+            <p className="font-semibold text-texto">Tienes Kipu Al Día activo</p>
           </div>
-          <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>
+          <p className="text-sm text-tenue">
             {estado.cancel_at_period_end ? "Cancelado: el servicio sigue hasta " : "Próximo cobro: "}
             {estado.period_end ? new Date(estado.period_end).toLocaleDateString("es-EC") : "—"}.
             Cualquier duda, escríbenos por WhatsApp de lunes a viernes, de 8:00 a 17:00.
@@ -386,11 +374,11 @@ export default function KipuAlDiaPage() {
           {esAdmin && (ES_APP_NATIVA ? (
             // App: sin enlaces de pago; tarjeta, cancelación o pagos, por WhatsApp
             <a href={whatsappPago} target="_blank" rel="noopener noreferrer"
-               className="inline-flex items-center gap-1.5 text-sm font-medium" style={{ color: "var(--kipu-accent)" }}>
+               className="inline-flex items-center gap-1.5 text-sm font-medium text-acento">
               <MessageCircle size={14} /> Escríbenos por WhatsApp para cambiar la tarjeta o cancelar
             </a>
           ) : (
-            <button type="button" onClick={gestionarPago} className="text-sm underline" style={{ color: "var(--kipu-accent)" }}>
+            <button type="button" onClick={gestionarPago} className="text-sm underline text-acento">
               Cambiar tarjeta o cancelar
             </button>
           ))}
@@ -404,7 +392,7 @@ export default function KipuAlDiaPage() {
       {(estado?.contratado || estado?.clave_se_borra_el) && esAdmin && <ClaveSri contratado={!!estado?.contratado} />}
 
       <SoloWeb>
-        <p className="text-xs text-center" style={{ color: "var(--kipu-subtle)" }}>
+        <p className="text-xs text-center text-sutil">
           <Link href="/planes" className="underline">Volver a Plan y créditos</Link>
         </p>
       </SoloWeb>

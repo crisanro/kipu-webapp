@@ -34,8 +34,7 @@ export function ThemeToggle({ compact = false }: { compact?: boolean }) {
   return (
     <button
       onClick={() => setTheme(isDark ? "light" : "dark")}
-      className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm transition-colors"
-      style={{ color: "var(--kipu-muted)" }}
+      className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm transition-colors text-tenue"
       onMouseEnter={(e) => {
         e.currentTarget.style.color = "var(--kipu-text)";
         e.currentTarget.style.background = "var(--kipu-border)";

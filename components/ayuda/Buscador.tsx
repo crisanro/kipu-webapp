@@ -33,20 +33,18 @@ export default function Buscador({ articulos, categorias }: { articulos: Articul
   return (
     <div className="space-y-8">
       <div className="relative">
-        <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none"
-                style={{ color: "var(--kipu-subtle)" }} />
+        <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none text-sutil" />
         <input
           type="search"
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Busca tu duda: firma, nota de crédito, IVA…"
           aria-label="Buscar en el Centro de Ayuda"
-          className="w-full rounded-xl pl-11 pr-10 py-3 text-sm outline-none focus:ring-2"
-          style={{ background: "var(--kipu-surface)", border: "1px solid var(--kipu-border)", color: "var(--kipu-text)" }}
+          className="w-full rounded-xl pl-11 pr-10 py-3 text-sm outline-none focus:ring-2 bg-superficie border border-borde text-texto"
         />
         {q && (
           <button type="button" onClick={() => setQ("")} aria-label="Borrar búsqueda"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1" style={{ color: "var(--kipu-subtle)" }}>
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-sutil">
             <X size={16} />
           </button>
         )}
@@ -54,15 +52,14 @@ export default function Buscador({ articulos, categorias }: { articulos: Articul
 
       {resultados ? (
         <section className="space-y-2" aria-live="polite">
-          <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+          <p className="text-xs text-sutil">
             {resultados.length === 0
               ? "No encontramos artículos con esas palabras. Prueba con otras o revisa las categorías."
               : `${resultados.length} artículo${resultados.length === 1 ? "" : "s"}`}
           </p>
           {resultados.map((a) => <TarjetaArticulo key={a.slug} articulo={a} />)}
           {resultados.length === 0 && (
-            <button type="button" onClick={() => setQ("")} className="text-sm underline underline-offset-2"
-                    style={{ color: "var(--kipu-accent)" }}>
+            <button type="button" onClick={() => setQ("")} className="text-sm underline underline-offset-2 text-acento">
               Ver todas las categorías
             </button>
           )}
@@ -75,8 +72,8 @@ export default function Buscador({ articulos, categorias }: { articulos: Articul
           return (
             <section key={c.id} id={c.id} className="space-y-2 scroll-mt-20">
               <div>
-                <h2 className="text-base font-bold" style={{ color: "var(--kipu-text)" }}>{c.nombre}</h2>
-                <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>{c.descripcion}</p>
+                <h2 className="text-base font-bold text-texto">{c.nombre}</h2>
+                <p className="text-xs text-sutil">{c.descripcion}</p>
               </div>
               {lista.map((a) => <TarjetaArticulo key={a.slug} articulo={a} />)}
             </section>

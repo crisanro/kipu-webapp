@@ -41,7 +41,7 @@ function Barra({ usados, limite, extra = 0 }: { usados: number; limite: number; 
   const pct   = Math.min(100, Math.round((usados / Math.max(total, 1)) * 100));
   const color = usados >= total ? "var(--kipu-danger)" : usados >= limite ? "var(--kipu-warning)" : "var(--kipu-accent)";
   return (
-    <div className="h-2 rounded-full overflow-hidden" style={{ background: "color-mix(in srgb, var(--kipu-text) 8%, transparent)" }}>
+    <div className="h-2 rounded-full overflow-hidden bg-texto/8">
       <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: color }} />
     </div>
   );
@@ -88,12 +88,12 @@ export default function UsoJustoPage() {
     return (
       <div className="max-w-2xl mx-auto px-4 md:px-6 py-6">
         <div className="rounded-xl p-5 space-y-3" style={caja}>
-          <p className="flex items-start gap-2 text-sm" style={{ color: "var(--kipu-text)" }}>
-            <AlertTriangle size={16} className="mt-0.5 shrink-0" style={{ color: "var(--kipu-warning)" }} />
+          <p className="flex items-start gap-2 text-sm text-texto">
+            <AlertTriangle size={16} className="mt-0.5 shrink-0 text-alerta" />
             Tu usuario no tiene acceso a la empresa con RUC {rucPedido}. Inicia sesión con la cuenta de esa
             empresa o pide a su administrador que te invite.
           </p>
-          <Link href="/uso-justo" className="text-xs font-semibold hover:underline" style={{ color: "var(--kipu-accent)" }}>
+          <Link href="/uso-justo" className="text-xs font-semibold hover:underline text-acento">
             Ver el uso justo de {empresa?.razon_social}
           </Link>
         </div>
@@ -104,7 +104,7 @@ export default function UsoJustoPage() {
   if (cambiando || (!datos && !error)) {
     return (
       <div className="flex justify-center py-16">
-        <Loader2 size={20} className="animate-spin" style={{ color: "var(--kipu-accent)" }} />
+        <Loader2 size={20} className="animate-spin text-acento" />
       </div>
     );
   }
@@ -112,17 +112,16 @@ export default function UsoJustoPage() {
   return (
     <div className="max-w-2xl mx-auto px-4 md:px-6 py-4 md:py-6 space-y-4">
       <div>
-        <h2 className="text-base font-semibold flex items-center gap-2" style={{ color: "var(--kipu-text)" }}>
-          <Gauge size={16} style={{ color: "var(--kipu-accent)" }} /> Tu uso justo
+        <h2 className="text-base font-semibold flex items-center gap-2 text-texto">
+          <Gauge className="text-acento" size={16} /> Tu uso justo
         </h2>
-        <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+        <p className="text-xs text-sutil">
           {empresa?.razon_social} · RUC {empresa?.ruc}
         </p>
       </div>
 
       {error && (
-        <p className="text-xs rounded-lg px-3 py-2"
-           style={{ background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)", color: "var(--kipu-danger)" }}>
+        <p className="text-xs rounded-lg px-3 py-2 bg-peligro-suave text-peligro">
           {error}
         </p>
       )}
@@ -137,23 +136,23 @@ export default function UsoJustoPage() {
         <>
           <div className="rounded-xl p-5 space-y-4" style={caja}>
             <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <p className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>
+              <p className="text-sm font-semibold text-texto">
                 Nivel {datos.nivel} de {datos.nivel_maximo}
               </p>
-              <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+              <p className="text-xs text-sutil">
                 Hasta {n(datos.limite_mes)} comprobantes al mes y {n(datos.limite_dia)} al día, gratis
               </p>
             </div>
 
             <div className="space-y-1.5">
-              <div className="flex justify-between text-xs" style={{ color: "var(--kipu-muted)" }}>
+              <div className="flex justify-between text-xs text-tenue">
                 <span>Este mes</span>
                 <span className="tabular-nums">{n(datos.usados_mes)} de {n(datos.limite_mes)}</span>
               </div>
               <Barra usados={datos.usados_mes} limite={datos.limite_mes} extra={datos.colchon} />
             </div>
             <div className="space-y-1.5">
-              <div className="flex justify-between text-xs" style={{ color: "var(--kipu-muted)" }}>
+              <div className="flex justify-between text-xs text-tenue">
                 <span>Hoy</span>
                 <span className="tabular-nums">{n(datos.usados_hoy)} de {n(datos.limite_dia)}</span>
               </div>
@@ -161,22 +160,20 @@ export default function UsoJustoPage() {
             </div>
 
             {datos.en_colchon && (
-              <p className="flex items-start gap-1.5 text-xs rounded-lg px-3 py-2"
-                 style={{ color: "var(--kipu-warning)", background: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)" }}>
+              <p className="flex items-start gap-1.5 text-xs rounded-lg px-3 py-2 text-alerta bg-alerta/10">
                 <AlertTriangle size={13} className="mt-0.5 shrink-0" />
                 Llegaste a tu límite de este mes. Te {datos.restantes_mes === 1 ? "queda 1 comprobante" : `quedan ${n(datos.restantes_mes)} comprobantes`} de
                 margen; después tendrás que esperar al próximo mes{ES_APP_NATIVA ? " o solicitar ampliación." : ", solicitar ampliación o pasarte a Kipu Pro."}
               </p>
             )}
             {!datos.en_colchon && datos.usados_mes >= datos.limite_mes + datos.colchon && (
-              <p className="flex items-start gap-1.5 text-xs rounded-lg px-3 py-2"
-                 style={{ color: "var(--kipu-danger)", background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)" }}>
+              <p className="flex items-start gap-1.5 text-xs rounded-lg px-3 py-2 text-peligro bg-peligro-suave">
                 <AlertTriangle size={13} className="mt-0.5 shrink-0" />
                 Usaste todo tu uso justo de este mes. Se reinicia el próximo mes.
               </p>
             )}
 
-            <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+            <p className="text-xs text-sutil">
               Tu límite sube solo cuando tu empresa lleva un tiempo facturando sin problemas.
               {datos.nivel < datos.nivel_maximo && " Si lo necesitas antes, pide una ampliación: es gratis."}
             </p>
@@ -184,18 +181,15 @@ export default function UsoJustoPage() {
           </div>
 
           <SoloWeb>
-            <div className="rounded-xl p-5 space-y-3"
-                 style={{ background: "color-mix(in srgb, var(--kipu-accent) 6%, transparent)",
-                          border: "1px solid color-mix(in srgb, var(--kipu-accent) 20%, transparent)" }}>
-              <p className="flex items-start gap-2 text-sm" style={{ color: "var(--kipu-text)" }}>
-                <Sparkles size={15} className="mt-0.5 shrink-0" style={{ color: "var(--kipu-accent)" }} />
+            <div className="rounded-xl p-5 space-y-3 bg-acento/6 border border-acento/20">
+              <p className="flex items-start gap-2 text-sm text-texto">
+                <Sparkles size={15} className="mt-0.5 shrink-0 text-acento" />
                 Con Kipu Pro no tienes límite de uso justo: emites sin límite desde el panel y por API,
                 tus facturas salen sin la marca de Kipu, y tienes el 104 con alertas y el resumen de la renta.
               </p>
               <Link
                 href="/planes"
-                className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-semibold text-white transition-opacity hover:opacity-90"
-                style={{ background: "var(--kipu-accent)" }}
+                className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-semibold text-white transition-opacity hover:opacity-90 bg-acento"
               >
                 <Sparkles size={13} /> Ver Kipu Pro
               </Link>

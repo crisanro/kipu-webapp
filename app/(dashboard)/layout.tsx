@@ -183,7 +183,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   if (!empresa) {
     return (
-      <div className="h-screen flex items-center justify-center" style={{ background: "var(--kipu-bg)" }}>
+      <div className="h-screen flex items-center justify-center bg-fondo">
         <div
           className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin"
           style={{ borderColor: "var(--kipu-accent)", borderTopColor: "transparent" }}
@@ -193,7 +193,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <div className="flex h-screen overflow-hidden" style={{ background: "var(--kipu-bg)" }}>
+    <div className="flex h-screen overflow-hidden bg-fondo">
       {/* Ctrl+K / ⌘K: crear, ir a una pantalla o hacer una acción */}
       <PaletaComandos />
       {showLogoutModal && (

@@ -90,29 +90,24 @@ export default function PinInput({ tipoAccion, email, onConfirmar, onCancelar, l
       {!enviado ? (
         <div className="text-center space-y-3">
           <div
-            className="w-12 h-12 rounded-full flex items-center justify-center mx-auto"
-            style={{ background: "color-mix(in srgb, var(--kipu-accent) 20%, transparent)" }}
+            className="w-12 h-12 rounded-full flex items-center justify-center mx-auto bg-acento/20"
           >
-            <Mail size={20} style={{ color: "var(--kipu-accent)" }} />
+            <Mail className="text-acento" size={20} />
           </div>
           <div>
-            <p className="text-sm font-medium" style={{ color: "var(--kipu-text)" }}>Verificación por email</p>
-            <p className="text-xs mt-1" style={{ color: "var(--kipu-subtle)" }}>
+            <p className="text-sm font-medium text-texto">Verificación por email</p>
+            <p className="text-xs mt-1 text-sutil">
               {label
                 ? `Para ${label}, necesitamos verificar tu identidad.`
                 : "Necesitamos verificar tu identidad."
               }
             </p>
-            <p className="text-xs mt-1" style={{ color: "var(--kipu-accent)" }}>{email}</p>
+            <p className="text-xs mt-1 text-acento">{email}</p>
           </div>
 
           {error && (
             <p
-              className="text-xs px-3 py-2 rounded-lg"
-              style={{
-                color: "var(--kipu-danger)",
-                background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
-              }}
+              className="text-xs px-3 py-2 rounded-lg text-peligro bg-peligro-suave"
             >
               {error}
             </p>
@@ -122,11 +117,7 @@ export default function PinInput({ tipoAccion, email, onConfirmar, onCancelar, l
             <button
               type="button"
               onClick={onCancelar}
-              className="flex-1 py-2.5 rounded-lg text-sm transition-colors"
-              style={{
-                border: "1px solid var(--kipu-border)",
-                color: "var(--kipu-muted)",
-              }}
+              className="flex-1 py-2.5 rounded-lg text-sm transition-colors border border-borde text-tenue"
               onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
               onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-muted)"}
             >
@@ -136,8 +127,7 @@ export default function PinInput({ tipoAccion, email, onConfirmar, onCancelar, l
               type="button"
               onClick={enviarPin}
               disabled={enviando}
-              className="flex-1 py-2.5 rounded-lg text-white text-sm font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-              style={{ background: "var(--kipu-accent)" }}
+              className="flex-1 py-2.5 rounded-lg text-white text-sm font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50 bg-acento"
               onMouseEnter={e => {
                 if (!enviando) e.currentTarget.style.background = "var(--kipu-accent-h)";
               }}
@@ -166,22 +156,21 @@ export default function PinInput({ tipoAccion, email, onConfirmar, onCancelar, l
         <div className="space-y-4">
           <div className="text-center">
             <div
-              className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3"
-              style={{ background: "color-mix(in srgb, var(--kipu-success) 20%, transparent)" }}
+              className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 bg-exito/20"
             >
-              <CheckCircle2 size={20} style={{ color: "var(--kipu-success)" }} />
+              <CheckCircle2 className="text-exito" size={20} />
             </div>
-            <p className="text-sm font-medium" style={{ color: "var(--kipu-text)" }}>Código enviado</p>
-            <p className="text-xs mt-1" style={{ color: "var(--kipu-subtle)" }}>
-              Revisa tu correo <span style={{ color: "var(--kipu-accent)" }}>{email}</span>
+            <p className="text-sm font-medium text-texto">Código enviado</p>
+            <p className="text-xs mt-1 text-sutil">
+              Revisa tu correo <span className="text-acento">{email}</span>
             </p>
-            <p className="text-xs mt-1" style={{ color: "var(--kipu-subtle)" }}>
-              ¿No lo ves? Busca un correo de <strong style={{ color: "var(--kipu-muted)" }}>no-reply@kipu.ec</strong> en tu carpeta de <strong>spam o no deseado</strong>.
+            <p className="text-xs mt-1 text-sutil">
+              ¿No lo ves? Busca un correo de <strong className="text-tenue">no-reply@kipu.ec</strong> en tu carpeta de <strong>spam o no deseado</strong>.
             </p>
           </div>
 
           <div>
-            <label className="block text-xs mb-1.5 text-center" style={{ color: "var(--kipu-subtle)" }}>
+            <label className="block text-xs mb-1.5 text-center text-sutil">
               Ingresa el código de 6 dígitos
             </label>
             <input
@@ -198,12 +187,7 @@ export default function PinInput({ tipoAccion, email, onConfirmar, onCancelar, l
               onKeyDown={(e) => { if (e.key === "Enter" && pin.length === 6) confirmar(); }}
               placeholder="• • • • • •"
               maxLength={6}
-              className="w-full px-4 py-3 rounded-lg text-xl text-center tracking-[0.5em] font-mono transition-colors focus:outline-none"
-              style={{
-                background: "var(--kipu-surface)",
-                border: "1px solid var(--kipu-border)",
-                color: "var(--kipu-text)",
-              }}
+              className="w-full px-4 py-3 rounded-lg text-xl text-center tracking-[0.5em] font-mono transition-colors focus:outline-none bg-superficie border border-borde text-texto"
               onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
               onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
             />
@@ -211,11 +195,7 @@ export default function PinInput({ tipoAccion, email, onConfirmar, onCancelar, l
 
           {error && (
             <p
-              className="text-xs px-3 py-2 rounded-lg text-center"
-              style={{
-                color: "var(--kipu-danger)",
-                background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
-              }}
+              className="text-xs px-3 py-2 rounded-lg text-center text-peligro bg-peligro-suave"
             >
               {error}
             </p>
@@ -224,16 +204,15 @@ export default function PinInput({ tipoAccion, email, onConfirmar, onCancelar, l
           {/* Reenviar */}
           <div className="text-center">
             {countdown > 0 ? (
-              <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
-                Reenviar en <span className="font-mono" style={{ color: "var(--kipu-text)" }}>{countdown}s</span>
+              <p className="text-xs text-sutil">
+                Reenviar en <span className="font-mono text-texto">{countdown}s</span>
               </p>
             ) : (
               <button
                 type="button"
                 onClick={enviarPin}
                 disabled={enviando}
-                className="flex items-center gap-1.5 text-xs disabled:opacity-50 transition-colors mx-auto"
-                style={{ color: "var(--kipu-accent)" }}
+                className="flex items-center gap-1.5 text-xs disabled:opacity-50 transition-colors mx-auto text-acento"
                 onMouseEnter={e => {
                   if (!enviando) e.currentTarget.style.color = "var(--kipu-accent-h)";
                 }}
@@ -262,11 +241,7 @@ export default function PinInput({ tipoAccion, email, onConfirmar, onCancelar, l
             <button
               type="button"
               onClick={onCancelar}
-              className="flex-1 py-2.5 rounded-lg text-sm transition-colors"
-              style={{
-                border: "1px solid var(--kipu-border)",
-                color: "var(--kipu-muted)",
-              }}
+              className="flex-1 py-2.5 rounded-lg text-sm transition-colors border border-borde text-tenue"
               onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
               onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-muted)"}
             >
@@ -276,8 +251,7 @@ export default function PinInput({ tipoAccion, email, onConfirmar, onCancelar, l
               type="button"
               onClick={confirmar}
               disabled={confirmando || pin.length !== 6}
-              className="flex-1 py-2.5 rounded-lg text-white text-sm font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-              style={{ background: "var(--kipu-accent)" }}
+              className="flex-1 py-2.5 rounded-lg text-white text-sm font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50 bg-acento"
               onMouseEnter={e => {
                 if (!confirmando && pin.length === 6) e.currentTarget.style.background = "var(--kipu-accent-h)";
               }}

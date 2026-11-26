@@ -244,7 +244,7 @@ export default function Checklist({ health, compact = false, onUpdate }: Props) 
           </div>
 
           <div>
-            <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--kipu-subtle)" }}>
+            <label className="block text-xs font-medium mb-1.5 text-sutil">
               Contraseña del certificado
             </label>
             <input
@@ -252,12 +252,7 @@ export default function Checklist({ health, compact = false, onUpdate }: Props) 
               value={p12Pass}
               onChange={e => { setP12Pass(e.target.value); setFirmaError(""); }}
               placeholder="••••••••"
-              className="w-full px-3 py-2.5 rounded-xl text-sm focus:outline-none"
-              style={{
-                background: "var(--kipu-bg)",
-                border: "1px solid var(--kipu-border)",
-                color: "var(--kipu-text)",
-              }}
+              className="w-full px-3 py-2.5 rounded-xl text-sm focus:outline-none bg-fondo border border-borde text-texto"
               onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
               onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
               onKeyDown={e => { if (e.key === "Enter" && p12File && p12Pass) subirFirma(); }}
@@ -266,11 +261,7 @@ export default function Checklist({ health, compact = false, onUpdate }: Props) 
 
           {firmaError && (
             <p
-              className="text-xs px-3 py-2 rounded-lg"
-              style={{
-                color: "var(--kipu-danger)",
-                background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
-              }}
+              className="text-xs px-3 py-2 rounded-lg text-peligro bg-peligro-suave"
             >
               {firmaError}
             </p>
@@ -324,13 +315,9 @@ export default function Checklist({ health, compact = false, onUpdate }: Props) 
   // ── Mensajes post-acción ────────────────────────────────────────
   const mensajes = (prodMsg || firmaMsg) && (
     <div
-      className="rounded-xl px-4 py-3 text-center"
-      style={{
-        background: "color-mix(in srgb, var(--kipu-success) 10%, transparent)",
-        border: "1px solid color-mix(in srgb, var(--kipu-success) 25%, transparent)",
-      }}
+      className="rounded-xl px-4 py-3 text-center bg-exito/10 border border-exito/25"
     >
-      <p className="text-sm font-semibold" style={{ color: "var(--kipu-success)" }}>
+      <p className="text-sm font-semibold text-exito">
         {prodMsg || firmaMsg}
       </p>
     </div>
@@ -390,11 +377,11 @@ export default function Checklist({ health, compact = false, onUpdate }: Props) 
           }}
         >
           {done ? (
-            <CheckCircle2 size={16} style={{ color: "var(--kipu-success)" }} />
+            <CheckCircle2 className="text-exito" size={16} />
           ) : noAcceso ? (
-            <UserCog size={14} style={{ color: "var(--kipu-subtle)" }} />
+            <UserCog className="text-sutil" size={14} />
           ) : locked ? (
-            <Lock size={14} style={{ color: "var(--kipu-subtle)" }} />
+            <Lock className="text-sutil" size={14} />
           ) : (
             <Icon size={15} style={{ color: esListo ? "var(--kipu-success)" : "var(--kipu-subtle)" }} />
           )}
@@ -415,7 +402,7 @@ export default function Checklist({ health, compact = false, onUpdate }: Props) 
           >
             {label}
           </p>
-          <p className="text-xs mt-0.5" style={{ color: "var(--kipu-subtle)" }}>{desc}</p>
+          <p className="text-xs mt-0.5 text-sutil">{desc}</p>
         </div>
         {esActivo && (
           <ChevronRight size={14} className="shrink-0" style={{ color: esListo ? "var(--kipu-success)" : "var(--kipu-subtle)" }} />
@@ -435,27 +422,22 @@ export default function Checklist({ health, compact = false, onUpdate }: Props) 
       <>
         {mensajes}
         <div
-          className="rounded-xl p-4"
-          style={{
-            background: "color-mix(in srgb, var(--kipu-accent) 10%, transparent)",
-            border: "1px solid color-mix(in srgb, var(--kipu-accent) 20%, transparent)",
-          }}
+          className="rounded-xl p-4 bg-acento/10 border border-acento/20"
         >
           <div className="flex items-center justify-between mb-3">
             <div>
-              <p className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>
+              <p className="text-sm font-semibold text-texto">
                 Configura tu cuenta ({completados}/{total})
               </p>
-              <p className="text-xs mt-0.5" style={{ color: "var(--kipu-subtle)" }}>
+              <p className="text-xs mt-0.5 text-sutil">
                 Completa estos pasos para emitir comprobantes
               </p>
             </div>
-            <span className="text-sm font-bold" style={{ color: "var(--kipu-accent)" }}>{porcentaje}%</span>
+            <span className="text-sm font-bold text-acento">{porcentaje}%</span>
           </div>
 
           <div
-            className="h-1.5 rounded-full mb-3 overflow-hidden"
-            style={{ background: "color-mix(in srgb, var(--kipu-text) 8%, transparent)" }}
+            className="h-1.5 rounded-full mb-3 overflow-hidden bg-texto/8"
           >
             <div
               className="h-full rounded-full transition-all duration-500"
@@ -498,9 +480,9 @@ export default function Checklist({ health, compact = false, onUpdate }: Props) 
             >
               <div className="flex items-center gap-2.5">
                 {siguiente.noAcceso ? (
-                  <UserCog size={14} className="shrink-0" style={{ color: "var(--kipu-subtle)" }} />
+                  <UserCog size={14} className="shrink-0 text-sutil" />
                 ) : siguiente.locked ? (
-                  <Lock size={14} className="shrink-0" style={{ color: "var(--kipu-subtle)" }} />
+                  <Lock size={14} className="shrink-0 text-sutil" />
                 ) : (
                   <Circle size={14} className="shrink-0" style={{ color: siguiente.key === "activar_produccion" ? "var(--kipu-success)" : "var(--kipu-subtle)" }} />
                 )}
@@ -508,7 +490,7 @@ export default function Checklist({ health, compact = false, onUpdate }: Props) 
                   <p className="text-xs font-medium" style={{ color: siguiente.noAcceso ? "var(--kipu-subtle)" : siguiente.key === "activar_produccion" ? "var(--kipu-success)" : "var(--kipu-text)" }}>
                     {siguiente.noAcceso ? `${siguiente.label} — requiere administrador` : `Siguiente: ${siguiente.label}`}
                   </p>
-                  <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>{siguiente.desc}</p>
+                  <p className="text-xs text-sutil">{siguiente.desc}</p>
                 </div>
               </div>
               {!siguiente.locked && !siguiente.noAcceso && (
@@ -528,27 +510,21 @@ export default function Checklist({ health, compact = false, onUpdate }: Props) 
     <>
       {mensajes}
       <div
-        className="rounded-xl overflow-hidden"
-        style={{
-          background: "var(--kipu-surface)",
-          border: "1px solid var(--kipu-border)",
-        }}
+        className="rounded-xl overflow-hidden bg-superficie border border-borde"
       >
         <div
-          className="px-5 py-4"
-          style={{ borderBottom: "1px solid var(--kipu-border)" }}
+          className="px-5 py-4 border-b border-borde"
         >
           <div className="flex items-center justify-between mb-2">
-            <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>
+            <h2 className="text-sm font-semibold text-texto">
               Pasos para emitir comprobantes
             </h2>
-            <span className="text-xs font-bold" style={{ color: "var(--kipu-accent)" }}>
+            <span className="text-xs font-bold text-acento">
               {completados}/{total} completados
             </span>
           </div>
           <div
-            className="h-1.5 rounded-full overflow-hidden"
-            style={{ background: "color-mix(in srgb, var(--kipu-text) 8%, transparent)" }}
+            className="h-1.5 rounded-full overflow-hidden bg-texto/8"
           >
             <div
               className="h-full rounded-full transition-all duration-500"

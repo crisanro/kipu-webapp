@@ -60,20 +60,20 @@ export default async function ArticuloBlogPage({ params }: Props) {
     <article>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd }} />
 
-      <nav className="text-xs mb-4" aria-label="Ruta" style={{ color: "var(--kipu-subtle)" }}>
+      <nav className="text-xs mb-4 text-sutil" aria-label="Ruta">
         <Link href="/blog" className="inline-flex items-center gap-1 hover:underline">
           <ChevronLeft size={14} /> Blog
         </Link>
       </nav>
 
-      <h1 className="text-2xl md:text-3xl font-bold leading-tight" style={{ color: "var(--kipu-text)" }}>{articulo.titulo}</h1>
-      <p className="text-sm mt-2" style={{ color: "var(--kipu-subtle)" }}>{articulo.resumen}</p>
+      <h1 className="text-2xl md:text-3xl font-bold leading-tight text-texto">{articulo.titulo}</h1>
+      <p className="text-sm mt-2 text-sutil">{articulo.resumen}</p>
 
-      <div className="mt-6 pt-2" style={{ borderTop: "1px solid var(--kipu-border)" }}>
+      <div className="mt-6 pt-2 border-t border-borde">
         <Contenido />
       </div>
 
-      <p className="mt-8 text-xs" style={{ color: "var(--kipu-subtle)" }}>
+      <p className="mt-8 text-xs text-sutil">
         Información general, revisada en {REVISADO}. Las normas del SRI cambian: para tu caso concreto,
         revisa tus obligaciones en el SRI o consulta a un contador.
       </p>

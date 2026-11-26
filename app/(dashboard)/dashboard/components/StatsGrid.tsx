@@ -107,20 +107,17 @@ export default function StatsGrid({ resumen, empresa }: Props) {
               <Icon size={17} style={{ color }} />
             </div>
             <p
-              className="text-2xl font-bold tracking-tight"
-              style={{ color: "var(--kipu-text)" }}
+              className="text-2xl font-bold tracking-tight text-texto"
             >
               {value}
             </p>
             <p
-              className="text-xs mt-0.5 font-medium"
-              style={{ color: "var(--kipu-muted)" }}
+              className="text-xs mt-0.5 font-medium text-tenue"
             >
               {label}
             </p>
             <p
-              className="text-xs mt-0.5"
-              style={{ color: "var(--kipu-subtle)" }}
+              className="text-xs mt-0.5 text-sutil"
             >
               {sub}
             </p>

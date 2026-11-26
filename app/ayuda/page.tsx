@@ -7,8 +7,8 @@ export default function AyudaPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold" style={{ color: "var(--kipu-text)" }}>¿En qué te ayudamos?</h1>
-        <p className="text-sm mt-1" style={{ color: "var(--kipu-subtle)" }}>
+        <h1 className="text-2xl font-bold text-texto">¿En qué te ayudamos?</h1>
+        <p className="text-sm mt-1 text-sutil">
           Guías paso a paso para facturar con Kipu.
         </p>
       </div>

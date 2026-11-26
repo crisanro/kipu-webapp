@@ -43,14 +43,13 @@ function EstructuraContenido() {
     <div className="p-4 md:p-6 max-w-3xl mx-auto space-y-5">
       <div className="flex items-center gap-3">
         <div
-          className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
-          style={{ background: "color-mix(in srgb, var(--kipu-accent) 20%, transparent)" }}
+          className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 bg-acento/20"
         >
-          <Building2 size={18} style={{ color: "var(--kipu-accent)" }} />
+          <Building2 className="text-acento" size={18} />
         </div>
         <div>
-          <h1 className="text-xl font-bold" style={{ color: "var(--kipu-text)" }}>Estructura</h1>
-          <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>
+          <h1 className="text-xl font-bold text-texto">Estructura</h1>
+          <p className="text-sm text-sutil">
             Establecimientos y puntos de emisión
           </p>
         </div>
