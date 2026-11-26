@@ -10,7 +10,9 @@ import ClaveSri from "@/components/al-dia/ClaveSri";
 import PanelCliente from "@/components/al-dia/PanelCliente";
 import TextoTerminos from "@/components/al-dia/TextoTerminos";
 import OfertaRenta from "@/components/renta/OfertaRenta";
-import { HeroAlDia, DemoAlDia, ComoFunciona, QueIncluye, Confianza, Preguntas } from "@/components/al-dia/Venta";
+import {
+  HeroAlDia, DemoAlDia, ComoFunciona, QueIncluye, Confianza, GarantiaAlDia, Preguntas,
+} from "@/components/al-dia/Venta";
 import SoloWeb from "@/components/SoloWeb";
 import SelectorPeriodo, { periodoDisponible, type Periodo, type PreciosPlan } from "@/components/SelectorPeriodo";
 import { ES_APP_NATIVA } from "@/lib/plataforma";
@@ -268,40 +270,11 @@ export default function KipuAlDiaPage() {
   const irAContratar = () =>
     document.getElementById("contratar")?.scrollIntoView({ behavior: "smooth", block: "start" });
 
-  // App (reglas de las tiendas): Al Día no se contrata ni se paga dentro de la app.
-  // Solo se explica el servicio y un botón al WhatsApp del equipo, que cierra la
-  // venta y manda el link de pago por fuera. Sin precios, términos ni pago.
-  const whatsappInfo = enlaceWhatsAppAlDia(empresa?.razon_social, "informacion");
-  const whatsappPago = enlaceWhatsAppAlDia(empresa?.razon_social, "pago");
-  if (ES_APP_NATIVA && !estado?.contratado) {
-    return (
-      <div className="p-4 md:p-6 max-w-3xl mx-auto space-y-8">
-        {error && (
-          <p className="text-sm px-3 py-2 rounded-lg text-peligro bg-peligro-suave">
-            {error}
-          </p>
-        )}
-        <PanelCliente soloHistorial />
-        {/* Borrar la clave no es una compra: también en la app */}
-        {estado?.clave_se_borra_el && esAdmin && <ClaveSri contratado={false} />}
-        <HeroAlDia precio={null} onContratar={() => {}} whatsapp={whatsappInfo} />
-        <DemoAlDia ruc={empresa?.ruc} semestral={empresa?.periodo_iva === "SEMESTRAL"} enProduccion={enProduccion} />
-        <ComoFunciona />
-        <QueIncluye />
-        <Confianza />
-        <Preguntas />
-        <div className="rounded-xl p-5 text-center space-y-3" style={caja}>
-          <p className="text-sm text-tenue">
-            ¿Quieres que tu contador de Kipu se encargue? Escríbenos y te contamos cómo empezar.
-          </p>
-          <a href={whatsappInfo} target="_blank" rel="noopener noreferrer"
-             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-white font-semibold text-sm bg-acento">
-            <MessageCircle size={16} /> Escríbenos por WhatsApp
-          </a>
-        </div>
-      </div>
-    );
-  }
+  // App: Al Día se contrata y se paga como en la web (servicio de un contador,
+  // Apple 3.1.3(e)): Stripe se abre en el navegador de la app y vuelve a
+  // /volver-a-la-app. La tarjeta y la cancelación siguen por WhatsApp (sin el
+  // portal de Stripe, que podría ofrecer otros planes).
+  const whatsappPago = enlaceWhatsAppAlDia(empresa?.razon_social);
 
   // Sin contratar: página de venta (la demo muestra lo que verá después)
   if (!estado?.contratado) {
@@ -314,11 +287,14 @@ export default function KipuAlDiaPage() {
         )}
         {/* Si tuvo el servicio, su historial se sigue viendo */}
         <PanelCliente soloHistorial />
+        {/* Terminó el servicio y la clave espera su borrado: puede borrarla antes */}
+        {estado?.clave_se_borra_el && esAdmin && <ClaveSri contratado={false} />}
         <HeroAlDia precio={precio} base={base} periodo={periodo} onContratar={irAContratar} />
         <DemoAlDia ruc={empresa?.ruc} semestral={empresa?.periodo_iva === "SEMESTRAL"} enProduccion={enProduccion} />
         <ComoFunciona />
         <QueIncluye precioRenta={estado?.precio_renta?.total ?? null} />
         <Confianza />
+        <GarantiaAlDia />
         <Preguntas />
 
         <section id="contratar" className="space-y-3 scroll-mt-4">
