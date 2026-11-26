@@ -88,6 +88,15 @@ export const NAV_GROUPS = ES_APP_NATIVA
   ? GRUPOS.map((g) => (g.items ? { ...g, items: g.items.filter((i) => !esRutaSoloWeb(i.href)) } : g))
   : GRUPOS;
 
+/** Ícono y permiso de una página del menú: otras listas (la pestaña Más) los toman de aquí. */
+export function itemDelMenu(href: string) {
+  for (const g of GRUPOS) {
+    const item = g.items?.find((i) => i.href === href);
+    if (item) return item;
+  }
+  throw new Error(`${href} no está en el menú`);
+}
+
 type EmpresaConPermisos = { rol?: string | null; permisos?: Record<string, boolean> | null } | null | undefined;
 
 type EmpresaPlanNav = { suscripcion_activa?: boolean | null; emite_retenciones?: boolean | null } | null | undefined;

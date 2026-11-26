@@ -21,7 +21,7 @@ import { consultarRuc } from "@/lib/consultar-ruc";
 import { validarIdentificacion } from "@/lib/identificacion";
 import { detalleError } from "@/lib/errores";
 import { enlaceWhatsAppFalla } from "@/lib/soporte";
-import Turnstile, { TURNSTILE_ACTIVO } from "@/components/auth/Turnstile";
+import { FALTA_CAPTCHA, useCaptcha } from "@/components/auth/Turnstile";
 import Boton from "@/components/ui/Boton";
 import BotonIcono from "@/components/ui/BotonIcono";
 import ChipsFiltro from "@/components/ui/ChipsFiltro";
@@ -75,8 +75,7 @@ export default function FormularioEmpresa({ onCreada, pie }: {
   const [error,   setError]   = useState("");
   // El RUC está en pruebas con otra cuenta: se ofrece recuperarlo con la firma
   const [recuperar, setRecuperar] = useState(false);
-  const [captcha,   setCaptcha]   = useState<string | null>(null);
-  const [intentoCaptcha, setIntentoCaptcha] = useState(0);
+  const captcha = useCaptcha();
 
   const [lookupLoading, setLookupLoading] = useState(false);
   const [lookupMsg,     setLookupMsg]     = useState("");
@@ -150,14 +149,11 @@ export default function FormularioEmpresa({ onCreada, pie }: {
   const handleSubmit = async () => {
     setError("");
     setRecuperar(false);
-    if (TURNSTILE_ACTIVO && !captcha) {
-      setError("Completa la verificación de seguridad.");
-      return;
-    }
+    if (captcha.falta) { setError(FALTA_CAPTCHA); return; }
     setLoading(true);
     let ok = false;
     try {
-      const res = await api.post("/api/v1/app/emisor/onboarding", { ...form, captcha_token: captcha });
+      const res = await api.post("/api/v1/app/emisor/onboarding", { ...form, captcha_token: captcha.token });
       ok = true;
       onCreada(res.data?.emisor_id ?? null);
     } catch (err: unknown) {
@@ -176,7 +172,7 @@ export default function FormularioEmpresa({ onCreada, pie }: {
     } finally {
       setLoading(false);
       // Cada verificación sirve una sola vez: para reintentar hace falta otra
-      if (!ok) { setCaptcha(null); setIntentoCaptcha(n => n + 1); }
+      if (!ok) captcha.renovar();
     }
   };
 
@@ -324,7 +320,7 @@ export default function FormularioEmpresa({ onCreada, pie }: {
 
             {error && <ErrorBox error={error} ruc={form.ruc} />}
             {recuperar && <RecuperarConFirma form={form} onListo={() => onCreada(null)} />}
-            {!recuperar && <Turnstile key={intentoCaptcha} onToken={setCaptcha} />}
+            {!recuperar && captcha.widget}
           </div>
         )}
       </div>
@@ -361,8 +357,7 @@ function RecuperarConFirma({ form, onListo }: { form: DatosEmpresa; onListo: () 
   const [clave,    setClave]    = useState("");
   const [enviando, setEnviando] = useState(false);
   const [error,    setError]    = useState("");
-  const [captcha,  setCaptcha]  = useState<string | null>(null);
-  const [intento,  setIntento]  = useState(0);
+  const captcha = useCaptcha();
   const archivoRef = useRef<HTMLInputElement>(null);
 
   const recuperar = async () => {
@@ -370,16 +365,13 @@ function RecuperarConFirma({ form, onListo }: { form: DatosEmpresa; onListo: () 
       setError("Elige tu archivo .p12 y escribe su contraseña.");
       return;
     }
-    if (TURNSTILE_ACTIVO && !captcha) {
-      setError("Completa la verificación de seguridad.");
-      return;
-    }
+    if (captcha.falta) { setError(FALTA_CAPTCHA); return; }
     setEnviando(true);
     setError("");
     let ok = false;
     try {
       const datos = new FormData();
-      datos.append("datos", JSON.stringify({ ...form, captcha_token: captcha }));
+      datos.append("datos", JSON.stringify({ ...form, captcha_token: captcha.token }));
       datos.append("password", clave);
       datos.append("file", archivo);
       await api.post("/api/v1/app/emisor/onboarding/reclamar", datos, {
@@ -392,7 +384,7 @@ function RecuperarConFirma({ form, onListo }: { form: DatosEmpresa; onListo: () 
     } finally {
       setEnviando(false);
       // Cada verificación sirve una sola vez: para reintentar hace falta otra
-      if (!ok) { setCaptcha(null); setIntento(n => n + 1); }
+      if (!ok) captcha.renovar();
     }
   };
 
@@ -440,7 +432,7 @@ function RecuperarConFirma({ form, onListo }: { form: DatosEmpresa; onListo: () 
 
       {error && <ErrorBox error={error} ruc={form.ruc} />}
 
-      <Turnstile key={intento} onToken={setCaptcha} />
+      {captcha.widget}
 
       <Boton anchoCompleto tamano="lg" onClick={recuperar} cargando={enviando} icono={<ShieldCheck size={16} />}>
         {enviando ? "Verificando la firma…" : "Recuperar mi empresa"}

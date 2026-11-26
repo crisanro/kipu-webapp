@@ -12,7 +12,7 @@ import { auth } from "@/lib/firebase";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
 import { detalleError } from "@/lib/errores";
-import Turnstile, { TURNSTILE_ACTIVO } from "@/components/auth/Turnstile";
+import { FALTA_CAPTCHA, useCaptcha } from "@/components/auth/Turnstile";
 import Boton from "@/components/ui/Boton";
 import { Campo, Entrada, EntradaClave } from "@/components/ui/Campo";
 import { URL_PRIVACIDAD, URL_TERMINOS, URL_TRATAMIENTO_DATOS } from "@/lib/config";
@@ -47,9 +47,7 @@ export default function RegisterPage() {
   const [error,          setError]          = useState("");
   // Errores de cada campo: se muestran al salir del campo o al enviar
   const [tocados,        setTocados]        = useState<Record<string, boolean>>({});
-  // Captcha: cada token sirve una vez; "intento" vuelve a montar el widget
-  const [captcha,        setCaptcha]        = useState<string | null>(null);
-  const [intento,        setIntento]        = useState(0);
+  const captcha = useCaptcha();
 
   const clave    = useRef<HTMLInputElement>(null);
   const confirma = useRef<HTMLInputElement>(null);
@@ -76,10 +74,7 @@ export default function RegisterPage() {
       setError("Para crear tu cuenta debes aceptar los Términos y condiciones, la Política de privacidad y el Acuerdo de tratamiento de datos.");
       return;
     }
-    if (TURNSTILE_ACTIVO && !captcha) {
-      setError("Completa la verificación de seguridad.");
-      return;
-    }
+    if (captcha.falta) { setError(FALTA_CAPTCHA); return; }
 
     setLoading(true);
     let creada = false;
@@ -87,7 +82,7 @@ export default function RegisterPage() {
       // La cuenta la crea el backend (captcha, correos temporales, límite por IP);
       // el registro directo en Firebase está desactivado
       await api.post("/api/v1/public/registro/cuenta", {
-        email: email.trim(), password, captcha_token: captcha,
+        email: email.trim(), password, captcha_token: captcha.token,
         acepta_terminos: aceptaTerminos, acepta_novedades: aceptaNovedades,
       });
       creada = true;
@@ -103,8 +98,7 @@ export default function RegisterPage() {
         return;
       }
       setError(detalleError(err, "No pudimos crear la cuenta. Intenta de nuevo."));
-      setCaptcha(null);
-      setIntento(i => i + 1);
+      captcha.renovar();
     } finally {
       setLoading(false);
     }
@@ -191,14 +185,14 @@ export default function RegisterPage() {
             </span>
           </label>
 
-          {TURNSTILE_ACTIVO && <Turnstile key={intento} onToken={setCaptcha} />}
+          {captcha.widget}
 
           {error && (
             <p className="rounded-lg bg-peligro-suave px-3 py-2 text-sm text-peligro-texto" role="alert">{error}</p>
           )}
 
           <Boton type="submit" tamano="lg" anchoCompleto cargando={loading}
-                 disabled={!aceptaTerminos || (TURNSTILE_ACTIVO && !captcha)}>
+                 disabled={!aceptaTerminos || captcha.falta}>
             {loading ? "Creando cuenta…" : "Crear cuenta gratis"}
           </Boton>
         </form>
