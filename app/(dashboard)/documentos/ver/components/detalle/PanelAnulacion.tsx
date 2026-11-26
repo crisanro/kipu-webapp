@@ -29,8 +29,7 @@ function CampoCopiable({ label, valor }: { label: string; valor: string | null |
 
   return (
     <div
-      className="flex items-center gap-3 px-3 py-2"
-      style={{ borderTop: "1px solid var(--kipu-border)" }}
+      className="flex items-center gap-3 px-3 py-2 border-t border-borde"
     >
       <div className="flex-1 min-w-0">
         <p className="text-[11px]" style={{ color: "var(--kipu-subtle)" }}>{label}</p>
@@ -115,16 +114,14 @@ export default function PanelAnulacion({ factura, onRecargar }: { factura: Factu
     <>
       {error && (
         <p
-          className="text-xs px-3 py-2 rounded-lg leading-relaxed"
-          style={{ color: "var(--kipu-danger)", background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)" }}
+          className="text-xs px-3 py-2 rounded-lg leading-relaxed text-peligro bg-peligro-suave"
         >
           {error}
         </p>
       )}
       {infoMsg && (
         <p
-          className="text-xs px-3 py-2 rounded-lg leading-relaxed"
-          style={{ color: "var(--kipu-accent)", background: "color-mix(in srgb, var(--kipu-accent) 10%, transparent)" }}
+          className="text-xs px-3 py-2 rounded-lg leading-relaxed text-acento bg-acento/10"
         >
           {infoMsg}
         </p>
@@ -204,21 +201,17 @@ export default function PanelAnulacion({ factura, onRecargar }: { factura: Factu
   if (an.estado === "PENDIENTE") {
     return (
       <div
-        className="rounded-xl p-4 space-y-3"
-        style={{
-          background: "color-mix(in srgb, var(--kipu-warning) 8%, transparent)",
-          border: "1px solid color-mix(in srgb, var(--kipu-warning) 25%, transparent)",
-        }}
+        className="rounded-xl p-4 space-y-3 bg-alerta/8 border border-alerta/25"
       >
         <div className="flex items-start gap-2.5">
-          <Clock size={16} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-warning)" }} />
+          <Clock size={16} className="shrink-0 mt-0.5 text-alerta" />
           <div className="space-y-1">
-            <p className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>
+            <p className="text-sm font-semibold text-texto">
               Anulación en espera del receptor
             </p>
-            <p className="text-xs leading-relaxed" style={{ color: "var(--kipu-muted)" }}>
+            <p className="text-xs leading-relaxed text-tenue">
               {an.sri.razon_social_receptor || "El receptor"} tiene hasta el{" "}
-              <span className="font-medium" style={{ color: "var(--kipu-text)" }}>
+              <span className="font-medium text-texto">
                 {formatearFecha(an.limite_aceptacion)}
               </span>{" "}
               para aceptar en el SRI. Mientras tanto el comprobante sigue vigente.
@@ -232,8 +225,7 @@ export default function PanelAnulacion({ factura, onRecargar }: { factura: Factu
           type="button"
           onClick={sincronizarAnulacion}
           disabled={!!enviando || espera > 0}
-          className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-medium text-white transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
-          style={{ background: "var(--kipu-accent)" }}
+          className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-medium text-white transition-opacity disabled:opacity-50 disabled:cursor-not-allowed bg-acento"
         >
           {enviando === "sincronizar" ? <Spinner /> : <RefreshCw size={13} />}
           {espera > 0 ? `Podrás volver a consultar en ${espera} s` : "Verificar respuesta en el SRI"}
@@ -247,21 +239,16 @@ export default function PanelAnulacion({ factura, onRecargar }: { factura: Factu
     if (!an.motivo_bloqueo) return null;
     return (
       <div className="rounded-xl p-4 flex items-start gap-2.5" style={cajaNeutra}>
-        <Info size={15} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-subtle)" }} />
+        <Info size={15} className="shrink-0 mt-0.5 text-sutil" />
         <div className="space-y-2">
-          <p className="text-xs leading-relaxed" style={{ color: "var(--kipu-muted)" }}>
+          <p className="text-xs leading-relaxed text-tenue">
             {an.motivo_bloqueo}
           </p>
           {an.sugerir_nota_credito && (
             <button
               type="button"
               onClick={() => router.push(`/documentos/emitir/ncr?doc_id=${factura.id}`)}
-              className="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
-              style={{
-                background: "color-mix(in srgb, var(--kipu-muted) 10%, transparent)",
-                color: "var(--kipu-muted)",
-                border: "1px solid color-mix(in srgb, var(--kipu-muted) 20%, transparent)",
-              }}
+              className="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors bg-tenue/10 text-tenue border border-tenue/20"
             >
               Emitir nota de crédito
             </button>
@@ -289,9 +276,9 @@ export default function PanelAnulacion({ factura, onRecargar }: { factura: Factu
         onMouseLeave={e => e.currentTarget.style.background = "transparent"}
         aria-expanded={abierto}
       >
-        <Ban size={15} className="shrink-0" style={{ color: "var(--kipu-danger)" }} />
+        <Ban size={15} className="shrink-0 text-peligro" />
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium" style={{ color: "var(--kipu-text)" }}>Anular comprobante</p>
+          <p className="text-sm font-medium text-texto">Anular comprobante</p>
           <p className="text-xs" style={{ color: urgente ? "var(--kipu-warning)" : "var(--kipu-subtle)" }}>
             Puedes anularlo hasta el {formatearFecha(an.fecha_limite)} · {plazoTexto}
           </p>
@@ -304,12 +291,12 @@ export default function PanelAnulacion({ factura, onRecargar }: { factura: Factu
       </button>
 
       {abierto && (
-        <div className="px-4 pb-4 space-y-4" style={{ borderTop: "1px solid var(--kipu-border)" }}>
+        <div className="px-4 pb-4 space-y-4 border-t border-borde">
           <div className="space-y-2 pt-3">
-            <p className="text-sm font-medium" style={{ color: "var(--kipu-text)" }}>
+            <p className="text-sm font-medium text-texto">
               1. Ingresa la solicitud en el SRI
             </p>
-            <p className="text-xs leading-relaxed" style={{ color: "var(--kipu-muted)" }}>
+            <p className="text-xs leading-relaxed text-tenue">
               Entra a SRI en línea, busca la opción de anulación de comprobantes electrónicos y copia estos datos:
             </p>
             <div className="rounded-lg overflow-hidden" style={{ border: "1px solid var(--kipu-border)", borderTop: "none" }}>
@@ -324,8 +311,7 @@ export default function PanelAnulacion({ factura, onRecargar }: { factura: Factu
               href={SRI_EN_LINEA_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-xs font-medium transition-colors"
-              style={{ color: "var(--kipu-accent)" }}
+              className="inline-flex items-center gap-1.5 text-xs font-medium transition-colors text-acento"
               onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent-h)"}
               onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-accent)"}
             >
@@ -334,24 +320,23 @@ export default function PanelAnulacion({ factura, onRecargar }: { factura: Factu
           </div>
 
           <div className="space-y-2">
-            <p className="text-sm font-medium" style={{ color: "var(--kipu-text)" }}>
+            <p className="text-sm font-medium text-texto">
               2. Verificar y registrar en Kipu
             </p>
-            <label className="block text-xs" style={{ color: "var(--kipu-subtle)" }} htmlFor="motivo-anulacion">
+            <label className="block text-xs text-sutil" htmlFor="motivo-anulacion">
               Motivo
             </label>
             <select
               id="motivo-anulacion"
               value={motivo}
               onChange={e => setMotivo(e.target.value)}
-              className="w-full px-2.5 py-2 rounded-lg text-sm focus:outline-none"
-              style={{ background: "var(--kipu-surface)", border: "1px solid var(--kipu-border)", color: "var(--kipu-text)" }}
+              className="w-full px-2.5 py-2 rounded-lg text-sm focus:outline-none bg-superficie border border-borde text-texto"
             >
               {an.motivos.map(m => (
                 <option key={m} value={m}>{MOTIVO_LABEL[m] ?? m}</option>
               ))}
             </select>
-            <label className="flex items-start gap-2 text-xs cursor-pointer pt-1" style={{ color: "var(--kipu-muted)" }}>
+            <label className="flex items-start gap-2 text-xs cursor-pointer pt-1 text-tenue">
               <input
                 type="checkbox"
                 checked={confirmado}
@@ -367,8 +352,7 @@ export default function PanelAnulacion({ factura, onRecargar }: { factura: Factu
               type="button"
               onClick={registrar}
               disabled={!confirmado || !!enviando}
-              className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-medium text-white transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
-              style={{ background: "var(--kipu-danger)" }}
+              className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-medium text-white transition-opacity disabled:opacity-40 disabled:cursor-not-allowed bg-peligro"
             >
               {enviando === "anular" ? <Spinner /> : <Ban size={13} />}
               Verificar y registrar anulación

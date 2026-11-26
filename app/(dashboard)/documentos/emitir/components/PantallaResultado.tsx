@@ -150,7 +150,7 @@ export default function PantallaResultado({
   }, [estado]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6" style={{ background: "var(--kipu-bg)" }}>
+    <div className="min-h-screen flex items-center justify-center p-6 bg-fondo">
       <div className="w-full max-w-sm text-center" aria-live="polite">
         <div
           className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
@@ -159,22 +159,21 @@ export default function PantallaResultado({
           <Icono size={32} className={vista.girar ? "animate-spin" : undefined} style={{ color: color(vista.tono) }} />
         </div>
 
-        <h2 className="text-xl font-bold mb-1" style={{ color: "var(--kipu-text)" }}>{vista.titulo}</h2>
+        <h2 className="text-xl font-bold mb-1 text-texto">{vista.titulo}</h2>
         {vista.detalle && (
-          <p className="text-sm mb-3" style={{ color: "var(--kipu-muted)" }}>{vista.detalle}</p>
+          <p className="text-sm mb-3 text-tenue">{vista.detalle}</p>
         )}
 
         {resultado.es_sandbox && (
           <p
-            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium mb-3"
-            style={{ background: "color-mix(in srgb, var(--kipu-sandbox) 15%, transparent)", color: "var(--kipu-sandbox)" }}
+            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium mb-3 bg-sandbox/15 text-sandbox"
           >
             <FlaskConical size={13} /> Prueba · sin validez tributaria
           </p>
         )}
 
         {resultado.claveAcceso && (
-          <p className="text-xs font-mono break-all mb-4" style={{ color: "var(--kipu-subtle)" }}>
+          <p className="text-xs font-mono break-all mb-4 text-sutil">
             {resultado.claveAcceso}
           </p>
         )}
@@ -193,8 +192,7 @@ export default function PantallaResultado({
           {resultado.id && (
             <button
               onClick={() => router.push(rutas.documento(resultado.id!))}
-              className="w-full inline-flex items-center justify-center gap-2 py-3 rounded-lg text-white text-sm font-medium transition-opacity hover:opacity-90 active:opacity-80"
-              style={{ background: "var(--kipu-accent)" }}
+              className="w-full inline-flex items-center justify-center gap-2 py-3 rounded-lg text-white text-sm font-medium transition-opacity hover:opacity-90 active:opacity-80 bg-acento"
             >
               <FileText size={16} /> Ver {nombre.toLowerCase()}
             </button>
@@ -202,15 +200,13 @@ export default function PantallaResultado({
           <div className="flex gap-2">
             <button
               onClick={onNueva}
-              className="flex-1 py-3 rounded-lg text-sm transition-opacity active:opacity-70"
-              style={{ border: "1px solid var(--kipu-border)", color: "var(--kipu-text)" }}
+              className="flex-1 py-3 rounded-lg text-sm transition-opacity active:opacity-70 border border-borde text-texto"
             >
               Nueva {nombre.toLowerCase()}
             </button>
             <button
               onClick={() => router.push("/documentos")}
-              className="flex-1 py-3 rounded-lg text-sm transition-opacity active:opacity-70"
-              style={{ border: "1px solid var(--kipu-border)", color: "var(--kipu-text)" }}
+              className="flex-1 py-3 rounded-lg text-sm transition-opacity active:opacity-70 border border-borde text-texto"
             >
               Ver historial
             </button>

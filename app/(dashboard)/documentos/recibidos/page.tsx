@@ -111,10 +111,10 @@ function BadgeBancarizacion({ doc }: { doc: DocRecibido }) {
           color: "var(--kipu-text)",
         }}
       >
-        <p className="font-bold flex items-center gap-1 mb-1" style={{ color: "var(--kipu-warning)" }}>
+        <p className="font-bold flex items-center gap-1 mb-1 text-alerta">
           <AlertTriangle size={12} /> Requiere Bancarización (Art. 103 LRTI)
         </p>
-        <p style={{ color: "var(--kipu-subtle)" }}>
+        <p className="text-sutil">
           Al superar $500.00, debe pagarse mediante el sistema financiero (transferencia, tarjeta o cheque) para ser deducible de Renta y conservar el Crédito Tributario de IVA.
         </p>
         {/* Triángulo indicador del tooltip */}
@@ -132,33 +132,26 @@ function DocExpandido({ doc, onVerDetalle }: { doc: DocRecibido; onVerDetalle: (
   const requiereBanc = ["FAC", "NDB"].includes(doc.tipo_doc) && doc.importe_total > UMBRAL_BANCARIZACION;
 
   return (
-    <div
-      style={{
-        borderTop: "1px solid var(--kipu-border)",
-        background: "color-mix(in srgb, var(--kipu-text) 2%, transparent)",
-      }}
+    <div className="border-t border-borde bg-texto/2"
     >
       <div className="px-4 py-3 grid grid-cols-3 gap-2">
         <div
-          className="rounded-lg p-2.5 text-center"
-          style={{ background: "color-mix(in srgb, var(--kipu-text) 4%, transparent)" }}
+          className="rounded-lg p-2.5 text-center bg-texto/4"
         >
           <p className="text-[10px] mb-1" style={{ color: "var(--kipu-subtle)" }}>Base sin IVA</p>
-          <p className="text-sm font-bold" style={{ color: "var(--kipu-text)" }}>${dosDecimales(doc.subtotal_base)}</p>
+          <p className="text-sm font-bold text-texto">${dosDecimales(doc.subtotal_base)}</p>
         </div>
         <div
-          className="rounded-lg p-2.5 text-center"
-          style={{ background: "color-mix(in srgb, var(--kipu-text) 4%, transparent)" }}
+          className="rounded-lg p-2.5 text-center bg-texto/4"
         >
           <p className="text-[10px] mb-1" style={{ color: "var(--kipu-subtle)" }}>IVA</p>
-          <p className="text-sm font-bold" style={{ color: "var(--kipu-text)" }}>${dosDecimales(doc.valor_iva_total)}</p>
+          <p className="text-sm font-bold text-texto">${dosDecimales(doc.valor_iva_total)}</p>
         </div>
         <div
-          className="rounded-lg p-2.5 text-center"
-          style={{ background: "color-mix(in srgb, var(--kipu-text) 4%, transparent)" }}
+          className="rounded-lg p-2.5 text-center bg-texto/4"
         >
           <p className="text-[10px] mb-1" style={{ color: "var(--kipu-subtle)" }}>Total</p>
-          <p className="text-sm font-bold" style={{ color: "var(--kipu-text)" }}>${dosDecimales(doc.importe_total)}</p>
+          <p className="text-sm font-bold text-texto">${dosDecimales(doc.importe_total)}</p>
         </div>
       </div>
 
@@ -205,12 +198,7 @@ function DocExpandido({ doc, onVerDetalle }: { doc: DocRecibido; onVerDetalle: (
 
       {requiereBanc && (
         <div 
-          className="mx-4 mb-3 p-2.5 rounded-lg flex items-start gap-2 text-xs"
-          style={{
-            background: "color-mix(in srgb, var(--kipu-warning) 8%, transparent)",
-            border: "1px solid color-mix(in srgb, var(--kipu-warning) 25%, transparent)",
-            color: "var(--kipu-warning)",
-          }}
+          className="mx-4 mb-3 p-2.5 rounded-lg flex items-start gap-2 text-xs bg-alerta/8 border border-alerta/25 text-alerta"
         >
           <AlertTriangle size={14} className="shrink-0 mt-0.5" />
           <p>
@@ -221,12 +209,11 @@ function DocExpandido({ doc, onVerDetalle }: { doc: DocRecibido; onVerDetalle: (
 
       {["FAC", "LIQ"].includes(doc.tipo_doc) && doc.estado_pago && (
         <div
-          className="mx-4 mb-3 flex items-center justify-between rounded-lg px-3 py-2"
-          style={{ background: "color-mix(in srgb, var(--kipu-text) 4%, transparent)" }}
+          className="mx-4 mb-3 flex items-center justify-between rounded-lg px-3 py-2 bg-texto/4"
         >
           <div className="flex items-center gap-2">
-            <Receipt size={12} style={{ color: "var(--kipu-subtle)" }} />
-            <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Pago proveedor</span>
+            <Receipt className="text-sutil" size={12} />
+            <span className="text-xs text-sutil">Pago proveedor</span>
           </div>
           <InsigniaPago estado={doc.estado_pago} />
         </div>
@@ -244,17 +231,12 @@ function DocExpandido({ doc, onVerDetalle }: { doc: DocRecibido; onVerDetalle: (
             {doc.fuente}
           </span>
           {doc.notas && (
-            <p className="text-xs italic truncate" style={{ color: "var(--kipu-subtle)" }}>{doc.notas}</p>
+            <p className="text-xs italic truncate text-sutil">{doc.notas}</p>
           )}
         </div>
         <button
           onClick={e => { e.stopPropagation(); onVerDetalle(); }}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors shrink-0"
-          style={{
-            background: "color-mix(in srgb, var(--kipu-accent) 12%, transparent)",
-            color: "var(--kipu-accent)",
-            border: "1px solid color-mix(in srgb, var(--kipu-accent) 25%, transparent)",
-          }}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors shrink-0 bg-acento-suave text-acento border border-acento/25"
         >
           Ver ítems y detalle <ExternalLink size={11} />
         </button>
@@ -360,66 +342,62 @@ export default function FacturasRecibidasPage() {
       {/* Resumen Fiscal */}
       {resumenV && resumenV.total_documentos > 0 && (
         <div
-          className="rounded-xl overflow-hidden"
-          style={{
-            background: "var(--kipu-surface)",
-            border: "1px solid var(--kipu-border)",
-          }}
+          className="rounded-xl overflow-hidden bg-superficie border border-borde"
         >
           <button
             onClick={() => setResumenOpen(!resumenOpen)}
             className="w-full flex items-center justify-between px-4 py-3 transition-colors"
           >
             <div className="flex items-center gap-2">
-              <TrendingUp size={15} style={{ color: "var(--kipu-success)" }} />
-              <span className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>Resumen fiscal</span>
-              <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>{periodo.inicio} → {periodo.fin}</span>
+              <TrendingUp className="text-exito" size={15} />
+              <span className="text-sm font-semibold text-texto">Resumen fiscal</span>
+              <span className="text-xs text-sutil">{periodo.inicio} → {periodo.fin}</span>
             </div>
             <div className="flex items-center gap-4">
-              <span className="text-xs hidden sm:block" style={{ color: "var(--kipu-muted)" }}>
-                Compras netas <span className="font-medium" style={{ color: "var(--kipu-text)" }}>${dosDecimales(resumenV.importe_total)}</span>
+              <span className="text-xs hidden sm:block text-tenue">
+                Compras netas <span className="font-medium text-texto">${dosDecimales(resumenV.importe_total)}</span>
               </span>
-              <span className="text-xs hidden sm:block" style={{ color: "var(--kipu-muted)" }}>
-                Ded. <span className="font-medium" style={{ color: "var(--kipu-success)" }}>${dosDecimales(resumenV.total_deducible)}</span>
+              <span className="text-xs hidden sm:block text-tenue">
+                Ded. <span className="font-medium text-exito">${dosDecimales(resumenV.total_deducible)}</span>
               </span>
-              <span className="text-xs hidden sm:block" style={{ color: "var(--kipu-muted)" }}>
-                CT IVA <span className="font-medium" style={{ color: "var(--kipu-info)" }}>${dosDecimales(resumenV.iva_credito_tributario)}</span>
+              <span className="text-xs hidden sm:block text-tenue">
+                CT IVA <span className="font-medium text-info">${dosDecimales(resumenV.iva_credito_tributario)}</span>
               </span>
-              {resumenOpen ? <ChevronUp size={16} style={{ color: "var(--kipu-subtle)" }} /> : <ChevronDown size={16} style={{ color: "var(--kipu-subtle)" }} />}
+              {resumenOpen ? <ChevronUp className="text-sutil" size={16} /> : <ChevronDown className="text-sutil" size={16} />}
             </div>
           </button>
 
           {resumenOpen && (
-            <div className="px-4 pb-4 pt-3 space-y-3" style={{ borderTop: "2px solid var(--kipu-border)" }}>
+            <div className="px-4 pb-4 pt-3 space-y-3 border-t-2 border-borde">
               {resumenV.compras && resumenV.notas_credito && resumenV.neto && (
-                <div className="rounded-xl overflow-x-auto" style={{ border: "1px solid var(--kipu-border)" }}>
+                <div className="rounded-xl overflow-x-auto border border-borde">
                   <table className="w-full text-xs">
                     <thead>
-                      <tr style={{ color: "var(--kipu-subtle)" }}>
+                      <tr className="text-sutil">
                         <th className="text-left font-medium px-3 py-2"></th>
                         <th className="text-right font-medium px-3 py-2">Subtotal</th>
                         <th className="text-right font-medium px-3 py-2">IVA</th>
                         <th className="text-right font-medium px-3 py-2">Total</th>
                       </tr>
                     </thead>
-                    <tbody style={{ color: "var(--kipu-text)" }}>
-                      <tr style={{ borderTop: "1px solid var(--kipu-border)" }}>
+                    <tbody className="text-texto">
+                      <tr className="border-t border-borde">
                         <td className="px-3 py-2">
-                          Compras <span style={{ color: "var(--kipu-subtle)" }}>({resumenV.compras.cantidad})</span>
+                          Compras <span className="text-sutil">({resumenV.compras.cantidad})</span>
                         </td>
                         <td className="text-right px-3 py-2">${dosDecimales(resumenV.compras.subtotal)}</td>
                         <td className="text-right px-3 py-2">${dosDecimales(resumenV.compras.iva)}</td>
                         <td className="text-right px-3 py-2">${dosDecimales(resumenV.compras.total)}</td>
                       </tr>
-                      <tr style={{ borderTop: "1px solid var(--kipu-border)", color: "var(--kipu-danger)" }}>
+                      <tr className="border-t border-borde text-peligro">
                         <td className="px-3 py-2">
-                          Notas de crédito <span style={{ color: "var(--kipu-subtle)" }}>({resumenV.notas_credito.cantidad}, restan)</span>
+                          Notas de crédito <span className="text-sutil">({resumenV.notas_credito.cantidad}, restan)</span>
                         </td>
                         <td className="text-right px-3 py-2">−${dosDecimales(resumenV.notas_credito.subtotal)}</td>
                         <td className="text-right px-3 py-2">−${dosDecimales(resumenV.notas_credito.iva)}</td>
                         <td className="text-right px-3 py-2">−${dosDecimales(resumenV.notas_credito.total)}</td>
                       </tr>
-                      <tr className="font-bold" style={{ borderTop: "2px solid var(--kipu-border)" }}>
+                      <tr className="font-bold border-t-2 border-borde">
                         <td className="px-3 py-2">Compras netas</td>
                         <td className="text-right px-3 py-2">${dosDecimales(resumenV.neto.subtotal)}</td>
                         <td className="text-right px-3 py-2">${dosDecimales(resumenV.neto.iva)}</td>
@@ -432,37 +410,25 @@ export default function FacturasRecibidasPage() {
 
               <div className={`grid grid-cols-1 gap-3 ${resumenV.retenciones ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
                 <div
-                  className="rounded-xl p-4 text-center"
-                  style={{
-                    background: "color-mix(in srgb, var(--kipu-success) 5%, transparent)",
-                    border: "1px solid color-mix(in srgb, var(--kipu-success) 10%, transparent)",
-                  }}
+                  className="rounded-xl p-4 text-center bg-exito/5 border border-exito/10"
                 >
                   <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: "var(--kipu-subtle)" }}>Deducible renta</p>
-                  <p className="text-lg font-bold" style={{ color: "var(--kipu-success)" }}>${dosDecimales(resumenV.total_deducible)}</p>
+                  <p className="text-lg font-bold text-exito">${dosDecimales(resumenV.total_deducible)}</p>
                   <p className="text-[10px] mt-1" style={{ color: "var(--kipu-subtle)" }}>base sin IVA, menos notas de crédito</p>
                 </div>
                 <div
-                  className="rounded-xl p-4 text-center"
-                  style={{
-                    background: "color-mix(in srgb, var(--kipu-info) 5%, transparent)",
-                    border: "1px solid color-mix(in srgb, var(--kipu-info) 10%, transparent)",
-                  }}
+                  className="rounded-xl p-4 text-center bg-info/5 border border-info/10"
                 >
                   <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: "var(--kipu-subtle)" }}>Crédito trib. IVA</p>
-                  <p className="text-lg font-bold" style={{ color: "var(--kipu-info)" }}>${dosDecimales(resumenV.iva_credito_tributario)}</p>
+                  <p className="text-lg font-bold text-info">${dosDecimales(resumenV.iva_credito_tributario)}</p>
                   <p className="text-[10px] mt-1" style={{ color: "var(--kipu-subtle)" }}>IVA recuperable, menos notas de crédito</p>
                 </div>
                 {resumenV.retenciones && (
                   <div
-                    className="rounded-xl p-4 text-center"
-                    style={{
-                      background: "color-mix(in srgb, var(--kipu-surface) 60%, transparent)",
-                      border: "1px solid var(--kipu-border)",
-                    }}
+                    className="rounded-xl p-4 text-center bg-superficie/60 border border-borde"
                   >
                     <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: "var(--kipu-subtle)" }}>Te retuvieron</p>
-                    <p className="text-lg font-bold" style={{ color: "var(--kipu-text)" }}>${dosDecimales(resumenV.retenciones.total)}</p>
+                    <p className="text-lg font-bold text-texto">${dosDecimales(resumenV.retenciones.total)}</p>
                     <p className="text-[10px] mt-1" style={{ color: "var(--kipu-subtle)" }}>
                       {resumenV.retenciones.cantidad} retenciones · IVA ${dosDecimales(resumenV.retenciones.iva)} · renta ${dosDecimales(resumenV.retenciones.renta)}
                     </p>
@@ -473,7 +439,7 @@ export default function FacturasRecibidasPage() {
               <p className="text-[11px] text-center" style={{ color: "var(--kipu-subtle)" }}>
                 Es la suma de tus documentos. Tu declaración de IVA (formulario 104) armada casillero por
                 casillero y revisada está en{" "}
-                <Link href="/reportes" className="underline" style={{ color: "var(--kipu-accent)" }}>Reportes</Link>.
+                <Link href="/reportes" className="underline text-acento">Reportes</Link>.
               </p>
             </div>
           )}
@@ -556,7 +522,7 @@ export default function FacturasRecibidasPage() {
                     </span>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-sm font-medium truncate" style={{ color: "var(--kipu-text)" }}>
+                        <p className="text-sm font-medium truncate text-texto">
                           {doc.razon_social_proveedor}
                         </p>
                         {esDemo && <EtiquetaEjemplo />}
@@ -587,19 +553,18 @@ export default function FacturasRecibidasPage() {
                           <BadgeBancarizacion doc={doc} />
                         </div>
                       </div>
-                      <p className="text-xs font-mono" style={{ color: "var(--kipu-subtle)" }}>
+                      <p className="text-xs font-mono text-sutil">
                         {doc.numero_doc} · {doc.fecha_emision}
                       </p>
                     </div>
                     <div className="text-right shrink-0">
-                      <p className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>${dosDecimales(doc.importe_total)}</p>
+                      <p className="text-sm font-semibold text-texto">${dosDecimales(doc.importe_total)}</p>
                       {["FAC", "LIQ"].includes(doc.tipo_doc) && <InsigniaPago estado={doc.estado_pago} />}
                     </div>
                     <button
                       type="button"
                       onClick={e => { e.stopPropagation(); verDetalle(doc.id); }}
-                      className="p-1.5 rounded-lg transition-colors shrink-0"
-                      style={{ color: "var(--kipu-subtle)" }}
+                      className="p-1.5 rounded-lg transition-colors shrink-0 text-sutil"
                       title="Ver detalle completo"
                       aria-label="Ver detalle completo"
                     >

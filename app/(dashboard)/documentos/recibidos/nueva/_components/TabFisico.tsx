@@ -212,7 +212,7 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
 
       {/* Tipo */}
       <div>
-        <label className="block text-xs font-medium mb-2" style={{ color: "var(--kipu-subtle)" }}>Tipo de documento</label>
+        <label className="block text-xs font-medium mb-2 text-sutil">Tipo de documento</label>
         <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5">
           {["FAC","NVE","NCR","NDB","RET"].map(tipo => {
             const isSelected = tipoDoc === tipo;
@@ -246,42 +246,28 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
 
       {/* Proveedor */}
       <div
-        className="rounded-xl p-4 space-y-3"
-        style={{
-          background: "var(--kipu-surface)",
-          border: "1px solid var(--kipu-border)",
-        }}
+        className="rounded-xl p-4 space-y-3 bg-superficie border border-borde"
       >
-        <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--kipu-subtle)" }}>Proveedor</h2>
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-sutil">Proveedor</h2>
         <div>
-          <label className="block text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>RUC / Identificación *</label>
+          <label className="block text-xs mb-1 text-sutil">RUC / Identificación *</label>
           <input
             value={rucProveedor}
             inputMode="numeric"
             onChange={e => setRucProveedor(e.target.value)}
             placeholder="1234567890001"
-            className="w-full px-3 py-2.5 rounded-lg text-sm font-mono transition-colors focus:outline-none"
-            style={{
-              background: "var(--kipu-surface)",
-              border: "1px solid var(--kipu-border)",
-              color: "var(--kipu-text)",
-            }}
+            className="w-full px-3 py-2.5 rounded-lg text-sm font-mono transition-colors focus:outline-none bg-superficie border border-borde text-texto"
             onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
             onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
           />
         </div>
         <div>
-          <label className="block text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>Razón social *</label>
+          <label className="block text-xs mb-1 text-sutil">Razón social *</label>
           <input
             value={razonSocial}
             onChange={e => setRazonSocial(e.target.value)}
             placeholder="EMPRESA PROVEEDORA S.A."
-            className="w-full px-3 py-2.5 rounded-lg text-sm transition-colors focus:outline-none"
-            style={{
-              background: "var(--kipu-surface)",
-              border: "1px solid var(--kipu-border)",
-              color: "var(--kipu-text)",
-            }}
+            className="w-full px-3 py-2.5 rounded-lg text-sm transition-colors focus:outline-none bg-superficie border border-borde text-texto"
             onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
             onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
           />
@@ -290,44 +276,30 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
 
       {/* Documento */}
       <div
-        className="rounded-xl p-4 space-y-3"
-        style={{
-          background: "var(--kipu-surface)",
-          border: "1px solid var(--kipu-border)",
-        }}
+        className="rounded-xl p-4 space-y-3 bg-superficie border border-borde"
       >
-        <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--kipu-subtle)" }}>Documento</h2>
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-sutil">Documento</h2>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>Número *</label>
+            <label className="block text-xs mb-1 text-sutil">Número *</label>
             <input
               value={numeroDoc}
               inputMode="numeric"
               maxLength={17}
               onChange={e => setNumeroDoc(formatoNumeroDoc(e.target.value))}
               placeholder="001-001-000000001"
-              className="w-full px-3 py-2.5 rounded-lg text-sm font-mono transition-colors focus:outline-none"
-              style={{
-                background: "var(--kipu-surface)",
-                border: "1px solid var(--kipu-border)",
-                color: "var(--kipu-text)",
-              }}
+              className="w-full px-3 py-2.5 rounded-lg text-sm font-mono transition-colors focus:outline-none bg-superficie border border-borde text-texto"
               onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
               onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
             />
           </div>
           <div>
-            <label className="block text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>Fecha emisión *</label>
+            <label className="block text-xs mb-1 text-sutil">Fecha emisión *</label>
             <input
               type="date"
               value={fechaEmision}
               onChange={e => setFechaEmision(e.target.value)}
-              className="w-full px-3 py-2.5 rounded-lg text-sm transition-colors focus:outline-none"
-              style={{
-                background: "var(--kipu-surface)",
-                border: "1px solid var(--kipu-border)",
-                color: "var(--kipu-text)",
-              }}
+              className="w-full px-3 py-2.5 rounded-lg text-sm transition-colors focus:outline-none bg-superficie border border-borde text-texto"
               onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
               onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
             />
@@ -338,13 +310,9 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
       {/* ── Totales FAC / NCR / NDB ───────────────────────────────────────── */}
       {tipoDoc !== "RET" && (
         <div
-          className="rounded-xl p-4 space-y-3"
-          style={{
-            background: "var(--kipu-surface)",
-            border: "1px solid var(--kipu-border)",
-          }}
+          className="rounded-xl p-4 space-y-3 bg-superficie border border-borde"
         >
-          <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--kipu-subtle)" }}>Totales</h2>
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-sutil">Totales</h2>
           {tipoDoc === "NVE" && (
             <p className="text-[11px]" style={{ color: "var(--kipu-subtle)" }}>
               Las notas de venta de negocios populares (RIMPE) no desglosan IVA: ingresa solo el total.
@@ -353,7 +321,7 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
           )}
           <div className="grid grid-cols-2 gap-3" style={{ display: tipoDoc === "NVE" ? "none" : undefined }}>
             <div>
-              <label className="block text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>Subtotal 0%</label>
+              <label className="block text-xs mb-1 text-sutil">Subtotal 0%</label>
               <input
                 type="number"
                 step="0.01"
@@ -361,27 +329,17 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
                 value={subtotal0}
                 onChange={e => { setSubtotal0(e.target.value); recalcularTotal(e.target.value, subtotalIva, valorIva); }}
                 placeholder="0.00"
-                className="w-full px-3 py-2.5 rounded-lg text-sm transition-colors focus:outline-none"
-                style={{
-                  background: "var(--kipu-surface)",
-                  border: "1px solid var(--kipu-border)",
-                  color: "var(--kipu-text)",
-                }}
+                className="w-full px-3 py-2.5 rounded-lg text-sm transition-colors focus:outline-none bg-superficie border border-borde text-texto"
                 onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
                 onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
               />
             </div>
             <div>
-              <label className="block text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>Tarifa IVA</label>
+              <label className="block text-xs mb-1 text-sutil">Tarifa IVA</label>
               <select
                 value={tarifaIva}
                 onChange={e => { setTarifaIva(e.target.value); calcularIVA(subtotalIva, e.target.value); }}
-                className="w-full px-3 py-2.5 rounded-lg text-sm transition-colors focus:outline-none"
-                style={{
-                  background: "var(--kipu-surface)",
-                  border: "1px solid var(--kipu-border)",
-                  color: "var(--kipu-text)",
-                }}
+                className="w-full px-3 py-2.5 rounded-lg text-sm transition-colors focus:outline-none bg-superficie border border-borde text-texto"
                 onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
                 onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
               >
@@ -390,7 +348,7 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
               </select>
             </div>
             <div>
-              <label className="block text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>Base gravada {tarifaIva}%</label>
+              <label className="block text-xs mb-1 text-sutil">Base gravada {tarifaIva}%</label>
               <input
                 type="number"
                 step="0.01"
@@ -398,18 +356,13 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
                 value={subtotalIva}
                 onChange={e => { setSubtotalIva(e.target.value); calcularIVA(e.target.value, tarifaIva); }}
                 placeholder="0.00"
-                className="w-full px-3 py-2.5 rounded-lg text-sm transition-colors focus:outline-none"
-                style={{
-                  background: "var(--kipu-surface)",
-                  border: "1px solid var(--kipu-border)",
-                  color: "var(--kipu-text)",
-                }}
+                className="w-full px-3 py-2.5 rounded-lg text-sm transition-colors focus:outline-none bg-superficie border border-borde text-texto"
                 onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
                 onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
               />
             </div>
             <div>
-              <label className="block text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>Valor IVA</label>
+              <label className="block text-xs mb-1 text-sutil">Valor IVA</label>
               <input
                 type="number"
                 step="0.01"
@@ -417,19 +370,14 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
                 value={valorIva}
                 onChange={e => { setValorIva(e.target.value); recalcularTotal(subtotal0, subtotalIva, e.target.value); }}
                 placeholder="0.00"
-                className="w-full px-3 py-2.5 rounded-lg text-sm transition-colors focus:outline-none"
-                style={{
-                  background: "var(--kipu-surface)",
-                  border: "1px solid var(--kipu-border)",
-                  color: "var(--kipu-text)",
-                }}
+                className="w-full px-3 py-2.5 rounded-lg text-sm transition-colors focus:outline-none bg-superficie border border-borde text-texto"
                 onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
                 onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
               />
             </div>
           </div>
-          <div className="pt-2" style={{ borderTop: "1px solid var(--kipu-border)" }}>
-            <label className="block text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>Total *</label>
+          <div className="pt-2 border-t border-borde">
+            <label className="block text-xs mb-1 text-sutil">Total *</label>
             <input
               type="number"
               step="0.01"
@@ -437,12 +385,7 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
               value={importeTotal}
               onChange={e => setImporteTotal(e.target.value)}
               placeholder="0.00"
-              className="w-full px-3 py-2.5 rounded-lg text-sm font-bold transition-colors focus:outline-none"
-              style={{
-                background: "var(--kipu-surface)",
-                border: "1px solid var(--kipu-border)",
-                color: "var(--kipu-text)",
-              }}
+              className="w-full px-3 py-2.5 rounded-lg text-sm font-bold transition-colors focus:outline-none bg-superficie border border-borde text-texto"
               onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
               onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
             />
@@ -453,19 +396,14 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
       {/* ── Líneas de retención ───────────────────────────────────────────── */}
       {tipoDoc === "RET" && (
         <div
-          className="rounded-xl p-4 space-y-3"
-          style={{
-            background: "var(--kipu-surface)",
-            border: "1px solid var(--kipu-border)",
-          }}
+          className="rounded-xl p-4 space-y-3 bg-superficie border border-borde"
         >
           <div className="flex items-center justify-between">
-            <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--kipu-subtle)" }}>Retenciones</h2>
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-sutil">Retenciones</h2>
             <button
               type="button"
               onClick={addLineaRet}
-              className="flex items-center gap-1 text-xs transition-colors"
-              style={{ color: "var(--kipu-accent)" }}
+              className="flex items-center gap-1 text-xs transition-colors text-acento"
               onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent-h)"}
               onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-accent)"}
             >
@@ -488,12 +426,7 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
                 <select
                   value={linea.tipo}
                   onChange={e => updateLineaRet(idx, "tipo", e.target.value)}
-                  className="w-full px-2 py-2 rounded-lg text-xs transition-colors focus:outline-none"
-                  style={{
-                    background: "var(--kipu-surface)",
-                    border: "1px solid var(--kipu-border)",
-                    color: "var(--kipu-text)",
-                  }}
+                  className="w-full px-2 py-2 rounded-lg text-xs transition-colors focus:outline-none bg-superficie border border-borde text-texto"
                   onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
                   onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
                 >
@@ -510,12 +443,7 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
                   value={linea.base_imponible}
                   onChange={e => updateLineaRet(idx, "base_imponible", e.target.value)}
                   placeholder="0.00"
-                  className="w-full px-2 py-2 rounded-lg text-xs transition-colors focus:outline-none"
-                  style={{
-                    background: "var(--kipu-surface)",
-                    border: "1px solid var(--kipu-border)",
-                    color: "var(--kipu-text)",
-                  }}
+                  className="w-full px-2 py-2 rounded-lg text-xs transition-colors focus:outline-none bg-superficie border border-borde text-texto"
                   onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
                   onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
                 />
@@ -528,12 +456,7 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
                   value={linea.porcentaje}
                   onChange={e => updateLineaRet(idx, "porcentaje", e.target.value)}
                   placeholder="%"
-                  className="w-full px-2 py-2 rounded-lg text-xs transition-colors focus:outline-none"
-                  style={{
-                    background: "var(--kipu-surface)",
-                    border: "1px solid var(--kipu-border)",
-                    color: "var(--kipu-text)",
-                  }}
+                  className="w-full px-2 py-2 rounded-lg text-xs transition-colors focus:outline-none bg-superficie border border-borde text-texto"
                   onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
                   onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
                 />
@@ -546,12 +469,7 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
                   value={linea.valor_retenido}
                   onChange={e => updateLineaRet(idx, "valor_retenido", e.target.value)}
                   placeholder="0.00"
-                  className="w-full px-2 py-2 rounded-lg text-xs transition-colors focus:outline-none"
-                  style={{
-                    background: "var(--kipu-surface)",
-                    border: "1px solid var(--kipu-border)",
-                    color: "var(--kipu-text)",
-                  }}
+                  className="w-full px-2 py-2 rounded-lg text-xs transition-colors focus:outline-none bg-superficie border border-borde text-texto"
                   onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
                   onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
                 />
@@ -561,8 +479,7 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
                   <button
                     type="button"
                     onClick={() => removeLineaRet(idx)}
-                    className="transition-colors p-1"
-                    style={{ color: "var(--kipu-subtle)" }}
+                    className="transition-colors p-1 text-sutil"
                     onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-danger)"}
                     onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-subtle)"}
                   >
@@ -573,9 +490,9 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
             </div>
           ))}
 
-          <div className="flex justify-between items-center pt-2" style={{ borderTop: "1px solid var(--kipu-border)" }}>
-            <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Total retenido</span>
-            <span className="text-sm font-bold" style={{ color: "var(--kipu-info)" }}>${dosDecimales(totalRetenido)}</span>
+          <div className="flex justify-between items-center pt-2 border-t border-borde">
+            <span className="text-xs text-sutil">Total retenido</span>
+            <span className="text-sm font-bold text-info">${dosDecimales(totalRetenido)}</span>
           </div>
         </div>
       )}
@@ -583,17 +500,13 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
       {/* ── Clasificación fiscal (FAC / NCR / NDB) ────────────────────────── */}
       {tipoDoc !== "RET" && (
         <div
-          className="rounded-xl p-4 space-y-3"
-          style={{
-            background: "var(--kipu-surface)",
-            border: "1px solid var(--kipu-border)",
-          }}
+          className="rounded-xl p-4 space-y-3 bg-superficie border border-borde"
         >
-          <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--kipu-subtle)" }}>Clasificación fiscal</h2>
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-sutil">Clasificación fiscal</h2>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm" style={{ color: "var(--kipu-text)" }}>Deducible de renta</p>
-              <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>El gasto reduce la base imponible</p>
+              <p className="text-sm text-texto">Deducible de renta</p>
+              <p className="text-xs text-sutil">El gasto reduce la base imponible</p>
             </div>
             <button
               type="button"
@@ -614,8 +527,8 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
           {parseFloat(valorIva) > 0 && tipoDoc !== "NVE" && (
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm" style={{ color: "var(--kipu-text)" }}>Crédito tributario IVA</p>
-                <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>El IVA se usa como crédito</p>
+                <p className="text-sm text-texto">Crédito tributario IVA</p>
+                <p className="text-xs text-sutil">El IVA se usa como crédito</p>
               </div>
               <button
                 type="button"
@@ -637,8 +550,8 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
           {tipoDoc !== "NVE" && (
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm" style={{ color: "var(--kipu-text)" }}>Es un activo fijo</p>
-                <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Equipos, vehículos o maquinaria (casillero 501)</p>
+                <p className="text-sm text-texto">Es un activo fijo</p>
+                <p className="text-xs text-sutil">Equipos, vehículos o maquinaria (casillero 501)</p>
               </div>
               <button
                 type="button"
@@ -664,13 +577,9 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
       {/* ── Info RET ─────────────────────────────────────────────────────── */}
       {tipoDoc === "RET" && (
         <div
-          className="flex items-start gap-2 rounded-lg px-3 py-2.5"
-          style={{
-            background: "color-mix(in srgb, var(--kipu-info) 10%, transparent)",
-            border: "1px solid color-mix(in srgb, var(--kipu-info) 20%, transparent)",
-          }}
+          className="flex items-start gap-2 rounded-lg px-3 py-2.5 bg-info/10 border border-info/20"
         >
-          <span className="text-xs mt-0.5" style={{ color: "var(--kipu-info)" }}>ℹ️</span>
+          <span className="text-xs mt-0.5 text-info">ℹ️</span>
           <p className="text-xs" style={{ color: "#93c5fd" }}>
             Las retenciones de IVA generan crédito tributario automáticamente.
             Las de Renta no son deducibles — ya son un pago anticipado de impuesto.
@@ -680,15 +589,11 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
 
       {/* Imagen */}
       <div
-        className="rounded-xl p-4 space-y-3"
-        style={{
-          background: "var(--kipu-surface)",
-          border: "1px solid var(--kipu-border)",
-        }}
+        className="rounded-xl p-4 space-y-3 bg-superficie border border-borde"
       >
         <div className="flex items-center justify-between">
-          <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--kipu-subtle)" }}>Foto del documento</h2>
-          {conFoto && <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>opcional · se optimiza automáticamente</span>}
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-sutil">Foto del documento</h2>
+          {conFoto && <span className="text-xs text-sutil">opcional · se optimiza automáticamente</span>}
         </div>
         {!conFoto ? (
           // Guardar la foto cuesta almacenamiento: es de Kipu Pro y Kipu Al Día (el
@@ -714,18 +619,14 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
             <button
               type="button"
               onClick={() => { setImagenFile(null); setImagenPreview(null); }}
-              className="absolute top-2 right-2 p-1.5 rounded-full transition-colors"
-              style={{
-                background: "color-mix(in srgb, var(--kipu-bg) 80%, transparent)",
-                color: "var(--kipu-subtle)",
-              }}
+              className="absolute top-2 right-2 p-1.5 rounded-full transition-colors bg-fondo/80 text-sutil"
               onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
               onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-subtle)"}
             >
               <X size={14} />
             </button>
             {imagenFile && (
-              <p className="text-xs mt-1 text-center" style={{ color: "var(--kipu-subtle)" }}>
+              <p className="text-xs mt-1 text-center text-sutil">
                 {(imagenFile.size / 1024).toFixed(0)} KB optimizado
               </p>
             )}
@@ -756,8 +657,8 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
               >
                 <Icono size={24} style={{ color: "var(--kipu-subtle)" }} />
                 <div className="text-center">
-                  <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>{texto}</p>
-                  <p className="text-xs mt-0.5" style={{ color: "var(--kipu-subtle)" }}>
+                  <p className="text-sm text-tenue">{texto}</p>
+                  <p className="text-xs mt-0.5 text-sutil">
                     {ref === imagenRef ? "O una foto que te enviaron por WhatsApp" : "JPG, PNG o WEBP"}
                   </p>
                 </div>
@@ -784,18 +685,13 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
 
       {/* Notas */}
       <div>
-        <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Notas (opcional)</label>
+        <label className="block text-xs mb-1.5 text-sutil">Notas (opcional)</label>
         <textarea
           value={notas}
           onChange={e => setNotas(e.target.value)}
           placeholder="Observaciones, referencia interna, etc."
           rows={2}
-          className="w-full px-3 py-2 rounded-lg text-sm resize-none transition-colors focus:outline-none"
-          style={{
-            background: "var(--kipu-surface)",
-            border: "1px solid var(--kipu-border)",
-            color: "var(--kipu-text)",
-          }}
+          className="w-full px-3 py-2 rounded-lg text-sm resize-none transition-colors focus:outline-none bg-superficie border border-borde text-texto"
           onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
           onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
         />
@@ -803,14 +699,10 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
 
       {error && (
         <div
-          className="flex items-start gap-2 rounded-lg px-3 py-2.5"
-          style={{
-            background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
-            border: "1px solid color-mix(in srgb, var(--kipu-danger) 20%, transparent)",
-          }}
+          className="flex items-start gap-2 rounded-lg px-3 py-2.5 bg-peligro-suave border border-peligro/20"
         >
-          <AlertTriangle size={14} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-danger)" }} />
-          <p className="text-sm" style={{ color: "var(--kipu-danger)" }}>{error}</p>
+          <AlertTriangle size={14} className="shrink-0 mt-0.5 text-peligro" />
+          <p className="text-sm text-peligro">{error}</p>
         </div>
       )}
 
@@ -818,8 +710,7 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
         type="button"
         onClick={guardar}
         disabled={saving || !suscripcionActiva}
-        className="w-full py-3 rounded-lg text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-        style={{ background: "var(--kipu-accent)" }}
+        className="w-full py-3 rounded-lg text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed bg-acento"
         onMouseEnter={e => {
           if (!saving && suscripcionActiva) e.currentTarget.style.background = "var(--kipu-accent-h)";
         }}

@@ -22,24 +22,17 @@ function ContenidoSRI({ empresa, onDone }: Props) {
 
       {/* Hero */}
       <div
-        className="rounded-xl p-5 text-center space-y-2"
-        style={{
-          background: "color-mix(in srgb, var(--kipu-accent) 10%, transparent)",
-          border: "1px solid color-mix(in srgb, var(--kipu-accent) 20%, transparent)",
-        }}
+        className="rounded-xl p-5 text-center space-y-2 bg-acento/10 border border-acento/20"
       >
         <div
-          className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto"
-          style={{
-            background: "color-mix(in srgb, var(--kipu-accent) 20%, transparent)",
-          }}
+          className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto bg-acento/20"
         >
-          <Download size={22} style={{ color: "var(--kipu-accent)" }} />
+          <Download className="text-acento" size={22} />
         </div>
-        <h2 className="font-bold text-base" style={{ color: "var(--kipu-text)" }}>
+        <h2 className="font-bold text-base text-texto">
           Kipu Importador SRI
         </h2>
-        <p className="text-sm leading-relaxed" style={{ color: "var(--kipu-subtle)" }}>
+        <p className="text-sm leading-relaxed text-sutil">
           Instala la extensión y descarga tus documentos recibidos del portal del SRI
           directo a Kipu — sin descargar archivos ni copiar datos.
         </p>
@@ -47,18 +40,14 @@ function ContenidoSRI({ empresa, onDone }: Props) {
 
       {/* Botones descarga */}
       <div className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--kipu-subtle)" }}>
+        <p className="text-xs font-semibold uppercase tracking-wider text-sutil">
           Instalar extensión
         </p>
         <a
           href={CHROME_EXT_URL}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-3 w-full px-4 py-3 rounded-xl transition-colors group"
-          style={{
-            background: "var(--kipu-surface)",
-            border: "1px solid var(--kipu-border)",
-          }}
+          className="flex items-center gap-3 w-full px-4 py-3 rounded-xl transition-colors group bg-superficie border border-borde"
           onMouseEnter={e => {
             e.currentTarget.style.borderColor = "color-mix(in srgb, var(--kipu-accent) 40%, transparent)";
             e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-accent) 5%, transparent)";
@@ -68,22 +57,18 @@ function ContenidoSRI({ empresa, onDone }: Props) {
             e.currentTarget.style.background = "var(--kipu-surface)";
           }}
         >
-          <Globe size={20} className="transition-colors shrink-0" style={{ color: "var(--kipu-subtle)" }} />
+          <Globe size={20} className="transition-colors shrink-0 text-sutil" />
           <div className="flex-1 text-left">
-            <p className="text-sm font-medium" style={{ color: "var(--kipu-text)" }}>Google Chrome</p>
-            <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Chrome Web Store</p>
+            <p className="text-sm font-medium text-texto">Google Chrome</p>
+            <p className="text-xs text-sutil">Chrome Web Store</p>
           </div>
-          <ArrowRight size={14} className="transition-colors" style={{ color: "var(--kipu-subtle)" }} />
+          <ArrowRight size={14} className="transition-colors text-sutil" />
         </a>
         <a
           href={FIREFOX_EXT_URL}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-3 w-full px-4 py-3 rounded-xl transition-colors group"
-          style={{
-            background: "var(--kipu-surface)",
-            border: "1px solid var(--kipu-border)",
-          }}
+          className="flex items-center gap-3 w-full px-4 py-3 rounded-xl transition-colors group bg-superficie border border-borde"
           onMouseEnter={e => {
             e.currentTarget.style.borderColor = "color-mix(in srgb, #f97316 40%, transparent)";
             e.currentTarget.style.background = "color-mix(in srgb, #f97316 5%, transparent)";
@@ -93,24 +78,20 @@ function ContenidoSRI({ empresa, onDone }: Props) {
             e.currentTarget.style.background = "var(--kipu-surface)";
           }}
         >
-          <Puzzle size={20} className="transition-colors shrink-0" style={{ color: "var(--kipu-subtle)" }} />
+          <Puzzle size={20} className="transition-colors shrink-0 text-sutil" />
           <div className="flex-1 text-left">
-            <p className="text-sm font-medium" style={{ color: "var(--kipu-text)" }}>Mozilla Firefox</p>
-            <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Firefox Add-ons</p>
+            <p className="text-sm font-medium text-texto">Mozilla Firefox</p>
+            <p className="text-xs text-sutil">Firefox Add-ons</p>
           </div>
-          <ArrowRight size={14} className="transition-colors" style={{ color: "var(--kipu-subtle)" }} />
+          <ArrowRight size={14} className="transition-colors text-sutil" />
         </a>
       </div>
 
       {/* Cómo funciona */}
       <div
-        className="rounded-xl p-4 space-y-3"
-        style={{
-          background: "var(--kipu-surface)",
-          border: "1px solid var(--kipu-border)",
-        }}
+        className="rounded-xl p-4 space-y-3 bg-superficie border border-borde"
       >
-        <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--kipu-subtle)" }}>
+        <p className="text-xs font-semibold uppercase tracking-wider text-sutil">
           Cómo funciona
         </p>
         <div className="space-y-3">
@@ -122,15 +103,11 @@ function ContenidoSRI({ empresa, onDone }: Props) {
           ].map(({ n, texto }) => (
             <div key={n} className="flex items-start gap-3">
               <span
-                className="w-5 h-5 rounded-full text-xs font-bold flex items-center justify-center shrink-0 mt-0.5"
-                style={{
-                  background: "color-mix(in srgb, var(--kipu-accent) 20%, transparent)",
-                  color: "var(--kipu-accent)",
-                }}
+                className="w-5 h-5 rounded-full text-xs font-bold flex items-center justify-center shrink-0 mt-0.5 bg-acento/20 text-acento"
               >
                 {n}
               </span>
-              <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>{texto}</p>
+              <p className="text-sm text-tenue">{texto}</p>
             </div>
           ))}
         </div>
@@ -138,15 +115,11 @@ function ContenidoSRI({ empresa, onDone }: Props) {
 
       {VIDEO_ID && (
       <div
-        className="rounded-xl overflow-hidden"
-        style={{
-          background: "var(--kipu-surface)",
-          border: "1px solid var(--kipu-border)",
-        }}
+        className="rounded-xl overflow-hidden bg-superficie border border-borde"
       >
         <div className="px-4 pt-4 pb-3 flex items-center gap-2">
-          <Play size={14} style={{ color: "var(--kipu-danger)" }} />
-          <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--kipu-subtle)" }}>
+          <Play className="text-peligro" size={14} />
+          <p className="text-xs font-semibold uppercase tracking-wider text-sutil">
             Video tutorial
           </p>
         </div>
@@ -164,20 +137,15 @@ function ContenidoSRI({ empresa, onDone }: Props) {
 
       {/* Link historial */}
       <div
-        className="flex items-center gap-2 rounded-xl px-4 py-3"
-        style={{
-          background: "var(--kipu-surface)",
-          border: "1px solid var(--kipu-border)",
-        }}
+        className="flex items-center gap-2 rounded-xl px-4 py-3 bg-superficie border border-borde"
       >
-        <span className="text-xs flex-1" style={{ color: "var(--kipu-subtle)" }}>
+        <span className="text-xs flex-1 text-sutil">
           ¿Ya tienes la extensión? Los documentos importados aparecen en el historial.
         </span>
         <button
           type="button"
           onClick={onDone}
-          className="text-xs transition-colors font-medium shrink-0 flex items-center gap-1"
-          style={{ color: "var(--kipu-accent)" }}
+          className="text-xs transition-colors font-medium shrink-0 flex items-center gap-1 text-acento"
           onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent-h)"}
           onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-accent)"}
         >

@@ -28,12 +28,12 @@ export default function PuntoEmision(pe: PuntoEmisionState) {
     const p = e.puntos_emision[0];
     return (
       <div className="rounded-xl px-4 py-3 flex items-center gap-2.5" style={caja}>
-        <MapPin size={15} style={{ color: "var(--kipu-accent)" }} className="shrink-0" />
+        <MapPin size={15} className="shrink-0 text-acento" />
         <div className="min-w-0">
-          <p className="text-sm" style={{ color: "var(--kipu-text)" }}>
+          <p className="text-sm text-texto">
             Emites desde <b className="font-mono">{e.codigo}-{p.codigo}</b>
           </p>
-          <p className="text-xs truncate" style={{ color: "var(--kipu-subtle)" }}>
+          <p className="text-xs truncate text-sutil">
             {e.nombre_comercial || e.direccion}{p.nombre ? ` · ${p.nombre}` : ""}
           </p>
         </div>
@@ -43,7 +43,7 @@ export default function PuntoEmision(pe: PuntoEmisionState) {
 
   return (
     <div className="rounded-xl p-4" style={caja}>
-      <h2 className="text-sm font-semibold mb-3" style={{ color: "var(--kipu-text)" }}>
+      <h2 className="text-sm font-semibold mb-3 text-texto">
         Punto de emisión
       </h2>
       <div className="space-y-2">
@@ -66,8 +66,7 @@ export default function PuntoEmision(pe: PuntoEmisionState) {
           </select>
           <ChevronDown
             size={14}
-            className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"
-            style={{ color: "var(--kipu-subtle)" }}
+            className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-sutil"
           />
         </div>
 
@@ -90,13 +89,12 @@ export default function PuntoEmision(pe: PuntoEmisionState) {
           </select>
           <ChevronDown
             size={14}
-            className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"
-            style={{ color: "var(--kipu-subtle)" }}
+            className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-sutil"
           />
         </div>
 
         {desdeOrigen && numeroOrigen && (
-          <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+          <p className="text-xs text-sutil">
             El mismo del comprobante <span className="font-mono">{numeroOrigen}</span>
           </p>
         )}
@@ -111,10 +109,9 @@ export default function PuntoEmision(pe: PuntoEmisionState) {
             checked={recordar}
             disabled={!serie}
             onChange={(e) => setRecordar(e.target.checked)}
-            className="w-3.5 h-3.5 rounded"
-            style={{ accentColor: "var(--kipu-accent)" }}
+            className="w-3.5 h-3.5 rounded accent-acento"
           />
-          <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+          <span className="text-xs text-sutil">
             Recordar en este dispositivo
           </span>
         </label>

@@ -144,11 +144,7 @@ export default function ReviewXML({ parsed, xmlFile, onBack, onDone, suscripcion
         <button
           type="button"
           onClick={onBack}
-          className="p-2 rounded-lg transition-colors"
-          style={{
-            border: "1px solid var(--kipu-border)",
-            color: "var(--kipu-subtle)",
-          }}
+          className="p-2 rounded-lg transition-colors border border-borde text-sutil"
           onMouseEnter={e => {
             e.currentTarget.style.color = "var(--kipu-text)";
             e.currentTarget.style.borderColor = "color-mix(in srgb, var(--kipu-text) 30%, transparent)";
@@ -168,51 +164,42 @@ export default function ReviewXML({ parsed, xmlFile, onBack, onDone, suscripcion
             >
               {parsed.tipo_doc}
             </span>
-            <h1 className="text-lg font-bold" style={{ color: "var(--kipu-text)" }}>{parsed.numero_doc}</h1>
+            <h1 className="text-lg font-bold text-texto">{parsed.numero_doc}</h1>
           </div>
-          <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>{parsed.razon_social_proveedor}</p>
+          <p className="text-sm text-sutil">{parsed.razon_social_proveedor}</p>
         </div>
         <div className="text-right">
-          <p className="text-lg font-bold" style={{ color: "var(--kipu-text)" }}>${dosDecimales(parsed.importe_total)}</p>
-          <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>{parsed.fecha_emision}</p>
+          <p className="text-lg font-bold text-texto">${dosDecimales(parsed.importe_total)}</p>
+          <p className="text-xs text-sutil">{parsed.fecha_emision}</p>
         </div>
       </div>
 
       {/* Proveedor */}
       <div
-        className="rounded-xl p-4"
-        style={{
-          background: "var(--kipu-surface)",
-          border: "1px solid var(--kipu-border)",
-        }}
+        className="rounded-xl p-4 bg-superficie border border-borde"
       >
-        <h2 className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "var(--kipu-subtle)" }}>Proveedor</h2>
+        <h2 className="text-xs font-semibold uppercase tracking-wider mb-3 text-sutil">Proveedor</h2>
         <div className="grid grid-cols-2 gap-3 text-sm">
-          <div><p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Razón social</p><p style={{ color: "var(--kipu-text)" }}>{parsed.razon_social_proveedor}</p></div>
-          <div><p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>RUC</p><p className="font-mono" style={{ color: "var(--kipu-text)" }}>{parsed.ruc_proveedor}</p></div>
-          <div><p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Número</p><p className="font-mono" style={{ color: "var(--kipu-text)" }}>{parsed.numero_doc}</p></div>
-          <div><p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Fecha emisión</p><p style={{ color: "var(--kipu-text)" }}>{parsed.fecha_emision}</p></div>
+          <div><p className="text-xs text-sutil">Razón social</p><p className="text-texto">{parsed.razon_social_proveedor}</p></div>
+          <div><p className="text-xs text-sutil">RUC</p><p className="font-mono text-texto">{parsed.ruc_proveedor}</p></div>
+          <div><p className="text-xs text-sutil">Número</p><p className="font-mono text-texto">{parsed.numero_doc}</p></div>
+          <div><p className="text-xs text-sutil">Fecha emisión</p><p className="text-texto">{parsed.fecha_emision}</p></div>
         </div>
       </div>
 
       {/* Vínculo */}
       {necesitaVinculo(parsed.tipo_doc) && (
         <div
-          className="rounded-xl p-4"
-          style={{
-            background: "var(--kipu-surface)",
-            border: "1px solid var(--kipu-border)",
-          }}
+          className="rounded-xl p-4 bg-superficie border border-borde"
         >
           <div className="flex items-center gap-2 mb-3">
-            <Link2 size={14} style={{ color: "var(--kipu-accent)" }} />
-            <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>Vincular a {vinculoLabel(parsed.tipo_doc)}</h2>
-            <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>(opcional)</span>
+            <Link2 className="text-acento" size={14} />
+            <h2 className="text-sm font-semibold text-texto">Vincular a {vinculoLabel(parsed.tipo_doc)}</h2>
+            <span className="text-xs text-sutil">(opcional)</span>
           </div>
           {vinculoSelected ? (
             <div
-              className="flex items-center gap-3 rounded-lg px-3 py-2.5"
-              style={{ background: "color-mix(in srgb, var(--kipu-text) 5%, transparent)" }}
+              className="flex items-center gap-3 rounded-lg px-3 py-2.5 bg-texto/5"
             >
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
@@ -225,15 +212,14 @@ export default function ReviewXML({ parsed, xmlFile, onBack, onDone, suscripcion
                   >
                     {vinculoSelected.tipo_doc}
                   </span>
-                  <p className="text-sm font-mono" style={{ color: "var(--kipu-text)" }}>{vinculoSelected.numero_doc}</p>
+                  <p className="text-sm font-mono text-texto">{vinculoSelected.numero_doc}</p>
                 </div>
-                <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>{vinculoSelected.razon_social} · ${dosDecimales(vinculoSelected.importe_total)}</p>
+                <p className="text-xs text-sutil">{vinculoSelected.razon_social} · ${dosDecimales(vinculoSelected.importe_total)}</p>
               </div>
               <button
                 type="button"
                 onClick={() => setVinculoSelected(null)}
-                className="p-1 transition-colors"
-                style={{ color: "var(--kipu-subtle)" }}
+                className="p-1 transition-colors text-sutil"
                 onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
                 onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-subtle)"}
               >
@@ -246,12 +232,7 @@ export default function ReviewXML({ parsed, xmlFile, onBack, onDone, suscripcion
                 value={vinculoQuery}
                 onChange={e => { setVinculoQuery(e.target.value); buscarVinculo(e.target.value, parsed.tipo_doc); }}
                 placeholder="Buscar por número o proveedor..."
-                className="w-full px-3 py-2.5 rounded-lg text-sm transition-colors focus:outline-none"
-                style={{
-                  background: "var(--kipu-surface)",
-                  border: "1px solid var(--kipu-border)",
-                  color: "var(--kipu-text)",
-                }}
+                className="w-full px-3 py-2.5 rounded-lg text-sm transition-colors focus:outline-none bg-superficie border border-borde text-texto"
                 onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
                 onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
               />
@@ -263,11 +244,7 @@ export default function ReviewXML({ parsed, xmlFile, onBack, onDone, suscripcion
               )}
               {vinculoResults.length > 0 && (
                 <div
-                  className="absolute z-10 w-full mt-1 rounded-lg shadow-xl overflow-hidden max-h-48 overflow-y-auto"
-                  style={{
-                    background: "var(--kipu-surface)",
-                    border: "1px solid var(--kipu-border)",
-                  }}
+                  className="absolute z-10 w-full mt-1 rounded-lg shadow-xl overflow-hidden max-h-48 overflow-y-auto bg-superficie border border-borde"
                 >
                   {vinculoResults.map(d => {
                     const vColor = TIPO_COLOR[d.tipo_doc] ?? TIPO_COLOR.FAC;
@@ -276,8 +253,7 @@ export default function ReviewXML({ parsed, xmlFile, onBack, onDone, suscripcion
                         type="button"
                         key={d.id}
                         onClick={() => { setVinculoSelected(d); setVinculoQuery(""); setVinculoResults([]); }}
-                        className="w-full flex items-center justify-between gap-3 px-4 py-2.5 text-left transition-colors"
-                        style={{ borderBottom: "1px solid var(--kipu-border)" }}
+                        className="w-full flex items-center justify-between gap-3 px-4 py-2.5 text-left transition-colors border-b border-borde"
                         onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 5%, transparent)"}
                         onMouseLeave={e => e.currentTarget.style.background = "transparent"}
                       >
@@ -289,11 +265,11 @@ export default function ReviewXML({ parsed, xmlFile, onBack, onDone, suscripcion
                             {d.tipo_doc}
                           </span>
                           <div className="min-w-0">
-                            <p className="text-sm font-mono" style={{ color: "var(--kipu-text)" }}>{d.numero_doc}</p>
-                            <p className="text-xs truncate" style={{ color: "var(--kipu-subtle)" }}>{d.razon_social}</p>
+                            <p className="text-sm font-mono text-texto">{d.numero_doc}</p>
+                            <p className="text-xs truncate text-sutil">{d.razon_social}</p>
                           </div>
                         </div>
-                        <span className="text-sm font-bold shrink-0" style={{ color: "var(--kipu-accent)" }}>${dosDecimales(d.importe_total)}</span>
+                        <span className="text-sm font-bold shrink-0 text-acento">${dosDecimales(d.importe_total)}</span>
                       </button>
                     );
                   })}
@@ -306,11 +282,7 @@ export default function ReviewXML({ parsed, xmlFile, onBack, onDone, suscripcion
 
       {/* Ítems */}
       <div
-        className="rounded-xl overflow-hidden"
-        style={{
-          background: "var(--kipu-surface)",
-          border: "1px solid var(--kipu-border)",
-        }}
+        className="rounded-xl overflow-hidden bg-superficie border border-borde"
       >
         <button
           type="button"
@@ -320,14 +292,14 @@ export default function ReviewXML({ parsed, xmlFile, onBack, onDone, suscripcion
           onMouseLeave={e => e.currentTarget.style.background = "transparent"}
         >
           <div className="flex items-center gap-2">
-            <FileText size={14} style={{ color: "var(--kipu-subtle)" }} />
-            <span className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>{items.length} ítem{items.length !== 1 ? "s" : ""}</span>
-            <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>— Clasificación fiscal por línea</span>
+            <FileText className="text-sutil" size={14} />
+            <span className="text-sm font-semibold text-texto">{items.length} ítem{items.length !== 1 ? "s" : ""}</span>
+            <span className="text-xs text-sutil">— Clasificación fiscal por línea</span>
           </div>
-          {showItems ? <ChevronUp size={16} style={{ color: "var(--kipu-subtle)" }} /> : <ChevronDown size={16} style={{ color: "var(--kipu-subtle)" }} />}
+          {showItems ? <ChevronUp className="text-sutil" size={16} /> : <ChevronDown className="text-sutil" size={16} />}
         </button>
         {showItems && (
-          <div style={{ borderTop: "1px solid var(--kipu-border)" }}>
+          <div className="border-t border-borde">
             <div
               className="grid grid-cols-12 gap-2 px-4 py-2 text-[10px] uppercase font-semibold tracking-wider"
               style={{ color: "var(--kipu-subtle)", borderBottom: "1px solid var(--kipu-border)" }}
@@ -347,11 +319,11 @@ export default function ReviewXML({ parsed, xmlFile, onBack, onDone, suscripcion
                 onMouseLeave={e => e.currentTarget.style.background = "transparent"}
               >
                 <div className="col-span-4">
-                  <p className="text-xs truncate" style={{ color: "var(--kipu-text)" }}>{item.descripcion}</p>
+                  <p className="text-xs truncate text-texto">{item.descripcion}</p>
                   <p className="text-[10px]" style={{ color: "var(--kipu-subtle)" }}>{item.cantidad} × ${dosDecimales(item.precio_unitario)}</p>
                 </div>
-                <div className="col-span-2 text-right text-xs" style={{ color: "var(--kipu-muted)" }}>${dosDecimales(item.subtotal)}</div>
-                <div className="col-span-2 text-right text-xs" style={{ color: "var(--kipu-muted)" }}>
+                <div className="col-span-2 text-right text-xs text-tenue">${dosDecimales(item.subtotal)}</div>
+                <div className="col-span-2 text-right text-xs text-tenue">
                   {item.tarifa_iva > 0 ? `${item.tarifa_iva}% $${dosDecimales(item.valor_iva)}` : "—"}
                 </div>
                 <div className="col-span-2 flex justify-center">
@@ -398,42 +370,33 @@ export default function ReviewXML({ parsed, xmlFile, onBack, onDone, suscripcion
 
       {/* Resumen fiscal */}
       <div
-        className="rounded-xl p-4"
-        style={{
-          background: "var(--kipu-surface)",
-          border: "1px solid var(--kipu-border)",
-        }}
+        className="rounded-xl p-4 bg-superficie border border-borde"
       >
-        <h2 className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "var(--kipu-subtle)" }}>Resumen fiscal</h2>
+        <h2 className="text-xs font-semibold uppercase tracking-wider mb-3 text-sutil">Resumen fiscal</h2>
         <div className="space-y-2 text-sm">
-          <div className="flex justify-between" style={{ color: "var(--kipu-muted)" }}>
+          <div className="flex justify-between text-tenue">
             <span>Total documento</span>
-            <span className="font-bold" style={{ color: "var(--kipu-text)" }}>${dosDecimales(parsed.importe_total)}</span>
+            <span className="font-bold text-texto">${dosDecimales(parsed.importe_total)}</span>
           </div>
           {parsed.tipo_doc !== "RET" && (
-            <div className="flex justify-between" style={{ color: "var(--kipu-muted)" }}>
+            <div className="flex justify-between text-tenue">
               <span>Deducible renta</span>
-              <span style={{ color: "var(--kipu-success)" }}>${dosDecimales(totalDeducible)}</span>
+              <span className="text-exito">${dosDecimales(totalDeducible)}</span>
             </div>
           )}
-          <div className="flex justify-between" style={{ color: "var(--kipu-muted)" }}>
+          <div className="flex justify-between text-tenue">
             <span>Crédito tributario IVA</span>
-            <span style={{ color: "var(--kipu-accent)" }}>${dosDecimales(totalCredito)}</span>
+            <span className="text-acento">${dosDecimales(totalCredito)}</span>
           </div>
         </div>
-        <div className="mt-3 pt-3" style={{ borderTop: "1px solid var(--kipu-border)" }}>
-          <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Notas (opcional)</label>
+        <div className="mt-3 pt-3 border-t border-borde">
+          <label className="block text-xs mb-1.5 text-sutil">Notas (opcional)</label>
           <textarea
             value={notas}
             onChange={e => setNotas(e.target.value)}
             placeholder="Observaciones, referencia interna, etc."
             rows={2}
-            className="w-full px-3 py-2 rounded-lg text-sm resize-none transition-colors focus:outline-none"
-            style={{
-              background: "var(--kipu-surface)",
-              border: "1px solid var(--kipu-border)",
-              color: "var(--kipu-text)",
-            }}
+            className="w-full px-3 py-2 rounded-lg text-sm resize-none transition-colors focus:outline-none bg-superficie border border-borde text-texto"
             onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
             onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
           />
@@ -442,14 +405,10 @@ export default function ReviewXML({ parsed, xmlFile, onBack, onDone, suscripcion
 
       {error && (
         <div
-          className="flex items-start gap-2 rounded-lg px-3 py-2.5"
-          style={{
-            background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
-            border: "1px solid color-mix(in srgb, var(--kipu-danger) 20%, transparent)",
-          }}
+          className="flex items-start gap-2 rounded-lg px-3 py-2.5 bg-peligro-suave border border-peligro/20"
         >
-          <AlertTriangle size={14} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-danger)" }} />
-          <p className="text-sm" style={{ color: "var(--kipu-danger)" }}>{error}</p>
+          <AlertTriangle size={14} className="shrink-0 mt-0.5 text-peligro" />
+          <p className="text-sm text-peligro">{error}</p>
         </div>
       )}
 
@@ -457,8 +416,7 @@ export default function ReviewXML({ parsed, xmlFile, onBack, onDone, suscripcion
         type="button"
         onClick={guardar}
         disabled={saving || !suscripcionActiva}
-        className="w-full py-3 rounded-lg text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-        style={{ background: "var(--kipu-accent)" }}
+        className="w-full py-3 rounded-lg text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed bg-acento"
         onMouseEnter={e => {
           if (!saving && suscripcionActiva) e.currentTarget.style.background = "var(--kipu-accent-h)";
         }}

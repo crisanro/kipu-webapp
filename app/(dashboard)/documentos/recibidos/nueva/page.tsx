@@ -81,10 +81,10 @@ export default function NuevaRecibidaPage() {
 
       {/* Header */}
       <div>
-        <h1 className="text-xl font-bold" style={{ color: "var(--kipu-text)" }}>
+        <h1 className="text-xl font-bold text-texto">
           Registrar documento recibido
         </h1>
-        <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>
+        <p className="text-sm text-sutil">
           XML electrónico o documento físico
         </p>
       </div>
@@ -99,11 +99,7 @@ export default function NuevaRecibidaPage() {
 
       {/* Tabs */}
       <div
-        className="flex gap-2 rounded-xl p-1"
-        style={{
-          background: "var(--kipu-surface)",
-          border: "1px solid var(--kipu-border)",
-        }}
+        className="flex gap-2 rounded-xl p-1 bg-superficie border border-borde"
       >
         <button
           type="button"
@@ -164,14 +160,10 @@ export default function NuevaRecibidaPage() {
       {/* Error compartido */}
       {error && (
         <div
-          className="flex items-start gap-2 rounded-lg px-3 py-2.5"
-          style={{
-            background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
-            border: "1px solid color-mix(in srgb, var(--kipu-danger) 20%, transparent)",
-          }}
+          className="flex items-start gap-2 rounded-lg px-3 py-2.5 bg-peligro-suave border border-peligro/20"
         >
-          <AlertTriangle size={14} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-danger)" }} />
-          <p className="text-sm" style={{ color: "var(--kipu-danger)" }}>{error}</p>
+          <AlertTriangle size={14} className="shrink-0 mt-0.5 text-peligro" />
+          <p className="text-sm text-peligro">{error}</p>
         </div>
       )}
 
@@ -206,8 +198,7 @@ export default function NuevaRecibidaPage() {
         <button
           type="button"
           onClick={() => router.push("/documentos/recibidos")}
-          className="text-xs transition-colors"
-          style={{ color: "var(--kipu-accent)" }}
+          className="text-xs transition-colors text-acento"
           onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent-h)"}
           onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-accent)"}
         >
