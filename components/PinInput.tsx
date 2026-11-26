@@ -117,9 +117,7 @@ export default function PinInput({ tipoAccion, email, onConfirmar, onCancelar, l
             <button
               type="button"
               onClick={onCancelar}
-              className="flex-1 py-2.5 rounded-lg text-sm transition-colors border border-borde text-tenue"
-              onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
-              onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-muted)"}
+              className="flex-1 py-2.5 rounded-lg text-sm transition-colors border border-borde text-tenue hover:text-texto"
             >
               Cancelar
             </button>
@@ -127,13 +125,7 @@ export default function PinInput({ tipoAccion, email, onConfirmar, onCancelar, l
               type="button"
               onClick={enviarPin}
               disabled={enviando}
-              className="flex-1 py-2.5 rounded-lg text-white text-sm font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50 bg-acento"
-              onMouseEnter={e => {
-                if (!enviando) e.currentTarget.style.background = "var(--kipu-accent-h)";
-              }}
-              onMouseLeave={e => {
-                if (!enviando) e.currentTarget.style.background = "var(--kipu-accent)";
-              }}
+              className="flex-1 py-2.5 rounded-lg text-white text-sm font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50 bg-acento enabled:hover:bg-acento-hover"
             >
               {enviando ? (
                 <>
@@ -187,9 +179,7 @@ export default function PinInput({ tipoAccion, email, onConfirmar, onCancelar, l
               onKeyDown={(e) => { if (e.key === "Enter" && pin.length === 6) confirmar(); }}
               placeholder="• • • • • •"
               maxLength={6}
-              className="w-full px-4 py-3 rounded-lg text-xl text-center tracking-[0.5em] font-mono transition-colors focus:outline-none bg-superficie border border-borde text-texto"
-              onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-              onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+              className="w-full px-4 py-3 rounded-lg text-xl text-center tracking-[0.5em] font-mono transition-colors focus:outline-none bg-superficie border border-borde text-texto focus:border-acento"
             />
           </div>
 
@@ -212,13 +202,7 @@ export default function PinInput({ tipoAccion, email, onConfirmar, onCancelar, l
                 type="button"
                 onClick={enviarPin}
                 disabled={enviando}
-                className="flex items-center gap-1.5 text-xs disabled:opacity-50 transition-colors mx-auto text-acento"
-                onMouseEnter={e => {
-                  if (!enviando) e.currentTarget.style.color = "var(--kipu-accent-h)";
-                }}
-                onMouseLeave={e => {
-                  if (!enviando) e.currentTarget.style.color = "var(--kipu-accent)";
-                }}
+                className="flex items-center gap-1.5 text-xs disabled:opacity-50 transition-colors mx-auto text-acento enabled:hover:text-acento-hover"
               >
                 {enviando ? (
                   <>
@@ -241,9 +225,7 @@ export default function PinInput({ tipoAccion, email, onConfirmar, onCancelar, l
             <button
               type="button"
               onClick={onCancelar}
-              className="flex-1 py-2.5 rounded-lg text-sm transition-colors border border-borde text-tenue"
-              onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
-              onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-muted)"}
+              className="flex-1 py-2.5 rounded-lg text-sm transition-colors border border-borde text-tenue hover:text-texto"
             >
               Cancelar
             </button>

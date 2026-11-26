@@ -123,13 +123,7 @@ export default function TabApiKeys() {
             type="button"
             onClick={regenerarSandbox}
             disabled={regenSandbox}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors disabled:opacity-40 border border-borde text-tenue"
-            onMouseEnter={e => {
-              if (!regenSandbox) e.currentTarget.style.color = "var(--kipu-text)";
-            }}
-            onMouseLeave={e => {
-              if (!regenSandbox) e.currentTarget.style.color = "var(--kipu-muted)";
-            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors disabled:opacity-40 border border-borde text-tenue enabled:hover:text-texto"
           >
             {regenSandbox ? (
               <div
@@ -170,9 +164,7 @@ export default function TabApiKeys() {
                   <button
                     type="button"
                     onClick={() => setShowSandbox(!showSandbox)}
-                    className="p-1 transition-colors text-sutil"
-                    onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
-                    onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-subtle)"}
+                    className="p-1 transition-colors text-sutil hover:text-texto"
                     title={showSandbox ? "Ocultar" : "Mostrar"}
                   >
                     {showSandbox ? <EyeOff size={13} /> : <Eye size={13} />}
@@ -181,9 +173,7 @@ export default function TabApiKeys() {
                     <button
                       type="button"
                       onClick={() => copiar(sandboxKey.key!, null, "sandbox")}
-                      className="p-1 transition-colors text-sutil"
-                      onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
-                      onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-subtle)"}
+                      className="p-1 transition-colors text-sutil hover:text-texto"
                       title="Copiar"
                     >
                       {copiado === "sandbox" ? (
@@ -258,9 +248,7 @@ export default function TabApiKeys() {
             <button
               type="button"
               onClick={() => copiar(nuevaKey, null, "nueva")}
-              className="shrink-0 transition-colors text-sutil"
-              onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
-              onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-subtle)"}
+              className="shrink-0 transition-colors text-sutil hover:text-texto"
             >
               {copiado === "nueva" ? (
                 <CheckCircle2 className="text-exito" size={14} />
@@ -272,9 +260,7 @@ export default function TabApiKeys() {
           <button
             type="button"
             onClick={() => setNuevaKey("")}
-            className="mt-3 text-xs transition-colors text-sutil"
-            onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
-            onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-subtle)"}
+            className="mt-3 text-xs transition-colors text-sutil hover:text-texto"
           >
             Ya la guardé, cerrar
           </button>
@@ -374,15 +360,7 @@ export default function TabApiKeys() {
                   <button
                     type="button"
                     onClick={() => setKeyToRevoke(k.id)}
-                    className="p-1.5 rounded transition-colors shrink-0 text-sutil"
-                    onMouseEnter={e => {
-                      e.currentTarget.style.color = "var(--kipu-danger)";
-                      e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-danger) 10%, transparent)";
-                    }}
-                    onMouseLeave={e => {
-                      e.currentTarget.style.color = "var(--kipu-subtle)";
-                      e.currentTarget.style.background = "transparent";
-                    }}
+                    className="p-1.5 rounded transition-colors shrink-0 text-sutil hover:text-peligro hover:bg-peligro-suave"
                     title="Revocar"
                   >
                     <Trash2 size={14} />
@@ -403,9 +381,7 @@ export default function TabApiKeys() {
                 value={nombre}
                 onChange={(e) => setNombre(e.target.value)}
                 placeholder="Ej: WooCommerce, ERP, POS..."
-                className="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none bg-superficie border border-borde text-texto"
-                onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+                className="w-full px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none bg-superficie border border-borde text-texto focus:border-acento"
               />
             </div>
             {nombre.trim() && (

@@ -228,9 +228,7 @@ export default function PagosMixtos({
               <select
                 value={pago.forma_pago}
                 onChange={(e) => editPago(pago._id, "forma_pago", e.target.value as FormaPagoCode)}
-                className="w-full sm:w-auto sm:flex-1 min-w-0 px-2.5 py-2 rounded-lg text-sm transition-colors focus:outline-none bg-superficie border border-borde text-texto"
-                onFocus={(e) => (e.currentTarget.style.borderColor = "var(--kipu-accent)")}
-                onBlur={(e) => (e.currentTarget.style.borderColor = "var(--kipu-border)")}
+                className="w-full sm:w-auto sm:flex-1 min-w-0 px-2.5 py-2 rounded-lg text-sm transition-colors focus:outline-none bg-superficie border border-borde text-texto focus:border-acento"
               >
                 {formasPagoDisponibles.map(({ value, label }) => (
                   <option key={value} value={value}>{label}</option>
@@ -257,18 +255,14 @@ export default function PagosMixtos({
                     min={0}
                     step={0.01}
                     placeholder="0.00"
-                    className="w-24 px-2 py-2 rounded-lg text-sm text-right transition-colors focus:outline-none bg-superficie border border-borde text-texto"
-                    onFocus={(e) => (e.currentTarget.style.borderColor = "var(--kipu-accent)")}
-                    onBlur={(e) => (e.currentTarget.style.borderColor = "var(--kipu-border)")}
+                    className="w-24 px-2 py-2 rounded-lg text-sm text-right transition-colors focus:outline-none bg-superficie border border-borde text-texto focus:border-acento"
                   />
                   {/* Convertir a saldo restante */}
                   <button
                     type="button"
                     onClick={() => convertirASaldo(pago._id)}
                     title="Usar como saldo restante"
-                    className="text-xs px-1 transition-colors text-sutil"
-                    onMouseEnter={(e) => (e.currentTarget.style.color = "var(--kipu-accent)")}
-                    onMouseLeave={(e) => (e.currentTarget.style.color = "var(--kipu-subtle)")}
+                    className="text-xs px-1 transition-colors text-sutil hover:text-acento"
                   >
                     ↔
                   </button>

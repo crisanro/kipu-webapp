@@ -106,9 +106,7 @@ export default function SeccionRetenciones({
           <button
             type="button"
             onClick={() => setExpandEmitidas(!expandEmitidas)}
-            className="w-full flex items-center justify-between px-4 py-3 transition-colors text-left"
-            onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 4%, transparent)"}
-            onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+            className="w-full flex items-center justify-between px-4 py-3 transition-colors text-left hover:bg-texto/4"
           >
             <div className="flex items-center gap-2.5">
               <div
@@ -266,9 +264,7 @@ export default function SeccionRetenciones({
           <button
             type="button"
             onClick={() => setExpandRecibidas(!expandRecibidas)}
-            className="w-full flex items-center justify-between px-4 py-3 transition-colors text-left"
-            onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 4%, transparent)"}
-            onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+            className="w-full flex items-center justify-between px-4 py-3 transition-colors text-left hover:bg-texto/4"
           >
             <div className="flex items-center gap-2.5">
               <div

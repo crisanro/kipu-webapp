@@ -107,9 +107,7 @@ function DemoCards({ tab }: { tab: Tab }) {
         <Link
           key={i}
           href={href}
-          className="block rounded-xl p-4 transition-all group bg-superficie border border-borde"
-          onMouseEnter={e => e.currentTarget.style.borderColor = "color-mix(in srgb, var(--kipu-text) 30%, transparent)"}
-          onMouseLeave={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+          className="block rounded-xl p-4 transition-all group bg-superficie border border-borde hover:border-texto/30"
         >
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-start gap-3">
@@ -393,9 +391,7 @@ export default function ReportesPage() {
                 </div>
                 <Link
                   href="/planes"
-                  className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-white text-sm font-semibold transition-colors bg-acento"
-                  onMouseEnter={e => e.currentTarget.style.background = "var(--kipu-accent-h)"}
-                  onMouseLeave={e => e.currentTarget.style.background = "var(--kipu-accent)"}
+                  className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-white text-sm font-semibold transition-colors bg-acento hover:bg-acento-hover"
                 >
                   Ver planes y suscribirme
                   <ChevronRight size={15} />

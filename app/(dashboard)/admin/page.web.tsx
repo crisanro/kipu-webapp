@@ -163,9 +163,7 @@ export default function AdminPage() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Buscar por RUC, nombre..."
-              className="w-full pl-9 pr-4 py-2.5 rounded-lg text-sm focus:outline-none transition-colors bg-superficie border border-borde text-texto"
-              onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-              onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+              className="w-full pl-9 pr-4 py-2.5 rounded-lg text-sm focus:outline-none transition-colors bg-superficie border border-borde text-texto focus:border-acento"
             />
           </div>
           <div className="flex gap-2">
@@ -229,10 +227,8 @@ export default function AdminPage() {
                 {filtrados.map((e, idx) => (
                   <tr
                     key={e.id}
-                    className="transition-colors"
+                    className="transition-colors hover:bg-texto/4"
                     style={{ borderBottom: idx < filtrados.length - 1 ? "1px solid var(--kipu-border)" : "none" }}
-                    onMouseEnter={ev => ev.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 4%, transparent)"}
-                    onMouseLeave={ev => ev.currentTarget.style.background = "transparent"}
                   >
                     <td className="px-4 py-3">
                       <p className="font-medium truncate max-w-[200px] text-texto">
@@ -274,9 +270,7 @@ export default function AdminPage() {
                     <td className="px-4 py-3 text-right">
                       <Link
                         href={`/admin/emisores/${e.id}`}
-                        className="inline-flex items-center gap-1 text-xs transition-colors font-medium text-acento"
-                        onMouseEnter={ev => ev.currentTarget.style.color = "var(--kipu-accent-h)"}
-                        onMouseLeave={ev => ev.currentTarget.style.color = "var(--kipu-accent)"}
+                        className="inline-flex items-center gap-1 text-xs transition-colors font-medium text-acento hover:text-acento-hover"
                       >
                         Ver <ChevronRight size={12} />
                       </Link>
@@ -293,10 +287,8 @@ export default function AdminPage() {
               <Link
                 key={e.id}
                 href={`/admin/emisores/${e.id}`}
-                className="flex items-center gap-3 px-4 py-3 transition-colors"
+                className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-texto/4"
                 style={{ borderTop: idx > 0 ? "1px solid var(--kipu-border)" : "none" }}
-                onMouseEnter={ev => ev.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 4%, transparent)"}
-                onMouseLeave={ev => ev.currentTarget.style.background = "transparent"}
               >
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate text-texto">

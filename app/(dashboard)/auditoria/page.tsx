@@ -178,9 +178,7 @@ export default function AuditoriaPage() {
             type="button"
             onClick={cargar}
             disabled={loading}
-            className="p-2 rounded-lg transition-colors disabled:opacity-40 border border-borde text-sutil"
-            onMouseEnter={e => { if (!loading) { e.currentTarget.style.color = "var(--kipu-text)"; e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 5%, transparent)"; } }}
-            onMouseLeave={e => { if (!loading) { e.currentTarget.style.color = "var(--kipu-subtle)"; e.currentTarget.style.background = "transparent"; } }}
+            className="p-2 rounded-lg transition-colors disabled:opacity-40 border border-borde text-sutil enabled:hover:text-texto enabled:hover:bg-texto/5"
           >
             {loading ? (
               <div className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: "currentColor", borderTopColor: "transparent" }} />
@@ -329,9 +327,7 @@ export default function AuditoriaPage() {
                     <button
                       type="button"
                       onClick={() => setExpandedId(expanded ? null : entry.id)}
-                      className="w-full text-left px-4 py-3 transition-colors border-b border-borde"
-                      onMouseEnter={e => e.currentTarget.style.background = "var(--kipu-bg)"}
-                      onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                      className="w-full text-left px-4 py-3 transition-colors border-b border-borde hover:bg-fondo"
                     >
                       {/* Desktop */}
                       <div

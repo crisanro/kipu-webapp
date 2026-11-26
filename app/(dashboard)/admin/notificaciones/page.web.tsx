@@ -80,15 +80,7 @@ function Notificaciones() {
         <button
           type="button"
           onClick={() => router.back()}
-          className="p-2 rounded-lg transition-colors text-sutil"
-          onMouseEnter={e => {
-            e.currentTarget.style.color = "var(--kipu-text)";
-            e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 5%, transparent)";
-          }}
-          onMouseLeave={e => {
-            e.currentTarget.style.color = "var(--kipu-subtle)";
-            e.currentTarget.style.background = "transparent";
-          }}
+          className="p-2 rounded-lg transition-colors text-sutil hover:text-texto hover:bg-texto/5"
         >
           <ArrowLeft size={18} />
         </button>
@@ -182,9 +174,7 @@ function Notificaciones() {
               inputMode="numeric"
               onChange={(e) => setEmisorId(e.target.value)}
               placeholder="Ej: 42"
-              className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none transition-colors bg-superficie border border-borde text-texto"
-              onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-              onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+              className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none transition-colors bg-superficie border border-borde text-texto focus:border-acento"
             />
             <p className="text-xs mt-1 text-sutil">
               Encuéntralo en la lista de emisores del panel.
@@ -245,9 +235,7 @@ function Notificaciones() {
             onChange={(e) => setTitulo(e.target.value)}
             placeholder="Ej: 🔔 Nueva funcionalidad disponible"
             maxLength={100}
-            className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none transition-colors bg-superficie border border-borde text-texto"
-            onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-            onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+            className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none transition-colors bg-superficie border border-borde text-texto focus:border-acento"
           />
           <p className="text-xs mt-1 text-right text-sutil">{titulo.length}/100</p>
         </div>
@@ -260,9 +248,7 @@ function Notificaciones() {
             placeholder="Descripción detallada de la notificación..."
             rows={4}
             maxLength={500}
-            className="w-full px-3 py-2 rounded-lg text-sm resize-none focus:outline-none transition-colors bg-superficie border border-borde text-texto"
-            onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-            onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+            className="w-full px-3 py-2 rounded-lg text-sm resize-none focus:outline-none transition-colors bg-superficie border border-borde text-texto focus:border-acento"
           />
           <p className="text-xs mt-1 text-right text-sutil">{mensaje.length}/500</p>
         </div>
@@ -273,9 +259,7 @@ function Notificaciones() {
             value={referencia}
             onChange={(e) => setReferencia(e.target.value)}
             placeholder="/dashboard"
-            className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none transition-colors bg-superficie border border-borde text-texto"
-            onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-            onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+            className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none transition-colors bg-superficie border border-borde text-texto focus:border-acento"
           />
           <p className="text-xs mt-1 text-sutil">
             Ruta a la que se redirige al hacer click en la notificación.

@@ -232,19 +232,7 @@ export default function PlanesPage() {
           type="button"
           onClick={recargar}
           disabled={loading}
-          className="p-2 rounded-lg transition-colors disabled:opacity-40 border border-borde text-sutil"
-          onMouseEnter={e => {
-            if (!loading) {
-              e.currentTarget.style.color = "var(--kipu-text)";
-              e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 5%, transparent)";
-            }
-          }}
-          onMouseLeave={e => {
-            if (!loading) {
-              e.currentTarget.style.color = "var(--kipu-subtle)";
-              e.currentTarget.style.background = "transparent";
-            }
-          }}
+          className="p-2 rounded-lg transition-colors disabled:opacity-40 border border-borde text-sutil enabled:hover:text-texto enabled:hover:bg-texto/5"
         >
           {loading ? (
             <div
@@ -461,13 +449,7 @@ export default function PlanesPage() {
                       type="button"
                       onClick={abrirPortal}
                       disabled={abriendo}
-                      className="flex items-center gap-2 px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors disabled:opacity-50 bg-acento"
-                      onMouseEnter={e => {
-                        if (!abriendo) e.currentTarget.style.background = "var(--kipu-accent-h)";
-                      }}
-                      onMouseLeave={e => {
-                        if (!abriendo) e.currentTarget.style.background = "var(--kipu-accent)";
-                      }}
+                      className="flex items-center gap-2 px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors disabled:opacity-50 bg-acento enabled:hover:bg-acento-hover"
                     >
                       {abriendo ? (
                         <div
@@ -667,13 +649,7 @@ export default function PlanesPage() {
                 <button
                   type="button"
                   onClick={() => setTab("suscripcion")}
-                  className="w-full flex items-center justify-between gap-3 rounded-xl px-4 py-3 text-left transition-colors group bg-acento/10 border border-acento/20"
-                  onMouseEnter={e => {
-                    e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-accent) 15%, transparent)";
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-accent) 10%, transparent)";
-                  }}
+                  className="w-full flex items-center justify-between gap-3 rounded-xl px-4 py-3 text-left transition-colors group bg-acento/10 border border-acento/20 hover:bg-acento/15"
                 >
                   <div className="flex items-start gap-3">
                     <Star size={15} className="shrink-0 mt-0.5 text-acento" />

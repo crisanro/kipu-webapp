@@ -268,15 +268,7 @@ export default function PagoExitosoPage() {
           </Link>
           <Link
             href="/dashboard"
-            className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm transition-colors border border-borde text-sutil bg-superficie"
-            onMouseEnter={e => {
-              e.currentTarget.style.color = "var(--kipu-text)";
-              e.currentTarget.style.borderColor = "color-mix(in srgb, var(--kipu-text) 30%, transparent)";
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.color = "var(--kipu-subtle)";
-              e.currentTarget.style.borderColor = "var(--kipu-border)";
-            }}
+            className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm transition-colors border border-borde text-sutil bg-superficie hover:text-texto hover:border-texto/30"
           >
             Ir al dashboard
           </Link>
@@ -287,9 +279,7 @@ export default function PagoExitosoPage() {
           ¿Tienes dudas?{" "}
           <Link
             href="/planes"
-            className="transition-colors text-acento"
-            onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent-h)"}
-            onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-accent)"}
+            className="transition-colors text-acento hover:text-acento-hover"
           >
             Ver mi plan
           </Link>

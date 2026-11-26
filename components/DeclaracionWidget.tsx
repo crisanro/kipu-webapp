@@ -234,15 +234,7 @@ export default function DeclaracionWidget({ data, onDeclarado }: Props) {
                 href="https://srienlinea.sri.gob.ec"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors bg-texto/5 border border-borde text-tenue"
-                onMouseEnter={e => {
-                  e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 10%, transparent)";
-                  e.currentTarget.style.color = "var(--kipu-text)";
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 5%, transparent)";
-                  e.currentTarget.style.color = "var(--kipu-muted)";
-                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors bg-texto/5 border border-borde text-tenue hover:bg-texto/10 hover:text-texto"
               >
                 <ExternalLink size={11} />
                 Ir al SRI en Línea
@@ -253,13 +245,7 @@ export default function DeclaracionWidget({ data, onDeclarado }: Props) {
                 <button
                   type="button"
                   onClick={() => setConfirmando(true)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors font-medium bg-exito/20 border border-exito/20 text-exito"
-                  onMouseEnter={e => {
-                    e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-success) 30%, transparent)";
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-success) 20%, transparent)";
-                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors font-medium bg-exito/20 border border-exito/20 text-exito hover:bg-exito/30"
                 >
                   <CheckCircle2 size={11} />
                   Ya declaré

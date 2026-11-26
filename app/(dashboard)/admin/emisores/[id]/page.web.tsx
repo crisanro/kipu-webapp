@@ -452,9 +452,7 @@ export default function AdminEmisorDetallePage() {
                 <input
                   value={form.razon_social}
                   onChange={(e) => setForm(f => ({ ...f, razon_social: e.target.value }))}
-                  className="flex-1 px-2 py-1 rounded-lg text-sm text-right focus:outline-none transition-colors bg-superficie border border-borde text-texto"
-                  onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                  onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+                  className="flex-1 px-2 py-1 rounded-lg text-sm text-right focus:outline-none transition-colors bg-superficie border border-borde text-texto focus:border-acento"
                 />
               ) : (
                 <span className="text-right font-medium text-texto">{emisor.razon_social}</span>
@@ -469,9 +467,7 @@ export default function AdminEmisorDetallePage() {
                   value={form.nombre_comercial}
                   onChange={(e) => setForm(f => ({ ...f, nombre_comercial: e.target.value }))}
                   placeholder="Opcional"
-                  className="flex-1 px-2 py-1 rounded-lg text-sm text-right focus:outline-none transition-colors bg-superficie border border-borde text-texto"
-                  onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                  onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+                  className="flex-1 px-2 py-1 rounded-lg text-sm text-right focus:outline-none transition-colors bg-superficie border border-borde text-texto focus:border-acento"
                 />
               ) : (
                 <span className="text-right font-medium text-texto">{emisor.nombre_comercial || "—"}</span>
@@ -485,9 +481,7 @@ export default function AdminEmisorDetallePage() {
                 <input
                   value={form.direccion_matriz}
                   onChange={(e) => setForm(f => ({ ...f, direccion_matriz: e.target.value }))}
-                  className="flex-1 px-2 py-1 rounded-lg text-sm text-right focus:outline-none transition-colors bg-superficie border border-borde text-texto"
-                  onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                  onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+                  className="flex-1 px-2 py-1 rounded-lg text-sm text-right focus:outline-none transition-colors bg-superficie border border-borde text-texto focus:border-acento"
                 />
               ) : (
                 <span className="text-right max-w-[60%] font-medium text-texto">{emisor.direccion_matriz || "—"}</span>
@@ -532,9 +526,7 @@ export default function AdminEmisorDetallePage() {
                   inputMode="numeric"
                   onChange={(e) => setForm(f => ({ ...f, contribuyente_especial: e.target.value }))}
                   placeholder="N° resolución o vacío"
-                  className="flex-1 px-2 py-1 rounded-lg text-sm text-right focus:outline-none transition-colors bg-superficie border border-borde text-texto"
-                  onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                  onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+                  className="flex-1 px-2 py-1 rounded-lg text-sm text-right focus:outline-none transition-colors bg-superficie border border-borde text-texto focus:border-acento"
                 />
               ) : (
                 <span className="text-right font-medium text-texto">{emisor.contribuyente_especial || "—"}</span>
@@ -575,13 +567,7 @@ export default function AdminEmisorDetallePage() {
                 type="button"
                 onClick={guardarEdicion}
                 disabled={guardando}
-                className="w-full py-2.5 rounded-lg text-white font-medium text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50 bg-acento"
-                onMouseEnter={e => {
-                  if (!guardando) e.currentTarget.style.background = "var(--kipu-accent-h)";
-                }}
-                onMouseLeave={e => {
-                  if (!guardando) e.currentTarget.style.background = "var(--kipu-accent)";
-                }}
+                className="w-full py-2.5 rounded-lg text-white font-medium text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50 bg-acento enabled:hover:bg-acento-hover"
               >
                 {guardando ? (
                   <>
@@ -681,9 +667,7 @@ export default function AdminEmisorDetallePage() {
                     onChange={(e) => setTfMonto(e.target.value)}
                     min="0"
                     step="0.01"
-                    className="w-full pl-7 pr-3 py-2 rounded-lg text-sm focus:outline-none transition-colors bg-superficie border border-borde text-texto"
-                    onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                    onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+                    className="w-full pl-7 pr-3 py-2 rounded-lg text-sm focus:outline-none transition-colors bg-superficie border border-borde text-texto focus:border-acento"
                   />
                 </div>
               </div>
@@ -693,9 +677,7 @@ export default function AdminEmisorDetallePage() {
                   type="date"
                   value={tfFecha}
                   onChange={(e) => setTfFecha(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none transition-colors bg-superficie border border-borde text-texto"
-                  onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                  onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+                  className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none transition-colors bg-superficie border border-borde text-texto focus:border-acento"
                 />
               </div>
             </div>
@@ -707,9 +689,7 @@ export default function AdminEmisorDetallePage() {
                 value={tfBanco}
                 onChange={(e) => setTfBanco(e.target.value)}
                 placeholder="Ej: Pichincha, Pacífico"
-                className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none transition-colors bg-superficie border border-borde text-texto"
-                onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+                className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none transition-colors bg-superficie border border-borde text-texto focus:border-acento"
               />
             </div>
 
@@ -723,9 +703,7 @@ export default function AdminEmisorDetallePage() {
                 inputMode="numeric"
                 onChange={(e) => setTfRef(e.target.value)}
                 placeholder="Ej: 0021234567890123456789"
-                className="w-full px-3 py-2 rounded-lg text-sm font-mono focus:outline-none transition-colors bg-superficie border border-borde text-texto"
-                onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+                className="w-full px-3 py-2 rounded-lg text-sm font-mono focus:outline-none transition-colors bg-superficie border border-borde text-texto focus:border-acento"
               />
             </div>
 
@@ -736,9 +714,7 @@ export default function AdminEmisorDetallePage() {
                 value={tfNotas}
                 onChange={(e) => setTfNotas(e.target.value)}
                 placeholder="Opcional — quién confirmó, canal, etc."
-                className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none transition-colors bg-superficie border border-borde text-texto"
-                onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+                className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none transition-colors bg-superficie border border-borde text-texto focus:border-acento"
               />
             </div>
 
@@ -1057,9 +1033,7 @@ export default function AdminEmisorDetallePage() {
                 onChange={(e) => setMontoRecarga(e.target.value)}
                 placeholder="Cantidad personalizada"
                 min={1}
-                className="flex-1 px-3 py-2 rounded-lg text-sm focus:outline-none transition-colors bg-superficie border border-borde text-texto"
-                onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+                className="flex-1 px-3 py-2 rounded-lg text-sm focus:outline-none transition-colors bg-superficie border border-borde text-texto focus:border-acento"
               />
               <button
                 type="button"

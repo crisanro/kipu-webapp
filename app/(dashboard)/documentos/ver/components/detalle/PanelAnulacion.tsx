@@ -271,9 +271,7 @@ export default function PanelAnulacion({ factura, onRecargar }: { factura: Factu
       <button
         type="button"
         onClick={() => setAbierto(v => !v)}
-        className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors"
-        onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 4%, transparent)"}
-        onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+        className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-texto/4"
         aria-expanded={abierto}
       >
         <Ban size={15} className="shrink-0 text-peligro" />
@@ -311,9 +309,7 @@ export default function PanelAnulacion({ factura, onRecargar }: { factura: Factu
               href={SRI_EN_LINEA_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-xs font-medium transition-colors text-acento"
-              onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent-h)"}
-              onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-accent)"}
+              className="inline-flex items-center gap-1.5 text-xs font-medium transition-colors text-acento hover:text-acento-hover"
             >
               <ExternalLink size={12} /> Abrir SRI en línea
             </a>

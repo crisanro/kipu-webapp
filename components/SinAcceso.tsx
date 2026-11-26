@@ -19,13 +19,7 @@ export default function SinAcceso() {
       </p>
       <Link
         href="/dashboard"
-        className="px-4 py-2 rounded-lg text-sm transition-colors bg-superficie border border-borde text-texto"
-        onMouseEnter={e => {
-          e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 5%, transparent)";
-        }}
-        onMouseLeave={e => {
-          e.currentTarget.style.background = "var(--kipu-surface)";
-        }}
+        className="px-4 py-2 rounded-lg text-sm transition-colors bg-superficie border border-borde text-texto hover:bg-texto/5"
       >
         Ir al Dashboard
       </Link>

@@ -126,9 +126,7 @@ export default function SeccionCobro({ factura, onRecargar }: { factura: Factura
                       <select
                         value={cobroFormaPago}
                         onChange={e => setCobroFormaPago(e.target.value)}
-                        className="w-full px-2.5 py-2 rounded-lg text-sm transition-colors focus:outline-none bg-superficie border border-borde text-texto"
-                        onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                        onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+                        className="w-full px-2.5 py-2 rounded-lg text-sm transition-colors focus:outline-none bg-superficie border border-borde text-texto focus:border-acento"
                       >
                         {FORMAS_COBRO.map(f => (
                           <option key={f.valor} value={f.valor}>{f.etiqueta}</option>
@@ -141,9 +139,7 @@ export default function SeccionCobro({ factura, onRecargar }: { factura: Factura
                         type="date"
                         value={cobroFecha}
                         onChange={e => setCobroFecha(e.target.value)}
-                        className="w-full px-2.5 py-2 rounded-lg text-sm transition-colors focus:outline-none bg-superficie border border-borde text-texto"
-                        onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                        onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+                        className="w-full px-2.5 py-2 rounded-lg text-sm transition-colors focus:outline-none bg-superficie border border-borde text-texto focus:border-acento"
                       />
                     </div>
                   </div>
@@ -158,9 +154,7 @@ export default function SeccionCobro({ factura, onRecargar }: { factura: Factura
                       onChange={e => setCobroReferencia(e.target.value)}
                       placeholder="N° transferencia, recibo..."
                       maxLength={100}
-                      className="w-full px-2.5 py-2 rounded-lg text-sm transition-colors focus:outline-none bg-superficie border border-borde text-texto"
-                      onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-                      onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+                      className="w-full px-2.5 py-2 rounded-lg text-sm transition-colors focus:outline-none bg-superficie border border-borde text-texto focus:border-acento"
                     />
                   </div>
                 </div>
@@ -180,9 +174,7 @@ export default function SeccionCobro({ factura, onRecargar }: { factura: Factura
                 <button
                   type="button"
                   onClick={() => setEditandoCobro(false)}
-                  className="flex-1 py-2 rounded-lg text-xs transition-colors border border-borde text-tenue"
-                  onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
-                  onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-muted)"}
+                  className="flex-1 py-2 rounded-lg text-xs transition-colors border border-borde text-tenue hover:text-texto"
                 >
                   Cancelar
                 </button>
@@ -190,9 +182,7 @@ export default function SeccionCobro({ factura, onRecargar }: { factura: Factura
                   type="button"
                   onClick={guardarCobro}
                   disabled={guardandoCobro}
-                  className="flex-1 py-2 rounded-lg text-white text-xs font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50 bg-acento"
-                  onMouseEnter={e => { if (!guardandoCobro) e.currentTarget.style.background = "var(--kipu-accent-h)"; }}
-                  onMouseLeave={e => { if (!guardandoCobro) e.currentTarget.style.background = "var(--kipu-accent)"; }}
+                  className="flex-1 py-2 rounded-lg text-white text-xs font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50 bg-acento enabled:hover:bg-acento-hover"
                 >
                   {guardandoCobro ? (
                     <div

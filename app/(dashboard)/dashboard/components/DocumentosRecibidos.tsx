@@ -26,9 +26,7 @@ export default function DocumentosRecibidos({ docs = [] }: Props) {
         </div>
         <Link
           href="/documentos/recibidos"
-          className="flex items-center gap-1 text-xs transition-colors text-acento"
-          onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent-h)"}
-          onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-accent)"}
+          className="flex items-center gap-1 text-xs transition-colors text-acento hover:text-acento-hover"
         >
           Ver todos <ArrowRight size={12} />
         </Link>
@@ -42,9 +40,7 @@ export default function DocumentosRecibidos({ docs = [] }: Props) {
           </p>
           <Link
             href="/documentos/recibidos/nueva"
-            className="mt-3 text-xs transition-colors text-acento"
-            onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-accent-h)"}
-            onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-accent)"}
+            className="mt-3 text-xs transition-colors text-acento hover:text-acento-hover"
           >
             Registrar factura →
           </Link>

@@ -350,9 +350,7 @@ export default function ItemsEditor({ items, onChange }: Props) {
             value={productoQuery}
             onChange={(e) => { setProductoQuery(e.target.value); setShowProductos(true); }}
             placeholder="Buscar en catálogo para agregar..."
-            className="w-full pl-9 pr-10 py-2 rounded-lg text-sm transition-colors focus:outline-none bg-superficie border border-borde text-texto"
-            onFocus={(e) => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
-            onBlur={(e) => e.currentTarget.style.borderColor = "var(--kipu-border)"}
+            className="w-full pl-9 pr-10 py-2 rounded-lg text-sm transition-colors focus:outline-none bg-superficie border border-borde text-texto focus:border-acento"
           />
           {productoLoading ? (
             <div
@@ -366,9 +364,7 @@ export default function ItemsEditor({ items, onChange }: Props) {
                 setScanForItemId(null);
                 setShowScanner(true);
               }}
-              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded transition-colors text-sutil"
-              onMouseEnter={(e) => (e.currentTarget.style.color = "var(--kipu-accent)")}
-              onMouseLeave={(e) => (e.currentTarget.style.color = "var(--kipu-subtle)")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded transition-colors text-sutil hover:text-acento"
               title="Escanear código de barras o QR"
             >
               <Camera size={16} />
@@ -385,12 +381,7 @@ export default function ItemsEditor({ items, onChange }: Props) {
                 type="button"
                 key={p.id}
                 onClick={() => seleccionarProducto(p)}
-                className="w-full flex min-h-12 items-center justify-between gap-3 px-4 py-2.5 text-left transition-colors border-b border-borde"
-                onMouseEnter={(e) =>
-                  (e.currentTarget.style.background =
-                    "color-mix(in srgb, var(--kipu-text) 5%, transparent)")
-                }
-                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                className="w-full flex min-h-12 items-center justify-between gap-3 px-4 py-2.5 text-left transition-colors border-b border-borde hover:bg-texto/5"
               >
                 <div>
                   <p className="text-sm text-texto">
@@ -453,12 +444,7 @@ export default function ItemsEditor({ items, onChange }: Props) {
           return (
             <div
               key={item._id}
-              className="p-3.5 rounded-xl space-y-3 transition-colors bg-superficie/60 border border-borde"
-              onMouseEnter={(e) =>
-                (e.currentTarget.style.borderColor =
-                  "color-mix(in srgb, var(--kipu-text) 20%, transparent)")
-              }
-              onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--kipu-border)")}
+              className="p-3.5 rounded-xl space-y-3 transition-colors bg-superficie/60 border border-borde hover:border-texto/20"
             >
               {/* Fila 1 — índice + cantidad + descripción + eliminar */}
               <div className="flex items-center gap-2">
@@ -492,9 +478,7 @@ export default function ItemsEditor({ items, onChange }: Props) {
                     }
                   }}
                   placeholder="Descripción del producto o servicio"
-                  className="flex-1 px-3 py-2 rounded-lg text-sm font-medium min-w-0 transition-colors focus:outline-none bg-superficie border border-borde text-texto"
-                  onFocus={(e) => (e.currentTarget.style.borderColor = "var(--kipu-accent)")}
-                  onBlur={(e) => (e.currentTarget.style.borderColor = "var(--kipu-border)")}
+                  className="flex-1 px-3 py-2 rounded-lg text-sm font-medium min-w-0 transition-colors focus:outline-none bg-superficie border border-borde text-texto focus:border-acento"
                 />
                 <button
                   type="button"
@@ -582,9 +566,7 @@ export default function ItemsEditor({ items, onChange }: Props) {
                           e.target.value as "$" | "%"
                         )
                       }
-                      className="w-10 px-1 py-1.5 rounded-lg text-xs shrink-0 font-medium transition-colors focus:outline-none bg-superficie border border-borde text-texto"
-                      onFocus={(e) => (e.currentTarget.style.borderColor = "var(--kipu-accent)")}
-                      onBlur={(e) => (e.currentTarget.style.borderColor = "var(--kipu-border)")}
+                      className="w-10 px-1 py-1.5 rounded-lg text-xs shrink-0 font-medium transition-colors focus:outline-none bg-superficie border border-borde text-texto focus:border-acento"
                     >
                       <option value="$">$</option>
                       <option value="%">%</option>
@@ -707,15 +689,7 @@ export default function ItemsEditor({ items, onChange }: Props) {
                             setScanForItemId(item._id);
                             setShowScanner(true);
                           }}
-                          className="px-1.5 rounded-lg transition-colors shrink-0 border border-borde text-sutil"
-                          onMouseEnter={e => {
-                            e.currentTarget.style.color = "var(--kipu-accent)";
-                            e.currentTarget.style.borderColor = "var(--kipu-accent)";
-                          }}
-                          onMouseLeave={e => {
-                            e.currentTarget.style.color = "var(--kipu-subtle)";
-                            e.currentTarget.style.borderColor = "var(--kipu-border)";
-                          }}
+                          className="px-1.5 rounded-lg transition-colors shrink-0 border border-borde text-sutil hover:text-acento hover:border-acento"
                           title="Escanear código"
                         >
                           <Camera size={13} />
