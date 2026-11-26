@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { detalleError } from "@/lib/errores";
 import { dolares } from "@/lib/dinero";
+import { enlaceWhatsAppA } from "@/lib/soporte";
 
 // "Facturar cuando el cliente pague": la factura ya armada espera el pago del link
 interface Cobro {
@@ -164,7 +165,7 @@ function CobrosContenido() {
       lista.push(
         { etiqueta: "Compartir link", descripcion: "Por WhatsApp, correo o donde quieras", icono: Share2, onClick: () => void compartirLink(url) },
         { etiqueta: "Enviar por WhatsApp", icono: MessageCircle,
-          onClick: () => void abrirExterno(`https://wa.me/?text=${encodeURIComponent(textoPago(url))}`) },
+          onClick: () => void abrirExterno(enlaceWhatsAppA(null, textoPago(url))) },
         { etiqueta: "Copiar link", icono: Copy, onClick: () => void copiar(url) },
       );
     }

@@ -8,6 +8,7 @@ import { ArrowLeft, Copy, FileText, KeyRound, Loader2, MessageCircle, Send, Uplo
 import api from "@/lib/api";
 import { caja, campo, Etiqueta, fecha, Vence, type Yo } from "../_comun";
 import { detalleError } from "@/lib/errores";
+import { enlaceWhatsAppA } from "@/lib/soporte";
 
 interface Gestion {
   id: number; tipo: string; nombre: string; estado: string; vencimiento: string; dias: number;
@@ -24,12 +25,6 @@ interface Detalle {
   accesos_clave: { accion: string; motivo: string; email: string | null; fecha: string }[];
 }
 interface Contador { id: string; nombre: string; activo: boolean }
-
-function waLink(numero: string | null) {
-  if (!numero) return null;
-  const n = numero.replace(/\D/g, "");
-  return `https://wa.me/${n.startsWith("0") ? "593" + n.slice(1) : n}`;
-}
 
 // ── Una declaración y sus acciones ────────────────────────────────────────────
 function FilaGestion({ g, emisorId, alCambiar }: { g: Gestion; emisorId: number; alCambiar: () => void }) {
@@ -331,7 +326,7 @@ export default function ClienteAlDiaPage() {
     );
   }
 
-  const wa = waLink(d.contacto?.whatsapp ?? null);
+  const wa = d.contacto?.whatsapp ? enlaceWhatsAppA(d.contacto.whatsapp) : null;
   const actual = d.asignaciones.find(a => !a.hasta);
 
   return (

@@ -5,6 +5,7 @@ import { type FacturaBase, PDF_FORMATOS, urlXml, urlPdf, urlConsulta } from "./u
 import { useAvisos } from "@/components/ui/Avisos";
 import type { Accion } from "@/components/ui/HojaAcciones";
 import { esNativo, guardarYCompartir, compartir, abrirExterno } from "@/lib/nativo";
+import { enlaceWhatsAppA } from "@/lib/soporte";
 
 // Estados que pueden generar PDF. Los anulados no: el servidor ya no los entrega (410)
 const ESTADOS_CON_PDF = ["AUTORIZADO", "FIRMADO", "RECIBIDA", "EN_REVISION"];
@@ -89,7 +90,7 @@ export function useAccionesArchivo(factura: FacturaBase) {
         .then(ok => { if (!ok) void copiarEnlace(); }),
     }]),
     { etiqueta: "Enviar por WhatsApp", descripcion: "Abre WhatsApp con el enlace listo", icono: MessageCircle,
-      onClick: () => void abrirExterno(`https://wa.me/?text=${encodeURIComponent(textoCliente)}`) },
+      onClick: () => void abrirExterno(enlaceWhatsAppA(null, textoCliente)) },
     { etiqueta: "Copiar enlace", descripcion: "Para enviar por cualquier medio", icono: Link2,
       onClick: () => void copiarEnlace() },
   ];

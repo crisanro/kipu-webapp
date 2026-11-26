@@ -16,7 +16,7 @@ import SelectorPeriodo, { periodoDisponible, type Periodo, type PreciosPlan } fr
 import { ES_APP_NATIVA } from "@/lib/plataforma";
 
 // Contacto de ventas (transferencia, cambio de plan): el mismo número configurado
-import { WHATSAPP_SOPORTE as SOPORTE_WA, enlaceWhatsAppAlDia } from "@/lib/soporte";
+import { enlaceWhatsAppAlDia, enlaceWhatsAppSoporte } from "@/lib/soporte";
 import { detalleError } from "@/lib/errores";
 
 interface Estado {
@@ -167,7 +167,7 @@ export default function KipuAlDiaPage() {
     ) : estado?.otra_suscripcion && !estado?.cambio_desde_pro ? (
       <div className="rounded-xl p-4 text-sm space-y-2" style={{ ...caja, color: "var(--kipu-muted)" }}>
         <p>Ya tienes {ES_APP_NATIVA ? "un plan activo" : "Kipu Pro activo"}. Escríbenos y te pasamos a Kipu Al Día sin perder lo que ya pagaste.</p>
-        <a href={`https://wa.me/${SOPORTE_WA}?text=${encodeURIComponent(`Hola, tengo ${ES_APP_NATIVA ? "un plan activo" : "Kipu Pro"} y quiero pasarme a Kipu Al Día.`)}`}
+        <a href={enlaceWhatsAppSoporte(`Hola, tengo ${ES_APP_NATIVA ? "un plan activo" : "Kipu Pro"} y quiero pasarme a Kipu Al Día.`)}
            target="_blank" rel="noopener noreferrer"
            className="inline-flex items-center gap-1.5 font-medium" style={{ color: "var(--kipu-accent)" }}>
           <MessageCircle size={14} /> Escribir por WhatsApp
@@ -261,7 +261,7 @@ export default function KipuAlDiaPage() {
         <p className="text-xs text-center" style={{ color: "var(--kipu-subtle)" }}>
           Pagas con tarjeta en Stripe. Te enviamos por correo una copia de los términos que aceptaste.
           ¿Prefieres transferencia?{" "}
-          <a href={`https://wa.me/${SOPORTE_WA}?text=${encodeURIComponent("Hola, quiero contratar Kipu Al Día pagando por transferencia.")}`}
+          <a href={enlaceWhatsAppSoporte("Hola, quiero contratar Kipu Al Día pagando por transferencia.")}
              target="_blank" rel="noopener noreferrer" className="underline" style={{ color: "var(--kipu-accent)" }}>
             Escríbenos
           </a>.

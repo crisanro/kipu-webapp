@@ -18,13 +18,11 @@ import TextoTerminos from "@/components/al-dia/TextoTerminos";
 import type { EstadoRenta } from "@/components/renta/OfertaRenta";
 
 // Contacto de ventas (transferencia, cambio de plan): el mismo número configurado
-import { WHATSAPP_SOPORTE as SOPORTE_WA } from "@/lib/soporte";
+import { enlaceWhatsAppSoporte } from "@/lib/soporte";
 import { detalleError } from "@/lib/errores";
 const caja = { background: "var(--kipu-surface)", border: "1px solid var(--kipu-border)" };
 
 interface Terminos { version: string; texto: string; hash: string }
-
-const whatsapp = (texto: string) => `https://wa.me/${SOPORTE_WA}?text=${encodeURIComponent(texto)}`;
 
 // ── Venta ────────────────────────────────────────────────────────────────────
 const PASOS = (anio: number) => [
@@ -334,7 +332,7 @@ export default function KipuRentaPage() {
             Mándanos lo que el SRI no tiene en electrónico: gastos personales con comprobante físico, retenciones en
             papel, ingresos que no facturaste y tus cargas familiares. Atendemos de lunes a viernes, de 8:00 a 17:00.
           </p>
-          <a href={whatsapp(`Hola, contraté Kipu Renta ${estado.anio} y les envío mis documentos.`)}
+          <a href={enlaceWhatsAppSoporte(`Hola, contraté Kipu Renta ${estado.anio} y les envío mis documentos.`)}
              target="_blank" rel="noopener noreferrer"
              className="inline-flex items-center gap-1.5 font-medium" style={{ color: "var(--kipu-accent)" }}>
             <MessageCircle size={14} /> Escribir por WhatsApp
@@ -413,7 +411,7 @@ export default function KipuRentaPage() {
         <p className="text-xs text-center" style={{ color: "var(--kipu-subtle)" }}>
           Pagas con tarjeta en Stripe. Te enviamos por correo la factura y una copia de los términos que aceptaste.
           ¿Prefieres transferencia?{" "}
-          <a href={whatsapp(`Hola, quiero contratar Kipu Renta ${estado.anio} pagando por transferencia.`)}
+          <a href={enlaceWhatsAppSoporte(`Hola, quiero contratar Kipu Renta ${estado.anio} pagando por transferencia.`)}
              target="_blank" rel="noopener noreferrer" className="underline" style={{ color: "var(--kipu-accent)" }}>
             Escríbenos
           </a>.
