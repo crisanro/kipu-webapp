@@ -52,19 +52,19 @@ export default function EquipoAlDiaPage() {
   const sinAsignar = clientes.filter(c => !c.contador).length;
 
   if (cargando) {
-    return <div className="flex justify-center py-24"><Loader2 size={22} className="animate-spin" style={{ color: "var(--kipu-subtle)" }} /></div>;
+    return <div className="flex justify-center py-24"><Loader2 size={22} className="animate-spin text-sutil" /></div>;
   }
 
   return (
     <div className="p-4 md:p-6 max-w-5xl mx-auto space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <CalendarCheck size={22} style={{ color: "var(--kipu-accent)" }} />
+          <CalendarCheck className="text-acento" size={22} />
           <div>
-            <h1 className="text-xl font-bold" style={{ color: "var(--kipu-text)" }}>Equipo Kipu Al Día</h1>
-            <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>
+            <h1 className="text-xl font-bold text-texto">Equipo Kipu Al Día</h1>
+            <p className="text-sm text-tenue">
               {yo?.es_superadmin ? "Todos los clientes" : `Tus clientes, ${yo?.nombre ?? ""}`} · {clientes.length} en total
-              {yo?.es_superadmin && sinAsignar > 0 && <span style={{ color: "var(--kipu-warning)" }}> · {sinAsignar} sin contador</span>}
+              {yo?.es_superadmin && sinAsignar > 0 && <span className="text-alerta"> · {sinAsignar} sin contador</span>}
             </p>
           </div>
         </div>
@@ -77,14 +77,13 @@ export default function EquipoAlDiaPage() {
       </div>
 
       {yo?.es_superadmin && yo.es_contador && (
-        <label className="flex items-center gap-2 text-sm" style={{ color: "var(--kipu-muted)" }}>
-          <input type="checkbox" checked={soloMios} onChange={e => setSoloMios(e.target.checked)}
-                 style={{ accentColor: "var(--kipu-accent)" }} />
+        <label className="flex items-center gap-2 text-sm text-tenue">
+          <input className="accent-acento" type="checkbox" checked={soloMios} onChange={e => setSoloMios(e.target.checked)} />
           Ver solo los que atiendo yo
         </label>
       )}
 
-      {error && <p className="text-sm" style={{ color: "var(--kipu-danger)" }}>{error}</p>}
+      {error && <p className="text-sm text-peligro">{error}</p>}
 
       {ordenados.length === 0 && !error && (
         <div className="rounded-xl p-8 text-center text-sm" style={{ ...caja, color: "var(--kipu-muted)" }}>
@@ -98,10 +97,10 @@ export default function EquipoAlDiaPage() {
                 className="block rounded-xl px-4 py-3 transition-colors" style={caja}>
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div className="min-w-0">
-                <p className="font-semibold text-sm truncate" style={{ color: "var(--kipu-text)" }}>{c.razon_social}</p>
-                <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+                <p className="font-semibold text-sm truncate text-texto">{c.razon_social}</p>
+                <p className="text-xs text-sutil">
                   RUC {c.ruc} · IVA {c.periodo_iva === "SEMESTRAL" ? "semestral" : "mensual"}
-                  {yo?.es_superadmin && <> · {c.contador ? c.contador.nombre : <span style={{ color: "var(--kipu-warning)" }}>sin contador</span>}</>}
+                  {yo?.es_superadmin && <> · {c.contador ? c.contador.nombre : <span className="text-alerta">sin contador</span>}</>}
                 </p>
               </div>
               <div className="flex flex-wrap gap-1.5">
@@ -117,9 +116,9 @@ export default function EquipoAlDiaPage() {
             </div>
             <div className="mt-2 space-y-1">
               {c.pendientes.length === 0
-                ? <p className="text-xs" style={{ color: "var(--kipu-success)" }}>Todo al día ✓</p>
+                ? <p className="text-xs text-exito">Todo al día ✓</p>
                 : c.pendientes.map(p => (
-                  <div key={p.id} className="flex flex-wrap items-center gap-2 text-sm" style={{ color: "var(--kipu-muted)" }}>
+                  <div key={p.id} className="flex flex-wrap items-center gap-2 text-sm text-tenue">
                     <span>{p.nombre}</span>
                     <Etiqueta estado={p.estado} />
                     <Vence dias={p.dias} estado={p.estado} />

@@ -77,19 +77,19 @@ function EstadoBadge({ estado }: { estado: string }) {
 function Dato({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex items-start justify-between gap-3 py-1.5">
-      <span className="text-xs shrink-0" style={{ color: "var(--kipu-subtle)" }}>{label}</span>
-      <span className="text-xs text-right break-all" style={{ color: "var(--kipu-text)" }}>{children}</span>
+      <span className="text-xs shrink-0 text-sutil">{label}</span>
+      <span className="text-xs text-right break-all text-texto">{children}</span>
     </div>
   );
 }
 
 function SiNo({ ok, si = "Sí", no = "No" }: { ok: boolean; si?: string; no?: string }) {
   return ok ? (
-    <span className="inline-flex items-center gap-1" style={{ color: "var(--kipu-success)" }}>
+    <span className="inline-flex items-center gap-1 text-exito">
       <CheckCircle2 size={12} /> {si}
     </span>
   ) : (
-    <span className="inline-flex items-center gap-1" style={{ color: "var(--kipu-danger)" }}>
+    <span className="inline-flex items-center gap-1 text-peligro">
       <XCircle size={12} /> {no}
     </span>
   );
@@ -280,23 +280,18 @@ export default function AdminSoportePage() {
       {/* Buscador */}
       <div className="rounded-xl p-4 space-y-3" style={cardStyle}>
         <div className="flex items-center gap-2">
-          <LifeBuoy size={16} style={{ color: "var(--kipu-accent)" }} />
-          <p className="text-sm font-medium" style={{ color: "var(--kipu-text)" }}>Buscar cuenta</p>
+          <LifeBuoy className="text-acento" size={16} />
+          <p className="text-sm font-medium text-texto">Buscar cuenta</p>
         </div>
         <div className="flex gap-2">
           <div className="relative flex-1">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--kipu-subtle)" }} />
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-sutil" />
             <input
               value={termino}
               onChange={(e) => setTermino(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") buscar(); }}
               placeholder="Correo completo, parte del correo o nombre"
-              className="w-full pl-9 pr-4 py-2.5 rounded-lg text-sm focus:outline-none transition-colors"
-              style={{
-                background: "var(--kipu-surface)",
-                border: "1px solid var(--kipu-border)",
-                color: "var(--kipu-text)",
-              }}
+              className="w-full pl-9 pr-4 py-2.5 rounded-lg text-sm focus:outline-none transition-colors bg-superficie border border-borde text-texto"
               onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
               onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
             />
@@ -322,28 +317,20 @@ export default function AdminSoportePage() {
       {/* Error */}
       {error && (
         <div
-          className="flex items-start gap-3 rounded-xl p-4"
-          style={{
-            background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
-            border:     "1px solid color-mix(in srgb, var(--kipu-danger) 40%, transparent)",
-          }}
+          className="flex items-start gap-3 rounded-xl p-4 bg-peligro-suave border border-peligro/40"
         >
-          <AlertTriangle size={16} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-danger)" }} />
-          <p className="text-xs break-all" style={{ color: "var(--kipu-text)" }}>{error}</p>
+          <AlertTriangle size={16} className="shrink-0 mt-0.5 text-peligro" />
+          <p className="text-xs break-all text-texto">{error}</p>
         </div>
       )}
 
       {/* Éxito */}
       {mensaje && (
         <div
-          className="flex items-start gap-3 rounded-xl p-4"
-          style={{
-            background: "color-mix(in srgb, var(--kipu-success) 10%, transparent)",
-            border:     "1px solid color-mix(in srgb, var(--kipu-success) 40%, transparent)",
-          }}
+          className="flex items-start gap-3 rounded-xl p-4 bg-exito/10 border border-exito/40"
         >
-          <CheckCircle2 size={16} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-success)" }} />
-          <p className="text-sm" style={{ color: "var(--kipu-text)" }}>{mensaje}</p>
+          <CheckCircle2 size={16} className="shrink-0 mt-0.5 text-exito" />
+          <p className="text-sm text-texto">{mensaje}</p>
         </div>
       )}
 
@@ -351,10 +338,9 @@ export default function AdminSoportePage() {
       {lista && (
         <div className="rounded-xl overflow-hidden" style={cardStyle}>
           <div
-            className="flex items-center justify-between px-4 py-2.5"
-            style={{ borderBottom: "1px solid var(--kipu-border)" }}
+            className="flex items-center justify-between px-4 py-2.5 border-b border-borde"
           >
-            <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+            <p className="text-xs text-sutil">
               {listaTotal} coincidencia{listaTotal === 1 ? "" : "s"}
               {listaTotal > lista.length && ` · mostrando ${lista.length}`}
             </p>
@@ -371,7 +357,7 @@ export default function AdminSoportePage() {
           </div>
 
           {lista.length === 0 ? (
-            <p className="text-sm text-center py-8" style={{ color: "var(--kipu-subtle)" }}>
+            <p className="text-sm text-center py-8 text-sutil">
               Sin coincidencias
             </p>
           ) : (
@@ -391,13 +377,13 @@ export default function AdminSoportePage() {
                   onMouseLeave={ev => { if (!activo) ev.currentTarget.style.background = "transparent"; }}
                 >
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-mono truncate" style={{ color: "var(--kipu-text)" }}>{r.email}</p>
-                    <p className="text-xs truncate" style={{ color: "var(--kipu-subtle)" }}>
+                    <p className="text-sm font-mono truncate text-texto">{r.email}</p>
+                    <p className="text-xs truncate text-sutil">
                       {r.nombre || "Sin nombre"} · {fmtFecha(r.creado)}
                     </p>
                   </div>
                   <EstadoBadge estado={r.estado} />
-                  <ChevronRight size={14} className="shrink-0" style={{ color: "var(--kipu-subtle)" }} />
+                  <ChevronRight size={14} className="shrink-0 text-sutil" />
                 </button>
               );
             })
@@ -411,10 +397,10 @@ export default function AdminSoportePage() {
           {/* Estado */}
           <div className="rounded-xl p-4" style={cardStyle}>
             <div className="flex items-center justify-between gap-3">
-              <p className="text-sm font-mono truncate" style={{ color: "var(--kipu-text)" }}>{resultado.email}</p>
+              <p className="text-sm font-mono truncate text-texto">{resultado.email}</p>
               <EstadoBadge estado={resultado.estado} />
             </div>
-            <p className="text-xs mt-2" style={{ color: "var(--kipu-subtle)" }}>
+            <p className="text-xs mt-2 text-sutil">
               {ESTADOS[resultado.estado]?.desc}
             </p>
           </div>
@@ -424,11 +410,11 @@ export default function AdminSoportePage() {
 
               {/* Firebase */}
               <div className="rounded-xl p-4" style={cardStyle}>
-                <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: "var(--kipu-subtle)" }}>
+                <p className="text-xs font-semibold uppercase tracking-wide mb-2 text-sutil">
                   Firebase
                 </p>
                 {fb ? (
-                  <div style={{ borderTop: "1px solid var(--kipu-border)" }} className="pt-1">
+                  <div className="pt-1 border-t border-borde">
                     <Dato label="Correo verificado"><SiNo ok={fb.email_verified} /></Dato>
                     <Dato label="Cuenta habilitada"><SiNo ok={!fb.disabled} /></Dato>
                     <Dato label="Proveedor">
@@ -441,25 +427,24 @@ export default function AdminSoportePage() {
                     <Dato label="UID"><span className="font-mono">{fb.uid}</span></Dato>
                   </div>
                 ) : (
-                  <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>No existe en Firebase.</p>
+                  <p className="text-xs text-sutil">No existe en Firebase.</p>
                 )}
               </div>
 
               {/* Kipu */}
               <div className="rounded-xl p-4" style={cardStyle}>
-                <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: "var(--kipu-subtle)" }}>
+                <p className="text-xs font-semibold uppercase tracking-wide mb-2 text-sutil">
                   Kipu
                 </p>
                 {profile ? (
-                  <div style={{ borderTop: "1px solid var(--kipu-border)" }} className="pt-1">
+                  <div className="pt-1 border-t border-borde">
                     <Dato label="Nombre">{profile.nombre || "—"}</Dato>
                     <Dato label="WhatsApp">
                       {profile.whatsapp_number ? (
-                        <a
+                        <a className="text-acento"
                           href={enlaceWhatsAppA(profile.whatsapp_number)}
                           target="_blank"
                           rel="noopener noreferrer"
-                          style={{ color: "var(--kipu-accent)" }}
                         >
                           {profile.whatsapp_number}
                         </a>
@@ -467,34 +452,32 @@ export default function AdminSoportePage() {
                     </Dato>
                     <Dato label="Perfil creado">{fmtFechaHora(profile.created_at)}</Dato>
                     <div className="pt-2 space-y-1">
-                      <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Empresas</span>
+                      <span className="text-xs text-sutil">Empresas</span>
                       {resultado.emisores?.length ? (
                         resultado.emisores.map((e: any) => (
                           <Link
                             key={e.emisor_id}
                             href={`/admin/emisores/${e.emisor_id}`}
-                            className="flex items-center gap-2 text-xs px-2 py-1.5 rounded-md"
-                            style={{ background: "color-mix(in srgb, var(--kipu-text) 6%, transparent)", color: "var(--kipu-text)" }}
+                            className="flex items-center gap-2 text-xs px-2 py-1.5 rounded-md bg-presionado text-texto"
                           >
-                            <Building2 size={12} style={{ color: "var(--kipu-subtle)" }} />
+                            <Building2 className="text-sutil" size={12} />
                             <span className="truncate flex-1">{e.nombre}</span>
-                            <span style={{ color: "var(--kipu-subtle)" }}>{e.rol}</span>
+                            <span className="text-sutil">{e.rol}</span>
                           </Link>
                         ))
                       ) : (
-                        <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Sin empresa</p>
+                        <p className="text-xs text-sutil">Sin empresa</p>
                       )}
                     </div>
                     <Link
                       href={`/admin/usuarios/${profile.id}`}
-                      className="inline-flex items-center gap-1 text-xs font-medium mt-3"
-                      style={{ color: "var(--kipu-accent)" }}
+                      className="inline-flex items-center gap-1 text-xs font-medium mt-3 text-acento"
                     >
                       Ver detalle del usuario <ExternalLink size={11} />
                     </Link>
                   </div>
                 ) : (
-                  <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+                  <p className="text-xs text-sutil">
                     No tiene perfil en Kipu todavía.
                   </p>
                 )}
@@ -505,7 +488,7 @@ export default function AdminSoportePage() {
           {/* Acciones */}
           {fb && (
             <div className="rounded-xl p-4 space-y-3" style={cardStyle}>
-              <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--kipu-subtle)" }}>
+              <p className="text-xs font-semibold uppercase tracking-wide text-sutil">
                 Acciones de soporte
               </p>
 
@@ -539,12 +522,7 @@ export default function AdminSoportePage() {
                     type="button"
                     onClick={() => setVerifOpen(v => !v)}
                     disabled={!!accion}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium"
-                    style={{
-                      background: "color-mix(in srgb, var(--kipu-warning) 15%, transparent)",
-                      border:     "1px solid color-mix(in srgb, var(--kipu-warning) 40%, transparent)",
-                      color:      "var(--kipu-warning)",
-                    }}
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium bg-alerta/15 border border-alerta/40 text-alerta"
                   >
                     <ShieldCheck size={13} />
                     Verificar manualmente
@@ -564,7 +542,7 @@ export default function AdminSoportePage() {
                 </button>
 
                 {!puedeVerif && !esPassword && !emailOpen && (
-                  <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+                  <p className="text-xs text-sutil">
                     Correo verificado y acceso con Google. No hay acciones de acceso pendientes.
                   </p>
                 )}
@@ -573,10 +551,9 @@ export default function AdminSoportePage() {
               {/* Verificación manual */}
               {verifOpen && (
                 <div
-                  className="rounded-lg p-3 space-y-2"
-                  style={{ border: "1px solid color-mix(in srgb, var(--kipu-warning) 40%, transparent)" }}
+                  className="rounded-lg p-3 space-y-2 border border-alerta/40"
                 >
-                  <p className="text-xs" style={{ color: "var(--kipu-text)" }}>
+                  <p className="text-xs text-texto">
                     Solo si confirmaste que la persona es dueña del correo (por llamada o WhatsApp).
                     Queda registrado en auditoría.
                   </p>
@@ -584,12 +561,7 @@ export default function AdminSoportePage() {
                     value={motivo}
                     onChange={(e) => setMotivo(e.target.value)}
                     placeholder="Motivo: ej. confirmado por WhatsApp, no le llega el correo"
-                    className="w-full px-3 py-2 rounded-lg text-xs focus:outline-none"
-                    style={{
-                      background: "var(--kipu-surface)",
-                      border: "1px solid var(--kipu-border)",
-                      color: "var(--kipu-text)",
-                    }}
+                    className="w-full px-3 py-2 rounded-lg text-xs focus:outline-none bg-superficie border border-borde text-texto"
                   />
                   <div className="flex gap-2 justify-end">
                     <button
@@ -619,10 +591,9 @@ export default function AdminSoportePage() {
               {/* Cambiar correo */}
               {emailOpen && (
                 <div
-                  className="rounded-lg p-3 space-y-2"
-                  style={{ border: "1px solid var(--kipu-border)" }}
+                  className="rounded-lg p-3 space-y-2 border border-borde"
                 >
-                  <p className="text-xs" style={{ color: "var(--kipu-text)" }}>
+                  <p className="text-xs text-texto">
                     Actualiza el correo en Firebase y en Kipu. El nuevo correo queda verificado automáticamente.
                     Queda registrado en auditoría.
                   </p>
@@ -631,8 +602,7 @@ export default function AdminSoportePage() {
                       <label className="text-[11px] mb-1 block" style={{ color: "var(--kipu-subtle)" }}>
                         Correo actual
                       </label>
-                      <p className="text-xs font-mono px-3 py-2 rounded-lg"
-                        style={{ background: "color-mix(in srgb, var(--kipu-text) 4%, transparent)", color: "var(--kipu-subtle)" }}>
+                      <p className="text-xs font-mono px-3 py-2 rounded-lg bg-texto/4 text-sutil">
                         {resultado.email}
                       </p>
                     </div>
@@ -645,12 +615,7 @@ export default function AdminSoportePage() {
                         onChange={(e) => setNuevoEmail(e.target.value)}
                         placeholder="nuevo@correo.com"
                         type="email"
-                        className="w-full px-3 py-2 rounded-lg text-xs focus:outline-none"
-                        style={{
-                          background: "var(--kipu-surface)",
-                          border: "1px solid var(--kipu-border)",
-                          color: "var(--kipu-text)",
-                        }}
+                        className="w-full px-3 py-2 rounded-lg text-xs focus:outline-none bg-superficie border border-borde text-texto"
                         onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
                         onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
                       />
@@ -663,12 +628,7 @@ export default function AdminSoportePage() {
                         value={emailMotivo}
                         onChange={(e) => setEmailMotivo(e.target.value)}
                         placeholder="Ej: cliente solicitó cambio por WhatsApp, correo anterior no tiene acceso"
-                        className="w-full px-3 py-2 rounded-lg text-xs focus:outline-none"
-                        style={{
-                          background: "var(--kipu-surface)",
-                          border: "1px solid var(--kipu-border)",
-                          color: "var(--kipu-text)",
-                        }}
+                        className="w-full px-3 py-2 rounded-lg text-xs focus:outline-none bg-superficie border border-borde text-texto"
                       />
                     </div>
                   </div>
@@ -708,12 +668,11 @@ export default function AdminSoportePage() {
               {/* Link generado — respaldo por WhatsApp */}
               {link && (
                 <div
-                  className="rounded-lg p-3 space-y-2"
-                  style={{ background: "color-mix(in srgb, var(--kipu-accent) 8%, transparent)" }}
+                  className="rounded-lg p-3 space-y-2 bg-acento/8"
                 >
-                  <p className="text-xs font-medium" style={{ color: "var(--kipu-text)" }}>
+                  <p className="text-xs font-medium text-texto">
                     {link.tipo === "verificacion" ? "Link de verificación" : "Link para restablecer contraseña"}
-                    <span className="font-normal" style={{ color: "var(--kipu-subtle)" }}>
+                    <span className="font-normal text-sutil">
                       {" "}· si no le llega el correo, mándalo por WhatsApp
                     </span>
                   </p>

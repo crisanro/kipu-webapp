@@ -77,23 +77,23 @@ function FilaGestion({ g, emisorId, horas, alCambiar }: {
   };
 
   return (
-    <div className="py-3 space-y-2" style={{ borderTop: "1px solid var(--kipu-border)" }}>
+    <div className="py-3 space-y-2 border-t border-borde">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-sm font-medium" style={{ color: "var(--kipu-text)" }}>{g.nombre}</span>
+        <span className="text-sm font-medium text-texto">{g.nombre}</span>
         <Etiqueta estado={g.estado} />
         <Vence dias={g.dias} estado={g.estado} />
-        <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>vence {fecha(g.vencimiento)}</span>
+        <span className="text-xs text-sutil">vence {fecha(g.vencimiento)}</span>
       </div>
 
       {g.resumen_enviado_at && g.estado !== "PRESENTADO" && (
-        <p className="text-xs" style={{ color: "var(--kipu-muted)" }}>
+        <p className="text-xs text-tenue">
           Resumen enviado el {new Date(g.resumen_enviado_at).toLocaleString("es-EC", { dateStyle: "short", timeStyle: "short" })}
           {g.valor_a_pagar !== null && ` · $${g.valor_a_pagar.toFixed(2)}`}
           {ahora - new Date(g.resumen_enviado_at).getTime() < horas * 36e5 && ` · espera ${horas} h antes de presentar`}
         </p>
       )}
       {g.estado === "PRESENTADO" && (
-        <p className="text-xs" style={{ color: "var(--kipu-muted)" }}>
+        <p className="text-xs text-tenue">
           Presentada el {fecha(g.presentado_at)}{g.contador && ` por ${g.contador}`}
           {g.valor_a_pagar !== null && ` · a pagar $${g.valor_a_pagar.toFixed(2)}`}
           {g.numero_formulario && ` · formulario ${g.numero_formulario}`}
@@ -108,7 +108,7 @@ function FilaGestion({ g, emisorId, horas, alCambiar }: {
               <Send size={13} /> {g.resumen_enviado_at ? "Reenviar resumen" : "Enviar resumen"}
             </button>
             <button type="button" onClick={() => setModo(modo === "presentar" ? "" : "presentar")}
-                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-white" style={{ background: "var(--kipu-accent)" }}>
+                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-white bg-acento">
               <Upload size={13} /> Marcar presentada
             </button>
             <button type="button" disabled={enviando}
@@ -119,7 +119,7 @@ function FilaGestion({ g, emisorId, horas, alCambiar }: {
                         textoConfirmar: "Marcar no pagó", peligro: true,
                       })) accion(() => api.post(`${base}/no-pagado`));
                     }}
-                    className="px-2.5 py-1.5 rounded-lg" style={{ color: "var(--kipu-danger)" }}>
+                    className="px-2.5 py-1.5 rounded-lg text-peligro">
               No pagó
             </button>
           </>
@@ -144,11 +144,11 @@ function FilaGestion({ g, emisorId, horas, alCambiar }: {
                     placeholder="Ej.: Ventas $1.200,00 · Compras con IVA $300,00 · Retenciones $12,00"
                     className="w-full text-sm bg-transparent focus:outline-none" />
           <div className="flex flex-wrap items-center gap-2">
-            <label className="text-xs" style={{ color: "var(--kipu-muted)" }}>Valor a pagar $</label>
+            <label className="text-xs text-tenue">Valor a pagar $</label>
             <input value={valor} onChange={e => setValor(e.target.value)} inputMode="decimal"
                    className="w-28 px-2 py-1.5 rounded text-sm" style={campo} />
             <button type="button" onClick={enviarResumen} disabled={enviando || resumen.trim().length < 5}
-                    className="px-3 py-1.5 rounded-lg text-white text-xs font-semibold disabled:opacity-50" style={{ background: "var(--kipu-accent)" }}>
+                    className="px-3 py-1.5 rounded-lg text-white text-xs font-semibold disabled:opacity-50 bg-acento">
               {enviando ? "Enviando..." : "Enviar por WhatsApp y correo"}
             </button>
           </div>
@@ -161,19 +161,19 @@ function FilaGestion({ g, emisorId, horas, alCambiar }: {
       {modo === "presentar" && (
         <div className="space-y-2 rounded-lg p-3" style={campo}>
           <div className="flex flex-wrap items-center gap-2">
-            <label className="text-xs" style={{ color: "var(--kipu-muted)" }}>Valor a pagar $</label>
+            <label className="text-xs text-tenue">Valor a pagar $</label>
             <input value={valor} onChange={e => setValor(e.target.value)} inputMode="decimal"
                    className="w-28 px-2 py-1.5 rounded text-sm" style={campo} />
-            <label className="text-xs" style={{ color: "var(--kipu-muted)" }}>N.º formulario</label>
+            <label className="text-xs text-tenue">N.º formulario</label>
             <input value={numero} onChange={e => setNumero(e.target.value)} inputMode="numeric" maxLength={40}
                    className="w-40 px-2 py-1.5 rounded text-sm" style={campo} />
           </div>
-          <label className="flex items-center gap-2 text-xs cursor-pointer" style={{ color: "var(--kipu-muted)" }}>
+          <label className="flex items-center gap-2 text-xs cursor-pointer text-tenue">
             <input type="file" accept="application/pdf" onChange={e => setPdf(e.target.files?.[0] ?? null)} className="text-xs" />
             Comprobante del SRI (PDF)
           </label>
           <button type="button" onClick={presentar} disabled={enviando}
-                  className="px-3 py-1.5 rounded-lg text-white text-xs font-semibold disabled:opacity-50" style={{ background: "var(--kipu-accent)" }}>
+                  className="px-3 py-1.5 rounded-lg text-white text-xs font-semibold disabled:opacity-50 bg-acento">
             {enviando ? "Guardando..." : "Guardar y avisar al cliente"}
           </button>
           <p className="text-[11px]" style={{ color: "var(--kipu-subtle)" }}>
@@ -181,7 +181,7 @@ function FilaGestion({ g, emisorId, horas, alCambiar }: {
           </p>
         </div>
       )}
-      {error && <p className="text-xs" style={{ color: "var(--kipu-danger)" }}>{error}</p>}
+      {error && <p className="text-xs text-peligro">{error}</p>}
     </div>
   );
 }
@@ -217,8 +217,7 @@ function VerClave({ emisorId, alVer }: { emisorId: number; alVer: () => void }) 
     return (
       <div className="flex flex-wrap items-center gap-2">
         <code className="px-2 py-1 rounded text-sm" style={campo}>{clave}</code>
-        <button type="button" onClick={() => copiar(clave)} className="inline-flex items-center gap-1 text-xs underline"
-                style={{ color: "var(--kipu-accent)" }}>
+        <button type="button" onClick={() => copiar(clave)} className="inline-flex items-center gap-1 text-xs underline text-acento">
           <Copy size={12} /> {copiado ? "Copiada" : "Copiar"}
         </button>
         <span className="text-[11px]" style={{ color: "var(--kipu-subtle)" }}>Se oculta en 1 minuto</span>
@@ -227,8 +226,7 @@ function VerClave({ emisorId, alVer }: { emisorId: number; alVer: () => void }) 
   }
   if (!abierto) {
     return (
-      <button type="button" onClick={() => setAbierto(true)} className="inline-flex items-center gap-1 text-sm underline"
-              style={{ color: "var(--kipu-accent)" }}>
+      <button type="button" onClick={() => setAbierto(true)} className="inline-flex items-center gap-1 text-sm underline text-acento">
         <KeyRound size={14} /> Ver clave
       </button>
     );
@@ -239,12 +237,12 @@ function VerClave({ emisorId, alVer }: { emisorId: number; alVer: () => void }) 
         <input value={motivo} onChange={e => setMotivo(e.target.value)} maxLength={300} autoFocus
                placeholder="¿Para qué? Ej.: IVA de octubre" className="flex-1 min-w-48 px-2 py-1.5 rounded text-sm" style={campo} />
         <button type="button" onClick={ver} disabled={motivo.trim().length < 5}
-                className="px-3 py-1.5 rounded-lg text-white text-xs font-semibold disabled:opacity-50" style={{ background: "var(--kipu-accent)" }}>
+                className="px-3 py-1.5 rounded-lg text-white text-xs font-semibold disabled:opacity-50 bg-acento">
           Ver
         </button>
       </div>
       <p className="text-[11px]" style={{ color: "var(--kipu-subtle)" }}>Queda registrado con tu nombre; el cliente lo ve.</p>
-      {error && <p className="text-xs" style={{ color: "var(--kipu-danger)" }}>{error}</p>}
+      {error && <p className="text-xs text-peligro">{error}</p>}
     </div>
   );
 }
@@ -285,10 +283,10 @@ function Asignar({ emisorId, alCambiar }: { emisorId: number; alCambiar: () => v
       <input value={motivo} onChange={e => setMotivo(e.target.value)} placeholder="Motivo (opcional)" maxLength={300}
              className="flex-1 min-w-40 px-2 py-1.5 rounded text-sm" style={campo} />
       <button type="button" onClick={asignar} disabled={!elegido}
-              className="px-3 py-1.5 rounded-lg text-white text-xs font-semibold disabled:opacity-50" style={{ background: "var(--kipu-accent)" }}>
+              className="px-3 py-1.5 rounded-lg text-white text-xs font-semibold disabled:opacity-50 bg-acento">
         Asignar
       </button>
-      {error && <p className="w-full text-xs" style={{ color: "var(--kipu-danger)" }}>{error}</p>}
+      {error && <p className="w-full text-xs text-peligro">{error}</p>}
     </div>
   );
 }
@@ -326,8 +324,8 @@ export default function ClienteAlDiaPage() {
   if (!d) {
     return (
       <div className="flex flex-col items-center gap-3 py-24">
-        {error ? <p className="text-sm" style={{ color: "var(--kipu-danger)" }}>{error}</p>
-               : <Loader2 size={22} className="animate-spin" style={{ color: "var(--kipu-subtle)" }} />}
+        {error ? <p className="text-sm text-peligro">{error}</p>
+               : <Loader2 size={22} className="animate-spin text-sutil" />}
       </div>
     );
   }
@@ -337,25 +335,24 @@ export default function ClienteAlDiaPage() {
 
   return (
     <div className="p-4 md:p-6 max-w-4xl mx-auto space-y-4">
-      <Link href="/equipo" className="inline-flex items-center gap-1 text-sm" style={{ color: "var(--kipu-muted)" }}>
+      <Link href="/equipo" className="inline-flex items-center gap-1 text-sm text-tenue">
         <ArrowLeft size={14} /> Clientes
       </Link>
 
       {/* Cliente */}
       <div className="rounded-xl p-5 space-y-2" style={caja}>
-        <h1 className="text-lg font-bold" style={{ color: "var(--kipu-text)" }}>{d.emisor.razon_social}</h1>
-        <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>
+        <h1 className="text-lg font-bold text-texto">{d.emisor.razon_social}</h1>
+        <p className="text-sm text-tenue">
           RUC {d.emisor.ruc} · IVA {d.emisor.periodo_iva === "SEMESTRAL" ? "semestral" : "mensual"}
           {d.emisor.regimen && ` · ${d.emisor.regimen}`}
         </p>
-        <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>
+        <p className="text-sm text-tenue">
           {d.contacto?.nombre ?? "—"} · {d.contacto?.email ?? "sin correo"}
           {wa && (
-            <> · <a href={wa} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 underline"
-                    style={{ color: "var(--kipu-accent)" }}><MessageCircle size={13} /> {d.contacto?.whatsapp}</a></>
+            <> · <a href={wa} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 underline text-acento"><MessageCircle size={13} /> {d.contacto?.whatsapp}</a></>
           )}
         </p>
-        <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+        <p className="text-xs text-sutil">
           Suscripción {d.suscripcion.estado.toLowerCase()} · pagado hasta {fecha(d.suscripcion.pagado_hasta)}
           {d.suscripcion.cancela && " · cancela al fin del período"}
         </p>
@@ -363,16 +360,16 @@ export default function ClienteAlDiaPage() {
 
       {/* Clave del SRI */}
       <div className="rounded-xl p-5 space-y-2" style={caja}>
-        <p className="font-semibold text-sm" style={{ color: "var(--kipu-text)" }}>Clave del SRI</p>
+        <p className="font-semibold text-sm text-texto">Clave del SRI</p>
         {d.clave_se_borra_el
-          ? <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>
+          ? <p className="text-sm text-tenue">
               El servicio terminó: la clave ya no se usa y se borra el {fecha(d.clave_se_borra_el)}, salvo que vuelva a contratar.
             </p>
           : d.clave_guardada_at
           ? <VerClave emisorId={emisorId} alVer={recargar} />
-          : <p className="text-sm" style={{ color: "var(--kipu-warning)" }}>El cliente todavía no la guarda (Kipu Al Día → Tu clave del SRI).</p>}
+          : <p className="text-sm text-alerta">El cliente todavía no la guarda (Kipu Al Día → Tu clave del SRI).</p>}
         {d.accesos_clave.length > 0 && (
-          <ul className="text-xs space-y-0.5 pt-1" style={{ color: "var(--kipu-subtle)" }}>
+          <ul className="text-xs space-y-0.5 pt-1 text-sutil">
             {d.accesos_clave.slice(0, 5).map((a, i) => (
               <li key={i}>{new Date(a.fecha).toLocaleString("es-EC", { dateStyle: "short", timeStyle: "short" })} · {a.accion} · {a.email ?? "sistema"} — {a.motivo}</li>
             ))}
@@ -382,9 +379,9 @@ export default function ClienteAlDiaPage() {
 
       {/* Declaraciones */}
       <div className="rounded-xl px-5 pt-4 pb-2" style={caja}>
-        <p className="font-semibold text-sm pb-2" style={{ color: "var(--kipu-text)" }}>Declaraciones</p>
+        <p className="font-semibold text-sm pb-2 text-texto">Declaraciones</p>
         {d.gestiones.length === 0
-          ? <p className="text-sm pb-3" style={{ color: "var(--kipu-muted)" }}>Nada que declarar por ahora.</p>
+          ? <p className="text-sm pb-3 text-tenue">Nada que declarar por ahora.</p>
           : d.gestiones.map(g => (
               <FilaGestion key={g.id} g={g} emisorId={emisorId} horas={d.horas_revision} alCambiar={recargar} />
             ))}
@@ -392,12 +389,12 @@ export default function ClienteAlDiaPage() {
 
       {/* Contador */}
       <div className="rounded-xl p-5 space-y-3" style={caja}>
-        <p className="font-semibold text-sm" style={{ color: "var(--kipu-text)" }}>
-          Contador: {actual ? actual.contador : <span style={{ color: "var(--kipu-warning)" }}>sin asignar</span>}
+        <p className="font-semibold text-sm text-texto">
+          Contador: {actual ? actual.contador : <span className="text-alerta">sin asignar</span>}
         </p>
         {yo?.es_superadmin && <Asignar emisorId={emisorId} alCambiar={recargar} />}
         {d.asignaciones.length > 0 && (
-          <ul className="text-xs space-y-0.5" style={{ color: "var(--kipu-subtle)" }}>
+          <ul className="text-xs space-y-0.5 text-sutil">
             {d.asignaciones.map((a, i) => (
               <li key={i}>
                 {a.contador}: {fecha(a.desde)} → {a.hasta ? fecha(a.hasta) : "hoy"}
