@@ -14,6 +14,7 @@ import ResumenImpositivo   from "../_components/ResumenImpositivo";
 import DocumentosIncluidos from "../_components/DocumentosIncluidos";
 import EstadoBadge         from "../_components/EstadoBadge";
 import { ES_APP_NATIVA } from "@/lib/plataforma";
+import { detalleError } from "@/lib/errores";
 
 const fmt  = (n: number = 0) =>
   n.toLocaleString("es-EC", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -206,7 +207,7 @@ function ReporteATS({ periodo }: { periodo: string }) {
         setDecl(null);
       }
     } catch (e: any) {
-      setError(e?.response?.data?.detail ?? "Error al cargar el ATS.");
+      setError(detalleError(e, "Error al cargar el ATS."));
     } finally {
       setLoading(false);
       setRegenerando(false);
@@ -226,7 +227,7 @@ function ReporteATS({ periodo }: { periodo: string }) {
       // Web: descarga; app: hoja de compartir para guardarlo o enviarlo (lib/nativo.ts)
       await guardarYCompartir({ url }, res.data?.nombre_zip ?? `ATS-${periodo}.zip`, { titulo: `ATS ${periodo}` });
     } catch (e: any) {
-      setError(e?.response?.data?.detail ?? "No se pudo generar el archivo del ATS.");
+      setError(detalleError(e, "No se pudo generar el archivo del ATS."));
     } finally {
       setDescargando(false);
     }

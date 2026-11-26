@@ -20,8 +20,13 @@ import { useAuthStore } from "@/store/auth.store";
 export const EVENTO_SELECTOR_EMPRESA = "kipu:abrir-selector-empresa";
 export const EVENTO_CERRAR_SESION    = "kipu:abrir-cerrar-sesion";
 
-// Pestañas: sin flecha atrás
-const RAICES = ["/dashboard", "/documentos", "/documentos/recibidos", "/personas", "/productos", "/mas"];
+/**
+ * Pantallas de las pestañas de abajo: sin flecha atrás. El botón atrás de
+ * Android usa la misma lista (components/shell/PuenteNativo.tsx): desde aquí va
+ * a Inicio, y desde Inicio minimiza la app.
+ */
+export const PANTALLAS_PESTANA = ["/dashboard", "/documentos", "/documentos/recibidos", "/personas", "/productos", "/mas"];
+const RAICES = PANTALLAS_PESTANA;
 
 // Título por ruta: gana el prefijo más largo
 const TITULOS: Record<string, string> = {

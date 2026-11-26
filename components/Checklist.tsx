@@ -15,6 +15,7 @@ import { useSandboxStore } from "@/store/sandbox.store";
 import { usePermiso } from "@/hooks/usePermiso";
 import Hoja from "@/components/ui/Hoja";
 import Boton from "@/components/ui/Boton";
+import { detalleError } from "@/lib/errores";
 
 export interface HealthData {
   email_verificado:              boolean;
@@ -94,7 +95,7 @@ export default function Checklist({ health, compact = false, onUpdate }: Props) 
       onUpdate?.();
       void refrescarEmpresaActual();   // la barra lateral deja de decir "Sin firma"
     } catch (err: any) {
-      setFirmaError(err?.response?.data?.detail ?? "Error al subir la firma.");
+      setFirmaError(detalleError(err, "Error al subir la firma."));
     } finally {
       setFirmaUploading(false);
     }

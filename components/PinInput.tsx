@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import api from "@/lib/api";
 import { Mail, CheckCircle2, RefreshCw } from "lucide-react";
+import { detalleError } from "@/lib/errores";
 
 interface Props {
   tipoAccion:  string;
@@ -52,7 +53,7 @@ export default function PinInput({ tipoAccion, email, onConfirmar, onCancelar, l
       iniciarCountdown();
       setTimeout(() => inputRef.current?.focus(), 100);
     } catch (err: any) {
-      const msg = err?.response?.data?.detail ?? "Error al enviar el PIN.";
+      const msg = detalleError(err, "Error al enviar el PIN.");
       if (err?.response?.status === 429) {
         setEnviado(true);  // Ya hay un PIN activo, dejar ingresar
         iniciarCountdown();
@@ -75,7 +76,7 @@ export default function PinInput({ tipoAccion, email, onConfirmar, onCancelar, l
     try {
       await onConfirmar(pin);
     } catch (err: any) {
-      setError(err?.response?.data?.detail ?? "PIN incorrecto o expirado.");
+      setError(detalleError(err, "PIN incorrecto o expirado."));
       setPin("");
     } finally {
       setConfirmando(false);

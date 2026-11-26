@@ -14,6 +14,7 @@ import {
   Zap, Building2, CheckCircle2, Search, Loader2, MessageCircle, ShieldCheck, Upload, FileKey,
 } from "lucide-react";
 import { consultarRuc } from "@/lib/consultar-ruc";
+import { validarIdentificacion } from "@/lib/identificacion";
 import { enlaceWhatsAppFalla } from "@/lib/soporte";
 import Turnstile, { TURNSTILE_ACTIVO } from "@/components/auth/Turnstile";
 import Boton from "@/components/ui/Boton";
@@ -37,23 +38,10 @@ const limpiarTexto = (texto: string): string => {
     .trimStart();
 };
 
+// La misma validación de Nueva empresa y del selector de clientes (lib/identificacion.ts)
 const validarRuc = (ruc: string): string | null => {
-  if (ruc.length !== 13) return "El RUC debe tener 13 dígitos.";
-  if (!ruc.endsWith("001")) return "El RUC debe terminar en 001.";
-  if (!/^\d+$/.test(ruc)) return "El RUC solo debe contener números.";
-  const provincia = parseInt(ruc.substring(0, 2));
-  if ((provincia < 1 || provincia > 24) && provincia !== 30) return "Provincia inválida.";
-  const tercero = parseInt(ruc[2]);
-  if (tercero < 6) {
-    const coef = [2, 1, 2, 1, 2, 1, 2, 1, 2];
-    const suma = ruc.slice(0, 9).split("").reduce((acc, d, i) => {
-      const p = parseInt(d) * coef[i];
-      return acc + (p >= 10 ? p - 9 : p);
-    }, 0);
-    const verificador = suma % 10 === 0 ? 0 : 10 - (suma % 10);
-    if (verificador !== parseInt(ruc[9])) return "El número de cédula del RUC es inválido.";
-  }
-  return null;
+  const v = validarIdentificacion("04", ruc);
+  return v.ok ? null : (v.error || "El RUC debe tener 13 dígitos.");
 };
 
 type FormEmpresa = {

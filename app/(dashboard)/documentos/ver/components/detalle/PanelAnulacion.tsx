@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import api from "@/lib/api";
 import { type FacturaBase, formatearFecha, SRI_EN_LINEA_URL, MOTIVO_LABEL } from "./utils";
+import { detalleError } from "@/lib/errores";
 
 // Tiempo mínimo entre consultas al SRI por documento
 const COOLDOWN_SEG = 60;
@@ -156,7 +157,7 @@ export default function PanelAnulacion({ factura, onRecargar }: { factura: Factu
         setTimeout(() => onRecargar(), 1800);
       }
     } catch (err: any) {
-      setError(err?.response?.data?.detail ?? "No se pudo verificar la anulación con el SRI.");
+      setError(detalleError(err, "No se pudo verificar la anulación con el SRI."));
     } finally {
       setEnviando(null);
     }
@@ -197,7 +198,7 @@ export default function PanelAnulacion({ factura, onRecargar }: { factura: Factu
         iniciarCooldown(retry);
         setInfoMsg(`⏳ Debes esperar ${Math.min(retry, COOLDOWN_SEG)} s antes de volver a consultar.`);
       } else {
-        setError(err?.response?.data?.detail ?? "No se pudo consultar el estado con el SRI.");
+        setError(detalleError(err, "No se pudo consultar el estado con el SRI."));
       }
     } finally {
       setEnviando(null);

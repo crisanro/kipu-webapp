@@ -18,13 +18,15 @@ import { useSWRConfig } from "swr";
 import { Capacitor, SystemBars, SystemBarsStyle, type PluginListenerHandle } from "@capacitor/core";
 import { cerrarCapaSuperior } from "@/lib/botonAtras";
 import { abrirExterno, ocultarSplash } from "@/lib/nativo";
+import { PANTALLAS_PESTANA } from "@/components/shell/BarraSuperior";
 import { esRutaSoloWeb } from "@/lib/plataforma";
 
 const INICIO = "/dashboard";
 // Desde aquí, atrás sale de la app (la minimiza, como cualquier app de Android)
 const RAICES = ["/dashboard", "/login", "/", "/bienvenida", "/onboarding"];
-// Pestañas de abajo: atrás vuelve a Inicio
-const PESTANAS = ["/documentos", "/personas", "/mas"];
+// Pestañas de abajo: atrás vuelve a Inicio (la misma lista que la barra superior;
+// antes faltaban Recibidos y Productos, donde atrás retrocedía en el historial)
+const PESTANAS = PANTALLAS_PESTANA.filter(r => r !== INICIO);
 
 const SPLASH_MAXIMO_MS = 8000;
 

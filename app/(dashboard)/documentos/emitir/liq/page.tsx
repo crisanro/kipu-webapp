@@ -140,7 +140,8 @@ export default function NuevaLiqPage() {
       setError("Todos los ítems deben tener descripción."); return;
     }
 
-    const totalCubierto = pagos.reduce((s, p) => s + (p.total ?? 0), 0);
+    // Redondeado: 1.10 + 2.20 en coma flotante da 3.3000000000000003 > 3.30
+    const totalCubierto = r2(pagos.reduce((s, p) => s + (p.total ?? 0), 0));
     if (totalCubierto > totales.total) {
       setError(`Los pagos ($${fmt(totalCubierto)}) superan el total ($${fmt(totales.total)}).`); return;
     }

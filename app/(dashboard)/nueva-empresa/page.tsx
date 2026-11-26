@@ -6,6 +6,9 @@ import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
 import { ArrowLeft, Building2, CheckCircle2, Search, Loader2 } from "lucide-react";
 import { consultarRuc } from "@/lib/consultar-ruc";
+import { validarIdentificacion } from "@/lib/identificacion";
+import { detalleError } from "@/lib/errores";
+import { aEmpresa } from "@/lib/empresa";
 import Turnstile, { TURNSTILE_ACTIVO } from "@/components/auth/Turnstile";
 
 const limpiarTexto = (texto: string) =>
@@ -14,13 +17,10 @@ const limpiarTexto = (texto: string) =>
     .replace(/[^A-Z0-9\s\.\,\-\/\#\&]/g, "")
     .replace(/\s+/g, " ").trimStart();
 
+// La misma validación del onboarding y del selector de clientes (lib/identificacion.ts)
 const validarRuc = (ruc: string): string | null => {
-  if (ruc.length !== 13) return "El RUC debe tener 13 dígitos.";
-  if (!ruc.endsWith("001")) return "El RUC debe terminar en 001.";
-  if (!/^\d+$/.test(ruc)) return "El RUC solo debe contener números.";
-  const provincia = parseInt(ruc.substring(0, 2));
-  if (provincia < 1 || provincia > 24) return "Provincia inválida.";
-  return null;
+  const v = validarIdentificacion("04", ruc);
+  return v.ok ? null : (v.error || "El RUC debe tener 13 dígitos.");
 };
 
 const PASOS = ["Datos", "Confirmar"];
@@ -107,33 +107,21 @@ export default function NuevaEmpresaPage() {
     setLoading(true);
     try {
       const res = await api.post("/api/v1/app/emisor/onboarding", { ...form, captcha_token: captcha });
-      const nuevaEmpresa = {
-        id:                     res.data.emisor_id,
-        ruc:                    form.ruc,
-        razon_social:           form.razon_social.toUpperCase(),
-        nombre_comercial:       form.nombre_comercial.toUpperCase() || "",
-        ambiente:               1,
-        rol:                    "admin",
-        permisos:               {},
-        balance_emision:        10,
-        balance_recepcion:      0,
-        firma_ok:               false,
-        tipo_emisor:            "NAT",
-        suscripcion_activa:     true,
-        suscripcion: {
-          plan:   "gratis",
-          estado: "activo",
-          activa: true,
-        },
-        balance_api:            0,
-        obligado_contabilidad: null,
-        periodo_iva:            null,
-      };
-      addEmpresa(nuevaEmpresa);
+      // La empresa tal como la dejó el backend (plan, permisos, saldo): antes se
+      // armaba aquí con suscripcion_activa: true hasta la siguiente carga
+      const lista = await api.get("/api/v1/app/usuarios/empresas").catch(() => null);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const fila = lista?.data?.data?.find((e: any) => e.id === res.data.emisor_id);
       setSuccess(true);
-      setTimeout(() => router.replace("/dashboard"), 2000);
-    } catch (err: any) {
-      setError(err?.response?.data?.detail ?? "Error al registrar la empresa.");
+      if (fila) {
+        addEmpresa(aEmpresa(fila));
+        setTimeout(() => router.replace("/dashboard"), 2000);
+      } else {
+        // Sin la lista: carga completa, que lee las empresas del servidor
+        setTimeout(() => window.location.replace("/dashboard"), 2000);
+      }
+    } catch (err: unknown) {
+      setError(detalleError(err, "No pudimos registrar la empresa. Intenta de nuevo."));
       // Cada verificación sirve una sola vez: para reintentar hace falta otra
       setCaptcha(null);
       setIntentoCaptcha(n => n + 1);

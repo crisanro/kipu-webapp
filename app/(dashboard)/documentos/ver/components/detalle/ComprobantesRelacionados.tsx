@@ -1,7 +1,8 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { Copy, FileMinus, FilePlus, Info, Lock, Receipt } from "lucide-react";
-import { type FacturaBase, normalizarTarifa } from "./utils";
+import type { FacturaBase } from "./utils";
+import { tipoIvaDesdeXml } from "@/lib/iva";
 import type { Accion } from "@/components/ui/HojaAcciones";
 import { useAuthStore } from "@/store/auth.store";
 import { rutaFueraDelPlan } from "@/lib/plataforma";
@@ -69,9 +70,6 @@ export function useAccionesRelacionadas(factura: FacturaBase, consumidorFinal: b
           },
           esConsumidorFinal: idComp === "9999999999999",
           items: detalles.map((d: any) => {
-            const imp    = d.impuestos?.impuesto;
-            const impArr = Array.isArray(imp) ? imp : [imp];
-            const tarifa = impArr[0]?.tarifa ?? "15";
             return {
               // La NC trae codigoInterno; FAC y LIQ, codigoPrincipal
               codigo:          esNc ? (d.codigoInterno || "") : d.codigoPrincipal !== "S/C" ? d.codigoPrincipal : "",
@@ -80,7 +78,7 @@ export function useAccionesRelacionadas(factura: FacturaBase, consumidorFinal: b
               precio:          parseFloat(d.precioUnitario),
               descuento:       parseFloat(d.descuento || 0),
               tipo_descuento:  "$",
-              tipo_iva:        normalizarTarifa(tarifa),
+              tipo_iva:        tipoIvaDesdeXml(d.impuestos?.impuesto),
               unidad:          "UNIDAD",
             };
           }),

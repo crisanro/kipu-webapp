@@ -1,4 +1,5 @@
 "use client";
+import { detalleError } from "@/lib/errores";
 import { rutas } from "@/lib/rutas";
 import { useState, useEffect, useRef, Suspense } from "react";
 import { useAtajos } from "@/lib/useAtajos";
@@ -188,12 +189,7 @@ function CuentasContent() {
         setShowModal(false);
         resetModal();
     } catch (err: any) {
-        const detail = err?.response?.data?.detail;
-        if (Array.isArray(detail)) {
-        setError(detail.map((e: any) => e.mensaje ?? e.msg ?? JSON.stringify(e)).join(", "));
-        } else {
-        setError(detail ?? "Error al guardar.");
-        }
+        setError(detalleError(err, "Error al guardar."));
     } finally {
         setSaving(false);
     }

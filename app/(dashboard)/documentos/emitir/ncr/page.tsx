@@ -4,6 +4,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { r2 } from "@/lib/dinero";
+import { tipoIvaDesdeXml } from "@/lib/iva";
 import { useSearchParams } from "next/navigation";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
@@ -144,7 +145,7 @@ export default function NuevaNcrPage() {
             precio:         parseFloat(det.precioUnitario) || 0,
             descuento:      parseFloat(det.descuento) || 0,
             tipo_descuento: "$" as "$",
-            tipo_iva:       _detectarTipoIva(det),
+            tipo_iva:       tipoIvaDesdeXml(det.impuestos?.impuesto),
             unidad:         det.unidadMedida || "UNIDAD",
           })));
         }
@@ -309,17 +310,4 @@ export default function NuevaNcrPage() {
       <CamposAdicionales campos={camposAdicionales} onChange={setCamposAdicionales} />
     </EmisionLayout>
   );
-}
-
-// Helper para detectar tipo IVA desde el XML del detalle
-function _detectarTipoIva(det: any): string {
-  const impuestos = det.impuestos?.impuesto;
-  if (!impuestos) return "15";
-  const arr = Array.isArray(impuestos) ? impuestos : [impuestos];
-  const iva  = arr.find((i: any) => String(i.codigo) === "2");
-  if (!iva) return "0";
-  const tarifa = String(iva.tarifa || "15");
-  if (tarifa === "0") return "0";
-  if (tarifa === "5") return "5";
-  return "15";
 }

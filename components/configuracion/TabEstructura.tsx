@@ -7,6 +7,7 @@ import api from "@/lib/api";
 import {
   Plus, Save, Power, Pencil, AlertTriangle
 } from "lucide-react";
+import { detalleError } from "@/lib/errores";
 
 interface Props {
   estructura:   any[];
@@ -87,7 +88,7 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
       invalidarEstructuraLocal(); cerrar();
       setEstabForm({ codigo: "001", nombre_comercial: "", direccion: "" });
     } catch (e: any) {
-      setError(e?.response?.data?.detail ?? "Error al crear.");
+      setError(detalleError(e, "Error al crear."));
     } finally { setSaving(false); }
   };
 
@@ -98,7 +99,7 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
       await api.put(`/api/v1/app/estructura/establecimientos/${estabId}`, editEstab);
       invalidarEstructuraLocal(); cerrar();
     } catch (e: any) {
-      setError(e?.response?.data?.detail ?? "Error al actualizar.");
+      setError(detalleError(e, "Error al actualizar."));
     } finally { setSaving(false); }
   };
 
@@ -109,7 +110,7 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
       await api.post("/api/v1/app/estructura/puntos-emision", puntoForm);
       invalidarEstructuraLocal(); cerrar();
     } catch (e: any) {
-      setError(e?.response?.data?.detail ?? "Error al crear.");
+      setError(detalleError(e, "Error al crear."));
     } finally { setSaving(false); }
   };
 
@@ -120,7 +121,7 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
       await api.put(`/api/v1/app/estructura/puntos-emision/${puntoId}`, editPunto);
       invalidarEstructuraLocal(); cerrar();
     } catch (e: any) {
-      setError(e?.response?.data?.detail ?? "Error al actualizar.");
+      setError(detalleError(e, "Error al actualizar."));
     } finally { setSaving(false); }
   };
 
@@ -131,7 +132,7 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
       await api.put(`/api/v1/app/estructura/establecimientos/${estabId}`, { is_active: !activo });
       invalidarEstructuraLocal();
     } catch (e: any) {
-      avisos.error(e?.response?.data?.detail ?? "No se pudo cambiar el establecimiento.");
+      avisos.error(detalleError(e, "No se pudo cambiar el establecimiento."));
     } finally { setToggling(null); }
   };
 
@@ -141,7 +142,7 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
       await api.put(`/api/v1/app/estructura/puntos-emision/${puntoId}`, { is_active: !activo });
       invalidarEstructuraLocal();
     } catch (e: any) {
-      avisos.error(e?.response?.data?.detail ?? "No se pudo cambiar el punto de emisión.");
+      avisos.error(detalleError(e, "No se pudo cambiar el punto de emisión."));
     } finally { setToggling(null); }
   };
 
@@ -812,7 +813,7 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
                   );
                   invalidarEstructuraLocal(); cerrar();
                 } catch (e: any) {
-                  setError(e?.response?.data?.detail ?? "Error al actualizar secuenciales.");
+                  setError(detalleError(e, "Error al actualizar secuenciales."));
                 } finally { setSaving(false); }
               }}
               disabled={saving}

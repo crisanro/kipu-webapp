@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 import { ArrowLeft, Bell, Send, CheckCircle2, Users, User } from "lucide-react";
+import { detalleError } from "@/lib/errores";
 
 const TIPOS = [
   { value: "SISTEMA",     label: "Sistema",     color: "var(--kipu-info)", bg: "color-mix(in srgb, var(--kipu-info) 10%, transparent)" },
@@ -54,7 +55,7 @@ export default function AdminNotificacionesPage() {
         router.replace("/dashboard");
         return;
       }
-      setError(e?.response?.data?.detail ?? "Error al enviar notificación.");
+      setError(detalleError(e, "Error al enviar notificación."));
     } finally {
       setEnviando(false);
     }

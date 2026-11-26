@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import ReporteCard from "./_components/ReporteCard";
 import { EstadoReporte } from "./_components/EstadoBadge";
+import { detalleError } from "@/lib/errores";
 
 type Tab = "IVA" | "RENTA" | "ATS";
 
@@ -237,7 +238,7 @@ export default function ReportesPage() {
       setMotivo(resDecl.data.aplica === false ? resDecl.data.motivo ?? null : null);
       setReportes(resRep.data.data ?? []);
     } catch (e: any) {
-      setError(e?.response?.data?.detail ?? "No se pudieron cargar las declaraciones.");
+      setError(detalleError(e, "No se pudieron cargar las declaraciones."));
     } finally {
       setLoading(false);
     }

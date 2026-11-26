@@ -89,7 +89,8 @@ export default function PagosMixtos({
     : FORMAS_PAGO;
 
   // Calcular saldo cubierto y restante
-  const totalCubierto = pagos.reduce((s, p) => s + (p.total ?? 0), 0);
+  // Redondeado: 1.10 + 2.20 en coma flotante da 3.3000000000000003 > 3.30
+  const totalCubierto = r2(pagos.reduce((s, p) => s + (p.total ?? 0), 0));
   const saldoRestante = r2(totalFactura - totalCubierto);
 
   const editPago = (id: string, field: keyof PagoItem, value: any) => {
