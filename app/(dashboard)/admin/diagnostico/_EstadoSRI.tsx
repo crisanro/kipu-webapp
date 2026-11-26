@@ -79,11 +79,11 @@ function Workers({ w }: { w: NonNullable<Datos["workers"]> }) {
         + `, ${aparte.reduce((n, v) => n + v.en_curso, 0)} documentos en curso)`
       : "Sin contenedor worker: lo procesa la API";
   return (
-    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs mb-3" style={{ color: "var(--kipu-text)" }}>
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs mb-3 text-texto">
       <span className="w-2 h-2 rounded-full shrink-0" style={{ background: color }} />
       <span>{texto}</span>
       {w.en_api && (
-        <span style={{ color: "var(--kipu-subtle)" }}>
+        <span className="text-sutil">
           · la API también procesa ({enApi.length} proceso{enApi.length === 1 ? "" : "s"}, WORKERS_EN_API=true)
         </span>
       )}
@@ -141,13 +141,12 @@ export default function EstadoSRI() {
 
   return (
     <div
-      className="rounded-xl p-4"
-      style={{ background: "var(--kipu-surface)", border: "1px solid var(--kipu-border)" }}
+      className="rounded-xl p-4 bg-superficie border border-borde"
     >
       <div className="flex items-center justify-between gap-2 mb-3">
         <div className="flex items-center gap-2 min-w-0">
-          <Radio size={16} style={{ color: "var(--kipu-accent)" }} />
-          <p className="text-sm font-medium" style={{ color: "var(--kipu-text)" }}>Estado del SRI</p>
+          <Radio className="text-acento" size={16} />
+          <p className="text-sm font-medium text-texto">Estado del SRI</p>
           {datos && !datos.detector_activo && (
             <span
               className="text-[10px] px-1.5 py-0.5 rounded"
@@ -169,13 +168,13 @@ export default function EstadoSRI() {
       </div>
 
       {error && (
-        <p className="text-xs mb-2" style={{ color: "var(--kipu-danger)" }}>{error}</p>
+        <p className="text-xs mb-2 text-peligro">{error}</p>
       )}
 
       {!datos ? (
         cargando && (
           <div className="flex justify-center py-6">
-            <Loader2 size={18} className="animate-spin" style={{ color: "var(--kipu-accent)" }} />
+            <Loader2 size={18} className="animate-spin text-acento" />
           </div>
         )
       ) : (
@@ -185,21 +184,20 @@ export default function EstadoSRI() {
             {AMBIENTES.map((amb) => (
               <div
                 key={amb.id}
-                className="rounded-lg p-3"
-                style={{ border: "1px solid var(--kipu-border)" }}
+                className="rounded-lg p-3 border border-borde"
               >
-                <p className="text-xs font-medium mb-2" style={{ color: "var(--kipu-text)" }}>{amb.nombre}</p>
+                <p className="text-xs font-medium mb-2 text-texto">{amb.nombre}</p>
                 {SERVICIOS.map((serv) => {
                   const s = estadoDe(amb.id, serv.id);
                   const e = ESTADO[s?.estado ?? "NORMAL"] ?? ESTADO.NORMAL;
                   return (
                     <div key={serv.id} className="flex items-center justify-between gap-2 py-1">
-                      <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>{serv.nombre}</span>
-                      <span className="inline-flex items-center gap-1.5 text-xs text-right" style={{ color: "var(--kipu-text)" }}>
+                      <span className="text-xs text-sutil">{serv.nombre}</span>
+                      <span className="inline-flex items-center gap-1.5 text-xs text-right text-texto">
                         <span className="w-2 h-2 rounded-full shrink-0" style={{ background: e.color }} />
                         {e.texto}
                         {s?.estado && s.estado !== "NORMAL" && s.desde && (
-                          <span style={{ color: "var(--kipu-subtle)" }}>· desde {desde(s.desde)}</span>
+                          <span className="text-sutil">· desde {desde(s.desde)}</span>
                         )}
                       </span>
                     </div>

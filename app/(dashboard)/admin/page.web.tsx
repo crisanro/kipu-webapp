@@ -123,9 +123,9 @@ export default function AdminPage() {
                 >
                   <Icon size={16} style={{ color }} />
                 </div>
-                <p className="text-2xl font-bold" style={{ color: "var(--kipu-text)" }}>{value}</p>
-                <p className="text-xs mt-0.5" style={{ color: "var(--kipu-subtle)" }}>{label}</p>
-                <p className="text-xs mt-0.5" style={{ color: "var(--kipu-subtle)" }}>{sub}</p>
+                <p className="text-2xl font-bold text-texto">{value}</p>
+                <p className="text-xs mt-0.5 text-sutil">{label}</p>
+                <p className="text-xs mt-0.5 text-sutil">{sub}</p>
               </>
             );
             const cardStyle = {
@@ -158,17 +158,12 @@ export default function AdminPage() {
         {/* Búsqueda + tabs */}
         <div className="flex flex-col md:flex-row gap-3">
           <div className="relative flex-1">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--kipu-subtle)" }} />
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-sutil" />
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Buscar por RUC, nombre..."
-              className="w-full pl-9 pr-4 py-2.5 rounded-lg text-sm focus:outline-none transition-colors"
-              style={{
-                background: "var(--kipu-surface)",
-                border: "1px solid var(--kipu-border)",
-                color: "var(--kipu-text)",
-              }}
+              className="w-full pl-9 pr-4 py-2.5 rounded-lg text-sm focus:outline-none transition-colors bg-superficie border border-borde text-texto"
               onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
               onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
             />
@@ -214,21 +209,13 @@ export default function AdminPage() {
 
         {/* Tabla emisores */}
         <div
-          className="rounded-xl overflow-hidden"
-          style={{
-            background: "var(--kipu-surface)",
-            border: "1px solid var(--kipu-border)",
-          }}
+          className="rounded-xl overflow-hidden bg-superficie border border-borde"
         >
           <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr
-                  className="text-xs"
-                  style={{
-                    borderBottom: "1px solid var(--kipu-border)",
-                    color: "var(--kipu-subtle)",
-                  }}
+                  className="text-xs border-b border-borde text-sutil"
                 >
                   <th className="text-left px-4 py-3 font-medium">Emisor</th>
                   <th className="text-left px-4 py-3 font-medium">Ambiente</th>
@@ -238,7 +225,7 @@ export default function AdminPage() {
                   <th className="text-right px-4 py-3 font-medium"></th>
                 </tr>
               </thead>
-              <tbody style={{ borderTop: "1px solid var(--kipu-border)" }}>
+              <tbody className="border-t border-borde">
                 {filtrados.map((e, idx) => (
                   <tr
                     key={e.id}
@@ -248,10 +235,10 @@ export default function AdminPage() {
                     onMouseLeave={ev => ev.currentTarget.style.background = "transparent"}
                   >
                     <td className="px-4 py-3">
-                      <p className="font-medium truncate max-w-[200px]" style={{ color: "var(--kipu-text)" }}>
+                      <p className="font-medium truncate max-w-[200px] text-texto">
                         {e.nombre_comercial || e.razon_social}
                       </p>
-                      <p className="text-xs font-mono" style={{ color: "var(--kipu-subtle)" }}>{e.ruc}</p>
+                      <p className="text-xs font-mono text-sutil">{e.ruc}</p>
                     </td>
                     <td className="px-4 py-3">
                       <span
@@ -276,19 +263,18 @@ export default function AdminPage() {
                       >
                         {e.balance_emision}
                       </span>
-                      <span className="text-xs ml-1" style={{ color: "var(--kipu-subtle)" }}>em</span>
+                      <span className="text-xs ml-1 text-sutil">em</span>
                     </td>
-                    <td className="px-4 py-3 text-right text-sm" style={{ color: "var(--kipu-subtle)" }}>
+                    <td className="px-4 py-3 text-right text-sm text-sutil">
                       {e.total_facturas}
                     </td>
-                    <td className="px-4 py-3 text-right text-sm" style={{ color: "var(--kipu-subtle)" }}>
+                    <td className="px-4 py-3 text-right text-sm text-sutil">
                       {e.total_usuarios}
                     </td>
                     <td className="px-4 py-3 text-right">
                       <Link
                         href={`/admin/emisores/${e.id}`}
-                        className="inline-flex items-center gap-1 text-xs transition-colors font-medium"
-                        style={{ color: "var(--kipu-accent)" }}
+                        className="inline-flex items-center gap-1 text-xs transition-colors font-medium text-acento"
                         onMouseEnter={ev => ev.currentTarget.style.color = "var(--kipu-accent-h)"}
                         onMouseLeave={ev => ev.currentTarget.style.color = "var(--kipu-accent)"}
                       >
@@ -313,10 +299,10 @@ export default function AdminPage() {
                 onMouseLeave={ev => ev.currentTarget.style.background = "transparent"}
               >
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate" style={{ color: "var(--kipu-text)" }}>
+                  <p className="text-sm font-medium truncate text-texto">
                     {e.nombre_comercial || e.razon_social}
                   </p>
-                  <p className="text-xs font-mono" style={{ color: "var(--kipu-subtle)" }}>{e.ruc}</p>
+                  <p className="text-xs font-mono text-sutil">{e.ruc}</p>
                 </div>
                 <div className="text-right shrink-0">
                   <span
@@ -330,17 +316,17 @@ export default function AdminPage() {
                   >
                     {e.ambiente === 2 ? "Prod" : "Pruebas"}
                   </span>
-                  <p className="text-xs mt-1" style={{ color: "var(--kipu-subtle)" }}>{e.balance_emision} créditos</p>
+                  <p className="text-xs mt-1 text-sutil">{e.balance_emision} créditos</p>
                 </div>
-                <ChevronRight size={14} className="shrink-0" style={{ color: "var(--kipu-subtle)" }} />
+                <ChevronRight size={14} className="shrink-0 text-sutil" />
               </Link>
             ))}
           </div>
 
           {filtrados.length === 0 && (
             <div className="text-center py-12">
-              <Users size={32} className="mx-auto mb-2" style={{ color: "var(--kipu-subtle)" }} />
-              <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>No hay emisores que coincidan</p>
+              <Users size={32} className="mx-auto mb-2 text-sutil" />
+              <p className="text-sm text-sutil">No hay emisores que coincidan</p>
             </div>
           )}
         </div>
