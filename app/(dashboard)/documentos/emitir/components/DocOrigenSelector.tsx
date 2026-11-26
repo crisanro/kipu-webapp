@@ -119,6 +119,80 @@ const manualVacio = (cod_doc: string): DocOrigenManual => ({
   cliente: { tipo_id: "05", identificacion: "", razon_social: "", email: "" },
 });
 
+// ── Lo que las pantallas de emitir hacen con el documento elegido ─────────────
+
+const CONSUMIDOR_FINAL = "9999999999999";
+
+/** El documento es a Consumidor Final: el SRI no deja modificarlo con notas de crédito ni de débito. */
+export function esConsumidorFinal(doc: DocOrigen): boolean {
+  if (doc?.tipo === "kipu")   return doc.data.identificacion === CONSUMIDOR_FINAL;
+  if (doc?.tipo === "manual") return doc.data.cliente?.identificacion === CONSUMIDOR_FINAL;
+  return false;
+}
+
+/** "001-002-000000123": usePuntoEmision propone esa misma serie. */
+export function numeroDocOrigen(doc: DocOrigen): string | null {
+  if (doc?.tipo === "kipu")   return doc.data.numero_doc;
+  if (doc?.tipo === "manual") return doc.data.numero;
+  return null;
+}
+
+/** Campos del payload que dicen qué documento se modifica (el de Kipu por su id; el externo, completo). */
+export function payloadDocOrigen(doc: NonNullable<DocOrigen>, campoId = "doc_origen_id"): Record<string, unknown> {
+  if (doc.tipo === "kipu") return { [campoId]: doc.data.id };
+  return {
+    doc_origen_numero:  doc.data.numero,
+    doc_origen_fecha:   doc.data.fecha,
+    doc_origen_cod_doc: doc.data.cod_doc,
+    cliente_origen:     doc.data.cliente,
+  };
+}
+
+interface InfoXml {
+  razonSocialComprador?: string; razonSocialProveedor?: string;
+  identificacionComprador?: string; identificacionProveedor?: string;
+}
+/** Lo que se usa de GET /documentos/{id}. */
+interface DocumentoApi {
+  id: string; numero_doc: string; tipo_doc?: string; cod_doc?: string;
+  fecha_emision: string; importe_total: number; estado_sri: string;
+  datos?: { infoFactura?: InfoXml; infoLiquidacionCompra?: InfoXml };
+}
+
+/** Documento emitido tal como lo devuelve GET /documentos/{id} (con ?doc_id= la pantalla llega con él). */
+export function docOrigenDeDocumento(d: DocumentoApi): DocOrigen {
+  const info: InfoXml = d.datos?.infoFactura || d.datos?.infoLiquidacionCompra || {};
+  return {
+    tipo: "kipu",
+    data: {
+      id:             d.id,
+      numero_doc:     d.numero_doc,
+      tipo_doc:       d.tipo_doc || "FAC",
+      cod_doc:        d.cod_doc || "01",
+      fecha_emision:  d.fecha_emision,
+      importe_total:  d.importe_total,
+      razon_social:   info.razonSocialComprador || info.razonSocialProveedor || "",
+      identificacion: info.identificacionComprador || info.identificacionProveedor || "",
+      estado_sri:     d.estado_sri,
+    },
+  };
+}
+
+/** Aviso cuando el documento elegido es a Consumidor Final (notas de crédito y débito). */
+export function AvisoOrigenConsumidorFinal() {
+  return (
+    <div className="flex items-start gap-3 rounded-xl border border-peligro/20 bg-peligro-suave px-4 py-3" role="alert">
+      <AlertTriangle size={16} className="mt-0.5 shrink-0 text-peligro" aria-hidden />
+      <div>
+        <p className="text-sm font-medium text-peligro-texto">No disponible para Consumidor Final</p>
+        <p className="mt-1 text-xs text-tenue">
+          Por normativa del SRI, los comprobantes emitidos a Consumidor Final no se modifican con notas de crédito ni de débito.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export default function DocOrigenSelector({
   tiposDoc,
   tabla,

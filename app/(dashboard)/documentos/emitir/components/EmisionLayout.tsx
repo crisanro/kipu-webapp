@@ -10,7 +10,7 @@
 //   - Teclado: Ctrl+Enter (⌘+Enter en Mac) emite desde cualquier campo; Escape
 //     cierra la hoja de arriba (components/ui/Hoja.tsx).
 //
-//   <EmisionLayout titulo="Nueva factura" subtitulo="Mi empresa · Producción"
+//   <EmisionLayout titulo="Nueva factura" puntoEmision={<PuntoEmision {...pe} />}
 //     lateral={<ResumenTotales … conBarraFija />}
 //     barra={{ total, texto: "Emitir", onEmitir, enviando, deshabilitado, error }}>
 //     …formulario…
@@ -26,6 +26,7 @@ import BotonIcono from "@/components/ui/BotonIcono";
 import { dosDecimales } from "@/lib/dinero";
 import { hayEmisionSinConfirmar, tieneAccesoAEmitir } from "@/lib/emision";
 import { useAuthStore } from "@/store/auth.store";
+import { useSandboxStore } from "@/store/sandbox.store";
 import SoloWeb from "@/components/SoloWeb";
 
 export interface BarraEmision {
@@ -107,10 +108,13 @@ export interface AvisoBorrador {
 }
 
 export default function EmisionLayout({
-  titulo, subtitulo, alerta, lateral, barra, children, tiposEmision, borrador,
+  titulo, subtitulo, puntoEmision, alerta, lateral, barra, children, tiposEmision, borrador,
 }: {
   titulo:     string;
+  /** Por defecto "Mi empresa · Producción" (o "Pruebas", también con el sandbox encendido). */
   subtitulo?: ReactNode;
+  /** <PuntoEmision {...pe} />: arriba del formulario en el celular y arriba del panel en la compu. */
+  puntoEmision?: ReactNode;
   /** Aviso propio de la pantalla arriba del formulario ("Sin acceso para emitir" ya lo pone el esqueleto). */
   alerta?:    ReactNode;
   /** Panel derecho en la compu; en el celular va al final del formulario. */
@@ -126,6 +130,10 @@ export default function EmisionLayout({
   useAtajoEmitir(barra);
   const empresa = useAuthStore((s) => s.empresa);
   const sinAcceso = !!empresa && !tieneAccesoAEmitir(empresa);
+  // Con el sandbox encendido se emite en pruebas aunque la empresa esté en producción
+  const sandbox = useSandboxStore((s) => s.activo);
+  const enProduccion = empresa?.ambiente === 2 && !sandbox;
+  const textoSubtitulo = subtitulo ?? (empresa && <>{empresa.razon_social} · {enProduccion ? "Producción" : "Pruebas"}</>);
   // Al abrir: ¿quedó un envío sin respuesta (se cortó la conexión, se cerró la app)?
   const [sinConfirmar, setSinConfirmar] = useState(() =>
     typeof window !== "undefined" && !!tiposEmision?.length && hayEmisionSinConfirmar(tiposEmision));
@@ -134,7 +142,7 @@ export default function EmisionLayout({
     <div className="mx-auto max-w-4xl space-y-6 p-4 pb-[calc(7rem+var(--sa-bottom))] md:p-6 lg:pb-6">
       <div>
         <h1 className="hidden text-xl font-bold text-texto lg:block">{titulo}</h1>
-        {subtitulo && <p className="text-xs text-sutil lg:text-sm">{subtitulo}</p>}
+        {textoSubtitulo && <p className="text-xs text-sutil lg:text-sm">{textoSubtitulo}</p>}
       </div>
 
       {sinConfirmar && (
@@ -179,8 +187,12 @@ export default function EmisionLayout({
       {alerta}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="space-y-6 lg:col-span-2">{children}</div>
+        <div className="space-y-6 lg:col-span-2">
+          {puntoEmision && <div className="lg:hidden">{puntoEmision}</div>}
+          {children}
+        </div>
         <div className="space-y-4">
+          {puntoEmision && <div className="hidden lg:block">{puntoEmision}</div>}
           {lateral}
           {/* Compu con mouse: el atajo, a la vista */}
           <p className="hidden text-center text-xs text-sutil lg:raton:block" title={`${barra.texto} sin ir al botón`}>
