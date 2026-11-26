@@ -20,33 +20,25 @@ export default function DoneScreen({ titulo, subtitulo, onOtro }: Props) {
   const router = useRouter();
   return (
     <div
-      className="min-h-screen flex items-center justify-center p-6"
-      style={{ background: "var(--kipu-bg)" }}
+      className="min-h-screen flex items-center justify-center p-6 bg-fondo"
     >
       <div className="w-full max-w-sm text-center">
         <div
-          className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
-          style={{
-            background: "color-mix(in srgb, var(--kipu-success) 20%, transparent)",
-          }}
+          className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 bg-exito/20"
         >
-          <CheckCircle2 size={32} style={{ color: "var(--kipu-success)" }} />
+          <CheckCircle2 className="text-exito" size={32} />
         </div>
-        <h2 className="text-xl font-bold mb-1" style={{ color: "var(--kipu-text)" }}>
+        <h2 className="text-xl font-bold mb-1 text-texto">
           {titulo}
         </h2>
-        <p className="text-sm mb-6" style={{ color: "var(--kipu-subtle)" }}>
+        <p className="text-sm mb-6 text-sutil">
           {subtitulo}
         </p>
         <div className="flex gap-3">
           <button
             type="button"
             onClick={onOtro}
-            className="flex-1 py-2.5 rounded-lg text-sm transition-colors"
-            style={{
-              border: "1px solid var(--kipu-border)",
-              color: "var(--kipu-muted)",
-            }}
+            className="flex-1 py-2.5 rounded-lg text-sm transition-colors border border-borde text-tenue"
             onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
             onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-muted)"}
           >
@@ -55,8 +47,7 @@ export default function DoneScreen({ titulo, subtitulo, onOtro }: Props) {
           <button
             type="button"
             onClick={() => router.push("/documentos/recibidos")}
-            className="flex-1 py-2.5 rounded-lg text-white text-sm font-medium transition-colors"
-            style={{ background: "var(--kipu-accent)" }}
+            className="flex-1 py-2.5 rounded-lg text-white text-sm font-medium transition-colors bg-acento"
             onMouseEnter={e => e.currentTarget.style.background = "var(--kipu-accent-h)"}
             onMouseLeave={e => e.currentTarget.style.background = "var(--kipu-accent)"}
           >

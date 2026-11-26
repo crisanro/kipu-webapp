@@ -71,11 +71,7 @@ function ResumenTipoCard({ tipo, label, color, data }: {
   const c = COLOR_MAP[color] ?? COLOR_MAP.indigo;
   return (
     <div
-      className="rounded-xl p-4"
-      style={{
-        background: "color-mix(in srgb, var(--kipu-surface) 60%, transparent)",
-        border: "1px solid var(--kipu-border)",
-      }}
+      className="rounded-xl p-4 bg-superficie/60 border border-borde"
     >
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
@@ -85,22 +81,22 @@ function ResumenTipoCard({ tipo, label, color, data }: {
           >
             {tipo}
           </span>
-          <h3 className="text-xs font-semibold" style={{ color: "var(--kipu-text)" }}>{label}</h3>
+          <h3 className="text-xs font-semibold text-texto">{label}</h3>
         </div>
         <span className="text-[10px]" style={{ color: "var(--kipu-subtle)" }}>{data.num_docs} docs</span>
       </div>
       <div className="space-y-1.5">
         {data.desglose_iva.length === 0 ? (
-          <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Sin desglose disponible</p>
+          <p className="text-xs text-sutil">Sin desglose disponible</p>
         ) : (
           data.desglose_iva.map((imp, i) => (
             <div key={i} className="space-y-0.5">
-              <div className="flex justify-between text-xs" style={{ color: "var(--kipu-muted)" }}>
+              <div className="flex justify-between text-xs text-tenue">
                 <span>Subtotal {imp.tarifa}%</span>
                 <span>${dosDecimales(imp.subtotal)}</span>
               </div>
               {imp.iva > 0 && (
-                <div className="flex justify-between text-xs pl-3" style={{ color: "var(--kipu-subtle)" }}>
+                <div className="flex justify-between text-xs pl-3 text-sutil">
                   <span>IVA {imp.tarifa}%</span>
                   <span>${dosDecimales(imp.iva)}</span>
                 </div>
@@ -109,10 +105,9 @@ function ResumenTipoCard({ tipo, label, color, data }: {
           ))
         )}
         <div
-          className="flex justify-between font-bold text-xs pt-2 mt-2"
-          style={{ borderTop: "1px solid var(--kipu-border)" }}
+          className="flex justify-between font-bold text-xs pt-2 mt-2 border-t border-borde"
         >
-          <span style={{ color: "var(--kipu-muted)" }}>Total</span>
+          <span className="text-tenue">Total</span>
           <span style={{ color: c.color }}>${dosDecimales(data.total)}</span>
         </div>
       </div>
@@ -230,44 +225,39 @@ export default function HistorialPage() {
       {/* Resumen fiscal */}
       {!sandbox && tieneResumen && (
         <div
-          className="rounded-xl overflow-hidden"
-          style={{
-            background: "var(--kipu-surface)",
-            border: "1px solid var(--kipu-border)",
-          }}
+          className="rounded-xl overflow-hidden bg-superficie border border-borde"
         >
           <button
             onClick={() => setResumenOpen(!resumenOpen)}
             className="w-full flex items-center justify-between px-4 py-3 transition-colors"
           >
             <div className="flex items-center gap-2">
-              <TrendingUp size={15} style={{ color: "var(--kipu-accent)" }} />
-              <span className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>Resumen fiscal</span>
-              <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+              <TrendingUp className="text-acento" size={15} />
+              <span className="text-sm font-semibold text-texto">Resumen fiscal</span>
+              <span className="text-xs text-sutil">
                 {resumen.periodo?.desde} → {resumen.periodo?.hasta}
               </span>
             </div>
             <div className="flex items-center gap-3">
               {resumen.por_tipo?.FAC && (
-                <span className="text-xs hidden sm:block" style={{ color: "var(--kipu-muted)" }}>
-                  FAC <span className="font-medium" style={{ color: "var(--kipu-text)" }}>${dosDecimales(resumen.por_tipo.FAC.total)}</span>
+                <span className="text-xs hidden sm:block text-tenue">
+                  FAC <span className="font-medium text-texto">${dosDecimales(resumen.por_tipo.FAC.total)}</span>
                 </span>
               )}
               {resumen.retenciones?.num_docs > 0 && (
-                <span className="text-xs hidden sm:block" style={{ color: "var(--kipu-muted)" }}>
-                  RET <span className="font-medium" style={{ color: "var(--kipu-warning)" }}>${dosDecimales(resumen.retenciones.total)}</span>
+                <span className="text-xs hidden sm:block text-tenue">
+                  RET <span className="font-medium text-alerta">${dosDecimales(resumen.retenciones.total)}</span>
                 </span>
               )}
               {resumenOpen
-                ? <ChevronUp size={16} style={{ color: "var(--kipu-subtle)" }} />
-                : <ChevronDown size={16} style={{ color: "var(--kipu-subtle)" }} />
+                ? <ChevronUp className="text-sutil" size={16} />
+                : <ChevronDown className="text-sutil" size={16} />
               }
             </div>
           </button>
           {resumenOpen && (
             <div
-              className="px-4 pb-4 space-y-3"
-              style={{ borderTop: "2px solid var(--kipu-border)" }}
+              className="px-4 pb-4 space-y-3 border-t-2 border-borde"
             >
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 pt-3">
                 {resumen.por_tipo?.FAC && (
@@ -284,11 +274,7 @@ export default function HistorialPage() {
                 )}
                 {resumen.retenciones?.num_docs > 0 && (
                   <div
-                    className="rounded-xl p-4"
-                    style={{
-                      background: "color-mix(in srgb, var(--kipu-surface) 60%, transparent)",
-                      border: "1px solid var(--kipu-border)",
-                    }}
+                    className="rounded-xl p-4 bg-superficie/60 border border-borde"
                   >
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2">
@@ -301,29 +287,28 @@ export default function HistorialPage() {
                         >
                           RET
                         </span>
-                        <h3 className="text-xs font-semibold" style={{ color: "var(--kipu-text)" }}>Retenciones Emitidas</h3>
+                        <h3 className="text-xs font-semibold text-texto">Retenciones Emitidas</h3>
                       </div>
                       <span className="text-[10px]" style={{ color: "var(--kipu-subtle)" }}>{resumen.retenciones.num_docs} docs</span>
                     </div>
                     <div className="space-y-1.5">
                       {Object.entries(resumen.retenciones.por_tipo).map(([tipo, data]: [string, any]) => (
                         <div key={tipo} className="space-y-0.5">
-                          <div className="flex justify-between text-xs" style={{ color: "var(--kipu-muted)" }}>
+                          <div className="flex justify-between text-xs text-tenue">
                             <span>Retención {tipo}</span>
-                            <span style={{ color: "var(--kipu-text)" }}>${dosDecimales(data.valor_retenido)}</span>
+                            <span className="text-texto">${dosDecimales(data.valor_retenido)}</span>
                           </div>
-                          <div className="flex justify-between text-xs pl-3" style={{ color: "var(--kipu-subtle)" }}>
+                          <div className="flex justify-between text-xs pl-3 text-sutil">
                             <span>Base imponible</span>
                             <span>${dosDecimales(data.base)}</span>
                           </div>
                         </div>
                       ))}
                       <div
-                        className="flex justify-between font-bold text-xs pt-2 mt-2"
-                        style={{ borderTop: "1px solid var(--kipu-border)" }}
+                        className="flex justify-between font-bold text-xs pt-2 mt-2 border-t border-borde"
                       >
-                        <span style={{ color: "var(--kipu-muted)" }}>Total retenido</span>
-                        <span style={{ color: "var(--kipu-warning)" }}>${dosDecimales(resumen.retenciones.total)}</span>
+                        <span className="text-tenue">Total retenido</span>
+                        <span className="text-alerta">${dosDecimales(resumen.retenciones.total)}</span>
                       </div>
                     </div>
                   </div>

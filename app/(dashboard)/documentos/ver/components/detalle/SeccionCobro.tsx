@@ -84,8 +84,7 @@ export default function SeccionCobro({ factura, onRecargar }: { factura: Factura
             <div className="space-y-3">
               {/* Toggle estado */}
               <div
-                className="flex rounded-lg overflow-hidden"
-                style={{ border: "1px solid var(--kipu-border)" }}
+                className="flex rounded-lg overflow-hidden border border-borde"
               >
                 <button
                   type="button"
@@ -123,16 +122,11 @@ export default function SeccionCobro({ factura, onRecargar }: { factura: Factura
                 <div className="space-y-2">
                   <div className="flex gap-2">
                     <div className="flex-1">
-                      <label className="block text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>Forma de pago</label>
+                      <label className="block text-xs mb-1 text-sutil">Forma de pago</label>
                       <select
                         value={cobroFormaPago}
                         onChange={e => setCobroFormaPago(e.target.value)}
-                        className="w-full px-2.5 py-2 rounded-lg text-sm transition-colors focus:outline-none"
-                        style={{
-                          background: "var(--kipu-surface)",
-                          border: "1px solid var(--kipu-border)",
-                          color: "var(--kipu-text)",
-                        }}
+                        className="w-full px-2.5 py-2 rounded-lg text-sm transition-colors focus:outline-none bg-superficie border border-borde text-texto"
                         onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
                         onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
                       >
@@ -142,25 +136,20 @@ export default function SeccionCobro({ factura, onRecargar }: { factura: Factura
                       </select>
                     </div>
                     <div className="flex-1">
-                      <label className="block text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>Fecha de pago</label>
+                      <label className="block text-xs mb-1 text-sutil">Fecha de pago</label>
                       <input
                         type="date"
                         value={cobroFecha}
                         onChange={e => setCobroFecha(e.target.value)}
-                        className="w-full px-2.5 py-2 rounded-lg text-sm transition-colors focus:outline-none"
-                        style={{
-                          background: "var(--kipu-surface)",
-                          border: "1px solid var(--kipu-border)",
-                          color: "var(--kipu-text)",
-                        }}
+                        className="w-full px-2.5 py-2 rounded-lg text-sm transition-colors focus:outline-none bg-superficie border border-borde text-texto"
                         onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
                         onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
                       />
                     </div>
                   </div>
                   <div>
-                    <label className="block text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>
-                      Referencia <span style={{ color: "var(--kipu-subtle)" }}>(opcional)</span>
+                    <label className="block text-xs mb-1 text-sutil">
+                      Referencia <span className="text-sutil">(opcional)</span>
                     </label>
                     <input
                       type="text"
@@ -169,12 +158,7 @@ export default function SeccionCobro({ factura, onRecargar }: { factura: Factura
                       onChange={e => setCobroReferencia(e.target.value)}
                       placeholder="N° transferencia, recibo..."
                       maxLength={100}
-                      className="w-full px-2.5 py-2 rounded-lg text-sm transition-colors focus:outline-none"
-                      style={{
-                        background: "var(--kipu-surface)",
-                        border: "1px solid var(--kipu-border)",
-                        color: "var(--kipu-text)",
-                      }}
+                      className="w-full px-2.5 py-2 rounded-lg text-sm transition-colors focus:outline-none bg-superficie border border-borde text-texto"
                       onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
                       onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
                     />
@@ -185,11 +169,7 @@ export default function SeccionCobro({ factura, onRecargar }: { factura: Factura
               {/* Error */}
               {errorCobro && (
                 <p
-                  className="text-xs px-3 py-2 rounded-lg"
-                  style={{
-                    color: "var(--kipu-danger)",
-                    background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
-                  }}
+                  className="text-xs px-3 py-2 rounded-lg text-peligro bg-peligro-suave"
                 >
                   {errorCobro}
                 </p>
@@ -200,11 +180,7 @@ export default function SeccionCobro({ factura, onRecargar }: { factura: Factura
                 <button
                   type="button"
                   onClick={() => setEditandoCobro(false)}
-                  className="flex-1 py-2 rounded-lg text-xs transition-colors"
-                  style={{
-                    border: "1px solid var(--kipu-border)",
-                    color: "var(--kipu-muted)",
-                  }}
+                  className="flex-1 py-2 rounded-lg text-xs transition-colors border border-borde text-tenue"
                   onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
                   onMouseLeave={e => e.currentTarget.style.color = "var(--kipu-muted)"}
                 >
@@ -214,8 +190,7 @@ export default function SeccionCobro({ factura, onRecargar }: { factura: Factura
                   type="button"
                   onClick={guardarCobro}
                   disabled={guardandoCobro}
-                  className="flex-1 py-2 rounded-lg text-white text-xs font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-                  style={{ background: "var(--kipu-accent)" }}
+                  className="flex-1 py-2 rounded-lg text-white text-xs font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50 bg-acento"
                   onMouseEnter={e => { if (!guardandoCobro) e.currentTarget.style.background = "var(--kipu-accent-h)"; }}
                   onMouseLeave={e => { if (!guardandoCobro) e.currentTarget.style.background = "var(--kipu-accent)"; }}
                 >
@@ -245,28 +220,28 @@ export default function SeccionCobro({ factura, onRecargar }: { factura: Factura
                 <div className="space-y-1 text-sm">
                   {factura.forma_pago_cobro && (
                     <div className="flex justify-between">
-                      <span style={{ color: "var(--kipu-subtle)" }}>Forma de pago</span>
-                      <span style={{ color: "var(--kipu-text)" }}>
+                      <span className="text-sutil">Forma de pago</span>
+                      <span className="text-texto">
                         {FORMAS_COBRO.find(f => f.valor === factura.forma_pago_cobro)?.etiqueta ?? factura.forma_pago_cobro}
                       </span>
                     </div>
                   )}
                   {factura.fecha_pago && (
                     <div className="flex justify-between">
-                      <span style={{ color: "var(--kipu-subtle)" }}>Fecha de pago</span>
-                      <span style={{ color: "var(--kipu-text)" }}>{factura.fecha_pago}</span>
+                      <span className="text-sutil">Fecha de pago</span>
+                      <span className="text-texto">{factura.fecha_pago}</span>
                     </div>
                   )}
                   {factura.numero_comprobante_pago && (
                     <div className="flex justify-between">
-                      <span style={{ color: "var(--kipu-subtle)" }}>Referencia</span>
-                      <span className="font-mono text-xs" style={{ color: "var(--kipu-text)" }}>{factura.numero_comprobante_pago}</span>
+                      <span className="text-sutil">Referencia</span>
+                      <span className="font-mono text-xs text-texto">{factura.numero_comprobante_pago}</span>
                     </div>
                   )}
                 </div>
               )}
               {factura.estado_cobro === "PENDIENTE" && (
-                <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+                <p className="text-xs text-sutil">
                   Registra el cobro cuando recibas el pago.
                 </p>
               )}

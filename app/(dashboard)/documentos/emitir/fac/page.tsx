@@ -342,19 +342,17 @@ export default function NuevaFacturaPage() {
   if (cobroCreado) {
     const url: string = cobroCreado.link?.url ?? "";
     return (
-      <div className="min-h-screen flex items-center justify-center p-6" style={{ background: "var(--kipu-bg)" }}>
+      <div className="min-h-screen flex items-center justify-center p-6 bg-fondo">
         <div className="w-full max-w-sm text-center">
-          <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
-               style={{ background: "color-mix(in srgb, var(--kipu-accent) 15%, transparent)" }}>
-            <CreditCard size={30} style={{ color: "var(--kipu-accent)" }} />
+          <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 bg-acento/15">
+            <CreditCard className="text-acento" size={30} />
           </div>
-          <h2 className="text-xl font-bold mb-1" style={{ color: "var(--kipu-text)" }}>Link de cobro listo</h2>
-          <p className="text-sm mb-4" style={{ color: "var(--kipu-subtle)" }}>
+          <h2 className="text-xl font-bold mb-1 text-texto">Link de cobro listo</h2>
+          <p className="text-sm mb-4 text-sutil">
             Cuando {cobroCreado.cliente_nombre || "tu cliente"} pague ${dosDecimales(cobroCreado.monto)}, la factura
             se emitirá sola, ya cobrada, y le llegará por correo.
           </p>
-          <div className="text-left rounded-xl p-3 mb-6 space-y-2"
-               style={{ border: "1px solid var(--kipu-border)", background: "var(--kipu-surface)" }}>
+          <div className="text-left rounded-xl p-3 mb-6 space-y-2 border border-borde bg-superficie">
             <code className="block truncate text-[11px] px-2 py-1.5 rounded"
                   style={{ background: "color-mix(in srgb, var(--kipu-text) 5%, transparent)", color: "var(--kipu-text)" }}>
               {url}
@@ -362,17 +360,15 @@ export default function NuevaFacturaPage() {
             <div className="flex gap-2">
               <button
                 onClick={() => copiar(url)}
-                className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs py-1.5 rounded-lg"
-                style={{ border: "1px solid var(--kipu-border)", color: "var(--kipu-muted)" }}
+                className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs py-1.5 rounded-lg border border-borde text-tenue"
               >
-                {linkCopiado ? <CheckCircle2 size={12} style={{ color: "var(--kipu-success)" }} /> : <Copy size={12} />}
+                {linkCopiado ? <CheckCircle2 className="text-exito" size={12} /> : <Copy size={12} />}
                 {linkCopiado ? "Copiado" : "Copiar"}
               </button>
               <a
                 href={enlaceWhatsAppA(null, `Hola, te comparto el link para tu pago: ${url}`)}
                 target="_blank" rel="noopener noreferrer"
-                className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs py-1.5 rounded-lg"
-                style={{ border: "1px solid var(--kipu-border)", color: "var(--kipu-muted)" }}
+                className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs py-1.5 rounded-lg border border-borde text-tenue"
               >
                 <MessageCircle size={12} /> WhatsApp
               </a>
@@ -381,15 +377,13 @@ export default function NuevaFacturaPage() {
           <div className="flex gap-3">
             <button
               onClick={reset}
-              className="flex-1 py-2.5 rounded-lg text-sm transition-colors"
-              style={{ border: "1px solid var(--kipu-border)", color: "var(--kipu-muted)" }}
+              className="flex-1 py-2.5 rounded-lg text-sm transition-colors border border-borde text-tenue"
             >
               Nueva factura
             </button>
             <button
               onClick={() => router.push("/cobros")}
-              className="flex-1 py-2.5 rounded-lg text-white text-sm font-medium transition-colors"
-              style={{ background: "var(--kipu-accent)" }}
+              className="flex-1 py-2.5 rounded-lg text-white text-sm font-medium transition-colors bg-acento"
             >
               Ver links de cobro
             </button>
@@ -404,10 +398,9 @@ export default function NuevaFacturaPage() {
     return (
       <PantallaResultado tipo="FAC" resultado={resultado} onNueva={reset}>
         {resultado.link_pago && (
-          <div className="text-left rounded-xl p-3 mb-4 space-y-2"
-               style={{ border: "1px solid var(--kipu-border)", background: "var(--kipu-surface)" }}>
-            <p className="flex items-center gap-1.5 text-xs font-medium" style={{ color: "var(--kipu-text)" }}>
-              <CreditCard size={13} style={{ color: "var(--kipu-accent)" }} />
+          <div className="text-left rounded-xl p-3 mb-4 space-y-2 border border-borde bg-superficie">
+            <p className="flex items-center gap-1.5 text-xs font-medium text-texto">
+              <CreditCard className="text-acento" size={13} />
               Link de pago incluido en la factura
             </p>
             <code className="block truncate text-[11px] px-2 py-1.5 rounded"
@@ -417,17 +410,15 @@ export default function NuevaFacturaPage() {
             <div className="flex gap-2">
               <button
                 onClick={() => copiar(resultado.link_pago)}
-                className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs py-1.5 rounded-lg"
-                style={{ border: "1px solid var(--kipu-border)", color: "var(--kipu-muted)" }}
+                className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs py-1.5 rounded-lg border border-borde text-tenue"
               >
-                {linkCopiado ? <CheckCircle2 size={12} style={{ color: "var(--kipu-success)" }} /> : <Copy size={12} />}
+                {linkCopiado ? <CheckCircle2 className="text-exito" size={12} /> : <Copy size={12} />}
                 {linkCopiado ? "Copiado" : "Copiar"}
               </button>
               <a
                 href={enlaceWhatsAppA(null, `Hola, te comparto el link para pagar tu factura: ${resultado.link_pago}`)}
                 target="_blank" rel="noopener noreferrer"
-                className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs py-1.5 rounded-lg"
-                style={{ border: "1px solid var(--kipu-border)", color: "var(--kipu-muted)" }}
+                className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs py-1.5 rounded-lg border border-borde text-tenue"
               >
                 <MessageCircle size={12} /> WhatsApp
               </a>
@@ -435,8 +426,7 @@ export default function NuevaFacturaPage() {
           </div>
         )}
         {resultado.aviso_link_pago && (
-          <p className="flex items-start gap-1.5 text-left text-xs rounded-lg px-3 py-2 mb-4"
-             style={{ color: "var(--kipu-warning)", background: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)" }}>
+          <p className="flex items-start gap-1.5 text-left text-xs rounded-lg px-3 py-2 mb-4 text-alerta bg-alerta/10">
             <AlertTriangle size={13} className="mt-0.5 shrink-0" />
             {resultado.aviso_link_pago}
           </p>

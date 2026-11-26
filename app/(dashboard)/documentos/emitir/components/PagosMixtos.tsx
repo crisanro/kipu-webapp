@@ -147,12 +147,7 @@ export default function PagosMixtos({
       {/* Alerta $500 */}
       {efectivoBloqueado && (
         <div
-          className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg"
-          style={{
-            color: "var(--kipu-accent)",
-            background: "color-mix(in srgb, var(--kipu-accent) 8%, transparent)",
-            border: "1px solid color-mix(in srgb, var(--kipu-accent) 20%, transparent)",
-          }}
+          className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg text-acento bg-acento/8 border border-acento/20"
         >
           <Info size={13} className="shrink-0" />
           Transacciones ≥ ${dosDecimales(LIMITE_EFECTIVO)} deben utilizar el sistema financiero.
@@ -233,12 +228,7 @@ export default function PagosMixtos({
               <select
                 value={pago.forma_pago}
                 onChange={(e) => editPago(pago._id, "forma_pago", e.target.value as FormaPagoCode)}
-                className="w-full sm:w-auto sm:flex-1 min-w-0 px-2.5 py-2 rounded-lg text-sm transition-colors focus:outline-none"
-                style={{
-                  background: "var(--kipu-surface)",
-                  border: "1px solid var(--kipu-border)",
-                  color: "var(--kipu-text)",
-                }}
+                className="w-full sm:w-auto sm:flex-1 min-w-0 px-2.5 py-2 rounded-lg text-sm transition-colors focus:outline-none bg-superficie border border-borde text-texto"
                 onFocus={(e) => (e.currentTarget.style.borderColor = "var(--kipu-accent)")}
                 onBlur={(e) => (e.currentTarget.style.borderColor = "var(--kipu-border)")}
               >
@@ -251,7 +241,7 @@ export default function PagosMixtos({
               {esSaldo ? (
                 <div className="flex items-center gap-2 shrink-0 ml-auto sm:ml-0">
                   <div className="text-right">
-                    <p className="text-xs font-medium" style={{ color: "var(--kipu-accent)" }}>
+                    <p className="text-xs font-medium text-acento">
                       ${dosDecimales(Math.max(0, saldoRestante))}
                     </p>
                     <p className="text-[10px]" style={{ color: "var(--kipu-subtle)" }}>saldo restante</p>
@@ -259,7 +249,7 @@ export default function PagosMixtos({
                 </div>
               ) : (
                 <div className="flex items-center gap-1.5 shrink-0 ml-auto sm:ml-0">
-                  <span className="text-sm" style={{ color: "var(--kipu-subtle)" }}>$</span>
+                  <span className="text-sm text-sutil">$</span>
                   <input
                     type="number"
                     value={pago.total ?? ""}
@@ -267,12 +257,7 @@ export default function PagosMixtos({
                     min={0}
                     step={0.01}
                     placeholder="0.00"
-                    className="w-24 px-2 py-2 rounded-lg text-sm text-right transition-colors focus:outline-none"
-                    style={{
-                      background: "var(--kipu-surface)",
-                      border: "1px solid var(--kipu-border)",
-                      color: "var(--kipu-text)",
-                    }}
+                    className="w-24 px-2 py-2 rounded-lg text-sm text-right transition-colors focus:outline-none bg-superficie border border-borde text-texto"
                     onFocus={(e) => (e.currentTarget.style.borderColor = "var(--kipu-accent)")}
                     onBlur={(e) => (e.currentTarget.style.borderColor = "var(--kipu-border)")}
                   />
@@ -281,8 +266,7 @@ export default function PagosMixtos({
                     type="button"
                     onClick={() => convertirASaldo(pago._id)}
                     title="Usar como saldo restante"
-                    className="text-xs px-1 transition-colors"
-                    style={{ color: "var(--kipu-subtle)" }}
+                    className="text-xs px-1 transition-colors text-sutil"
                     onMouseEnter={(e) => (e.currentTarget.style.color = "var(--kipu-accent)")}
                     onMouseLeave={(e) => (e.currentTarget.style.color = "var(--kipu-subtle)")}
                   >
@@ -296,8 +280,7 @@ export default function PagosMixtos({
                 type="button"
                 onClick={() => removePago(pago._id)}
                 disabled={pagos.length === 1}
-                className="p-1.5 rounded-lg transition-colors shrink-0 disabled:opacity-20"
-                style={{ color: "var(--kipu-subtle)" }}
+                className="p-1.5 rounded-lg transition-colors shrink-0 disabled:opacity-20 text-sutil"
                 onMouseEnter={(e) => {
                   if (pagos.length > 1) {
                     e.currentTarget.style.color = "var(--kipu-danger)";
@@ -322,11 +305,7 @@ export default function PagosMixtos({
       {/* Error si pagos superan el total */}
       {!esSaldoValido && (
         <div
-          className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg"
-          style={{
-            color: "var(--kipu-danger)",
-            background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
-          }}
+          className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg text-peligro bg-peligro-suave"
         >
           <AlertTriangle size={13} />
           Los pagos (${dosDecimales(totalCubierto)}) superan el total (${dosDecimales(totalFactura)}).
@@ -335,9 +314,9 @@ export default function PagosMixtos({
 
       {/* Resumen si hay múltiples pagos */}
       {pagos.length > 1 && esSaldoValido && (
-        <div className="flex justify-between text-xs px-1" style={{ color: "var(--kipu-subtle)" }}>
+        <div className="flex justify-between text-xs px-1 text-sutil">
           <span>Cubierto con monto fijo</span>
-          <span className="font-medium" style={{ color: "var(--kipu-text)" }}>${dosDecimales(totalCubierto)}</span>
+          <span className="font-medium text-texto">${dosDecimales(totalCubierto)}</span>
         </div>
       )}
 
@@ -370,11 +349,10 @@ export default function PagosMixtos({
 
       {/* Propina */}
       <div
-        className="pt-2 flex items-center justify-between gap-3"
-        style={{ borderTop: "1px solid var(--kipu-border)" }}
+        className="pt-2 flex items-center justify-between gap-3 border-t border-borde"
       >
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 min-w-0">
-          <span className="text-sm font-medium" style={{ color: "var(--kipu-muted)" }}>
+          <span className="text-sm font-medium text-tenue">
             Propina (10%)
           </span>
           <span

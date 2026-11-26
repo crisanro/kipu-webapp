@@ -200,15 +200,14 @@ export default function TabXML({ empresa, onParsed, error, setError, dragging, s
         }}
       >
         <div
-          className="w-14 h-14 rounded-xl flex items-center justify-center"
-          style={{ background: "color-mix(in srgb, var(--kipu-accent) 20%, transparent)" }}
+          className="w-14 h-14 rounded-xl flex items-center justify-center bg-acento/20"
         >
-          <Upload size={24} style={{ color: "var(--kipu-accent)" }} />
+          <Upload className="text-acento" size={24} />
         </div>
         <div className="text-center">
-          <p className="font-medium" style={{ color: "var(--kipu-text)" }}>Arrastra el XML aquí</p>
-          <p className="text-sm mt-1" style={{ color: "var(--kipu-subtle)" }}>o haz clic para seleccionar</p>
-          <p className="text-xs mt-2" style={{ color: "var(--kipu-muted)" }}>Facturas · Notas de crédito · Notas de débito · Retenciones</p>
+          <p className="font-medium text-texto">Arrastra el XML aquí</p>
+          <p className="text-sm mt-1 text-sutil">o haz clic para seleccionar</p>
+          <p className="text-xs mt-2 text-tenue">Facturas · Notas de crédito · Notas de débito · Retenciones</p>
         </div>
         <input
           ref={fileRef}
@@ -230,11 +229,7 @@ export default function TabXML({ empresa, onParsed, error, setError, dragging, s
           return (
             <div
               key={tipo}
-              className="flex items-center gap-2 rounded-lg px-3 py-2"
-              style={{
-                background: "var(--kipu-surface)",
-                border: "1px solid var(--kipu-border)",
-              }}
+              className="flex items-center gap-2 rounded-lg px-3 py-2 bg-superficie border border-borde"
             >
               <span
                 className="text-[10px] px-1.5 py-0.5 rounded font-bold"
@@ -242,7 +237,7 @@ export default function TabXML({ empresa, onParsed, error, setError, dragging, s
               >
                 {tipo}
               </span>
-              <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>{desc}</span>
+              <span className="text-xs text-sutil">{desc}</span>
             </div>
           );
         })}

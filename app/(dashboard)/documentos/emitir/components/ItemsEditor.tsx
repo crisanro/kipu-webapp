@@ -324,21 +324,17 @@ export default function ItemsEditor({ items, onChange }: Props) {
   // ── Render ───────────────────────────────────────────────────────────────────
   return (
     <div
-      className="rounded-xl p-4 space-y-4"
-      style={{
-        background: "var(--kipu-surface)",
-        border: "1px solid var(--kipu-border)",
-      }}
+      className="rounded-xl p-4 space-y-4 bg-superficie border border-borde"
     >
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Search size={15} style={{ color: "var(--kipu-accent)" }} />
-          <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>
+          <Search className="text-acento" size={15} />
+          <h2 className="text-sm font-semibold text-texto">
             Productos / Servicios
           </h2>
         </div>
-        <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+        <span className="text-xs text-sutil">
           {items.length} ítem(s)
         </span>
       </div>
@@ -348,19 +344,13 @@ export default function ItemsEditor({ items, onChange }: Props) {
         <div className="relative">
           <Search
             size={15}
-            className="absolute left-3 top-1/2 -translate-y-1/2"
-            style={{ color: "var(--kipu-subtle)" }}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-sutil"
           />
           <input
             value={productoQuery}
             onChange={(e) => { setProductoQuery(e.target.value); setShowProductos(true); }}
             placeholder="Buscar en catálogo para agregar..."
-            className="w-full pl-9 pr-10 py-2 rounded-lg text-sm transition-colors focus:outline-none"
-            style={{
-              background: "var(--kipu-surface)",
-              border: "1px solid var(--kipu-border)",
-              color: "var(--kipu-text)",
-            }}
+            className="w-full pl-9 pr-10 py-2 rounded-lg text-sm transition-colors focus:outline-none bg-superficie border border-borde text-texto"
             onFocus={(e) => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
             onBlur={(e) => e.currentTarget.style.borderColor = "var(--kipu-border)"}
           />
@@ -376,8 +366,7 @@ export default function ItemsEditor({ items, onChange }: Props) {
                 setScanForItemId(null);
                 setShowScanner(true);
               }}
-              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded transition-colors"
-              style={{ color: "var(--kipu-subtle)" }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded transition-colors text-sutil"
               onMouseEnter={(e) => (e.currentTarget.style.color = "var(--kipu-accent)")}
               onMouseLeave={(e) => (e.currentTarget.style.color = "var(--kipu-subtle)")}
               title="Escanear código de barras o QR"
@@ -389,21 +378,14 @@ export default function ItemsEditor({ items, onChange }: Props) {
 
         {showProductos && productoResults.length > 0 && (
           <div
-            className="mt-1 max-h-64 overflow-y-auto rounded-lg md:absolute md:z-10 md:w-full md:shadow-xl"
-            style={{
-              background: "var(--kipu-surface)",
-              border: "1px solid var(--kipu-border)",
-            }}
+            className="mt-1 max-h-64 overflow-y-auto rounded-lg md:absolute md:z-10 md:w-full md:shadow-xl bg-superficie border border-borde"
           >
             {productoResults.map((p) => (
               <button
                 type="button"
                 key={p.id}
                 onClick={() => seleccionarProducto(p)}
-                className="w-full flex min-h-12 items-center justify-between gap-3 px-4 py-2.5 text-left transition-colors"
-                style={{
-                  borderBottom: "1px solid var(--kipu-border)",
-                }}
+                className="w-full flex min-h-12 items-center justify-between gap-3 px-4 py-2.5 text-left transition-colors border-b border-borde"
                 onMouseEnter={(e) =>
                   (e.currentTarget.style.background =
                     "color-mix(in srgb, var(--kipu-text) 5%, transparent)")
@@ -411,14 +393,14 @@ export default function ItemsEditor({ items, onChange }: Props) {
                 onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
               >
                 <div>
-                  <p className="text-sm" style={{ color: "var(--kipu-text)" }}>
+                  <p className="text-sm text-texto">
                     {p.descripcion}
                   </p>
-                  <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+                  <p className="text-xs text-sutil">
                     {p.codigo || p.unidad} · IVA {etiquetaIva(p.tipo_iva)}
                   </p>
                 </div>
-                <span className="text-sm font-medium shrink-0" style={{ color: "var(--kipu-accent)" }}>
+                <span className="text-sm font-medium shrink-0 text-acento">
                   ${dosDecimales(p.precio)}
                 </span>
               </button>
@@ -471,11 +453,7 @@ export default function ItemsEditor({ items, onChange }: Props) {
           return (
             <div
               key={item._id}
-              className="p-3.5 rounded-xl space-y-3 transition-colors"
-              style={{
-                background: "color-mix(in srgb, var(--kipu-surface) 60%, transparent)",
-                border: "1px solid var(--kipu-border)",
-              }}
+              className="p-3.5 rounded-xl space-y-3 transition-colors bg-superficie/60 border border-borde"
               onMouseEnter={(e) =>
                 (e.currentTarget.style.borderColor =
                   "color-mix(in srgb, var(--kipu-text) 20%, transparent)")
@@ -485,8 +463,7 @@ export default function ItemsEditor({ items, onChange }: Props) {
               {/* Fila 1 — índice + cantidad + descripción + eliminar */}
               <div className="flex items-center gap-2">
                 <span
-                  className="text-xs font-semibold w-4 shrink-0 text-center"
-                  style={{ color: "var(--kipu-subtle)" }}
+                  className="text-xs font-semibold w-4 shrink-0 text-center text-sutil"
                 >
                   #{index + 1}
                 </span>
@@ -515,12 +492,7 @@ export default function ItemsEditor({ items, onChange }: Props) {
                     }
                   }}
                   placeholder="Descripción del producto o servicio"
-                  className="flex-1 px-3 py-2 rounded-lg text-sm font-medium min-w-0 transition-colors focus:outline-none"
-                  style={{
-                    background: "var(--kipu-surface)",
-                    border: "1px solid var(--kipu-border)",
-                    color: "var(--kipu-text)",
-                  }}
+                  className="flex-1 px-3 py-2 rounded-lg text-sm font-medium min-w-0 transition-colors focus:outline-none bg-superficie border border-borde text-texto"
                   onFocus={(e) => (e.currentTarget.style.borderColor = "var(--kipu-accent)")}
                   onBlur={(e) => (e.currentTarget.style.borderColor = "var(--kipu-border)")}
                 />
@@ -528,8 +500,7 @@ export default function ItemsEditor({ items, onChange }: Props) {
                   type="button"
                   onClick={() => removeItem(item._id)}
                   disabled={items.length === 1}
-                  className="p-2 rounded-lg transition-colors shrink-0 disabled:opacity-20"
-                  style={{ color: "var(--kipu-subtle)" }}
+                  className="p-2 rounded-lg transition-colors shrink-0 disabled:opacity-20 text-sutil"
                   onMouseEnter={(e) => {
                     if (items.length > 1) {
                       e.currentTarget.style.color = "var(--kipu-danger)";
@@ -556,11 +527,7 @@ export default function ItemsEditor({ items, onChange }: Props) {
                   <div
                     role="group"
                     aria-label="Precio: sin IVA o con IVA incluido"
-                    className="flex w-full rounded-md p-px text-[10px] font-semibold"
-                    style={{
-                      background: "color-mix(in srgb, var(--kipu-text) 6%, transparent)",
-                      border: "1px solid var(--kipu-border)",
-                    }}
+                    className="flex w-full rounded-md p-px text-[10px] font-semibold bg-presionado border border-borde"
                   >
                     {([
                       [false, "s/IVA", "Precio sin IVA: Kipu le suma el IVA"],
@@ -615,12 +582,7 @@ export default function ItemsEditor({ items, onChange }: Props) {
                           e.target.value as "$" | "%"
                         )
                       }
-                      className="w-10 px-1 py-1.5 rounded-lg text-xs shrink-0 font-medium transition-colors focus:outline-none"
-                      style={{
-                        background: "var(--kipu-surface)",
-                        border: "1px solid var(--kipu-border)",
-                        color: "var(--kipu-text)",
-                      }}
+                      className="w-10 px-1 py-1.5 rounded-lg text-xs shrink-0 font-medium transition-colors focus:outline-none bg-superficie border border-borde text-texto"
                       onFocus={(e) => (e.currentTarget.style.borderColor = "var(--kipu-accent)")}
                       onBlur={(e) => (e.currentTarget.style.borderColor = "var(--kipu-border)")}
                     >
@@ -671,10 +633,7 @@ export default function ItemsEditor({ items, onChange }: Props) {
                 </div>
 
                 <div
-                  className="col-span-12 sm:col-span-3 flex sm:flex-col justify-between sm:justify-end items-center sm:items-end pt-2 sm:pt-0"
-                  style={{
-                    borderTop: "1px solid var(--kipu-border)",
-                  }}
+                  className="col-span-12 sm:col-span-3 flex sm:flex-col justify-between sm:justify-end items-center sm:items-end pt-2 sm:pt-0 border-t border-borde"
                 >
                   <div className="text-right">
                     <span
@@ -683,7 +642,7 @@ export default function ItemsEditor({ items, onChange }: Props) {
                     >
                       Total Ítem
                     </span>
-                    <span className="text-sm font-bold" style={{ color: "var(--kipu-accent)" }}>
+                    <span className="text-sm font-bold text-acento">
                       ${dosDecimales(c.total)}
                     </span>
                   </div>
@@ -693,9 +652,9 @@ export default function ItemsEditor({ items, onChange }: Props) {
               {/* IVA incluido — desglose de lo que va en la factura */}
               {conIva && tarifaPct(item.tipo_iva) > 0 && c.total > 0 && (
                 <div className="flex items-center justify-between gap-x-3 gap-y-1 flex-wrap text-[11px]">
-                  <span style={{ color: "var(--kipu-subtle)" }}>
-                    Sin IVA <b style={{ color: "var(--kipu-text)" }}>${dosDecimales(c.base)}</b>
-                    {" · "}IVA {etiquetaIva(item.tipo_iva)} <b style={{ color: "var(--kipu-text)" }}>${dosDecimales(c.iva)}</b>
+                  <span className="text-sutil">
+                    Sin IVA <b className="text-texto">${dosDecimales(c.base)}</b>
+                    {" · "}IVA {etiquetaIva(item.tipo_iva)} <b className="text-texto">${dosDecimales(c.iva)}</b>
                   </span>
                   {redondeado && (
                     <span style={{ color: "color-mix(in srgb, var(--kipu-warning) 70%, var(--kipu-text))" }}>
@@ -713,8 +672,7 @@ export default function ItemsEditor({ items, onChange }: Props) {
                       type="checkbox"
                       checked={!!item.guardar_catalogo}
                       onChange={(e) => editItem(item._id, "guardar_catalogo", e.target.checked)}
-                      className="w-3.5 h-3.5 rounded"
-                      style={{ accentColor: "var(--kipu-accent)" }}
+                      className="w-3.5 h-3.5 rounded accent-acento"
                     />
                     <span className="text-[11px]" style={{ color: "var(--kipu-subtle)" }}>
                       Guardar en mi catálogo
@@ -749,11 +707,7 @@ export default function ItemsEditor({ items, onChange }: Props) {
                             setScanForItemId(item._id);
                             setShowScanner(true);
                           }}
-                          className="px-1.5 rounded-lg transition-colors shrink-0"
-                          style={{
-                            border: "1px solid var(--kipu-border)",
-                            color: "var(--kipu-subtle)",
-                          }}
+                          className="px-1.5 rounded-lg transition-colors shrink-0 border border-borde text-sutil"
                           onMouseEnter={e => {
                             e.currentTarget.style.color = "var(--kipu-accent)";
                             e.currentTarget.style.borderColor = "var(--kipu-accent)";

@@ -83,8 +83,7 @@ export default function EstadoCobro({ cobro, onChange, linkPago, conForma = fals
 
       {/* Toggle Cobrada / Pendiente */}
       <div
-        className="flex rounded-lg overflow-hidden"
-        style={{ border: "1px solid var(--kipu-border)" }}
+        className="flex rounded-lg overflow-hidden border border-borde"
       >
         <button
           type="button"
@@ -143,14 +142,14 @@ export default function EstadoCobro({ cobro, onChange, linkPago, conForma = fals
 
       {/* Nota para pendiente */}
       {!esPagado && (
-        <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+        <p className="text-xs text-sutil">
           Podrás registrar el cobro después desde el detalle del comprobante.
         </p>
       )}
 
       {/* Link de pago: opcional, factura por factura */}
       {!esPagado && linkPago?.pasarela?.conectada && (
-        <div className="rounded-lg p-3 space-y-2" style={{ border: "1px solid var(--kipu-border)" }}>
+        <div className="rounded-lg p-3 space-y-2 border border-borde">
           <label className="flex items-start gap-2.5 cursor-pointer">
             <input
               type="checkbox"
@@ -159,11 +158,11 @@ export default function EstadoCobro({ cobro, onChange, linkPago, conForma = fals
               onChange={(e) => linkPago.onChange(e.target.checked)}
             />
             <span className="min-w-0">
-              <span className="flex items-center gap-1.5 text-sm font-medium" style={{ color: "var(--kipu-text)" }}>
-                <CreditCard size={14} style={{ color: "var(--kipu-accent)" }} />
+              <span className="flex items-center gap-1.5 text-sm font-medium text-texto">
+                <CreditCard className="text-acento" size={14} />
                 Cobrar con link de pago ({linkPago.pasarela.nombre})
               </span>
-              <span className="block text-xs mt-0.5" style={{ color: "var(--kipu-subtle)" }}>
+              <span className="block text-xs mt-0.5 text-sutil">
                 {linkPago.momento === "al_pagar"
                   ? "Se crea solo el link. Cuando tu cliente pague, la factura se emite sola, ya cobrada, y le llega por correo."
                   : "El link va en la información adicional de la factura (XML y PDF) y en el correo al cliente. Cuando pague, la factura queda cobrada sola."}
@@ -185,15 +184,15 @@ export default function EstadoCobro({ cobro, onChange, linkPago, conForma = fals
                     onChange={() => linkPago.onMomento?.(valor)}
                   />
                   <span>
-                    <span className="font-medium" style={{ color: "var(--kipu-text)" }}>{titulo}</span>
-                    <span style={{ color: "var(--kipu-subtle)" }}> · {ayuda}</span>
+                    <span className="font-medium text-texto">{titulo}</span>
+                    <span className="text-sutil"> · {ayuda}</span>
                   </span>
                 </label>
               ))}
             </div>
           )}
           {linkPago.activo && linkPago.aviso && (
-            <p className="flex items-start gap-1.5 text-xs" style={{ color: "var(--kipu-warning)" }}>
+            <p className="flex items-start gap-1.5 text-xs text-alerta">
               <AlertTriangle size={13} className="mt-0.5 shrink-0" />
               {linkPago.aviso}
             </p>
@@ -201,9 +200,9 @@ export default function EstadoCobro({ cobro, onChange, linkPago, conForma = fals
         </div>
       )}
       {!esPagado && linkPago?.pasarela && !linkPago.pasarela.conectada && (
-        <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+        <p className="text-xs text-sutil">
           ¿Quieres cobrarla con tarjeta?{" "}
-          <Link href="/configuracion#cobros" className="underline" style={{ color: "var(--kipu-accent)" }}>
+          <Link href="/configuracion#cobros" className="underline text-acento">
             Conecta Payphone o PagoPlux
           </Link>
         </p>
