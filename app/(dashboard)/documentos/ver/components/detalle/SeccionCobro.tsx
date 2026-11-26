@@ -239,7 +239,8 @@ export default function SeccionCobro({ factura, onRecargar }: { factura: Factura
                 <LinkPago
                   documentoId={factura.id}
                   numero={factura.numero_doc}
-                  pendiente={["PENDIENTE", "PARCIAL"].includes(factura.estado_cobro ?? "")}
+                  // Un comprobante de prueba no lleva link: el pago sería real
+                  pendiente={["PENDIENTE", "PARCIAL"].includes(factura.estado_cobro ?? "") && !factura.es_sandbox}
                   onPagado={onRecargar}
                 />
               )}
