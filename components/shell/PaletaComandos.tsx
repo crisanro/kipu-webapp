@@ -35,6 +35,7 @@ import { useSandboxStore } from "@/store/sandbox.store";
 import { EVENTO_CERRAR_SESION, EVENTO_SELECTOR_EMPRESA } from "@/components/shell/BarraSuperior";
 import { cn } from "@/components/ui/cn";
 import { dosDecimales } from "@/lib/dinero";
+import { dejarParaFactura } from "@/lib/prefill";
 
 /** Abre la paleta desde un botón: window.dispatchEvent(new Event(EVENTO_PALETA)). */
 export const EVENTO_PALETA = "kipu:abrir-paleta";
@@ -240,11 +241,11 @@ function Ventana({ onCerrar }: { onCerrar: () => void }) {
         detalle: `$${dosDecimales(p.precio)}${puedeFacturar ? " · facturar" : ""}`,
         ejecutar: () => {
           if (!puedeFacturar) { router.push("/productos"); return; }
-          // Factura nueva con el producto ya cargado (fac/page.tsx lee kipu:prefill)
-          sessionStorage.setItem("kipu:prefill", JSON.stringify({ items: [{
+          // Factura nueva con el producto ya cargado
+          dejarParaFactura({ items: [{
             codigo: p.codigo ?? "", descripcion: p.descripcion, cantidad: 1, precio: p.precio,
-            descuento: 0, tipo_descuento: "$", tipo_iva: p.tipo_iva ?? "15", unidad: p.unidad ?? "UNIDAD",
-          }] }));
+            tipo_iva: p.tipo_iva ?? "15", unidad: p.unidad ?? "UNIDAD",
+          }] });
           router.push(FAC);
         },
       })) });

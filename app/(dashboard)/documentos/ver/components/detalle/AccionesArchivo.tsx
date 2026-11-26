@@ -6,6 +6,7 @@ import { useAvisos } from "@/components/ui/Avisos";
 import type { Accion } from "@/components/ui/HojaAcciones";
 import { esNativo, guardarYCompartir, compartir, abrirExterno } from "@/lib/nativo";
 import { enlaceWhatsAppA } from "@/lib/soporte";
+import { useCopiar } from "@/lib/useCopiar";
 
 // Estados que pueden generar PDF. Los anulados no: el servidor ya no los entrega (410)
 const ESTADOS_CON_PDF = ["AUTORIZADO", "FIRMADO", "RECIBIDA", "EN_REVISION"];
@@ -31,6 +32,7 @@ export function useAccionesArchivo(factura: FacturaBase) {
   // Archivo que se está bajando (en la app tarda un momento)
   const [preparando, setPreparando] = useState<Preparando>(null);
   const avisos = useAvisos();
+  const { copiar } = useCopiar();
 
   const xml_url      = urlXml(factura.clave_acceso);
   const consulta_url = urlConsulta(factura.clave_acceso);
@@ -57,10 +59,7 @@ export function useAccionesArchivo(factura: FacturaBase) {
     guardarYCompartir({ url: urlPdf(factura.clave_acceso, formato) }, `${numero}-${formato}.pdf`,
                       { titulo: `Comprobante ${numero}`, abrirEnWeb: true }));
 
-  const copiarEnlace = async () => {
-    try { await navigator.clipboard.writeText(consulta_url); avisos.exito("Enlace copiado"); }
-    catch { avisos.info(consulta_url); }
-  };
+  const copiarEnlace = () => copiar(consulta_url, "Enlace copiado");
 
   const pdf: Accion[] = puedePdf
     ? PDF_FORMATOS.map(f => ({

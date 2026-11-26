@@ -25,6 +25,7 @@ import {
 import { detalleError } from "@/lib/errores";
 import { dolares } from "@/lib/dinero";
 import { enlaceWhatsAppA } from "@/lib/soporte";
+import { useCopiar } from "@/lib/useCopiar";
 
 // "Facturar cuando el cliente pague": la factura ya armada espera el pago del link
 interface Cobro {
@@ -147,10 +148,8 @@ function CobrosContenido() {
     }
   };
 
-  const copiar = async (url: string) => {
-    try { await navigator.clipboard.writeText(url); avisos.exito("Link copiado"); }
-    catch { avisos.info(url); }
-  };
+  const { copiar: copiarTexto } = useCopiar();
+  const copiar = (url: string) => copiarTexto(url, "Link copiado");
 
   // Hoja del sistema (app/celular): el cliente elige WhatsApp, correo, etc.
   const compartirLink = async (url: string) => {

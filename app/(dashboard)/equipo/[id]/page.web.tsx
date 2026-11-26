@@ -9,6 +9,7 @@ import api from "@/lib/api";
 import { caja, campo, Etiqueta, fecha, Vence, type Yo } from "../_comun";
 import { detalleError } from "@/lib/errores";
 import { enlaceWhatsAppA } from "@/lib/soporte";
+import { useCopiar } from "@/lib/useCopiar";
 
 interface Gestion {
   id: number; tipo: string; nombre: string; estado: string; vencimiento: string; dias: number;
@@ -191,6 +192,7 @@ function VerClave({ emisorId, alVer }: { emisorId: number; alVer: () => void }) 
   const [clave,  setClave]  = useState("");
   const [error,  setError]  = useState("");
   const [abierto, setAbierto] = useState(false);
+  const { copiar, copiado } = useCopiar();
 
   // Se oculta sola al minuto
   useEffect(() => {
@@ -215,9 +217,9 @@ function VerClave({ emisorId, alVer }: { emisorId: number; alVer: () => void }) 
     return (
       <div className="flex flex-wrap items-center gap-2">
         <code className="px-2 py-1 rounded text-sm" style={campo}>{clave}</code>
-        <button type="button" onClick={() => navigator.clipboard.writeText(clave)} className="inline-flex items-center gap-1 text-xs underline"
+        <button type="button" onClick={() => copiar(clave)} className="inline-flex items-center gap-1 text-xs underline"
                 style={{ color: "var(--kipu-accent)" }}>
-          <Copy size={12} /> Copiar
+          <Copy size={12} /> {copiado ? "Copiada" : "Copiar"}
         </button>
         <span className="text-[11px]" style={{ color: "var(--kipu-subtle)" }}>Se oculta en 1 minuto</span>
       </div>

@@ -12,6 +12,7 @@ import BotonIcono from "@/components/ui/BotonIcono";
 import { Campo, Entrada, EntradaClave } from "@/components/ui/Campo";
 import { useAvisos } from "@/components/ui/Avisos";
 import { detalleError } from "@/lib/errores";
+import { useCopiar } from "@/lib/useCopiar";
 import { cn } from "@/components/ui/cn";
 
 interface CampoCred { key: string; label: string; secreto: boolean; requerido?: boolean }
@@ -57,7 +58,7 @@ export default function TabCobrosEnLinea() {
   const [cargando,   setCargando]   = useState(true);
   const [editando,   setEditando]   = useState<string | null>(null);   // proveedor con el formulario abierto
   const [valores,    setValores]    = useState<Record<string, string>>({});
-  const [copiado,    setCopiado]    = useState<string | null>(null);
+  const { copiar, copiado } = useCopiar();
   const [error,      setError]      = useState("");
   const [guardando,  setGuardando]  = useState(false);
   const [desconectando, setDesconectando] = useState<string | null>(null);   // proveedor pidiendo PIN
@@ -135,12 +136,6 @@ export default function TabCobrosEnLinea() {
     await cargar();
   };
 
-  const copiar = async (texto: string, id: string) => {
-    await navigator.clipboard.writeText(texto);
-    setCopiado(id);
-    setTimeout(() => setCopiado(null), 2000);
-  };
-
   if (cargando) return null;
 
   return (
@@ -207,7 +202,7 @@ export default function TabCobrosEnLinea() {
                       etiqueta={copiado === op.proveedor ? "Copiada" : "Copiar la URL"}
                       icono={copiado === op.proveedor ? <CheckCircle2 size={16} className="text-exito" /> : <Copy size={16} />}
                       variante="secundario"
-                      onClick={() => copiar(c.webhook_url, op.proveedor)}
+                      onClick={() => copiar(c.webhook_url, null, op.proveedor)}
                     />
                   </div>
                   <p className="text-xs text-sutil">{AYUDA[op.proveedor]?.webhook}</p>

@@ -11,7 +11,7 @@ import SinAcceso from "@/components/SinAcceso";
 import { useAuthStore } from "@/store/auth.store";
 import { hoyEC } from "@/lib/fecha";
 import { demoCuentas, resumenCuentas } from "@/lib/demos";
-import { BannerEjemplo, EtiquetaEjemplo } from "@/components/EjemploPro";
+import { AvisoFuncionPro, BannerEjemplo, EtiquetaEjemplo } from "@/components/EjemploPro";
 import SoloWeb from "@/components/SoloWeb";
 import { ES_APP_NATIVA } from "@/lib/plataforma";
 import Hoja from "@/components/ui/Hoja";
@@ -250,24 +250,11 @@ function CuentasContent() {
       )}
 
       {!tieneSub && !esDemo && (
-        <div className="mb-4 flex items-center gap-3 rounded-xl border border-alerta/20 bg-alerta-suave px-4 py-3">
-          <AlertTriangle size={15} className="shrink-0 text-alerta" />
-          <div className="flex-1">
-            <p className="text-sm font-medium text-alerta-texto">
-              {ES_APP_NATIVA ? "No incluido en tu plan actual" : "Función del Plan Pro"}
-            </p>
-            <p className="text-xs text-tenue">
-              {ES_APP_NATIVA
-                ? "Las cuentas por cobrar y pagar no están incluidas en tu plan actual. Las que ya registraste las sigues viendo."
-                : "Las cuentas por cobrar y pagar son del Plan Pro. Las que ya registraste las sigues viendo."}
-            </p>
-          </div>
-          <SoloWeb>
-            <Link href="/planes" className="shrink-0 text-xs text-alerta-texto underline underline-offset-2">
-              Ver planes
-            </Link>
-          </SoloWeb>
-        </div>
+        <AvisoFuncionPro
+          titulo className="mb-4"
+          texto="Las cuentas por cobrar y pagar son del Plan Pro. Las que ya registraste las sigues viendo."
+          textoApp="Las cuentas por cobrar y pagar no están incluidas en tu plan actual. Las que ya registraste las sigues viendo."
+        />
       )}
 
       {/* Resumen: tocar Por cobrar / Por pagar filtra la lista */}

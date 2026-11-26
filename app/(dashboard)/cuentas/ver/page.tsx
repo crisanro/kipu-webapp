@@ -8,6 +8,7 @@ import { useAuthStore } from "@/store/auth.store";
 import { hoyEC } from "@/lib/fecha";
 import { useLista } from "@/lib/useLista";
 import SoloWeb from "@/components/SoloWeb";
+import { AvisoFuncionPro } from "@/components/EjemploPro";
 import { ES_APP_NATIVA } from "@/lib/plataforma";
 import { FORMAS_COBRO, type TonoEstado } from "@/lib/estados";
 import Hoja from "@/components/ui/Hoja";
@@ -225,17 +226,11 @@ function DetalleCuenta({ id }: { id: string }) {
           )}
 
           {activa && !tieneSub && (
-            <div className="mt-4 flex items-center gap-2 rounded-lg border border-alerta/20 bg-alerta-suave px-3 py-2.5">
-              <AlertTriangle size={14} className="shrink-0 text-alerta" aria-hidden />
-              <p className="text-xs text-alerta-texto">
-                {ES_APP_NATIVA
-                  ? "Registrar abonos y ajustes no está incluido en tu plan actual."
-                  : "Registrar abonos y ajustes es del Plan Pro."}
-              </p>
-              <SoloWeb>
-                <Link href="/planes" className="ml-auto shrink-0 text-xs text-alerta-texto underline">Ver planes</Link>
-              </SoloWeb>
-            </div>
+            <AvisoFuncionPro
+              className="mt-4 gap-2 rounded-lg px-3 py-2.5"
+              texto="Registrar abonos y ajustes es del Plan Pro."
+              textoApp="Registrar abonos y ajustes no está incluido en tu plan actual."
+            />
           )}
         </section>
 

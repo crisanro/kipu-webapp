@@ -11,6 +11,7 @@ import {
   AtSign
 } from "lucide-react";
 import { enlaceWhatsAppA } from "@/lib/soporte";
+import { useCopiar } from "@/lib/useCopiar";
 
 // ── Estados del embudo ─────────────────────────────────────────────────────────
 const ESTADOS: Record<string, { label: string; desc: string; color: string }> = {
@@ -108,7 +109,8 @@ export default function AdminSoportePage() {
   const [mensaje,    setMensaje]    = useState<string | null>(null);
   const [accion,     setAccion]     = useState<string | null>(null);
   const [link,       setLink]       = useState<{ tipo: "verificacion" | "password"; url: string } | null>(null);
-  const [copiado,    setCopiado]    = useState(false);
+  const { copiar: copiarTexto, copiado: textoCopiado } = useCopiar();
+  const copiado = !!link && textoCopiado === link.url;
   const [verifOpen,  setVerifOpen]  = useState(false);
   const [motivo,     setMotivo]     = useState("");
 
@@ -198,7 +200,6 @@ export default function AdminSoportePage() {
         enviar: true,
       });
       setLink({ tipo, url: res.data.link });
-      setCopiado(false);
       if (res.data.enviado) {
         setMensaje(`Correo enviado a ${resultado.email}.`);
       } else {
@@ -260,12 +261,7 @@ export default function AdminSoportePage() {
     }
   };
 
-  const copiar = async () => {
-    if (!link) return;
-    await navigator.clipboard.writeText(link.url);
-    setCopiado(true);
-    setTimeout(() => setCopiado(false), 2000);
-  };
+  const copiar = () => { if (link) copiarTexto(link.url); };
 
   const fb         = resultado?.firebase;
   const profile    = resultado?.profile;

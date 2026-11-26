@@ -11,6 +11,7 @@ import {
 import PinInput from "@/components/PinInput";
 import { useAuthStore } from "@/store/auth.store";
 import { detalleError } from "@/lib/errores";
+import { useCopiar } from "@/lib/useCopiar";
 
 interface ApiKey {
   id:           number;
@@ -38,7 +39,7 @@ export default function TabApiKeys() {
   const [loading,      setLoading]      = useState(true);
   const [nombre,       setNombre]       = useState("");
   const [nuevaKey,     setNuevaKey]     = useState("");
-  const [copiado,      setCopiado]      = useState<string | null>(null);
+  const { copiar, copiado } = useCopiar();
   const [showForm,     setShowForm]     = useState(false);
   const [keyToRevoke,  setKeyToRevoke]  = useState<number | null>(null);
   const [showSandbox,  setShowSandbox]  = useState(false);
@@ -93,12 +94,6 @@ export default function TabApiKeys() {
     } finally {
       setRegenSandbox(false);
     }
-  };
-
-  const copiar = async (text: string, id: string) => {
-    await navigator.clipboard.writeText(text);
-    setCopiado(id);
-    setTimeout(() => setCopiado(null), 2000);
   };
 
   return (
@@ -196,7 +191,7 @@ export default function TabApiKeys() {
                   {sandboxKey.key && (
                     <button
                       type="button"
-                      onClick={() => copiar(sandboxKey.key!, "sandbox")}
+                      onClick={() => copiar(sandboxKey.key!, null, "sandbox")}
                       className="p-1 transition-colors"
                       style={{ color: "var(--kipu-subtle)" }}
                       onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}
@@ -280,7 +275,7 @@ export default function TabApiKeys() {
             <code className="text-xs flex-1 break-all" style={{ color: "var(--kipu-text)" }}>{nuevaKey}</code>
             <button
               type="button"
-              onClick={() => copiar(nuevaKey, "nueva")}
+              onClick={() => copiar(nuevaKey, null, "nueva")}
               className="shrink-0 transition-colors"
               style={{ color: "var(--kipu-subtle)" }}
               onMouseEnter={e => e.currentTarget.style.color = "var(--kipu-text)"}

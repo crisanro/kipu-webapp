@@ -3,6 +3,7 @@ import { useRouter } from "next/navigation";
 import { Copy, FileMinus, FilePlus, Info, Lock, Receipt } from "lucide-react";
 import type { FacturaBase } from "./utils";
 import { tipoIvaDesdeXml } from "@/lib/iva";
+import { dejarParaFactura } from "@/lib/prefill";
 import type { Accion } from "@/components/ui/HojaAcciones";
 import { useAuthStore } from "@/store/auth.store";
 import { rutaFueraDelPlan } from "@/lib/plataforma";
@@ -62,30 +63,27 @@ export function useAccionesRelacionadas(factura: FacturaBase, consumidorFinal: b
         const razon  = info.razonSocialComprador || factura.cliente?.razon_social || "";
         const tipoId = info.tipoIdentificacionComprador || "05";
 
-        sessionStorage.setItem("kipu:prefill", JSON.stringify({
+        dejarParaFactura({
           cliente: idComp === "9999999999999" ? null : {
             identificacion: idComp,
             razon_social:   razon,
             tipo_id:        tipoId,
           },
           esConsumidorFinal: idComp === "9999999999999",
-          items: detalles.map((d: any) => {
-            return {
-              // La NC trae codigoInterno; FAC y LIQ, codigoPrincipal
-              codigo:          esNc ? (d.codigoInterno || "") : d.codigoPrincipal !== "S/C" ? d.codigoPrincipal : "",
-              descripcion:     d.descripcion,
-              cantidad:        parseFloat(d.cantidad),
-              precio:          parseFloat(d.precioUnitario),
-              descuento:       parseFloat(d.descuento || 0),
-              tipo_descuento:  "$",
-              tipo_iva:        tipoIvaDesdeXml(d.impuestos?.impuesto),
-              unidad:          "UNIDAD",
-            };
-          }),
+          items: detalles.map((d: any) => ({
+            // La NC trae codigoInterno; FAC y LIQ, codigoPrincipal
+            codigo:          esNc ? (d.codigoInterno || "") : d.codigoPrincipal !== "S/C" ? d.codigoPrincipal : "",
+            descripcion:     d.descripcion,
+            cantidad:        parseFloat(d.cantidad),
+            precio:          parseFloat(d.precioUnitario),
+            descuento:       parseFloat(d.descuento || 0),
+            tipo_descuento:  "$",
+            tipo_iva:        tipoIvaDesdeXml(d.impuestos?.impuesto),
+          })),
           camposAdicionales: adicionales
             .filter((a: any) => a["@nombre"] !== "PROVEEDOR_SISTEMA_INFORMATICO")
             .map((a: any) => ({ nombre: a["@nombre"], valor: a["#text"] })),
-        }));
+        });
         router.push("/documentos/emitir/fac");
       },
     });

@@ -24,6 +24,8 @@ import { useEmision } from "../components/useEmision";
 import { useBorrador } from "@/lib/borradores";
 import { tieneAccesoAEmitir } from "@/lib/emision";
 import { enlaceWhatsAppA } from "@/lib/soporte";
+import { useDatosParaFactura } from "@/lib/prefill";
+import { useCopiar } from "@/lib/useCopiar";
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -86,7 +88,7 @@ export default function NuevaFacturaPage() {
   // ── Link de pago (opcional, factura por factura) ────────────────────────────
   const [pasarela, setPasarela] = useState<PasarelaEstado | null>(null);
   const [linkPago, setLinkPago] = useState(false);
-  const [linkCopiado, setLinkCopiado] = useState(false);
+  const { copiar, copiado: linkCopiado } = useCopiar();
   const [momento, setMomento] = useState<MomentoFactura>("ahora");   // "al_pagar": se factura cuando pague
   const [cobroCreado, setCobroCreado] = useState<CobroCreado | null>(null);
   useEffect(() => {
@@ -116,9 +118,40 @@ export default function NuevaFacturaPage() {
   const [proformaId, setProformaId] = useState<string | null>(null);
 
   // ── Borrador: lo escrito sobrevive a salir de la pantalla o al cierre de la app ──
-  // Con datos de fuera (duplicar, desde proforma) no se ofrece el borrador viejo
-  const [conPrefill] = useState(() =>
-    typeof window !== "undefined" && !!sessionStorage.getItem("kipu:prefill"));
+  // Datos de otra pantalla (duplicar, facturar una proforma o a una persona,
+  // producto de la paleta): llenan el formulario y no se ofrece el borrador viejo
+  const conPrefill = useDatosParaFactura((data) => {
+    if (data.items?.length) {
+      setItems(data.items.map((i) => {
+        const iva = String(i.tipo_iva ?? "").toUpperCase();
+        return {
+          _id:            genId(),
+          codigo:         String(i.codigo ?? ""),
+          descripcion:    String(i.descripcion ?? ""),
+          cantidad:       Number(i.cantidad)  || 1,
+          precio:         Number(i.precio)    || 0,
+          descuento:      Number(i.descuento) || 0,
+          tipo_descuento: i.tipo_descuento === "%" ? "%" : "$",
+          tipo_iva:       TIPOS_IVA.includes(iva) ? iva : "15",
+          unidad:         String(i.unidad ?? "UNIDAD"),
+        };
+      }));
+    }
+    if (data.camposAdicionales) setCamposAdicionales(data.camposAdicionales);
+    if (data.proformaId) setProformaId(data.proformaId);
+    if (data.esConsumidorFinal) {
+      setEsConsumidorFinal(true);
+    } else if (data.cliente) {
+      setClienteSelected({
+        id:                      data.cliente.id || "",
+        razon_social:            data.cliente.razon_social || "",
+        identificacion:          data.cliente.identificacion || "",
+        tipo_identificacion_sri: data.cliente.tipo_id || "05",
+        email:                   "",
+        direccion:               "",
+      });
+    }
+  });
   const datosBorrador = useMemo(() => ({
     clienteSelected, esConsumidorFinal, clienteNuevo, items, pagos, propina, cobro, camposAdicionales, proformaId,
   }), [clienteSelected, esConsumidorFinal, clienteNuevo, items, pagos, propina, cobro, camposAdicionales, proformaId]);
@@ -156,52 +189,6 @@ export default function NuevaFacturaPage() {
 
   // ── Cargar estructura ────────────────────────────────────────────────────────
 
-  // ── Prefill / clonación ──────────────────────────────────────────────────────
-  useEffect(() => {
-    const prefill = sessionStorage.getItem("kipu:prefill");
-    if (!prefill) return;
-    try {
-      const data = JSON.parse(prefill);
-
-      if (data.items && Array.isArray(data.items)) {
-        setItems(data.items.map((i: any) => ({
-          _id:              genId(),
-          codigo:          String(i.codigo ?? ""),
-          descripcion:     String(i.descripcion ?? ""),
-          cantidad:        parseFloat(i.cantidad)  || 1,
-          precio:          parseFloat(i.precio)    || 0,
-          descuento:       parseFloat(i.descuento) || 0,
-          tipo_descuento: (i.tipo_descuento === "%" ? "%" : "$") as "$" | "%",
-          tipo_iva:        TIPOS_IVA.includes(String(i.tipo_iva)) ? String(i.tipo_iva) : "15",
-          unidad:          String(i.unidad ?? "UNIDAD"),
-        })));
-      }
-
-      if (data.camposAdicionales) setCamposAdicionales(data.camposAdicionales);
-
-      if (data._proforma_id) {
-        setProformaId(data._proforma_id);
-      }
-
-      if (data.esConsumidorFinal) {
-        setEsConsumidorFinal(true);
-      } else if (data.cliente) {
-        setClienteSelected({
-          id:                    data.cliente.id || "",
-          razon_social:          data.cliente.razon_social || "",
-          identificacion:        data.cliente.identificacion || "",
-          tipo_identificacion_sri: data.cliente.tipo_id || "05",
-          email:                 "",
-          direccion:             "",
-        });
-      }
-    } catch (e) {
-      console.error("Error al procesar prefill", e);
-    } finally {
-      sessionStorage.removeItem("kipu:prefill");
-    }
-  }, []);
-
   // ── Handlers establecimiento ─────────────────────────────────────────────────
 
   // ── Reset ────────────────────────────────────────────────────────────────────
@@ -216,7 +203,6 @@ export default function NuevaFacturaPage() {
     setPropina(false);
     setCobro(cobroInicial());
     setLinkPago(!!pasarela?.marcar_por_defecto);
-    setLinkCopiado(false);
     setMomento("ahora");
     setCobroCreado(null);
     setCamposAdicionales([]);
@@ -375,7 +361,7 @@ export default function NuevaFacturaPage() {
             </code>
             <div className="flex gap-2">
               <button
-                onClick={async () => { await navigator.clipboard.writeText(url); setLinkCopiado(true); }}
+                onClick={() => copiar(url)}
                 className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs py-1.5 rounded-lg"
                 style={{ border: "1px solid var(--kipu-border)", color: "var(--kipu-muted)" }}
               >
@@ -430,7 +416,7 @@ export default function NuevaFacturaPage() {
             </code>
             <div className="flex gap-2">
               <button
-                onClick={async () => { await navigator.clipboard.writeText(resultado.link_pago); setLinkCopiado(true); }}
+                onClick={() => copiar(resultado.link_pago)}
                 className="flex-1 inline-flex items-center justify-center gap-1.5 text-xs py-1.5 rounded-lg"
                 style={{ border: "1px solid var(--kipu-border)", color: "var(--kipu-muted)" }}
               >

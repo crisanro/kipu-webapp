@@ -28,6 +28,8 @@ import {
 import { detalleError } from "@/lib/errores";
 import { dosDecimales } from "@/lib/dinero";
 import { NOMBRE_TIPO_ID } from "@/lib/identificacion";
+import { dejarParaFactura } from "@/lib/prefill";
+import { useCopiar } from "@/lib/useCopiar";
 import { enlaceWhatsAppA } from "@/lib/soporte";
 
 const FACTURAS_LIMIT = 10; // ← Cambia a 20 cuando estés listo
@@ -68,6 +70,7 @@ export default function DetallePersonaPage() {
 function DetallePersona({ id }: { id: string }) {
   const router  = useRouter();
   const avisos  = useAvisos();
+  const { copiar } = useCopiar();
   const empresaActiva = useAuthStore((s) => s.empresa);
   const sinCuentas = rutaFueraDelPlan("/cuentas", empresaActiva);
 
@@ -162,24 +165,18 @@ function DetallePersona({ id }: { id: string }) {
     }
   };
 
-  const copiarUid = async () => {
-    try { await navigator.clipboard.writeText(uid); avisos.exito("UID copiado"); }
-    catch { avisos.info(uid); }
-  };
+  const copiarUid = () => copiar(uid, "UID copiado");
 
   const nuevaFactura = () => {
-    sessionStorage.setItem("kipu:prefill", JSON.stringify({
+    dejarParaFactura({
       cliente: {
         id:             cliente.id,
         razon_social:   cliente.razon_social,
         identificacion: cliente.identificacion,
         tipo_id:        cliente.tipo_identificacion_sri,
       },
-      esConsumidorFinal:  false,
-      items:              [],
-      formaPago:          "01",
-      camposAdicionales:  cliente.email ? [{ nombre: "Email", valor: cliente.email }] : [],
-    }));
+      camposAdicionales: cliente.email ? [{ nombre: "Email", valor: cliente.email }] : [],
+    });
     router.push("/documentos/emitir/fac");
   };
 

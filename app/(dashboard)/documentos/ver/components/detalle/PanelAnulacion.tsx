@@ -7,6 +7,7 @@ import {
 import api from "@/lib/api";
 import { type FacturaBase, formatearFecha, SRI_EN_LINEA_URL, MOTIVO_LABEL } from "./utils";
 import { detalleError } from "@/lib/errores";
+import { useCopiar } from "@/lib/useCopiar";
 
 // Tiempo mínimo entre consultas al SRI por documento
 const COOLDOWN_SEG = 60;
@@ -22,15 +23,9 @@ function Spinner({ color = "#FFFFFF" }: { color?: string }) {
 }
 
 function CampoCopiable({ label, valor }: { label: string; valor: string | null | undefined }) {
-  const [copiado, setCopiado] = useState(false);
+  const { copiar: copiarTexto, copiado } = useCopiar();
   const vacio = !valor;
-
-  const copiar = async () => {
-    if (vacio) return;
-    await navigator.clipboard.writeText(valor!);
-    setCopiado(true);
-    setTimeout(() => setCopiado(false), 1500);
-  };
+  const copiar = () => { if (valor) copiarTexto(valor); };
 
   return (
     <div
