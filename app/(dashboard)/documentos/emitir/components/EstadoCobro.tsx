@@ -4,13 +4,17 @@ import Link from "next/link";
 import { CheckCircle2, Clock, CreditCard, AlertTriangle, HandCoins } from "lucide-react";
 import Seccion from "@/components/ui/Seccion";
 import { Campo, Entrada } from "@/components/ui/Campo";
+import ChipsFiltro from "@/components/ui/ChipsFiltro";
 import { hoyEC } from "@/lib/fecha";
+import { FORMAS_COBRO } from "@/lib/estados";
 
 // ── Tipos ──────────────────────────────────────────────────────────────────────
 export interface DatosCobro {
   estado:     "PAGADO" | "PENDIENTE";
   fecha_pago: string;       // YYYY-MM-DD
   referencia: string;       // número de comprobante / referencia
+  /** Cómo se cobró (FORMAS_COBRO). La factura no lo usa: lo saca de sus formas de pago. */
+  forma?:     string;
 }
 
 /** Pasarela de la empresa (GET /cobros-en-linea/estado) */
@@ -38,6 +42,8 @@ interface Props {
   cobro:     DatosCobro;
   onChange:  (cobro: DatosCobro) => void;
   linkPago?: OpcionLinkPago;
+  /** Pregunta cómo se cobró (nota de débito: no tiene formas de pago de donde sacarlo). */
+  conForma?: boolean;
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -47,11 +53,13 @@ export const cobroInicial = (): DatosCobro => ({
   estado:     "PAGADO",
   fecha_pago: hoyEC(),
   referencia: "",
+  forma:      "EFECTIVO",
 });
 
 // ── Componente ─────────────────────────────────────────────────────────────────
-export default function EstadoCobro({ cobro, onChange, linkPago }: Props) {
+export default function EstadoCobro({ cobro, onChange, linkPago, conForma = false }: Props) {
   const esPagado = cobro.estado === "PAGADO";
+  const forma    = cobro.forma ?? "EFECTIVO";   // borradores de antes no la traen
 
   const toggleEstado = (estado: "PAGADO" | "PENDIENTE") => {
     onChange({
@@ -64,7 +72,8 @@ export default function EstadoCobro({ cobro, onChange, linkPago }: Props) {
 
   // Plegada se ve cómo queda; por cobrar se abre sola (hay que decidir el link)
   const conLink = !esPagado && !!linkPago?.activo && !!linkPago.pasarela?.conectada;
-  const resumen = esPagado ? "Cobrada"
+  const etiquetaForma = FORMAS_COBRO.find(f => f.valor === forma)?.etiqueta ?? forma;
+  const resumen = esPagado ? (conForma ? `Cobrada · ${etiquetaForma}` : "Cobrada")
     : conLink ? (linkPago?.momento === "al_pagar" ? "Por cobrar · factura al pagar" : "Por cobrar · con link")
     : "Por cobrar";
 
@@ -107,6 +116,16 @@ export default function EstadoCobro({ cobro, onChange, linkPago }: Props) {
           Pendiente de cobro
         </button>
       </div>
+
+      {/* Cómo se cobró — solo donde no sale de las formas de pago */}
+      {esPagado && conForma && (
+        <ChipsFiltro
+          etiqueta="Cómo se cobró"
+          opciones={FORMAS_COBRO}
+          valor={forma}
+          onCambio={(f) => onChange({ ...cobro, forma: f })}
+        />
+      )}
 
       {/* Campos de pago — solo cuando está cobrada */}
       {esPagado && (

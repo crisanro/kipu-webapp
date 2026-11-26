@@ -10,14 +10,7 @@ import LinkPago from "@/components/cobros/LinkPago";
 import Seccion from "@/components/ui/Seccion";
 import Boton from "@/components/ui/Boton";
 import { detalleError } from "@/lib/errores";
-
-const FORMAS_PAGO_COBRO = [
-  { value: "EFECTIVO",      label: "Efectivo" },
-  { value: "TRANSFERENCIA", label: "Transferencia bancaria" },
-  { value: "TARJETA",       label: "Tarjeta" },
-  { value: "CHEQUE",        label: "Cheque" },
-  { value: "OTRO",          label: "Otro" },
-];
+import { FORMAS_COBRO } from "@/lib/estados";
 
 // Estado de cobro (FAC, LIQ, NDB autorizadas) con edición inline.
 export default function SeccionCobro({ factura, onRecargar }: { factura: FacturaBase; onRecargar: () => void }) {
@@ -141,8 +134,8 @@ export default function SeccionCobro({ factura, onRecargar }: { factura: Factura
                         onFocus={e => e.currentTarget.style.borderColor = "var(--kipu-accent)"}
                         onBlur={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
                       >
-                        {FORMAS_PAGO_COBRO.map(f => (
-                          <option key={f.value} value={f.value}>{f.label}</option>
+                        {FORMAS_COBRO.map(f => (
+                          <option key={f.valor} value={f.valor}>{f.etiqueta}</option>
                         ))}
                       </select>
                     </div>

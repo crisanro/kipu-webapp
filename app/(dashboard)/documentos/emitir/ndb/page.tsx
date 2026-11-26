@@ -209,7 +209,7 @@ export default function NuevaNdbPage() {
 
       // Datos de cobro
       estado_cobro:            cobro.estado,
-      forma_pago_cobro:        cobro.estado === "PAGADO" ? "EFECTIVO" : null,
+      forma_pago_cobro:        cobro.estado === "PAGADO" ? (cobro.forma ?? "EFECTIVO") : null,
       fecha_pago:              cobro.estado === "PAGADO" ? cobro.fecha_pago : null,
       numero_comprobante_pago: cobro.estado === "PAGADO" && cobro.referencia.trim()
                                  ? cobro.referencia.trim()
@@ -342,7 +342,7 @@ export default function NuevaNdbPage() {
 
       <CamposAdicionales campos={camposAdicionales} onChange={setCamposAdicionales} />
 
-      <EstadoCobro cobro={cobro} onChange={setCobro} />
+      <EstadoCobro cobro={cobro} onChange={setCobro} conForma />
     </EmisionLayout>
   );
 }

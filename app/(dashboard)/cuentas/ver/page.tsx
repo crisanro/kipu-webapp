@@ -9,7 +9,7 @@ import { hoyEC } from "@/lib/fecha";
 import { useLista } from "@/lib/useLista";
 import SoloWeb from "@/components/SoloWeb";
 import { ES_APP_NATIVA } from "@/lib/plataforma";
-import type { TonoEstado } from "@/lib/estados";
+import { FORMAS_COBRO, type TonoEstado } from "@/lib/estados";
 import Hoja from "@/components/ui/Hoja";
 import Boton from "@/components/ui/Boton";
 import BotonIcono from "@/components/ui/BotonIcono";
@@ -40,14 +40,6 @@ const ESTADOS: Record<string, { etiqueta: string; tono: TonoEstado }> = {
   PAGADO:    { etiqueta: "Pagado",    tono: "exito" },
   ANULADO:   { etiqueta: "Anulado",   tono: "neutro" },
 };
-
-const FORMAS_PAGO: { valor: string; etiqueta: string }[] = [
-  { valor: "EFECTIVO",      etiqueta: "Efectivo" },
-  { valor: "TRANSFERENCIA", etiqueta: "Transferencia" },
-  { valor: "CHEQUE",        etiqueta: "Cheque" },
-  { valor: "TARJETA",       etiqueta: "Tarjeta" },
-  { valor: "OTRO",          etiqueta: "Otro" },
-];
 
 /** Fila etiqueta → valor (Datos). */
 function Dato({ icono: Icono, etiqueta, valor }: { icono: typeof Calendar; etiqueta: string; valor: React.ReactNode }) {
@@ -294,7 +286,7 @@ function DetalleCuenta({ id }: { id: string }) {
                       </span>
                     }
                     titulo={esAjuste ? "Ajuste" : "Abono"}
-                    subtitulo={[fecha(m.fecha), m.forma_pago && (FORMAS_PAGO.find(f => f.valor === m.forma_pago)?.etiqueta ?? m.forma_pago)].filter(Boolean).join(" · ")}
+                    subtitulo={[fecha(m.fecha), m.forma_pago && (FORMAS_COBRO.find(f => f.valor === m.forma_pago)?.etiqueta ?? m.forma_pago)].filter(Boolean).join(" · ")}
                     detalle={m.notas || m.motivo || undefined}
                     fin={<span className={esAjuste ? "text-alerta-texto" : "text-exito-texto"}>{esAjuste ? "+" : "−"}{dolares(m.monto)}</span>}
                   />
@@ -350,7 +342,7 @@ function DetalleCuenta({ id }: { id: string }) {
               <Campo etiqueta="Forma de pago">
                 <Selector value={abonoForm.forma_pago}
                           onChange={(e) => setAbonoForm({ ...abonoForm, forma_pago: e.target.value })}>
-                  {FORMAS_PAGO.map((f) => <option key={f.valor} value={f.valor}>{f.etiqueta}</option>)}
+                  {FORMAS_COBRO.map((f) => <option key={f.valor} value={f.valor}>{f.etiqueta}</option>)}
                 </Selector>
               </Campo>
             </div>
