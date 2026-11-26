@@ -41,23 +41,21 @@ export default function PantallaDePago({ periodoFmt, enCurso, total, alertasCant
       <button
         type="button"
         onClick={onVolver}
-        className="hidden items-center gap-1.5 text-xs transition-colors hover:underline lg:flex"
-        style={{ color: "var(--kipu-subtle)" }}
+        className="hidden items-center gap-1.5 text-xs transition-colors hover:underline lg:flex text-sutil"
       >
         <ArrowLeft size={14} /> Volver a reportes
       </button>
 
       {/* Lo que ya está calculado: solo el total */}
-      <div className="rounded-2xl p-5 text-center space-y-2"
-           style={{ background: "var(--kipu-surface)", border: "1px solid var(--kipu-border)" }}>
-        <Calculator size={22} className="mx-auto" style={{ color: "var(--kipu-accent)" }} />
-        <h1 className="text-lg font-bold" style={{ color: "var(--kipu-text)" }}>
+      <div className="rounded-2xl p-5 text-center space-y-2 bg-superficie border border-borde">
+        <Calculator size={22} className="mx-auto text-acento" />
+        <h1 className="text-lg font-bold text-texto">
           Tu declaración de {periodoFmt} {enCurso ? "va así hasta hoy" : "ya está calculada"}
         </h1>
-        <p className="text-3xl font-bold tabular-nums" style={{ color: "var(--kipu-text)" }}>
+        <p className="text-3xl font-bold tabular-nums text-texto">
           ${montoEC(aFavor ? total.saldo_a_favor : total.iva_a_pagar)}
         </p>
-        <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+        <p className="text-xs text-sutil">
           {aFavor ? "Saldo a favor para el próximo periodo" : "IVA a pagar"}
         </p>
       </div>
@@ -72,7 +70,7 @@ export default function PantallaDePago({ periodoFmt, enCurso, total, alertasCant
     return (
       <div className="p-4 md:p-6 max-w-2xl mx-auto space-y-5">
         {cabecera}
-        <p className="text-sm text-center" style={{ color: "var(--kipu-subtle)" }}>
+        <p className="text-sm text-center text-sutil">
           Calculado con los comprobantes de {periodoFmt} que tienes en Kipu.
         </p>
       </div>
@@ -84,11 +82,9 @@ export default function PantallaDePago({ periodoFmt, enCurso, total, alertasCant
       {cabecera}
 
       {otrasAlertas > 0 && (
-        <div className="rounded-xl p-3.5 flex items-start gap-3"
-             style={{ background: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)",
-                      border: "1px solid color-mix(in srgb, var(--kipu-warning) 30%, transparent)" }}>
-          <AlertTriangle size={16} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-warning)" }} />
-          <p className="text-sm" style={{ color: "var(--kipu-text)" }}>
+        <div className="rounded-xl p-3.5 flex items-start gap-3 bg-alerta/10 border border-alerta/30">
+          <AlertTriangle size={16} className="shrink-0 mt-0.5 text-alerta" />
+          <p className="text-sm text-texto">
             <strong>
               Encontramos {otrasAlertas === 1 ? "1 alerta" : `${otrasAlertas} alertas`} en tu declaración
               de {periodoFmt}.
@@ -98,30 +94,27 @@ export default function PantallaDePago({ periodoFmt, enCurso, total, alertasCant
         </div>
       )}
 
-      <p className="text-sm text-center" style={{ color: "var(--kipu-subtle)" }}>
+      <p className="text-sm text-center text-sutil">
         Para verla casillero por casillero, lista para copiar en el SRI:
       </p>
 
-      <div className="rounded-2xl p-4 flex flex-col gap-3"
-           style={{ background: "var(--kipu-surface)", border: "2px solid var(--kipu-accent)" }}>
-        <span className="flex items-center gap-1.5 text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>
-          <Sparkles size={15} style={{ color: "var(--kipu-accent)" }} /> Kipu Pro
+      <div className="rounded-2xl p-4 flex flex-col gap-3 bg-superficie border-2 border-acento">
+        <span className="flex items-center gap-1.5 text-sm font-semibold text-texto">
+          <Sparkles className="text-acento" size={15} /> Kipu Pro
         </span>
-        <p className="text-xl font-bold" style={{ color: "var(--kipu-text)" }}>
+        <p className="text-xl font-bold text-texto">
           {precioPro ? `$${montoEC(precioPro.total)}` : "Todo el año"}
-          {precioPro && <span className="text-xs font-normal" style={{ color: "var(--kipu-subtle)" }}> al año</span>}
+          {precioPro && <span className="text-xs font-normal text-sutil"> al año</span>}
         </p>
-        <ul className="text-xs space-y-1" style={{ color: "var(--kipu-subtle)" }}>
+        <ul className="text-xs space-y-1 text-sutil">
           {["El formulario 104 de cada periodo, casillero por casillero", "Las alertas de tu declaración",
             "Resumen para la renta", "Emisión sin límite y varios usuarios"]
             .map((t) => (
-              <li key={t} className="flex gap-1.5"><CheckCircle2 size={13} className="shrink-0 mt-px"
-                style={{ color: "var(--kipu-success)" }} />{t}</li>
+              <li key={t} className="flex gap-1.5"><CheckCircle2 size={13} className="shrink-0 mt-px text-exito" />{t}</li>
             ))}
         </ul>
         <Link href="/planes"
-              className="mt-1 text-center py-2 rounded-lg text-sm font-semibold text-white transition-opacity hover:opacity-90 active:scale-[0.98]"
-              style={{ background: "var(--kipu-accent)" }}>
+              className="mt-1 text-center py-2 rounded-lg text-sm font-semibold text-white transition-opacity hover:opacity-90 active:scale-[0.98] bg-acento">
           Ver planes
         </Link>
       </div>

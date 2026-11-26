@@ -122,21 +122,16 @@ export default function PreguntasSRI({ preguntas, tipo }: Props) {
 
   return (
     <div
-      className="rounded-xl overflow-hidden"
-      style={{
-        background: "var(--kipu-surface)",
-        border: "1px solid var(--kipu-border)",
-      }}
+      className="rounded-xl overflow-hidden bg-superficie border border-borde"
     >
       {/* Header */}
       <div
-        className="px-4 py-3 flex items-center justify-between gap-2"
-        style={{ borderBottom: "1px solid var(--kipu-border)" }}
+        className="px-4 py-3 flex items-center justify-between gap-2 border-b border-borde"
       >
-        <span className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>
+        <span className="text-sm font-semibold text-texto">
           Preguntas previas SRI (Perfilamiento)
         </span>
-        <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+        <span className="text-xs text-sutil">
           — respondidas automáticamente con tu configuración
         </span>
       </div>
@@ -156,9 +151,9 @@ export default function PreguntasSRI({ preguntas, tipo }: Props) {
               }}
             >
               {valor ? (
-                <CheckCircle2 size={15} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-success)" }} />
+                <CheckCircle2 size={15} className="shrink-0 mt-0.5 text-exito" />
               ) : (
-                <XCircle size={15} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-subtle)" }} />
+                <XCircle size={15} className="shrink-0 mt-0.5 text-sutil" />
               )}
               <div className="flex-1 min-w-0">
                 <p
@@ -198,17 +193,13 @@ export default function PreguntasSRI({ preguntas, tipo }: Props) {
       {/* Advertencias */}
       {conAdvertencia.length > 0 && (
         <div
-          className="px-4 py-3"
-          style={{
-            borderTop: "1px solid color-mix(in srgb, var(--kipu-warning) 20%, transparent)",
-            background: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)",
-          }}
+          className="px-4 py-3 border-t border-alerta/20 bg-alerta/10"
         >
-          <p className="text-xs font-semibold mb-1 flex items-center gap-1.5" style={{ color: "var(--kipu-warning)" }}>
+          <p className="text-xs font-semibold mb-1 flex items-center gap-1.5 text-alerta">
             <AlertTriangle size={12} />
             Campos que requieren tu atención manual
           </p>
-          <p className="text-xs" style={{ color: "var(--kipu-warning)" }}>
+          <p className="text-xs text-alerta">
             Algunos casilleros del SRI requieren información adicional fuera de tus comprobantes electrónicos.
           </p>
         </div>

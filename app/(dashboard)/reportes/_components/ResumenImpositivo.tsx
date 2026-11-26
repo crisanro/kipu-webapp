@@ -140,19 +140,19 @@ function InputCampoAjuste({
   onRestaurar?: () => void;
 }) {
   return (
-    <div className="flex items-center justify-between gap-3 px-4 py-2 rounded-lg" style={{ background: "color-mix(in srgb, var(--kipu-warning) 5%, transparent)", border: "1px solid color-mix(in srgb, var(--kipu-warning) 20%, transparent)" }}>
+    <div className="flex items-center justify-between gap-3 px-4 py-2 rounded-lg bg-alerta/5 border border-alerta/20">
       <div className="flex items-center gap-3 min-w-0 flex-1">
         <span className="text-[10px] font-bold px-2 py-0.5 rounded shrink-0" style={{ background: "color-mix(in srgb, var(--kipu-warning) 20%, transparent)", color: "var(--kipu-warning)" }}>
           {num}
         </span>
         <div className="min-w-0">
-          <span className="block text-xs truncate font-medium" style={{ color: "var(--kipu-warning)" }}>
+          <span className="block text-xs truncate font-medium text-alerta">
             {label}
           </span>
           <span className="block text-[10px]" style={{ color: "var(--kipu-subtle)" }}>
             {manual ? "Ingresado a mano · " : "Calculado por Kipu"}
             {manual && onRestaurar && (
-              <button type="button" onClick={onRestaurar} className="underline" style={{ color: "var(--kipu-accent)" }}>
+              <button type="button" onClick={onRestaurar} className="underline text-acento">
                 usar cálculo automático
               </button>
             )}
@@ -160,7 +160,7 @@ function InputCampoAjuste({
         </div>
       </div>
       <div className="flex items-center gap-1 shrink-0">
-        <span className="text-xs font-semibold" style={{ color: "var(--kipu-warning)" }}>$</span>
+        <span className="text-xs font-semibold text-alerta">$</span>
         <input
           type="number"
           step="0.01"
@@ -168,8 +168,7 @@ function InputCampoAjuste({
           value={value === 0 ? "" : value}
           onChange={e => onChange(parseFloat(e.target.value) || 0)}
           placeholder="0.00"
-          className="w-28 px-2 py-1 rounded text-xs text-right font-bold focus:outline-none tabular-nums"
-          style={{ background: "var(--kipu-surface)", border: "1px solid color-mix(in srgb, var(--kipu-warning) 30%, transparent)", color: "var(--kipu-text)" }}
+          className="w-28 px-2 py-1 rounded text-xs text-right font-bold focus:outline-none tabular-nums bg-superficie border border-alerta/30 text-texto"
         />
       </div>
     </div>
@@ -229,11 +228,11 @@ export default function ResumenImpositivo({
     <div className="space-y-4">
       {/* ── MÓDULO IVA (FORMULARIO 104) ─────────────────────────────────── */}
       {tipo === "IVA" && (
-        <div className="rounded-xl overflow-hidden" style={{ background: "var(--kipu-surface)", border: "1px solid var(--kipu-border)" }}>
-          <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: "1px solid var(--kipu-border)" }}>
+        <div className="rounded-xl overflow-hidden bg-superficie border border-borde">
+          <div className="px-4 py-3 flex items-center justify-between border-b border-borde">
             <div>
-              <p className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>Resumen Impositivo</p>
-              <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Agente de Percepción del IVA (Formulario 104)</p>
+              <p className="text-sm font-semibold text-texto">Resumen Impositivo</p>
+              <p className="text-xs text-sutil">Agente de Percepción del IVA (Formulario 104)</p>
             </div>
             {onGuardar && (
               <button
@@ -254,8 +253,8 @@ export default function ResumenImpositivo({
 
           <div className="p-4 space-y-1">
             {dirty && (
-              <div className="flex items-start gap-2 rounded-lg px-3 py-2 mb-2" style={{ background: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)" }}>
-                <Info size={13} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-warning)" }} />
+              <div className="flex items-start gap-2 rounded-lg px-3 py-2 mb-2 bg-alerta/10">
+                <Info size={13} className="shrink-0 mt-0.5 text-alerta" />
                 <p className="text-[11px]" style={{ color: "var(--kipu-warning)" }}>
                   Tienes cambios sin guardar. Los totales de abajo se actualizan al guardar.
                 </p>
@@ -295,7 +294,7 @@ export default function ResumenImpositivo({
 
             <FilaCasillero num="609" label="Retenciones de IVA que le han sido efectuadas" value={c("609")} verde resta />
 
-            <div className="my-2" style={{ borderTop: "1px solid var(--kipu-border)" }} />
+            <div className="my-2 border-t border-borde" />
 
             <FilaCasillero num="620" label="Subtotal a pagar" value={c("620")} subtotal />
             <FilaCasillero num="699" label="Total impuesto a pagar por percepción" value={c("699")} subtotal />
@@ -328,11 +327,11 @@ export default function ResumenImpositivo({
 
       {/* ── MÓDULO RENTA (FORMULARIO 102) ─────────────────────────────────── */}
       {tipo === "RENTA" && (
-        <div className="rounded-xl overflow-hidden" style={{ background: "var(--kipu-surface)", border: "1px solid var(--kipu-border)" }}>
-          <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: "1px solid var(--kipu-border)" }}>
+        <div className="rounded-xl overflow-hidden bg-superficie border border-borde">
+          <div className="px-4 py-3 flex items-center justify-between border-b border-borde">
             <div>
-              <p className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>Resumen Impuesto a la Renta</p>
-              <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Personas Naturales (Formulario 102)</p>
+              <p className="text-sm font-semibold text-texto">Resumen Impuesto a la Renta</p>
+              <p className="text-xs text-sutil">Personas Naturales (Formulario 102)</p>
             </div>
           </div>
 
@@ -341,7 +340,7 @@ export default function ResumenImpositivo({
             <FilaCasillero num="850" label="Impuesto a la renta causado" value={casilleros["850"] ?? resultado?.impuesto_causado ?? 0} rojo />
             <FilaCasillero num="855" label="Retenciones en la fuente que le realizaron" value={casilleros["855"] ?? 0} verde resta />
             
-            <div className="my-2" style={{ borderTop: "1px solid var(--kipu-border)" }} />
+            <div className="my-2 border-t border-borde" />
 
             <FilaCasillero
               num="859"
