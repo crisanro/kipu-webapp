@@ -147,7 +147,7 @@ export default function ProductosPage() {
   useAtajos({
     "/": () => buscadorRef.current?.focus(),
     "n": () => abrirCrear(),
-  }, puedeVer);
+  }, puedeVer, { n: "Nuevo producto" });
   // "Nuevo producto" desde la paleta de comandos (lib/comandos.ts)
   useNuevoDesdePaleta(() => { if (puedeVer) abrirCrear(); });
 

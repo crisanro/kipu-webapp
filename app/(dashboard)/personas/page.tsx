@@ -223,7 +223,7 @@ function PersonasContenido() {
   useAtajos({
     "/": () => buscadorRef.current?.focus(),
     "n": () => abrirModal(),
-  });
+  }, true, { n: "Nuevo cliente o proveedor" });
   // "Nuevo cliente o proveedor" desde la paleta de comandos (lib/comandos.ts)
   useNuevoDesdePaleta(() => abrirModal());
 

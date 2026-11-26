@@ -10,6 +10,8 @@
 //     en el panel de Documentos), la persona en su ficha y el producto en una
 //     factura nueva ya cargado.
 // Se monta una vez en app/(dashboard)/layout.tsx.
+// Aquí vive también la hoja de atajos de teclado ("?" o "Ver atajos" en la paleta):
+// los generales, los de emitir y los de la pantalla activa (lib/useAtajos.ts).
 
 "use client";
 
@@ -23,6 +25,8 @@ import {
   type Comando, type GrupoComando,
 } from "@/lib/comandos";
 import { useCapaAtras } from "@/lib/botonAtras";
+import { useAtajosVisibles } from "@/lib/useAtajos";
+import Hoja from "@/components/ui/Hoja";
 import api from "@/lib/api";
 import { rutas } from "@/lib/rutas";
 import { tienePermiso } from "@/components/dashboard/DashboardNav";
@@ -33,13 +37,22 @@ import { cn } from "@/components/ui/cn";
 
 /** Abre la paleta desde un botón: window.dispatchEvent(new Event(EVENTO_PALETA)). */
 export const EVENTO_PALETA = "kipu:abrir-paleta";
+/** Abre la hoja de atajos de teclado. */
+export const EVENTO_ATAJOS = "kipu:ver-atajos";
 
 const ES_MAC = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent);
 /** Texto del atajo para mostrar en botones ("⌘K" o "Ctrl K"). */
 export const ATAJO_PALETA = ES_MAC ? "⌘K" : "Ctrl K";
 
+/** ¿Se está escribiendo? (ahí "?" es un carácter, no el atajo) */
+function escribiendo(el: EventTarget | null): boolean {
+  if (!(el instanceof HTMLElement)) return false;
+  return /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName) || el.isContentEditable;
+}
+
 export default function PaletaComandos() {
   const [abierta, setAbierta] = useState(false);
+  const [verAtajos, setVerAtajos] = useState(false);
   const abiertaRef = useRef(abierta);
   useEffect(() => { abiertaRef.current = abierta; });
 
@@ -52,17 +65,84 @@ export default function PaletaComandos() {
       e.preventDefault();
       setAbierta(a => !a);
     };
+    // "?" muestra los atajos (sin escribir en un campo y sin otra ventana abierta)
+    const alPregunta = (e: KeyboardEvent) => {
+      if (e.key !== "?" || e.ctrlKey || e.metaKey || e.altKey || e.isComposing) return;
+      if (escribiendo(e.target) || document.querySelector('[role="dialog"][aria-modal="true"]')) return;
+      e.preventDefault();
+      setVerAtajos(true);
+    };
     const alPedir = () => setAbierta(true);
+    const alPedirAtajos = () => setVerAtajos(true);
     window.addEventListener("keydown", alTeclear);
+    window.addEventListener("keydown", alPregunta);
     window.addEventListener(EVENTO_PALETA, alPedir);
+    window.addEventListener(EVENTO_ATAJOS, alPedirAtajos);
     return () => {
       window.removeEventListener("keydown", alTeclear);
+      window.removeEventListener("keydown", alPregunta);
       window.removeEventListener(EVENTO_PALETA, alPedir);
+      window.removeEventListener(EVENTO_ATAJOS, alPedirAtajos);
     };
   }, []);
 
-  // Se monta al abrir: cada vez empieza vacía y con el primero marcado
-  return abierta ? <Ventana onCerrar={() => setAbierta(false)} /> : null;
+  return (
+    <>
+      {/* Se monta al abrir: cada vez empieza vacía y con el primero marcado */}
+      {abierta && <Ventana onCerrar={() => setAbierta(false)} />}
+      <HojaAtajos abierta={verAtajos} onCerrar={() => setVerAtajos(false)} />
+    </>
+  );
+}
+
+// ── Hoja de atajos ───────────────────────────────────────────────────────────
+
+const NOMBRE_TECLA: Record<string, string> = {
+  ArrowDown: "↓", ArrowUp: "↑", Escape: "Esc", Enter: "Enter",
+};
+
+function HojaAtajos({ abierta, onCerrar }: { abierta: boolean; onCerrar: () => void }) {
+  const dePantalla = useAtajosVisibles();
+  const mod = ES_MAC ? "⌘" : "Ctrl";
+  // combo: teclas juntas (Ctrl + K); si no, alternativas (j o ↓)
+  const grupos: { titulo: string; filas: { teclas: string[]; texto: string; combo?: boolean }[] }[] = [
+    { titulo: "En todo el panel", filas: [
+      { teclas: [mod, "K"], combo: true, texto: "Paleta: crear, ir a una pantalla o buscar" },
+      { teclas: ["?"],      texto: "Ver estos atajos" },
+      { teclas: ["Esc"],    texto: "Cerrar la ventana de arriba" },
+    ] },
+    { titulo: "Al emitir o guardar", filas: [
+      { teclas: [mod, "Enter"], combo: true, texto: "Emitir sin ir al botón (también desde un campo)" },
+    ] },
+    ...(dePantalla.length ? [{ titulo: "En esta pantalla", filas: dePantalla }] : []),
+  ];
+
+  return (
+    <Hoja abierta={abierta} onCerrar={onCerrar} titulo="Atajos de teclado" tamano="sm">
+      <div className="space-y-5">
+        {grupos.map(g => (
+          <section key={g.titulo}>
+            <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-sutil">{g.titulo}</h3>
+            <dl className="divide-y divide-borde">
+              {g.filas.map(f => (
+                <div key={f.texto} className="flex items-center justify-between gap-4 py-2">
+                  <dt className="text-sm text-texto">{f.texto}</dt>
+                  <dd className="flex shrink-0 items-center gap-1 text-xs text-sutil">
+                    {f.teclas.map((t, i) => (
+                      <span key={t} className="flex items-center gap-1">
+                        {i > 0 && <span>{"combo" in f && f.combo ? "+" : "o"}</span>}
+                        <Tecla>{NOMBRE_TECLA[t] ?? t}</Tecla>
+                      </span>
+                    ))}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+        ))}
+      </div>
+    </Hoja>
+  );
 }
 
 const ORDEN: Exclude<GrupoComando, "Recientes">[] = ["Crear", "Ir a", "Acciones"];
@@ -117,10 +197,11 @@ function Ventana({ onCerrar }: { onCerrar: () => void }) {
     };
   }, []);
 
+  const [conTeclado] = useState(() => window.matchMedia("(pointer: fine)").matches);
   const comandos = useMemo(() => empresa ? comandosDisponibles({
-    empresa, varias, sandbox, temaOscuro,
+    empresa, varias, sandbox, temaOscuro, conTeclado,
     puedeSandbox: !!empresa.firma_ok && empresa.ambiente === 2,
-  }) : [], [empresa, varias, sandbox, temaOscuro]);
+  }) : [], [empresa, varias, sandbox, temaOscuro, conTeclado]);
 
   // ── Comprobantes, personas y productos (escribiendo) ─────────────────────────
   const q = consulta.trim();
@@ -223,6 +304,7 @@ function Ventana({ onCerrar }: { onCerrar: () => void }) {
       case "cerrar-sesion":    window.dispatchEvent(new Event(EVENTO_CERRAR_SESION)); break;
       case "sandbox":          setSandbox(!sandbox); break;
       case "tema":             setTheme(temaOscuro ? "light" : "dark"); break;
+      case "atajos":           window.dispatchEvent(new Event(EVENTO_ATAJOS)); break;
     }
   };
 
@@ -345,7 +427,7 @@ function Ventana({ onCerrar }: { onCerrar: () => void }) {
           <span><Tecla>↑</Tecla> <Tecla>↓</Tecla> moverse</span>
           <span><Tecla>Enter</Tecla> abrir</span>
           <span><Tecla>Esc</Tecla> cerrar</span>
-          <span className="ml-auto"><Tecla>{ATAJO_PALETA}</Tecla> desde cualquier pantalla</span>
+          <span className="ml-auto"><Tecla>?</Tecla> todos los atajos</span>
         </div>
       </div>
     </div>,
@@ -355,6 +437,6 @@ function Ventana({ onCerrar }: { onCerrar: () => void }) {
 
 function Tecla({ children }: { children: React.ReactNode }) {
   return (
-    <kbd className="rounded border border-borde bg-presionado px-1 py-px font-sans text-[10px] text-tenue">{children}</kbd>
+    <kbd className="inline-flex min-w-5 justify-center rounded border border-borde bg-presionado px-1 py-px font-sans text-[11px] text-tenue">{children}</kbd>
   );
 }

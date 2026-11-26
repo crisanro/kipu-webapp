@@ -88,7 +88,7 @@ function ProformasContenido() {
   useAtajos({
     "/": () => buscadorRef.current?.focus(),
     "n": () => { if (tieneSub) nueva(); },
-  });
+  }, true, { n: "Nueva proforma" });
 
   return (
     <div className="p-4 md:p-6">

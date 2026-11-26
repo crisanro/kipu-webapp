@@ -14,7 +14,7 @@
 
 import { useEffect, useRef } from "react";
 import {
-  ArrowLeftRight, CircleHelp, ClipboardList, FilePlus2, FileText, FlaskConical, Link2, LogOut,
+  ArrowLeftRight, CircleHelp, ClipboardList, FilePlus2, FileText, FlaskConical, Keyboard, Link2, LogOut,
   Moon, Package, ShoppingCart, Sun, UserPlus, type LucideIcon,
 } from "lucide-react";
 import { NAV_GROUPS, aplicaALaEmpresa, bloqueadoPorPlan, tienePermiso } from "@/components/dashboard/DashboardNav";
@@ -23,7 +23,7 @@ import type { Empresa } from "@/store/auth.store";
 
 export type GrupoComando = "Recientes" | "Crear" | "Ir a" | "Acciones";
 
-export type AccionComando = "selector-empresa" | "sandbox" | "tema" | "cerrar-sesion";
+export type AccionComando = "selector-empresa" | "sandbox" | "tema" | "cerrar-sesion" | "atajos";
 
 export interface Comando {
   id:        string;
@@ -95,7 +95,7 @@ function visible(empresa: Empresa, item: { href: string; permiso?: string | stri
   return true;
 }
 
-export function comandosDisponibles({ empresa, varias, sandbox, puedeSandbox, temaOscuro }: {
+export function comandosDisponibles({ empresa, varias, sandbox, puedeSandbox, temaOscuro, conTeclado = false }: {
   empresa:      Empresa;
   /** Tiene más de una empresa: se ofrece cambiar. */
   varias:       boolean;
@@ -103,6 +103,8 @@ export function comandosDisponibles({ empresa, varias, sandbox, puedeSandbox, te
   /** Firma lista y empresa en producción (mismas reglas que el menú). */
   puedeSandbox: boolean;
   temaOscuro:   boolean;
+  /** Hay mouse/teclado (compu): se ofrece la lista de atajos. */
+  conTeclado?:  boolean;
 }): Comando[] {
   const crear: Comando[] = CREAR.filter(c => visible(empresa, c)).map(c => ({
     id: c.id, grupo: "Crear", titulo: c.titulo, claves: c.claves, icono: c.icono, href: c.href, nuevo: c.nuevo,
@@ -133,6 +135,8 @@ export function comandosDisponibles({ empresa, varias, sandbox, puedeSandbox, te
     detalle: sandbox ? "Activado" : undefined, icono: FlaskConical, accion: "sandbox", claves: "pruebas sandbox" });
   acciones.push({ id: "accion-tema", grupo: "Acciones", titulo: temaOscuro ? "Cambiar a tema claro" : "Cambiar a tema oscuro",
     icono: temaOscuro ? Sun : Moon, accion: "tema", claves: "apariencia modo oscuro claro" });
+  if (conTeclado) acciones.push({ id: "accion-atajos", grupo: "Acciones", titulo: "Ver atajos de teclado",
+    icono: Keyboard, accion: "atajos", claves: "teclas teclado shortcuts ayuda" });
   acciones.push({ id: "accion-ayuda", grupo: "Acciones", titulo: "Centro de Ayuda", icono: CircleHelp,
     href: "/ayuda", claves: "ayuda guias soporte" });
   acciones.push({ id: "accion-salir", grupo: "Acciones", titulo: "Cerrar sesión", icono: LogOut,

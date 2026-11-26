@@ -214,7 +214,7 @@ function CuentasContent() {
   useAtajos({
     "/": () => buscadorRef.current?.focus(),
     "n": nueva,
-  });
+  }, true, { n: "Nueva cuenta" });
   const hoy   = hoyEC();
   // Las tarjetas del resumen filtran por tipo; tocar la elegida quita el filtro
   const alternarTipo = (t: "COBRAR" | "PAGAR") => setFiltroTipo(filtroTipo === t ? "" : t);

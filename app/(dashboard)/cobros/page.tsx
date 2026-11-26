@@ -111,7 +111,7 @@ function CobrosContenido() {
   useEffect(() => { cargar(); }, [cargar]);
 
   // Compu: "n" crea un link de cobro (lib/useAtajos.ts)
-  useAtajos({ "n": () => router.push(NUEVO_LINK) });
+  useAtajos({ "n": () => router.push(NUEVO_LINK) }, true, { n: "Nuevo link de cobro" });
 
   const reemplazar = (c: Cobro) => setCobros(prev => prev.map(x => x.id === c.id ? c : x));
 
