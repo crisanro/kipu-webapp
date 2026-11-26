@@ -14,6 +14,7 @@ import DocumentosRecibidos from "./components/DocumentosRecibidos";
 import AccesosRapidos from "./components/AccesosRapidos";
 import OfertaRenta from "@/components/renta/OfertaRenta";
 import { ES_APP_NATIVA, rutaFueraDelPlan } from "@/lib/plataforma";
+import { usePermiso } from "@/hooks/usePermiso";
 
 // El gráfico usa recharts (~370 KB): se baja aparte, después de pintar el panel.
 // Mientras tanto, un esqueleto del mismo tamaño para que la pantalla no salte.
@@ -75,6 +76,10 @@ export default function DashboardPage() {
   );
   // sandbox va en la clave: al cambiarlo SWR recarga solo (un mutate() aquí
   // duplicaba la petición al abrir el dashboard)
+
+  // Lo mismo que entrega la API (dashboard.py): cada parte, con el permiso de su pantalla
+  const verDocumentos = usePermiso("descargar");
+  const verRecibidos  = usePermiso("documentos_recibidos") && !rutaFueraDelPlan("/documentos/recibidos", empresa);
 
   const nombre      = empresa?.nombre_comercial || empresa?.razon_social || "tu empresa";
   const esProduccion = empresa?.ambiente === 2;
@@ -210,20 +215,24 @@ export default function DashboardPage() {
         <div className="space-y-6">
           <StatsGrid resumen={data?.resumen} empresa={empresa} />
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <div className="lg:col-span-2">
-              <GraficoFacturacion documentos={data?.documentos ?? []} />
-            </div>
+            {verDocumentos && (
+              <div className="lg:col-span-2">
+                <GraficoFacturacion documentos={data?.documentos ?? []} />
+              </div>
+            )}
             <AccesosRapidos />
           </div>
           {/* App de las tiendas: Recibidos solo si el plan lo incluye (lib/plataforma.ts) */}
-          {rutaFueraDelPlan("/documentos/recibidos", empresa) ? (
-            <UltimosDocumentos documentos={data?.documentos ?? []} />
-          ) : (
+          {verDocumentos && verRecibidos ? (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <UltimosDocumentos documentos={data?.documentos ?? []} />
               <DocumentosRecibidos docs={data?.recibidos_recientes ?? []} />
             </div>
-          )}
+          ) : verDocumentos ? (
+            <UltimosDocumentos documentos={data?.documentos ?? []} />
+          ) : verRecibidos ? (
+            <DocumentosRecibidos docs={data?.recibidos_recientes ?? []} />
+          ) : null}
         </div>
       )}
 

@@ -20,6 +20,7 @@ export default function StatsGrid({ resumen, empresa }: Props) {
   const stats = [
     {
       label: "Total facturado",
+      cifra: true,
       value: `$${compactoK(resumen?.importe_total ?? 0)}`,
       sub: "este mes · autorizados",
       icon: TrendingUp,
@@ -29,6 +30,7 @@ export default function StatsGrid({ resumen, empresa }: Props) {
     },
     {
       label: "Comprobantes",
+      cifra: true,
       value: resumen?.total_documentos ?? 0,
       sub: "emitidos este mes",
       icon: FileText,
@@ -38,6 +40,7 @@ export default function StatsGrid({ resumen, empresa }: Props) {
     },
     {
       label: "IVA generado",
+      cifra: true,
       value: `$${compactoK(resumen?.valor_iva ?? 0)}`,
       sub: "para declaración",
       icon: Receipt,
@@ -74,6 +77,7 @@ export default function StatsGrid({ resumen, empresa }: Props) {
     },
     {
       label: "Subtotal base",
+      cifra: true,
       value: `$${compactoK(resumen?.subtotal_iva ?? 0)}`,
       sub: "base gravada 15%",
       icon: Users,
@@ -85,7 +89,8 @@ export default function StatsGrid({ resumen, empresa }: Props) {
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-      {stats.map(({ label, value, sub, icon: Icon, color, bg, border }) => (
+      {/* Sin el permiso "reportes" la API no manda el resumen: solo plan y créditos */}
+      {stats.filter((s) => resumen || !s.cifra).map(({ label, value, sub, icon: Icon, color, bg, border }) => (
         <div
           key={label}
           className="relative overflow-hidden rounded-xl p-4"

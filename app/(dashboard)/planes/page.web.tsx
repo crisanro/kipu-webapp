@@ -757,7 +757,10 @@ export default function PlanesPage() {
                 }}
               >
                 <h2 className="text-sm font-semibold mb-1" style={{ color: "var(--kipu-text)" }}>Comprar créditos</h2>
-                <p className="text-xs mb-4" style={{ color: "var(--kipu-subtle)" }}>Pago único · No vencen · IVA incluido</p>
+                <p className="text-xs mb-4" style={{ color: "var(--kipu-subtle)" }}>
+                  Pago único · No vencen · IVA incluido
+                  {!esAdmin && " · Solo el administrador de la empresa puede comprarlos"}
+                </p>
 
                 {planes.length === 0 ? (
                   <p className="text-sm text-center py-4" style={{ color: "var(--kipu-subtle)" }}>No hay planes disponibles.</p>
@@ -803,7 +806,7 @@ export default function PlanesPage() {
                           <button
                             type="button"
                             onClick={() => iniciarCheckoutCreditos(p.id)}
-                            disabled={!!pagando || !enProduccion}
+                            disabled={!!pagando || !enProduccion || !esAdmin}
                             className="w-full py-2 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
                             style={{
                               background: "var(--kipu-warning)",
