@@ -268,7 +268,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 ? "El pago de tu servicio falló. Escríbenos por WhatsApp y lo resolvemos."
                 : "El pago del servicio falló. Avísale al administrador de la empresa.",
               onActualizar: adminDelPlan
-                ? () => void abrirExterno(enlaceWhatsAppAlDia(empresa.razon_social, "pago"))
+                ? () => void abrirExterno(enlaceWhatsAppAlDia(empresa.razon_social))
                 : undefined,
               etiqueta: "Escribir por WhatsApp",
             } : {

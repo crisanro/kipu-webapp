@@ -8,8 +8,11 @@
 import Link from "next/link";
 import { useTheme } from "next-themes";
 import {
-  CalendarCheck, ChevronRight, FlaskConical, HelpCircle, LogOut, ShieldCheck, type LucideIcon,
+  CalendarCheck, ChevronRight, Database, FileText, FlaskConical, HelpCircle, Lock, LogOut, ShieldCheck,
+  type LucideIcon,
 } from "lucide-react";
+import { URL_PRIVACIDAD, URL_TERMINOS, URL_TRATAMIENTO_DATOS } from "@/lib/config";
+import { abrirExterno } from "@/lib/nativo";
 import { itemDelMenu, tienePermiso } from "@/components/dashboard/DashboardNav";
 import { EVENTO_CERRAR_SESION, EVENTO_SELECTOR_EMPRESA } from "@/components/shell/BarraSuperior";
 import { useEsCliente } from "@/components/ui/Hoja";
@@ -184,6 +187,13 @@ export default function MasPage() {
             })}
           </div>
         </div>
+      </Grupo>
+
+      {/* Documentos legales de kipu.ec (las tiendas piden la privacidad a mano) */}
+      <Grupo titulo="Legal">
+        <Fila icono={FileText} onClick={() => void abrirExterno(URL_TERMINOS)}>Términos y condiciones</Fila>
+        <Fila icono={Lock} onClick={() => void abrirExterno(URL_PRIVACIDAD)}>Política de privacidad</Fila>
+        <Fila icono={Database} onClick={() => void abrirExterno(URL_TRATAMIENTO_DATOS)}>Tratamiento de datos</Fila>
       </Grupo>
 
       <Grupo>
