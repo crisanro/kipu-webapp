@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import api from "@/lib/api";
 import { ArrowLeft, Bell, Send, CheckCircle2, Users, User } from "lucide-react";
 import { detalleError } from "@/lib/errores";
@@ -11,13 +11,24 @@ const TIPOS = [
   { value: "DECLARACION", label: "Declaración", color: "var(--kipu-accent)", bg: "color-mix(in srgb, var(--kipu-accent) 10%, transparent)" },
   { value: "CREDITOS",    label: "Créditos",    color: "var(--kipu-warning)", bg: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)" },
   { value: "FACTURA",     label: "Factura",     color: "var(--kipu-success)", bg: "color-mix(in srgb, var(--kipu-success) 10%, transparent)" },
+  // Mismos tipos que entiende la bandeja (components/NotificacionesDrawer.tsx).
+  // Suscripción no llega a la app de las tiendas (el backend no la envía a "app-…").
+  { value: "SUSCRIPCION", label: "Suscripción", color: "var(--kipu-accent)", bg: "color-mix(in srgb, var(--kipu-accent) 10%, transparent)" },
 ];
 
+// useSearchParams necesita un Suspense encima (si no, el build estático falla)
 export default function AdminNotificacionesPage() {
+  return <Suspense fallback={null}><Notificaciones /></Suspense>;
+}
+
+function Notificaciones() {
   const router = useRouter();
 
-  const [destino,    setDestino]    = useState<"todos" | "individual">("todos");
-  const [emisorId,   setEmisorId]   = useState("");
+  // ?emisor=123 (desde el detalle del emisor): ya elegido como destino
+  const emisorDeUrl = useSearchParams().get("emisor") ?? "";
+  const conEmisor   = /^\d+$/.test(emisorDeUrl);
+  const [destino,    setDestino]    = useState<"todos" | "individual">(conEmisor ? "individual" : "todos");
+  const [emisorId,   setEmisorId]   = useState(conEmisor ? emisorDeUrl : "");
   const [tipo,       setTipo]       = useState("SISTEMA");
   const [titulo,     setTitulo]     = useState("");
   const [mensaje,    setMensaje]    = useState("");

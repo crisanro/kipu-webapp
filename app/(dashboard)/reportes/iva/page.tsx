@@ -22,6 +22,7 @@ import Alertas104          from "../_components/Alertas104";
 import AyudaAlDia          from "../_components/AyudaAlDia";
 import { detalleError } from "@/lib/errores";
 import { montoEC } from "@/lib/dinero";
+import { ModalConfirmar } from "@/components/DeclaracionWidget";
 import { MESES } from "@/lib/fecha";
 
 /** "2026-10-26" → "26 de octubre de 2026" sin pasar por Date */
@@ -108,15 +109,18 @@ function ReporteIVA({ periodo }: { periodo: string }) {
     await cargar();   // los saldos 605/606 cambian el cálculo: se recalcula en el backend
   };
 
+  const [confirmando, setConfirmando] = useState(false);
   const marcarDeclarado = async () => {
     setMarcando(true);
     setError("");
     try {
       // Siempre con el periodo que se está viendo (antes marcaba "el que toca ahora")
-      await api.post(`/api/v1/app/declaraciones/declarar?tipo=104&periodo=${periodo}`);
+      await api.post("/api/v1/app/declaraciones/declarar", null, { params: { tipo: "104", periodo } });
       setDecl(d => d ? { ...d, declarado: true, estado: "DECLARADO" } : d);
+      setConfirmando(false);
     } catch (e: any) {
       setError(detalleError(e, "Error al marcar como declarado."));
+      setConfirmando(false);
     } finally {
       setMarcando(false);
     }
@@ -503,7 +507,7 @@ function ReporteIVA({ periodo }: { periodo: string }) {
           </p>
           <button
             type="button"
-            onClick={marcarDeclarado}
+            onClick={() => setConfirmando(true)}
             disabled={marcando}
             className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-white text-sm font-medium transition-colors disabled:opacity-50"
             style={{ background: "var(--kipu-success)" }}
@@ -523,6 +527,11 @@ function ReporteIVA({ periodo }: { periodo: string }) {
             )}
           </button>
         </div>
+      )}
+
+      {/* Mismo aviso que el dashboard y "Declarar el mes anterior" */}
+      {confirmando && (
+        <ModalConfirmar onConfirm={marcarDeclarado} onCancel={() => setConfirmando(false)} loading={marcando} />
       )}
 
       {/* Ya declarado */}
