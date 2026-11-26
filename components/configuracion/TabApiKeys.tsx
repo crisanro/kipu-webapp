@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import PinInput from "@/components/PinInput";
 import { useAuthStore } from "@/store/auth.store";
+import { detalleError } from "@/lib/errores";
 
 interface ApiKey {
   id:           number;
@@ -88,7 +89,7 @@ export default function TabApiKeys() {
       setSandboxKey(res.data.data);
       setShowSandbox(true);
     } catch (e: any) {
-      avisos.error(e?.response?.data?.detail ?? "No se pudo regenerar la key.");
+      avisos.error(detalleError(e, "No se pudo regenerar la key."));
     } finally {
       setRegenSandbox(false);
     }

@@ -114,12 +114,6 @@ export const TIPO_ID: Record<string, string> = {
 };
 
 export const fmt = (n: any) => parseFloat(n ?? 0).toFixed(2);
-export const normalizarTarifa = (tarifa: any): string => {
-  const t = parseInt(String(tarifa ?? "15"));
-  if (t === 0) return "0";
-  if (t === 5) return "5";
-  return "15";
-};
 
 // Portal donde el usuario ingresa la solicitud de anulación
 export const SRI_EN_LINEA_URL = "https://srienlinea.sri.gob.ec";

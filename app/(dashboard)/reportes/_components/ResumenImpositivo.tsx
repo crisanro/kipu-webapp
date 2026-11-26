@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Info, Save } from "lucide-react";
+import { detalleError } from "@/lib/errores";
 
 interface CampoManual {
   casillero: string;
@@ -216,7 +217,7 @@ export default function ResumenImpositivo({
       await onGuardar(editados as Record<string, number | null>);
       setEditados({});
     } catch (e: any) {
-      setError(e?.response?.data?.detail ?? "No se pudieron guardar los valores.");
+      setError(detalleError(e, "No se pudieron guardar los valores."));
     } finally {
       setGuardando(false);
     }

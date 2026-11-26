@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { CreditCard, Copy, CheckCircle2, ExternalLink, RefreshCw, MessageCircle } from "lucide-react";
 import api from "@/lib/api";
+import { detalleError } from "@/lib/errores";
 
 interface LinkPagoData {
   id:              string;
@@ -25,8 +26,6 @@ interface Props {
   onPagado:    () => void;       // recargar la factura cuando se confirma el pago
 }
 
-const detalleError = (e: unknown, porDefecto: string): string =>
-  (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail ?? porDefecto;
 
 const fecha = (iso: string) =>
   new Date(iso).toLocaleDateString("es-EC", { day: "2-digit", month: "short", year: "numeric",

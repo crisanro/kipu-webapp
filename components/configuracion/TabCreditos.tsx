@@ -4,6 +4,7 @@ import { useAvisos } from "@/components/ui/Avisos";
 import { useState } from "react";
 import { AlertTriangle } from "lucide-react";
 import api from "@/lib/api";
+import { detalleError } from "@/lib/errores";
 
 interface Plan {
   id:       number;
@@ -31,7 +32,7 @@ export default function TabCreditos({ creditos, planes, ambiente }: Props) {
       const res = await api.post("/api/v1/app/planes/stripe/checkout", { plan_id: planId });
       window.location.href = res.data.checkout_url;
     } catch (err: any) {
-      avisos.error(err?.response?.data?.detail ?? "No se pudo iniciar el pago.");
+      avisos.error(detalleError(err, "No se pudo iniciar el pago."));
     } finally {
       setPagando(null);
     }

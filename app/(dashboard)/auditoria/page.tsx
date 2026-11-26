@@ -6,6 +6,7 @@ import {
   Shield, RefreshCw, ChevronDown, ChevronRight,
   Search, X, Filter,
 } from "lucide-react";
+import { detalleError } from "@/lib/errores";
 
 // =============================================================================
 // TIPOS
@@ -104,7 +105,7 @@ export default function AuditoriaPage() {
       if (err?.response?.status === 403) {
         setError("No tienes permisos para ver el log de auditoría.");
       } else {
-        setError(err?.response?.data?.detail ?? "Error al cargar el historial.");
+        setError(detalleError(err, "Error al cargar el historial."));
       }
     } finally {
       setLoading(false);

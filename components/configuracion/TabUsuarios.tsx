@@ -11,6 +11,7 @@ import {
   Plus, Trash2, Shield, User, ChevronDown,
   ChevronUp, Check, X, AlertCircle
 } from "lucide-react";
+import { detalleError } from "@/lib/errores";
 
 interface Props {
   empresaId: number;
@@ -109,7 +110,7 @@ export default function TabUsuarios({ empresaId }: Props) {
       setInvEmail("");
       await cargar();
     } catch (err: any) {
-      setInvError(err?.response?.data?.detail ?? "Error al invitar.");
+      setInvError(detalleError(err, "Error al invitar."));
     } finally {
       setInviting(false);
     }
@@ -126,7 +127,7 @@ export default function TabUsuarios({ empresaId }: Props) {
       await api.delete(`/api/v1/app/usuarios/empresas/${empresaId}/usuarios/${profileId}`);
       setUsuarios(prev => prev.filter(u => u.profile_id !== profileId));
     } catch (err: any) {
-      avisos.error(err?.response?.data?.detail ?? "No se pudo remover al usuario.");
+      avisos.error(detalleError(err, "No se pudo remover al usuario."));
     } finally {
       setRemoviendo(null);
     }
@@ -164,7 +165,7 @@ export default function TabUsuarios({ empresaId }: Props) {
         return next;
       });
     } catch (err: any) {
-      avisos.error(err?.response?.data?.detail ?? "No se pudieron guardar los permisos.");
+      avisos.error(detalleError(err, "No se pudieron guardar los permisos."));
     } finally {
       setGuardandoPermisos(null);
     }

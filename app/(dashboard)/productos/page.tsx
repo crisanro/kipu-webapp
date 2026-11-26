@@ -26,6 +26,7 @@ import {
   Search, Plus, Package,
   Save, Pencil, PowerOff, Power, Camera
 } from "lucide-react";
+import { detalleError } from "@/lib/errores";
 
 const BarcodeScanner = lazy(() => import("@/components/BarcodeScanner"));
 
@@ -241,7 +242,7 @@ export default function ProductosPage() {
       await cargar();
       setShowModal(false);
     } catch (err: any) {
-      setError(err?.response?.data?.detail ?? "Error al guardar.");
+      setError(detalleError(err, "Error al guardar."));
     } finally {
       setSaving(false);
     }

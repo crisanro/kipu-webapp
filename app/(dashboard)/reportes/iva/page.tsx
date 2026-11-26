@@ -20,6 +20,7 @@ import PantallaDePago      from "../_components/PantallaDePago";
 import ElegirPeriodo       from "../_components/ElegirPeriodo";
 import Alertas104          from "../_components/Alertas104";
 import AyudaAlDia          from "../_components/AyudaAlDia";
+import { detalleError } from "@/lib/errores";
 
 const fmt = (n: number = 0) =>
   n.toLocaleString("es-EC", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -94,7 +95,7 @@ function ReporteIVA({ periodo }: { periodo: string }) {
         setDecl(null);
       }
     } catch (e: any) {
-      setError(e?.response?.data?.detail ?? "Error al cargar el reporte.");
+      setError(detalleError(e, "Error al cargar el reporte."));
     } finally {
       setLoading(false);
       setRegenerando(false);
@@ -119,7 +120,7 @@ function ReporteIVA({ periodo }: { periodo: string }) {
       await api.post(`/api/v1/app/declaraciones/declarar?tipo=104&periodo=${periodo}`);
       setDecl(d => d ? { ...d, declarado: true, estado: "DECLARADO" } : d);
     } catch (e: any) {
-      setError(e?.response?.data?.detail ?? "Error al marcar como declarado.");
+      setError(detalleError(e, "Error al marcar como declarado."));
     } finally {
       setMarcando(false);
     }

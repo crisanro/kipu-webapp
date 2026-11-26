@@ -11,6 +11,7 @@ import {
   XCircle, Send, RefreshCw, Banknote, ShieldCheck,
   ShieldOff, CalendarClock, Receipt,
 } from "lucide-react";
+import { detalleError } from "@/lib/errores";
 
 const fmt     = (n: any) => parseFloat(n ?? 0).toFixed(2);
 const fmtDate = (d: any) => d ? new Date(d).toLocaleDateString("es-EC", { day: "2-digit", month: "short", year: "numeric" }) : "—";
@@ -50,15 +51,17 @@ export default function AdminEmisorDetallePage() {
   const [msgRecarga,   setMsgRecarga]   = useState("");
 
   // ── Transferencia ─────────────────────────────────────────────────────────
-  // Lo que el cliente transfirió, CON IVA: el backend saca la base de ahí.
-  // Se precarga con el precio vigente del plan (leído de Stripe).
-  const [tfMonto,      setTfMonto]      = useState("");
+  // Plan y período: por defecto los que la empresa ya tiene (antes se mandaba
+  // siempre PRO ANUAL y una renovación de Al Día lo pasaba a Pro).
+  const [tfPlan,       setTfPlan]       = useState<"PRO" | "AL_DIA" | null>(null);
+  const [tfPeriodo,    setTfPeriodo]    = useState<"MENSUAL" | "ANUAL" | null>(null);
+  // Lo que el cliente transfirió, CON IVA: el backend saca la base de ahí. null =
+  // el precio vigente del plan y período elegidos (leído de Stripe).
+  const [tfMonto,      setTfMonto]      = useState<string | null>(null);
+  const [precios,      setPrecios]      = useState<Record<string, Record<string, { total?: number } | null>> | null>(null);
   useEffect(() => {
-    api.get("/api/v1/app/suscripcion/precio")
-      .then((r) => {
-        const total = r.data?.data?.total;
-        if (total) setTfMonto((actual) => actual || total.toFixed(2));
-      })
+    api.get("/api/v1/app/suscripcion/precios")
+      .then((r) => setPrecios(r.data?.data ?? null))
       .catch(() => {});
   }, []);
   const [tfRef,        setTfRef]        = useState("");
@@ -133,18 +136,24 @@ export default function AdminEmisorDetallePage() {
       setMontoRecarga("");
       await cargar();
     } catch (e: any) {
-      setMsgRecarga(`❌ ${e?.response?.data?.detail ?? "Error al recargar."}`);
+      setMsgRecarga(`❌ ${detalleError(e, "Error al recargar.")}`);
     } finally {
       setRecargando(false);
     }
   };
+
+  const planTf: "PRO" | "AL_DIA"       = tfPlan ?? (emisor?.sub_plan === "AL_DIA" ? "AL_DIA" : "PRO");
+  const periodoTf: "MENSUAL" | "ANUAL" = tfPeriodo ?? (emisor?.sub_periodo === "MENSUAL" ? "MENSUAL" : "ANUAL");
+  const precioTf  = precios?.[planTf]?.[periodoTf]?.total;
+  const montoTf   = tfMonto ?? (precioTf ? precioTf.toFixed(2) : "");
+  const NOMBRE_PLAN = { PRO: "Kipu Pro", AL_DIA: "Kipu Al Día" } as const;
 
   const activarTransferencia = async () => {
     if (!tfRef.trim()) {
       setMsgTransf({ ok: false, texto: "La referencia de pago es obligatoria." });
       return;
     }
-    if (parseFloat(tfMonto) <= 0) {
+    if (!(parseFloat(montoTf) > 0)) {
       setMsgTransf({ ok: false, texto: "El monto debe ser mayor a 0." });
       return;
     }
@@ -153,22 +162,23 @@ export default function AdminEmisorDetallePage() {
     try {
       const res = await api.post("/api/v1/admin/panel/suscripcion/transferencia", {
         emisor_id:       parseInt(id as string),
-        monto:           parseFloat(tfMonto),
+        monto:           parseFloat(montoTf),
         referencia_pago: tfRef.trim(),
         banco:           tfBanco.trim() || null,
         fecha_pago:      tfFecha,
         notas:           tfNotas.trim() || null,
-        periodo:         "ANUAL",
-        plan:            "PRO",
+        periodo:         periodoTf,
+        plan:            planTf,
       });
       setMsgTransf({ ok: true, texto: res.data.mensaje });
       setTfRef("");
       setTfBanco("");
       setTfNotas("");
       setTfFecha(hoyEC());
+      setTfMonto(null);
       await cargar();
     } catch (e: any) {
-      setMsgTransf({ ok: false, texto: e?.response?.data?.detail ?? "Error al activar." });
+      setMsgTransf({ ok: false, texto: detalleError(e, "Error al activar.") });
     } finally {
       setActivando(false);
     }
@@ -177,7 +187,7 @@ export default function AdminEmisorDetallePage() {
   const forzarEstado = async (estado: string) => {
     if (!(await confirmar({
       titulo: `¿Forzar la suscripción a "${estado}"?`,
-      mensaje: "Esto no emite factura.",
+      mensaje: `Se mantiene ${emisor?.sub_plan === "AL_DIA" ? "Kipu Al Día" : "Kipu Pro"} ${(emisor?.sub_periodo ?? "ANUAL").toLowerCase()}. Esto no emite factura.`,
       textoConfirmar: "Forzar", peligro: true,
     }))) return;
     setForzandoEstado(true);
@@ -185,12 +195,13 @@ export default function AdminEmisorDetallePage() {
       await api.post("/api/v1/admin/panel/suscripcion/forzar", {
         emisor_id: parseInt(id as string),
         estado,
-        plan:      "PRO",
-        periodo:   "ANUAL",
+        // El plan y el período que ya tiene (antes siempre PRO ANUAL: pisaba Al Día)
+        plan:      emisor?.sub_plan === "AL_DIA" ? "AL_DIA" : "PRO",
+        periodo:   emisor?.sub_periodo === "MENSUAL" ? "MENSUAL" : "ANUAL",
       });
       await cargar();
     } catch (e: any) {
-      avisos.error(e?.response?.data?.detail ?? "No se pudo forzar la suscripción.");
+      avisos.error(detalleError(e, "No se pudo forzar la suscripción."));
     } finally {
       setForzandoEstado(false);
     }
@@ -211,7 +222,7 @@ export default function AdminEmisorDetallePage() {
       setEditando(false);
       await cargar();
     } catch (e: any) {
-      setMsgEditar({ ok: false, texto: e?.response?.data?.detail ?? "Error al guardar." });
+      setMsgEditar({ ok: false, texto: detalleError(e, "Error al guardar.") });
     } finally {
       setGuardando(false);
     }
@@ -232,7 +243,7 @@ export default function AdminEmisorDetallePage() {
       setNotifTitulo("");
       setNotifMensaje("");
     } catch (e: any) {
-      setMsgNotif(`❌ ${e?.response?.data?.detail ?? "Error al enviar."}`);
+      setMsgNotif(`❌ ${detalleError(e, "Error al enviar.")}`);
     } finally {
       setEnviando(false);
     }
@@ -698,8 +709,36 @@ export default function AdminEmisorDetallePage() {
               <h2 className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>Activar por transferencia</h2>
             </div>
             <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
-              Registra el pago manual y activa la suscripción PRO ANUAL. Se emite la factura de Kipu automáticamente.
+              Registra el pago manual y activa {NOMBRE_PLAN[planTf]} {periodoTf.toLowerCase()}. Se emite la factura de Kipu automáticamente.
             </p>
+
+            {/* Plan y período: por defecto los actuales de la empresa */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Plan</label>
+                <select
+                  value={planTf}
+                  onChange={(e) => { setTfPlan(e.target.value as "PRO" | "AL_DIA"); setTfMonto(null); }}
+                  className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
+                  style={{ background: "var(--kipu-surface)", border: "1px solid var(--kipu-border)", color: "var(--kipu-text)" }}
+                >
+                  <option value="PRO">Kipu Pro</option>
+                  <option value="AL_DIA">Kipu Al Día</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs mb-1.5" style={{ color: "var(--kipu-subtle)" }}>Período</label>
+                <select
+                  value={periodoTf}
+                  onChange={(e) => { setTfPeriodo(e.target.value as "MENSUAL" | "ANUAL"); setTfMonto(null); }}
+                  className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
+                  style={{ background: "var(--kipu-surface)", border: "1px solid var(--kipu-border)", color: "var(--kipu-text)" }}
+                >
+                  <option value="ANUAL">Anual</option>
+                  <option value="MENSUAL">Mensual</option>
+                </select>
+              </div>
+            </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -708,7 +747,7 @@ export default function AdminEmisorDetallePage() {
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm" style={{ color: "var(--kipu-subtle)" }}>$</span>
                   <input
                     type="number"
-                    value={tfMonto}
+                    value={montoTf}
                     onChange={(e) => setTfMonto(e.target.value)}
                     min="0"
                     step="0.01"

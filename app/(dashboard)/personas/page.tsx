@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { lookupIdentificacion, useBuscaNombres, textoNombreAMano } from "@/lib/identificacion-lookup";
 import { tecladoIdentificacion } from "@/lib/teclado";
+import { detalleError } from "@/lib/errores";
 
 interface Persona {
   uid:                     string;
@@ -205,7 +206,7 @@ function PersonasContenido() {
       setForm(EMPTY_FORM);
       setLookupMsg("");
     } catch (err: any) {
-      setError(err?.response?.data?.detail ?? "Error al guardar.");
+      setError(detalleError(err, "Error al guardar."));
     } finally {
       setSaving(false);
     }

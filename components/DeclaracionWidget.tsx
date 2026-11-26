@@ -8,6 +8,7 @@ import api from "@/lib/api";
 import { CheckCircle2, AlertTriangle, Clock, XCircle, ExternalLink } from "lucide-react";
 import Hoja from "@/components/ui/Hoja";
 import Boton from "@/components/ui/Boton";
+import { detalleError } from "@/lib/errores";
 
 export interface DeclaracionData {
   periodo:         string;
@@ -113,7 +114,7 @@ export default function DeclaracionWidget({ data, onDeclarado }: Props) {
       setConfirmando(false);
       onDeclarado(); 
     } catch (e: any) {
-      setError(e?.response?.data?.detail ?? "Error al registrar la declaración.");
+      setError(detalleError(e, "Error al registrar la declaración."));
     } finally {
       setGuardando(false);
     }

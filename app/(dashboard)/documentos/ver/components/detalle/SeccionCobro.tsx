@@ -9,6 +9,7 @@ import { type FacturaBase, COBRO_CONFIG } from "./utils";
 import LinkPago from "@/components/cobros/LinkPago";
 import Seccion from "@/components/ui/Seccion";
 import Boton from "@/components/ui/Boton";
+import { detalleError } from "@/lib/errores";
 
 const FORMAS_PAGO_COBRO = [
   { value: "EFECTIVO",      label: "Efectivo" },
@@ -53,7 +54,7 @@ export default function SeccionCobro({ factura, onRecargar }: { factura: Factura
       setEditandoCobro(false);
       onRecargar();
     } catch (err: any) {
-      setErrorCobro(err?.response?.data?.detail ?? "Error al actualizar el cobro.");
+      setErrorCobro(detalleError(err, "Error al actualizar el cobro."));
     } finally {
       setGuardandoCobro(false);
     }
