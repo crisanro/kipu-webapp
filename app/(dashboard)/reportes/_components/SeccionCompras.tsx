@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { ChevronDown, ChevronUp, ShoppingCart, CheckCircle2, XCircle } from "lucide-react";
 import { montoEC, numeroEC } from "@/lib/dinero";
+import CeldaCasillero from "./CeldaCasillero";
 
 interface DesgloseTarifa {
   tarifa:          number;
@@ -28,56 +29,6 @@ interface CasillerosCompras {
 interface Props {
   desglose:   DesgloseTarifa[];
   casilleros: CasillerosCompras;
-}
-
-function CeldaCasillero({ num, label, value, highlight = false, dimmed = false }: {
-  num: string;
-  label: string;
-  value: number;
-  highlight?: boolean;
-  dimmed?: boolean;
-}) {
-  return (
-    <div
-      className="p-2.5 rounded-lg flex flex-col justify-between transition-colors"
-      style={{
-        background: highlight
-          ? "color-mix(in srgb, var(--kipu-success) 10%, transparent)"
-          : "color-mix(in srgb, var(--kipu-text) 3%, transparent)",
-        border: highlight
-          ? "1px solid color-mix(in srgb, var(--kipu-success) 25%, transparent)"
-          : "1px solid var(--kipu-border)",
-        opacity: dimmed ? 0.7 : 1,
-      }}
-    >
-      <div className="flex items-center justify-between gap-1 mb-1">
-        <span
-          className="text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0"
-          style={{
-            background: highlight ? "var(--kipu-success)" : "color-mix(in srgb, var(--kipu-text) 10%, transparent)",
-            color: highlight ? "#FFFFFF" : "var(--kipu-subtle)",
-          }}
-        >
-          {num}
-        </span>
-        <span className="text-[10px] truncate" style={{ color: "var(--kipu-subtle)" }}>
-          {label}
-        </span>
-      </div>
-      <p
-        className="text-sm font-bold tabular-nums text-right"
-        style={{
-          color: highlight
-            ? "var(--kipu-success)"
-            : value === 0
-              ? "var(--kipu-subtle)"
-              : "var(--kipu-text)",
-        }}
-      >
-        ${montoEC(value)}
-      </p>
-    </div>
-  );
 }
 
 export default function SeccionCompras({ desglose, casilleros }: Props) {
@@ -177,17 +128,17 @@ export default function SeccionCompras({ desglose, casilleros }: Props) {
                     </div>
 
                     <div className="grid grid-cols-3 gap-2">
-                      <CeldaCasillero
+                      <CeldaCasillero tono="exito"
                         num={brutoNum}
                         label="Valor Bruto"
                         value={d.con_credito}
                       />
-                      <CeldaCasillero
+                      <CeldaCasillero tono="exito"
                         num={netoNum}
                         label="Valor Neto"
                         value={Math.max(d.con_credito - d.ncr, 0)}
                       />
-                      <CeldaCasillero
+                      <CeldaCasillero tono="exito"
                         num={ivaNum}
                         label="Crédito Tributario"
                         value={d.iva_credito}
@@ -208,19 +159,19 @@ export default function SeccionCompras({ desglose, casilleros }: Props) {
                     </div>
 
                     <div className="grid grid-cols-3 gap-2">
-                      <CeldaCasillero
+                      <CeldaCasillero tono="exito"
                         num="502"
                         label="Valor Bruto"
                         value={d.sin_credito}
                         dimmed
                       />
-                      <CeldaCasillero
+                      <CeldaCasillero tono="exito"
                         num="512"
                         label="Valor Neto"
                         value={d.sin_credito}
                         dimmed
                       />
-                      <CeldaCasillero
+                      <CeldaCasillero tono="exito"
                         num="522"
                         label="IVA Cargado al Gasto"
                         value={d.iva_sin_credito}
@@ -241,13 +192,13 @@ export default function SeccionCompras({ desglose, casilleros }: Props) {
               </span>
 
               <div className="grid grid-cols-2 gap-2">
-                <CeldaCasillero
+                <CeldaCasillero tono="exito"
                   num="507"
                   label="Valor Bruto"
                   value={casilleros["507"] ?? 0}
                   dimmed
                 />
-                <CeldaCasillero
+                <CeldaCasillero tono="exito"
                   num="517"
                   label="Valor Neto"
                   value={casilleros["517"] ?? 0}
@@ -264,9 +215,9 @@ export default function SeccionCompras({ desglose, casilleros }: Props) {
                 Activos fijos (con derecho a crédito tributario)
               </span>
               <div className="grid grid-cols-3 gap-2">
-                <CeldaCasillero num="501" label="Valor Bruto"        value={casilleros["501"] ?? 0} />
-                <CeldaCasillero num="511" label="Valor Neto"         value={casilleros["511"] ?? 0} />
-                <CeldaCasillero num="521" label="Crédito Tributario" value={casilleros["521"] ?? 0} highlight />
+                <CeldaCasillero tono="exito" num="501" label="Valor Bruto"        value={casilleros["501"] ?? 0} />
+                <CeldaCasillero tono="exito" num="511" label="Valor Neto"         value={casilleros["511"] ?? 0} />
+                <CeldaCasillero tono="exito" num="521" label="Crédito Tributario" value={casilleros["521"] ?? 0} highlight />
               </div>
             </div>
           )}
@@ -279,12 +230,12 @@ export default function SeccionCompras({ desglose, casilleros }: Props) {
               </span>
               <div className="grid grid-cols-2 gap-2">
                 {(casilleros["531"] ?? 0) > 0 && <>
-                  <CeldaCasillero num="531" label="No objeto · Bruto" value={casilleros["531"] ?? 0} dimmed />
-                  <CeldaCasillero num="541" label="No objeto · Neto"  value={casilleros["541"] ?? 0} dimmed />
+                  <CeldaCasillero tono="exito" num="531" label="No objeto · Bruto" value={casilleros["531"] ?? 0} dimmed />
+                  <CeldaCasillero tono="exito" num="541" label="No objeto · Neto"  value={casilleros["541"] ?? 0} dimmed />
                 </>}
                 {(casilleros["532"] ?? 0) > 0 && <>
-                  <CeldaCasillero num="532" label="Exentas · Bruto" value={casilleros["532"] ?? 0} dimmed />
-                  <CeldaCasillero num="542" label="Exentas · Neto"  value={casilleros["542"] ?? 0} dimmed />
+                  <CeldaCasillero tono="exito" num="532" label="Exentas · Bruto" value={casilleros["532"] ?? 0} dimmed />
+                  <CeldaCasillero tono="exito" num="542" label="Exentas · Neto"  value={casilleros["542"] ?? 0} dimmed />
                 </>}
               </div>
             </div>
@@ -302,8 +253,8 @@ export default function SeccionCompras({ desglose, casilleros }: Props) {
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-2">
-                <CeldaCasillero num="508" label="Valor Bruto" value={casilleros["508"] ?? 0} dimmed />
-                <CeldaCasillero num="518" label="Valor Neto"  value={casilleros["518"] ?? 0} dimmed />
+                <CeldaCasillero tono="exito" num="508" label="Valor Bruto" value={casilleros["508"] ?? 0} dimmed />
+                <CeldaCasillero tono="exito" num="518" label="Valor Neto"  value={casilleros["518"] ?? 0} dimmed />
               </div>
             </div>
           )}
@@ -314,17 +265,17 @@ export default function SeccionCompras({ desglose, casilleros }: Props) {
               Totales de adquisiciones y pagos
             </p>
             <div className="grid grid-cols-3 gap-2">
-              <CeldaCasillero
+              <CeldaCasillero tono="exito"
                 num="509"
                 label="Total Bruto"
                 value={casilleros["509"] ?? 0}
               />
-              <CeldaCasillero
+              <CeldaCasillero tono="exito"
                 num="519"
                 label="Total Neto"
                 value={casilleros["519"] ?? 0}
               />
-              <CeldaCasillero
+              <CeldaCasillero tono="exito"
                 num="529"
                 label="Total IVA Adquisiciones"
                 value={casilleros["529"] ?? 0}

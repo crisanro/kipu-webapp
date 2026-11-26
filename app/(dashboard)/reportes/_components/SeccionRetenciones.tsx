@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { ChevronDown, ChevronUp, FileText, ArrowUpRight, ArrowDownLeft } from "lucide-react";
 import { montoEC } from "@/lib/dinero";
+import CeldaCasillero from "./CeldaCasillero";
 
 interface LineaRetencion {
   porcentaje: number;
@@ -68,61 +69,6 @@ const PCT_CAS: Record<number, { cas: string; label: string }> = {
   70:  { cas: "729", label: "Retención del 70%" },
   100: { cas: "731", label: "Retención del 100%" },
 };
-
-function CeldaCasillero({ num, label, value, highlight = false, warning = false }: {
-  num: string;
-  label: string;
-  value: number;
-  highlight?: boolean;
-  warning?: boolean;
-}) {
-  return (
-    <div
-      className="p-2.5 rounded-lg flex flex-col justify-between transition-colors"
-      style={{
-        background: highlight
-          ? "color-mix(in srgb, var(--kipu-warning) 10%, transparent)"
-          : warning
-            ? "color-mix(in srgb, var(--kipu-warning) 5%, transparent)"
-            : "color-mix(in srgb, var(--kipu-text) 3%, transparent)",
-        border: highlight
-          ? "1px solid color-mix(in srgb, var(--kipu-warning) 30%, transparent)"
-          : warning
-            ? "1px solid color-mix(in srgb, var(--kipu-warning) 15%, transparent)"
-            : "1px solid var(--kipu-border)",
-      }}
-    >
-      <div className="flex items-center justify-between gap-1 mb-1">
-        <span
-          className="text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0"
-          style={{
-            background: highlight
-              ? "var(--kipu-warning)"
-              : "color-mix(in srgb, var(--kipu-text) 10%, transparent)",
-            color: highlight ? "var(--kipu-surface)" : "var(--kipu-subtle)",
-          }}
-        >
-          {num}
-        </span>
-        <span className="text-[10px] truncate" style={{ color: "var(--kipu-subtle)" }}>
-          {label}
-        </span>
-      </div>
-      <p
-        className="text-sm font-bold tabular-nums text-right"
-        style={{
-          color: highlight
-            ? "var(--kipu-warning)"
-            : value === 0
-              ? "var(--kipu-subtle)"
-              : "var(--kipu-text)",
-        }}
-      >
-        ${montoEC(value)}
-      </p>
-    </div>
-  );
-}
 
 export default function SeccionRetenciones({
   retEmitidas, retRecibidas, detalleEmitidas, detalleRecibidas, modo,
@@ -227,7 +173,7 @@ export default function SeccionRetenciones({
                       const val  = item ? item.valor : (retEmitidas.casilleros[info.cas] ?? 0);
 
                       return (
-                        <CeldaCasillero
+                        <CeldaCasillero tono="alerta"
                           key={pct}
                           num={info.cas}
                           label={info.label}
@@ -241,17 +187,17 @@ export default function SeccionRetenciones({
                   {/* Resumen Final Agente de Retención */}
                   <div className="pt-3 border-t space-y-2" style={{ borderColor: "var(--kipu-border)" }}>
                     <div className="grid grid-cols-3 gap-2">
-                      <CeldaCasillero
+                      <CeldaCasillero tono="alerta"
                         num="799"
                         label="Total Impuesto Retenido"
                         value={retEmitidas.casilleros["799"] ?? 0}
                       />
-                      <CeldaCasillero
+                      <CeldaCasillero tono="alerta"
                         num="800"
                         label="Devolución / Compensación"
                         value={retEmitidas.casilleros["800"] ?? 0}
                       />
-                      <CeldaCasillero
+                      <CeldaCasillero tono="alerta"
                         num="801"
                         label="Total a Pagar por Retención"
                         value={retEmitidas.casilleros["801"] ?? retEmitidas.casilleros["799"] ?? 0}
