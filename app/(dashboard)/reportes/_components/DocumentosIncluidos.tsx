@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { FileText, Shield, ChevronDown, ChevronUp, ExternalLink } from "lucide-react";
 import Link from "next/link";
+import { numeroEC } from "@/lib/dinero";
 
 interface Props {
   totalEmitidos:  number;
@@ -11,8 +12,6 @@ interface Props {
   generadoAt?:    string;
   regeneradoAt?:  string;
 }
-
-const fmt = (n: number) => n.toLocaleString("es-EC");
 
 export default function DocumentosIncluidos({
   totalEmitidos, totalRecibidos, periodo, tipo, generadoAt, regeneradoAt,
@@ -60,7 +59,7 @@ export default function DocumentosIncluidos({
           </div>
           <div className="text-left">
             <p className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>
-              Trazabilidad — {fmt(total)} documentos incluidos
+              Trazabilidad — {numeroEC(total)} documentos incluidos
             </p>
             <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
               Respaldo completo para auditoría SRI · {periodoFmt}
@@ -92,7 +91,7 @@ export default function DocumentosIncluidos({
               >
                 <FileText size={14} style={{ color: "var(--kipu-accent)" }} />
               </div>
-              <p className="text-2xl font-bold" style={{ color: "var(--kipu-text)" }}>{fmt(totalEmitidos)}</p>
+              <p className="text-2xl font-bold" style={{ color: "var(--kipu-text)" }}>{numeroEC(totalEmitidos)}</p>
               <p className="text-xs mt-0.5" style={{ color: "var(--kipu-subtle)" }}>Documentos emitidos</p>
               <p className="text-[10px] mt-1" style={{ color: "var(--kipu-subtle)" }}>FAC · LIQ · NCR · NDB · RET</p>
             </div>
@@ -106,7 +105,7 @@ export default function DocumentosIncluidos({
               >
                 <FileText size={14} style={{ color: "var(--kipu-success)" }} />
               </div>
-              <p className="text-2xl font-bold" style={{ color: "var(--kipu-text)" }}>{fmt(totalRecibidos)}</p>
+              <p className="text-2xl font-bold" style={{ color: "var(--kipu-text)" }}>{numeroEC(totalRecibidos)}</p>
               <p className="text-xs mt-0.5" style={{ color: "var(--kipu-subtle)" }}>Documentos recibidos</p>
               <p className="text-[10px] mt-1" style={{ color: "var(--kipu-subtle)" }}>XML · Físicos · Retenciones</p>
             </div>

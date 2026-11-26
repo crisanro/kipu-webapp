@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { ChevronDown, ChevronUp, ShoppingCart, CheckCircle2, XCircle } from "lucide-react";
+import { montoEC, numeroEC } from "@/lib/dinero";
 
 interface DesgloseTarifa {
   tarifa:          number;
@@ -28,9 +29,6 @@ interface Props {
   desglose:   DesgloseTarifa[];
   casilleros: CasillerosCompras;
 }
-
-const fmt  = (n: number = 0) => n.toLocaleString("es-EC", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const fmtN = (n: number = 0) => n.toLocaleString("es-EC", { minimumFractionDigits: 0 });
 
 function CeldaCasillero({ num, label, value, highlight = false, dimmed = false }: {
   num: string;
@@ -76,7 +74,7 @@ function CeldaCasillero({ num, label, value, highlight = false, dimmed = false }
               : "var(--kipu-text)",
         }}
       >
-        ${fmt(value)}
+        ${montoEC(value)}
       </p>
     </div>
   );
@@ -132,9 +130,9 @@ export default function SeccionCompras({ desglose, casilleros }: Props) {
               Adquisiciones y pagos
             </p>
             <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
-              {fmtN(casilleros["115"])} comprobantes recibidos
-              {(casilleros["117"] ?? 0) > 0 && ` · ${fmtN(casilleros["117"])} notas de venta`}
-              {(casilleros["119"] ?? 0) > 0 && ` · ${fmtN(casilleros["119"])} liquidaciones`}
+              {numeroEC(casilleros["115"])} comprobantes recibidos
+              {(casilleros["117"] ?? 0) > 0 && ` · ${numeroEC(casilleros["117"])} notas de venta`}
+              {(casilleros["119"] ?? 0) > 0 && ` · ${numeroEC(casilleros["119"])} liquidaciones`}
             </p>
           </div>
         </div>
@@ -143,7 +141,7 @@ export default function SeccionCompras({ desglose, casilleros }: Props) {
           <div className="text-right hidden sm:block">
             <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Crédito tributario IVA</p>
             <p className="text-sm font-bold" style={{ color: "var(--kipu-success)" }}>
-              ${fmt(creditoBruto)}
+              ${montoEC(creditoBruto)}
             </p>
           </div>
           {expandido ? (
@@ -353,7 +351,7 @@ export default function SeccionCompras({ desglose, casilleros }: Props) {
                   </p>
                 </div>
                 <p className="text-xl font-bold" style={{ color: "var(--kipu-success)" }}>
-                  ${fmt(creditoBruto)}
+                  ${montoEC(creditoBruto)}
                 </p>
               </div>
             </div>
@@ -374,7 +372,7 @@ export default function SeccionCompras({ desglose, casilleros }: Props) {
               >
                 <p className="text-xs mb-0.5" style={{ color: "var(--kipu-subtle)" }}>Recibidos</p>
                 <p className="text-base font-bold" style={{ color: "var(--kipu-text)" }}>
-                  {fmtN(casilleros["115"])}
+                  {numeroEC(casilleros["115"])}
                 </p>
                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ background: "color-mix(in srgb, var(--kipu-text) 8%, transparent)", color: "var(--kipu-subtle)" }}>
                   115
@@ -390,7 +388,7 @@ export default function SeccionCompras({ desglose, casilleros }: Props) {
               >
                 <p className="text-xs mb-0.5" style={{ color: "var(--kipu-subtle)" }}>Notas de Venta</p>
                 <p className="text-base font-bold" style={{ color: "var(--kipu-text)" }}>
-                  {fmtN(casilleros["117"])}
+                  {numeroEC(casilleros["117"])}
                 </p>
                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ background: "color-mix(in srgb, var(--kipu-text) 8%, transparent)", color: "var(--kipu-subtle)" }}>
                   117
@@ -406,7 +404,7 @@ export default function SeccionCompras({ desglose, casilleros }: Props) {
               >
                 <p className="text-xs mb-0.5" style={{ color: "var(--kipu-subtle)" }}>Liquidaciones</p>
                 <p className="text-base font-bold" style={{ color: "var(--kipu-text)" }}>
-                  {fmtN(casilleros["119"])}
+                  {numeroEC(casilleros["119"])}
                 </p>
                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ background: "color-mix(in srgb, var(--kipu-text) 8%, transparent)", color: "var(--kipu-subtle)" }}>
                   119

@@ -25,6 +25,7 @@ import {
   ClipboardList, Plus, Search,
   CheckCircle2, AlertTriangle, Clock,
 } from "lucide-react";
+import { dolares } from "@/lib/dinero";
 
 interface Proforma {
   id:              string;
@@ -43,8 +44,6 @@ interface Proforma {
     identificacion: string;
   } | null;
 }
-
-const fmt = (n: number) => `$${n.toFixed(2)}`;
 
 export default function ProformasPage() {
   const puedeVer = usePermiso("emitir");
@@ -176,7 +175,7 @@ function ProformasContenido() {
                   href={esDemo ? (ES_APP_NATIVA ? "/proformas" : "/planes") : rutas.proforma(p.id)}
                   titulo={<span className="flex items-center gap-2">{p.cliente?.razon_social ?? "Sin cliente"}{esDemo && <EtiquetaEjemplo />}</span>}
                   subtitulo={`${p.numero}${p.fecha_validez ? ` · vence ${etiquetaPeriodo(p.fecha_validez, p.fecha_validez).toLowerCase()}` : ""}`}
-                  fin={fmt(p.total)}
+                  fin={dolares(p.total)}
                   finAbajo={
                     facturada ? <InsigniaEstado tono="exito" icono={CheckCircle2}>Facturada</InsigniaEstado>
                     : vencida ? <InsigniaEstado tono="peligro" icono={AlertTriangle}>Vencida</InsigniaEstado>

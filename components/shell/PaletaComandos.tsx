@@ -34,6 +34,7 @@ import { useAuthStore } from "@/store/auth.store";
 import { useSandboxStore } from "@/store/sandbox.store";
 import { EVENTO_CERRAR_SESION, EVENTO_SELECTOR_EMPRESA } from "@/components/shell/BarraSuperior";
 import { cn } from "@/components/ui/cn";
+import { dosDecimales } from "@/lib/dinero";
 
 /** Abre la paleta desde un botón: window.dispatchEvent(new Event(EVENTO_PALETA)). */
 export const EVENTO_PALETA = "kipu:abrir-paleta";
@@ -157,8 +158,6 @@ const POR_TIPO = 5;
 const ANCHO_PANEL = "(min-width: 1280px)";
 const FAC = "/documentos/emitir/fac";
 
-const fmt = (n: unknown) => (Number(n) || 0).toFixed(2);
-
 // Filas de los listados (solo lo que se muestra)
 interface DocFila { id: string; numero_doc: string; tipo_doc?: string; razon_social?: string; importe_total?: number }
 interface PersonaFila { id: string; razon_social: string; identificacion?: string }
@@ -228,7 +227,7 @@ function Ventana({ onCerrar }: { onCerrar: () => void }) {
       if (docs.length) secciones.push({ grupo: "Comprobantes", items: docs.map(d => ({
         id: `doc-${d.id}`, grupo: "Comprobantes", icono: FileText,
         titulo: `${d.tipo_doc ?? ""} ${d.numero_doc}`.trim(), subtitulo: d.razon_social,
-        detalle: d.importe_total != null ? `$${fmt(d.importe_total)}` : undefined,
+        detalle: d.importe_total != null ? `$${dosDecimales(d.importe_total)}` : undefined,
         ejecutar: () => router.push(window.matchMedia(ANCHO_PANEL).matches
           ? `/documentos?sel=${encodeURIComponent(d.id)}` : rutas.documento(d.id)),
       })) });
@@ -238,7 +237,7 @@ function Ventana({ onCerrar }: { onCerrar: () => void }) {
       })) });
       if (productos.length) secciones.push({ grupo: "Productos", items: productos.map(p => ({
         id: `producto-${p.id}`, grupo: "Productos", icono: Package, titulo: p.descripcion, subtitulo: p.codigo || undefined,
-        detalle: `$${fmt(p.precio)}${puedeFacturar ? " · facturar" : ""}`,
+        detalle: `$${dosDecimales(p.precio)}${puedeFacturar ? " · facturar" : ""}`,
         ejecutar: () => {
           if (!puedeFacturar) { router.push("/productos"); return; }
           // Factura nueva con el producto ya cargado (fac/page.tsx lee kipu:prefill)

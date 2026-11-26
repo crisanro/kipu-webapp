@@ -11,8 +11,7 @@ import {
   CreditCard, Zap, RefreshCw,
   CheckCircle2, AlertTriangle, TrendingDown, Star, ArrowRight, Info, CalendarCheck, MinusCircle
 } from "lucide-react";
-
-const fmt = (n: unknown) => parseFloat(String(n ?? 0)).toFixed(2);
+import { dosDecimales } from "@/lib/dinero";
 
 interface EstadoSub {
   plan:                 string;
@@ -836,7 +835,7 @@ export default function PlanesPage() {
                               <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>{p.nombre}</p>
                             </div>
                             <div className="text-right">
-                              <p className="text-xl font-bold" style={{ color: "var(--kipu-text)" }}>${fmt(p.precio)}</p>
+                              <p className="text-xl font-bold" style={{ color: "var(--kipu-text)" }}>${dosDecimales(p.precio)}</p>
                               <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>${p.precio_por_credito.toFixed(3)}/crédito · IVA inc.</p>
                             </div>
                           </div>
@@ -923,7 +922,7 @@ export default function PlanesPage() {
                             {t.cantidad > 0 ? "+" : ""}{t.cantidad}
                           </p>
                           {t.precio_total > 0 && (
-                            <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>${fmt(t.precio_total)}</p>
+                            <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>${dosDecimales(t.precio_total)}</p>
                           )}
                         </div>
                       </div>

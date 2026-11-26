@@ -8,8 +8,7 @@ import api from "@/lib/api";
 import OfertaRenta from "@/components/renta/OfertaRenta";
 import Alertas104, { type Alerta104 } from "../_components/Alertas104";
 import { ArrowLeft, RefreshCw, FileText, AlertTriangle, TrendingUp, TrendingDown, Receipt } from "lucide-react";
-
-const fmt = (n: number = 0) => n.toLocaleString("es-EC", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+import { montoEC } from "@/lib/dinero";
 
 export default function ReporteRentaPage() {
   const anio = useSearchParams().get("anio");
@@ -86,15 +85,15 @@ function ReporteRenta({ anio }: { anio: string }) {
           <div className="space-y-2 text-xs">
             <div className="flex justify-between">
               <span style={{ color: "var(--kipu-subtle)" }}>Ventas brutas (FAC + NDB)</span>
-              <span className="font-mono font-medium">${fmt(data?.ventas_brutas)}</span>
+              <span className="font-mono font-medium">${montoEC(data?.ventas_brutas)}</span>
             </div>
             <div className="flex justify-between">
               <span style={{ color: "var(--kipu-subtle)" }}>(-) Notas de crédito emitidas</span>
-              <span className="font-mono text-red-400">-${fmt(data?.notas_credito_emitidas)}</span>
+              <span className="font-mono text-red-400">-${montoEC(data?.notas_credito_emitidas)}</span>
             </div>
             <div className="pt-2 flex justify-between font-bold text-sm" style={{ borderTop: "1px solid var(--kipu-border)" }}>
               <span>Total Ingresos Facturados</span>
-              <span className="text-emerald-500">${fmt(data?.ventas_netas)}</span>
+              <span className="text-emerald-500">${montoEC(data?.ventas_netas)}</span>
             </div>
           </div>
         </div>
@@ -108,15 +107,15 @@ function ReporteRenta({ anio }: { anio: string }) {
           <div className="space-y-2 text-xs">
             <div className="flex justify-between">
               <span style={{ color: "var(--kipu-subtle)" }}>Compras recibidas deducibles</span>
-              <span className="font-mono font-medium">${fmt(data?.compras_deducibles)}</span>
+              <span className="font-mono font-medium">${montoEC(data?.compras_deducibles)}</span>
             </div>
             <div className="flex justify-between">
               <span style={{ color: "var(--kipu-subtle)" }}>(+) Liquidaciones de compra emitidas</span>
-              <span className="font-mono font-medium">${fmt(data?.liquidaciones_compras)}</span>
+              <span className="font-mono font-medium">${montoEC(data?.liquidaciones_compras)}</span>
             </div>
             <div className="pt-2 flex justify-between font-bold text-sm" style={{ borderTop: "1px solid var(--kipu-border)" }}>
               <span>Total Gastos Deducibles</span>
-              <span className="text-sky-400">${fmt(data?.total_gastos_deducibles)}</span>
+              <span className="text-sky-400">${montoEC(data?.total_gastos_deducibles)}</span>
             </div>
           </div>
         </div>
@@ -131,12 +130,12 @@ function ReporteRenta({ anio }: { anio: string }) {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
           <div className="p-3 rounded-lg" style={{ background: "color-mix(in srgb, var(--kipu-info) 8%, transparent)", border: "1px solid color-mix(in srgb, var(--kipu-info) 20%, transparent)" }}>
             <p className="text-[10px] uppercase font-bold text-sky-400">Retenciones Recibidas (Crédito a tu favor)</p>
-            <p className="text-lg font-bold text-sky-400 mt-1">${fmt(data?.retenciones_renta_recibidas)}</p>
+            <p className="text-lg font-bold text-sky-400 mt-1">${montoEC(data?.retenciones_renta_recibidas)}</p>
             <p className="text-[10px] text-[var(--kipu-subtle)] mt-1">Retenciones que te hicieron tus clientes en ventas (Casillero 855/841)</p>
           </div>
           <div className="p-3 rounded-lg" style={{ background: "color-mix(in srgb, #f59e0b 8%, transparent)", border: "1px solid color-mix(in srgb, #f59e0b 20%, transparent)" }}>
             <p className="text-[10px] uppercase font-bold text-amber-400">Retenciones Emitidas (A tus proveedores)</p>
-            <p className="text-lg font-bold text-amber-400 mt-1">${fmt(data?.retenciones_renta_emitidas)}</p>
+            <p className="text-lg font-bold text-amber-400 mt-1">${montoEC(data?.retenciones_renta_emitidas)}</p>
             <p className="text-[10px] text-[var(--kipu-subtle)] mt-1">Retenciones de Renta que realizaste a tus proveedores en compras</p>
           </div>
         </div>

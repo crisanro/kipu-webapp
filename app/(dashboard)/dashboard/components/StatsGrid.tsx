@@ -4,16 +4,12 @@ import {
   CreditCard, Zap, Users
 } from "lucide-react";
 import { ES_APP_NATIVA } from "@/lib/plataforma";
+import { compactoK } from "@/lib/dinero";
 
 interface Props {
   resumen: any;
   empresa: any;
 }
-
-const fmtK = (n: any) => {
-  const v = parseFloat(n ?? 0);
-  return v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v.toFixed(2);
-};
 
 export default function StatsGrid({ resumen, empresa }: Props) {
   const suscripcion = empresa?.suscripcion;
@@ -24,7 +20,7 @@ export default function StatsGrid({ resumen, empresa }: Props) {
   const stats = [
     {
       label: "Total facturado",
-      value: `$${fmtK(resumen?.importe_total ?? 0)}`,
+      value: `$${compactoK(resumen?.importe_total ?? 0)}`,
       sub: "este mes · autorizados",
       icon: TrendingUp,
       color: "var(--kipu-accent)",
@@ -42,7 +38,7 @@ export default function StatsGrid({ resumen, empresa }: Props) {
     },
     {
       label: "IVA generado",
-      value: `$${fmtK(resumen?.valor_iva ?? 0)}`,
+      value: `$${compactoK(resumen?.valor_iva ?? 0)}`,
       sub: "para declaración",
       icon: Receipt,
       color: "var(--kipu-info)",
@@ -78,7 +74,7 @@ export default function StatsGrid({ resumen, empresa }: Props) {
     },
     {
       label: "Subtotal base",
-      value: `$${fmtK(resumen?.subtotal_iva ?? 0)}`,
+      value: `$${compactoK(resumen?.subtotal_iva ?? 0)}`,
       sub: "base gravada 15%",
       icon: Users,
       color: "var(--kipu-muted)",

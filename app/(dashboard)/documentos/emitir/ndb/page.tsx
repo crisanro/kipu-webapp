@@ -4,7 +4,7 @@
 // Con ?doc_id=… llega con la factura elegida.
 
 import { useState, useEffect, useMemo } from "react";
-import { r2 } from "@/lib/dinero";
+import { r2, dosDecimales } from "@/lib/dinero";
 import { useSearchParams } from "next/navigation";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
@@ -23,8 +23,8 @@ import DocOrigenSelector, { DocOrigen } from "../components/DocOrigenSelector";
 import EmisionLayout from "../components/EmisionLayout";
 import { InputDecimal } from "../components/HojaItem";
 import { useEmision } from "../components/useEmision";
+import { tieneAccesoAEmitir } from "@/lib/emision";
 
-const fmt = (n: number) => r2(n).toFixed(2);
 const genId = () => Math.random().toString(36).slice(2);
 
 const TARIFAS_IVA = [
@@ -188,7 +188,7 @@ export default function NuevaNdbPage() {
     setCobro(cobroInicial());
   };
 
-  const puedeEmitir = !!empresa && (empresa.suscripcion_activa || empresa.balance_api > 0 || !!empresa.emision_gratis);
+  const puedeEmitir = tieneAccesoAEmitir(empresa);
 
   const emitir = async () => {
     setError("");
@@ -366,7 +366,7 @@ export default function NuevaNdbPage() {
                 />
               </Campo>
               <Campo etiqueta="IVA" ayuda={parseFloat(m.tipo_iva) > 0 && m.valor > 0
-                ? `+$${fmt(r2(m.valor * parseFloat(m.tipo_iva) / 100))} de IVA` : undefined}>
+                ? `+$${dosDecimales(r2(m.valor * parseFloat(m.tipo_iva) / 100))} de IVA` : undefined}>
                 <Selector value={m.tipo_iva} onChange={e => editMotivo(m._id, "tipo_iva", e.target.value)}>
                   {TARIFAS_IVA.map(t => (
                     <option key={t.value} value={t.value}>{t.label}</option>
@@ -383,7 +383,7 @@ export default function NuevaNdbPage() {
           </Boton>
           {motivos.length > 1 && (
             <p className="text-sm text-tenue">
-              Total <span className="font-bold tabular-nums text-texto">${fmt(totales.total)}</span>
+              Total <span className="font-bold tabular-nums text-texto">${dosDecimales(totales.total)}</span>
             </p>
           )}
         </div>

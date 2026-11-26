@@ -4,7 +4,7 @@
 // y "Guardar"; lo escrito queda como borrador si se sale de la pantalla.
 import { rutas } from "@/lib/rutas";
 import { useState, useEffect, useMemo } from "react";
-import { r2 } from "@/lib/dinero";
+import { r2, dosDecimales } from "@/lib/dinero";
 import { detalleError } from "@/lib/errores";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
@@ -41,7 +41,6 @@ interface ClienteNuevo {
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
-const fmt = (n: number) => r2(n).toFixed(2);
 
 function calcTotales(items: Item[]) {
   return items.reduce(
@@ -255,24 +254,24 @@ export default function NuevaProformaPage() {
             {totales.subtotal > 0 && (
               <div className="flex justify-between text-tenue">
                 <span>Subtotal</span>
-                <span className="tabular-nums">${fmt(totales.subtotal)}</span>
+                <span className="tabular-nums">${dosDecimales(totales.subtotal)}</span>
               </div>
             )}
             {totales.descuento > 0 && (
               <div className="flex justify-between text-alerta-texto">
                 <span>Descuento</span>
-                <span className="tabular-nums">-${fmt(totales.descuento)}</span>
+                <span className="tabular-nums">-${dosDecimales(totales.descuento)}</span>
               </div>
             )}
             {totales.iva > 0 && (
               <div className="flex justify-between text-tenue">
                 <span>IVA</span>
-                <span className="tabular-nums">${fmt(totales.iva)}</span>
+                <span className="tabular-nums">${dosDecimales(totales.iva)}</span>
               </div>
             )}
             <div className="flex justify-between border-t border-borde pt-2 text-base font-bold text-texto">
               <span>Total</span>
-              <span className="tabular-nums">${fmt(totales.total)}</span>
+              <span className="tabular-nums">${dosDecimales(totales.total)}</span>
             </div>
           </div>
 
@@ -287,7 +286,7 @@ export default function NuevaProformaPage() {
 
           <Boton anchoCompleto tamano="lg" onClick={guardar} cargando={submitting}
                  className="hidden h-auto min-h-11 whitespace-normal py-2.5 lg:flex">
-            {`Guardar proforma · $${fmt(totales.total)}`}
+            {`Guardar proforma · $${dosDecimales(totales.total)}`}
           </Boton>
         </section>
       </>}

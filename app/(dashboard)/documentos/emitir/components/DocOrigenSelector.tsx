@@ -16,6 +16,7 @@ import BotonIcono from "@/components/ui/BotonIcono";
 import ChipsFiltro from "@/components/ui/ChipsFiltro";
 import { Campo, Entrada, type Teclado } from "@/components/ui/Campo";
 import { cn } from "@/components/ui/cn";
+import { dosDecimales } from "@/lib/dinero";
 
 export interface DocOrigenKipu {
   id:             string;
@@ -58,8 +59,6 @@ interface Props {
   /** Si viene, no se ofrece "Externo" (documento que no está en Kipu): en su lugar, este texto. */
   externoNoDisponible?: string;
 }
-
-const fmt = (n: number) => parseFloat(String(n || 0)).toFixed(2);
 
 // dd/mm/aaaa mientras se escribe
 const formatFechaDoc = (val: string): string => {
@@ -245,7 +244,7 @@ export default function DocOrigenSelector({
             </p>
             <p className="text-xs text-sutil">
               {value.tipo === "kipu"
-                ? <>{value.data.fecha_emision} · <span className="tabular-nums">${fmt(value.data.importe_total)}</span></>
+                ? <>{value.data.fecha_emision} · <span className="tabular-nums">${dosDecimales(value.data.importe_total)}</span></>
                 : <>{value.data.fecha} · No está en Kipu</>}
             </p>
           </div>
@@ -402,7 +401,7 @@ function ListaDocs({ docs, onElegir }: { docs: DocOrigenKipu[]; onElegir: (d: Do
               <span className="block truncate text-xs text-sutil">{d.razon_social}</span>
             </span>
             <span className="shrink-0 text-right">
-              <span className="block text-sm font-semibold tabular-nums text-texto">${fmt(d.importe_total)}</span>
+              <span className="block text-sm font-semibold tabular-nums text-texto">${dosDecimales(d.importe_total)}</span>
               <span className="block text-xs text-sutil">{d.fecha_emision}</span>
             </span>
           </button>

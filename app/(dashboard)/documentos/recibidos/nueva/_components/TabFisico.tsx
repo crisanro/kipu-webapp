@@ -11,6 +11,7 @@ import SoloWeb from "@/components/SoloWeb";
 import { hoyEC } from "@/lib/fecha";
 import { formatoNumeroDoc } from "@/lib/teclado";
 import { detalleError } from "@/lib/errores";
+import { dosDecimales } from "@/lib/dinero";
 
 interface LineaRetencion {
   tipo:            string; // "1"=Renta "2"=IVA "6"=ISD
@@ -23,8 +24,6 @@ interface Props {
   suscripcionActiva: boolean;
   onDone: () => void;
 }
-
-const fmt = (n: any) => parseFloat(String(n ?? 0)).toFixed(2);
 
 // ── Optimizar imagen ──────────────────────────────────────────────────────────
 async function optimizarImagen(file: File): Promise<Blob> {
@@ -184,7 +183,7 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
         formData.append("subtotal_iva",  "0");
         formData.append("tarifa_iva",    "0");
         formData.append("valor_iva",     "0");
-        formData.append("importe_total", fmt(totalRetenido));
+        formData.append("importe_total", dosDecimales(totalRetenido));
         // Sin las líneas el backend no sabe cuánto es IVA (casillero 609) y cuánto renta
         formData.append("lineas_ret",    JSON.stringify(lineasRet));
       } else {
@@ -576,7 +575,7 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
 
           <div className="flex justify-between items-center pt-2" style={{ borderTop: "1px solid var(--kipu-border)" }}>
             <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Total retenido</span>
-            <span className="text-sm font-bold" style={{ color: "var(--kipu-info)" }}>${fmt(totalRetenido)}</span>
+            <span className="text-sm font-bold" style={{ color: "var(--kipu-info)" }}>${dosDecimales(totalRetenido)}</span>
           </div>
         </div>
       )}
@@ -837,7 +836,7 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
             Guardando...
           </>
         ) : (
-          `Registrar ${tipoDoc === "RET" ? `Retención · $${fmt(totalRetenido)}` : tipoDoc === "FAC" ? "Factura" : tipoDoc === "NVE" ? "Nota de venta" : tipoDoc === "NCR" ? "Nota de Crédito" : "Nota de Débito"}${tipoDoc !== "RET" && importeTotal ? ` · $${fmt(importeTotal)}` : ""}`
+          `Registrar ${tipoDoc === "RET" ? `Retención · $${dosDecimales(totalRetenido)}` : tipoDoc === "FAC" ? "Factura" : tipoDoc === "NVE" ? "Nota de venta" : tipoDoc === "NCR" ? "Nota de Crédito" : "Nota de Débito"}${tipoDoc !== "RET" && importeTotal ? ` · $${dosDecimales(importeTotal)}` : ""}`
         )}
       </button>
     </div>

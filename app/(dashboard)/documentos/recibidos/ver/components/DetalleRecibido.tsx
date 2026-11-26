@@ -29,12 +29,12 @@ import { InsigniaEstado, InsigniaSri } from "@/components/ui/InsigniaEstado";
 import { etiquetaPeriodo } from "@/components/ui/PeriodoFechas";
 import { cn } from "@/components/ui/cn";
 import { detalleError } from "@/lib/errores";
+import { dosDecimales } from "@/lib/dinero";
 
 // "Emitir retención": misma regla que el menú (DashboardNav). Sin retenciones activadas no
 // aparece; sin Kipu Pro / Al Día va con candado y lleva a planes (en la app no aparece).
 const RET = { href: "/documentos/emitir/ret", requierePro: true, requiereRetenciones: true };
 
-const fmt = (n: any) => parseFloat(String(n ?? 0)).toFixed(2);
 const fecha = (f?: string | null) => (f && /^\d{4}-\d{2}-\d{2}$/.test(f) ? etiquetaPeriodo(f, f) : f || "—");
 
 /** Fila etiqueta → valor de las secciones. */
@@ -105,11 +105,11 @@ function ModalClasificacion({ doc, onClose, onSaved }: {
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-sm text-texto">{item.descripcion}</p>
-                    <p className="text-xs text-sutil">{item.cantidad} × ${fmt(item.precio_unitario)}</p>
+                    <p className="text-xs text-sutil">{item.cantidad} × ${dosDecimales(item.precio_unitario)}</p>
                   </div>
                   <div className="shrink-0 text-right text-xs tabular-nums">
-                    <p className="font-medium text-texto">${fmt(item.subtotal)}</p>
-                    <p className="text-sutil">{item.tarifa_iva > 0 ? `IVA ${item.tarifa_iva}% $${fmt(item.valor_iva)}` : "Sin IVA"}</p>
+                    <p className="font-medium text-texto">${dosDecimales(item.subtotal)}</p>
+                    <p className="text-sutil">{item.tarifa_iva > 0 ? `IVA ${item.tarifa_iva}% $${dosDecimales(item.valor_iva)}` : "Sin IVA"}</p>
                   </div>
                 </div>
                 {doc.tipo_doc !== "RET" && (
@@ -131,17 +131,17 @@ function ModalClasificacion({ doc, onClose, onSaved }: {
         <div className="space-y-1.5 rounded-xl bg-presionado p-4 text-sm tabular-nums">
           <div className="flex justify-between text-tenue">
             <span>Total documento</span>
-            <span className="font-bold text-texto">${fmt(doc.importe_total)}</span>
+            <span className="font-bold text-texto">${dosDecimales(doc.importe_total)}</span>
           </div>
           {doc.tipo_doc !== "RET" && (
             <div className="flex justify-between text-tenue">
               <span>Deducible renta</span>
-              <span className="font-medium text-exito-texto">${fmt(totalDeducible)}</span>
+              <span className="font-medium text-exito-texto">${dosDecimales(totalDeducible)}</span>
             </div>
           )}
           <div className="flex justify-between text-tenue">
             <span>Crédito tributario IVA</span>
-            <span className="font-medium text-info">${fmt(totalCredito)}</span>
+            <span className="font-medium text-info">${dosDecimales(totalCredito)}</span>
           </div>
         </div>
 
@@ -292,7 +292,7 @@ export default function DetalleRecibido({ id, enPanel = false }: { id: string; e
             {pago && <InsigniaEstado tono={pago.tono} className="shrink-0">{pago.etiqueta}</InsigniaEstado>}
           </div>
 
-          <p className="mt-4 text-3xl font-bold tabular-nums text-texto">${fmt(doc.importe_total)}</p>
+          <p className="mt-4 text-3xl font-bold tabular-nums text-texto">${dosDecimales(doc.importe_total)}</p>
 
           <div className="mt-4 flex flex-wrap items-center gap-2">
             {puedeRetener && (
@@ -324,12 +324,12 @@ export default function DetalleRecibido({ id, enPanel = false }: { id: string; e
             {doc.tipo_doc !== "RET" && (
               <div className="rounded-lg bg-exito-suave p-3">
                 <p className="text-xs text-tenue">Deducible renta</p>
-                <p className="text-base font-bold tabular-nums text-exito-texto">${fmt(totalDeducible)}</p>
+                <p className="text-base font-bold tabular-nums text-exito-texto">${dosDecimales(totalDeducible)}</p>
               </div>
             )}
             <div className="rounded-lg bg-info-suave p-3">
               <p className="text-xs text-tenue">Crédito tributario IVA</p>
-              <p className="text-base font-bold tabular-nums text-info">${fmt(totalCredito)}</p>
+              <p className="text-base font-bold tabular-nums text-info">${dosDecimales(totalCredito)}</p>
             </div>
           </div>
 
@@ -361,7 +361,7 @@ export default function DetalleRecibido({ id, enPanel = false }: { id: string; e
                 <div key={idx} className="flex items-start justify-between gap-3 px-4 py-3">
                   <div className="min-w-0 flex-1">
                     <p className="text-sm text-texto">{item.descripcion}</p>
-                    <p className="text-xs text-sutil">{item.cantidad} × ${fmt(item.precio_unitario)}</p>
+                    <p className="text-xs text-sutil">{item.cantidad} × ${dosDecimales(item.precio_unitario)}</p>
                     {(item.deducible_renta || item.credito_tributario_iva) && (
                       <span className="mt-1 flex flex-wrap gap-1">
                         {item.deducible_renta && <InsigniaEstado tono="exito">Deducible</InsigniaEstado>}
@@ -370,8 +370,8 @@ export default function DetalleRecibido({ id, enPanel = false }: { id: string; e
                     )}
                   </div>
                   <div className="shrink-0 text-right text-sm tabular-nums">
-                    <p className="font-semibold text-texto">${fmt(item.subtotal)}</p>
-                    {item.tarifa_iva > 0 && <p className="text-xs text-sutil">IVA {item.tarifa_iva}% ${fmt(item.valor_iva)}</p>}
+                    <p className="font-semibold text-texto">${dosDecimales(item.subtotal)}</p>
+                    {item.tarifa_iva > 0 && <p className="text-xs text-sutil">IVA {item.tarifa_iva}% ${dosDecimales(item.valor_iva)}</p>}
                   </div>
                 </div>
               ))}

@@ -9,11 +9,7 @@ import {
   Search, ChevronRight,
   Building2, CheckCircle2, Clock, UserCircle
 } from "lucide-react";
-
-const fmtK = (n: any) => {
-  const v = parseFloat(n ?? 0);
-  return v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v.toFixed(0);
-};
+import { compactoK } from "@/lib/dinero";
 
 export default function AdminPage() {
   const router = useRouter();
@@ -79,7 +75,7 @@ export default function AdminPage() {
           {[
             {
               label: "Usuarios",
-              value: fmtK(stats.total_usuarios),
+              value: compactoK(stats.total_usuarios, 0),
               sub:   `${stats.usuarios_sin_empresa} sin empresa`,
               icon:  UserCircle,
               color: "var(--kipu-info)",
@@ -88,7 +84,7 @@ export default function AdminPage() {
             },
             {
               label: "Total emisores",
-              value: fmtK(stats.total_emisores),
+              value: compactoK(stats.total_emisores, 0),
               sub:   `${stats.en_produccion} en prod · ${stats.en_pruebas} en pruebas`,
               icon:  Building2,
               color: "var(--kipu-accent)",
@@ -96,15 +92,15 @@ export default function AdminPage() {
             },
             {
               label: "Facturas emitidas",
-              value: fmtK(stats.total_facturas),
-              sub:   `${fmtK(stats.autorizadas)} autorizadas`,
+              value: compactoK(stats.total_facturas, 0),
+              sub:   `${compactoK(stats.autorizadas, 0)} autorizadas`,
               icon:  FileText,
               color: "var(--kipu-success)",
               bg:    "color-mix(in srgb, var(--kipu-success) 10%, transparent)",
             },
             {
               label: "Monto total",
-              value: `$${fmtK(stats.monto_total)}`,
+              value: `$${compactoK(stats.monto_total, 0)}`,
               sub:   "en facturas autorizadas",
               icon:  TrendingUp,
               color: "var(--kipu-info)",
@@ -112,7 +108,7 @@ export default function AdminPage() {
             },
             {
               label: "Créditos activos",
-              value: fmtK(stats.creditos_totales),
+              value: compactoK(stats.creditos_totales, 0),
               sub:   "en todos los emisores",
               icon:  CreditCard,
               color: "var(--kipu-warning)",

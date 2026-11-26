@@ -5,16 +5,11 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip,
   ResponsiveContainer, Cell
 } from "recharts";
+import { compactoK, dosDecimales } from "@/lib/dinero";
 
 interface Props {
   documentos: any[];
 }
-
-const fmt  = (n: any) => parseFloat(n ?? 0).toFixed(2);
-const fmtK = (n: any) => {
-  const v = parseFloat(n ?? 0);
-  return v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v.toFixed(2);
-};
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
@@ -28,7 +23,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     >
       <p className="mb-1" style={{ color: "var(--kipu-muted)" }}>Día {label}</p>
       <p className="font-bold text-sm" style={{ color: "var(--kipu-text)" }}>
-        ${fmt(payload[0].value)}
+        ${dosDecimales(payload[0].value)}
       </p>
     </div>
   );
@@ -92,7 +87,7 @@ export default function GraficoFacturacion({ documentos }: Props) {
               tick={{ fill: mutedColor, fontSize: 10 }}
               axisLine={false}
               tickLine={false}
-              tickFormatter={(v: number) => `$${fmtK(v)}`}
+              tickFormatter={(v: number) => `$${compactoK(v)}`}
             />
             <Tooltip
               content={<CustomTooltip />}

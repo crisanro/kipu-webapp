@@ -18,12 +18,10 @@ import ChipsFiltro from "@/components/ui/ChipsFiltro";
 import { Campo, Entrada } from "@/components/ui/Campo";
 import { cn } from "@/components/ui/cn";
 import { etiquetaIva, opcionesIva } from "@/lib/iva";
-import { r2 } from "@/lib/dinero";
+import { dosDecimales } from "@/lib/dinero";
 import { calcularLinea, totalEsperadoConIva, tarifaPct } from "@/lib/precios";
 // Solo el tipo: ItemsEditor importa este archivo (sin importación circular)
 import type { Item } from "./ItemsEditor";
-
-const fmt = (n: number) => r2(n).toFixed(2);
 
 // ── Campo decimal ─────────────────────────────────────────────────────────────
 export function InputDecimal({
@@ -112,7 +110,7 @@ export default function HojaItem({
       abierta={abierta}
       onCerrar={onCerrar}
       titulo={item.descripcion.trim() || "Nuevo ítem"}
-      descripcion={`Total del ítem: $${fmt(c.total)}`}
+      descripcion={`Total del ítem: $${dosDecimales(c.total)}`}
       pie={<>
         {puedeEliminar && (
           <Boton variante="peligro" onClick={onEliminar} icono={<Trash2 size={16} />}>Quitar</Boton>
@@ -201,8 +199,8 @@ export default function HojaItem({
         {/* IVA incluido: lo que va en la factura */}
         {conIva && tarifaPct(item.tipo_iva) > 0 && c.total > 0 && (
           <p className="text-xs text-tenue">
-            Sin IVA <b className="text-texto">${fmt(c.base)}</b> · IVA {etiquetaIva(item.tipo_iva)} <b className="text-texto">${fmt(c.iva)}</b>
-            {redondeado && <span className="block text-alerta-texto">Queda en ${fmt(c.total)}: el SRI redondea el IVA al centavo.</span>}
+            Sin IVA <b className="text-texto">${dosDecimales(c.base)}</b> · IVA {etiquetaIva(item.tipo_iva)} <b className="text-texto">${dosDecimales(c.iva)}</b>
+            {redondeado && <span className="block text-alerta-texto">Queda en ${dosDecimales(c.total)}: el SRI redondea el IVA al centavo.</span>}
           </p>
         )}
 

@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { AlertTriangle, CalendarClock, CheckCircle2, Clock, Download, FileText, Loader2, MessageSquareText, XCircle } from "lucide-react";
 import api from "@/lib/api";
 import { abrirExterno } from "@/lib/nativo";
+import { dolares } from "@/lib/dinero";
 
 interface Gestion {
   id:                number;
@@ -30,7 +31,6 @@ const ESTADO = {
 } as const;
 
 const caja = { background: "var(--kipu-surface)", border: "1px solid var(--kipu-border)" };
-const dinero = (n: number) => `$${n.toFixed(2)}`;
 const dia = (iso: string) => new Date(iso).toLocaleDateString("es-EC", { day: "numeric", month: "long" });
 
 export default function PanelCliente({ soloHistorial = false }: { soloHistorial?: boolean }) {
@@ -87,7 +87,7 @@ export default function PanelCliente({ soloHistorial = false }: { soloHistorial?
                 </p>
                 {p.estado === "RESUMEN_ENVIADO" && p.valor_a_pagar !== null && (
                   <p className="text-sm" style={{ color: "var(--kipu-text)" }}>
-                    Valor a pagar: <strong>{dinero(p.valor_a_pagar)}</strong>. Si algo no está bien, respóndenos por WhatsApp.
+                    Valor a pagar: <strong>{dolares(p.valor_a_pagar)}</strong>. Si algo no está bien, respóndenos por WhatsApp.
                   </p>
                 )}
               </>
@@ -133,7 +133,7 @@ export default function PanelCliente({ soloHistorial = false }: { soloHistorial?
                     {g.estado === "PRESENTADO" && g.presentado_at
                       ? `Presentada el ${dia(g.presentado_at)}`
                       : `Vence el ${g.vencimiento_fmt}`}
-                    {g.valor_a_pagar !== null && g.estado !== "PENDIENTE" && ` · valor a pagar ${dinero(g.valor_a_pagar)}`}
+                    {g.valor_a_pagar !== null && g.estado !== "PENDIENTE" && ` · valor a pagar ${dolares(g.valor_a_pagar)}`}
                     {g.numero_formulario && ` · formulario n.º ${g.numero_formulario}`}
                   </p>
                   {g.estado === "RESUMEN_ENVIADO" && g.resumen && (

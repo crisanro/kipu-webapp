@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { errorIdentificacion } from "@/lib/identificacion";
 import { TIPOS_IVA } from "@/lib/iva";
-import { r2 } from "@/lib/dinero";
+import { r2, dosDecimales } from "@/lib/dinero";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
@@ -22,6 +22,7 @@ import ResumenTotales from "../components/ResumenTotales";
 import EmisionLayout from "../components/EmisionLayout";
 import { useEmision } from "../components/useEmision";
 import { useBorrador } from "@/lib/borradores";
+import { tieneAccesoAEmitir } from "@/lib/emision";
 
 // ── Tipos ──────────────────────────────────────────────────────────────────────
 interface Cliente {
@@ -41,7 +42,6 @@ interface ClienteNuevo {
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
-const fmt = (n: number) => r2(n).toFixed(2);
 
 /** Mapea código SRI de forma de pago al label de cobro */
 const FORMA_PAGO_COBRO_MAP: Record<string, string> = {
@@ -189,8 +189,8 @@ export default function NuevaFacturaPage() {
     || clienteSelected?.tipo_identificacion_sri === "07"
     || clienteNuevo?.tipo_identificacion_sri === "07";
   const avisoConsumidorFinal = aConsumidorFinal && totales.total > LIMITE_CONSUMIDOR_FINAL
-    ? `A Consumidor Final no se puede facturar más de $${fmt(LIMITE_CONSUMIDOR_FINAL)} `
-      + `(total: $${fmt(totales.total)}). Elige un cliente con cédula o RUC.`
+    ? `A Consumidor Final no se puede facturar más de $${dosDecimales(LIMITE_CONSUMIDOR_FINAL)} `
+      + `(total: $${dosDecimales(totales.total)}). Elige un cliente con cédula o RUC.`
     : null;
 
   // ── Cargar estructura ────────────────────────────────────────────────────────
@@ -323,7 +323,7 @@ export default function NuevaFacturaPage() {
       } catch {}
     }
     
-    const puedeEmitir = empresa?.suscripcion_activa || (empresa?.balance_api ?? 0) > 0 || !!empresa?.emision_gratis;
+    const puedeEmitir = tieneAccesoAEmitir(empresa);
     if (!puedeEmitir) {
       setError("Se requiere suscripción activa o créditos API para emitir.");
       return;
@@ -332,7 +332,7 @@ export default function NuevaFacturaPage() {
     // Redondeado: 1.10 + 2.20 en coma flotante da 3.3000000000000003 > 3.30
     const totalCubierto = r2(pagos.reduce((s, p) => s + (p.total ?? 0), 0));
     if (totalCubierto > totales.total) {
-      setError(`Los pagos ($${fmt(totalCubierto)}) superan el total ($${fmt(totales.total)}).`);
+      setError(`Los pagos ($${dosDecimales(totalCubierto)}) superan el total ($${dosDecimales(totales.total)}).`);
       return;
     }
 
@@ -421,7 +421,7 @@ export default function NuevaFacturaPage() {
           </div>
           <h2 className="text-xl font-bold mb-1" style={{ color: "var(--kipu-text)" }}>Link de cobro listo</h2>
           <p className="text-sm mb-4" style={{ color: "var(--kipu-subtle)" }}>
-            Cuando {cobroCreado.cliente_nombre || "tu cliente"} pague ${fmt(cobroCreado.monto)}, la factura
+            Cuando {cobroCreado.cliente_nombre || "tu cliente"} pague ${dosDecimales(cobroCreado.monto)}, la factura
             se emitirá sola, ya cobrada, y le llegará por correo.
           </p>
           <div className="text-left rounded-xl p-3 mb-6 space-y-2"
@@ -519,7 +519,7 @@ export default function NuevaFacturaPage() {
   // ── Formulario ───────────────────────────────────────────────────────────────
   // "Emitir cuando pague": el botón crea el link de cobro en vez de la factura
   const soloLink = cobro.estado === "PENDIENTE" && linkPago && !!pasarela?.conectada && momento === "al_pagar";
-  const puedeEmitir = !!empresa && (empresa.suscripcion_activa || empresa.balance_api > 0 || !!empresa.emision_gratis);
+  const puedeEmitir = tieneAccesoAEmitir(empresa);
 
   return (
     <EmisionLayout

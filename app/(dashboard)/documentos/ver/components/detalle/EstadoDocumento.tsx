@@ -12,10 +12,11 @@ import Boton from "@/components/ui/Boton";
 import BotonIcono from "@/components/ui/BotonIcono";
 import HojaAcciones, { type Accion } from "@/components/ui/HojaAcciones";
 import { InsigniaSri, InsigniaEstado } from "@/components/ui/InsigniaEstado";
-import { type FacturaBase, TIPO_LABEL, MOTIVO_LABEL, formatearFechaHora, fmt } from "./utils";
+import { type FacturaBase, TIPO_LABEL, MOTIVO_LABEL, formatearFechaHora } from "./utils";
 import { useAccionesArchivo } from "./AccionesArchivo";
 import { useAccionesRelacionadas } from "./ComprobantesRelacionados";
 import { detalleError } from "@/lib/errores";
+import { dosDecimales } from "@/lib/dinero";
 
 // Estados en los que tiene sentido preguntarle al SRI cómo está el comprobante
 const CONSULTABLES = ["FIRMADO", "RECIBIDA", "EN_REVISION", "DEVUELTA", "RECHAZADO"];
@@ -159,7 +160,7 @@ export default function EstadoDocumento({ factura, onRecargar, consumidorFinal, 
       </div>
 
       {/* El monto, en grande */}
-      <p className="mt-4 text-3xl font-bold tabular-nums text-texto">${fmt(factura.importe_total)}</p>
+      <p className="mt-4 text-3xl font-bold tabular-nums text-texto">${dosDecimales(factura.importe_total)}</p>
       <p className="mt-1 text-xs leading-relaxed text-tenue">{descripcion}</p>
       {factura.es_sandbox && (
         <p className="mt-1 text-xs leading-relaxed text-sutil">

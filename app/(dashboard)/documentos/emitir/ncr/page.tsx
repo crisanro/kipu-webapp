@@ -21,6 +21,7 @@ import ResumenTotales from "../components/ResumenTotales";
 import DocOrigenSelector, { DocOrigen } from "../components/DocOrigenSelector";
 import EmisionLayout from "../components/EmisionLayout";
 import { useEmision } from "../components/useEmision";
+import { tieneAccesoAEmitir } from "@/lib/emision";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 function calcTotales(items: Item[]) {
@@ -164,7 +165,7 @@ export default function NuevaNcrPage() {
     setCamposAdicionales([]);
   };
 
-  const puedeEmitir = !!empresa && (empresa.suscripcion_activa || empresa.balance_api > 0 || !!empresa.emision_gratis);
+  const puedeEmitir = tieneAccesoAEmitir(empresa);
 
   const emitir = async () => {
     setError("");

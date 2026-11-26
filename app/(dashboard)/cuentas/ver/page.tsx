@@ -29,9 +29,9 @@ import {
   ArrowUpCircle, ArrowDownCircle, MoreVertical,
 } from "lucide-react";
 import { detalleError } from "@/lib/errores";
+import { dolares } from "@/lib/dinero";
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
-const fmt   = (n: number) => `$${n.toFixed(2)}`;
 const fecha = (f?: string | null) => (f && /^\d{4}-\d{2}-\d{2}$/.test(f) ? etiquetaPeriodo(f, f) : f || "");
 
 const ESTADOS: Record<string, { etiqueta: string; tono: TonoEstado }> = {
@@ -225,7 +225,7 @@ function DetalleCuenta({ id }: { id: string }) {
 
           {/* Lo que falta, en grande, y cuánto va */}
           <p className="mt-4 text-xs text-sutil">{cuenta.estado === "PAGADO" ? "Saldada" : cobrar ? "Te falta cobrar" : "Te falta pagar"}</p>
-          <p className="text-3xl font-bold tabular-nums text-texto">{fmt(cuenta.saldo_pendiente)}</p>
+          <p className="text-3xl font-bold tabular-nums text-texto">{dolares(cuenta.saldo_pendiente)}</p>
           <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-presionado"
                role="progressbar" aria-valuenow={Math.round(porcentaje)} aria-valuemin={0} aria-valuemax={100}
                aria-label="Avance del pago">
@@ -233,7 +233,7 @@ function DetalleCuenta({ id }: { id: string }) {
                  style={{ width: `${porcentaje}%` }} />
           </div>
           <p className="mt-1.5 text-xs tabular-nums text-tenue">
-            {cobrar ? "Cobrado" : "Pagado"} {fmt(cuenta.monto_pagado)} de {fmt(cuenta.monto_total)}
+            {cobrar ? "Cobrado" : "Pagado"} {dolares(cuenta.monto_pagado)} de {dolares(cuenta.monto_total)}
           </p>
 
           {activa && tieneSub && (
@@ -269,7 +269,7 @@ function DetalleCuenta({ id }: { id: string }) {
             <Dato icono={Calendar} etiqueta="Vencimiento"
                   valor={<span className={cn("font-medium", vencida && "text-peligro-texto")}>{fecha(cuenta.fecha_vencimiento)}</span>} />
           )}
-          <Dato icono={Wallet} etiqueta="Total actual" valor={<span className="tabular-nums">{fmt(cuenta.monto_total)}</span>} />
+          <Dato icono={Wallet} etiqueta="Total actual" valor={<span className="tabular-nums">{dolares(cuenta.monto_total)}</span>} />
           {cuenta.notas && <Dato icono={FileText} etiqueta="Notas" valor={cuenta.notas} />}
         </section>
 
@@ -296,7 +296,7 @@ function DetalleCuenta({ id }: { id: string }) {
                     titulo={esAjuste ? "Ajuste" : "Abono"}
                     subtitulo={[fecha(m.fecha), m.forma_pago && (FORMAS_PAGO.find(f => f.valor === m.forma_pago)?.etiqueta ?? m.forma_pago)].filter(Boolean).join(" · ")}
                     detalle={m.notas || m.motivo || undefined}
-                    fin={<span className={esAjuste ? "text-alerta-texto" : "text-exito-texto"}>{esAjuste ? "+" : "−"}{fmt(m.monto)}</span>}
+                    fin={<span className={esAjuste ? "text-alerta-texto" : "text-exito-texto"}>{esAjuste ? "+" : "−"}{dolares(m.monto)}</span>}
                   />
                 );
               })}
@@ -318,7 +318,7 @@ function DetalleCuenta({ id }: { id: string }) {
           abierta={showAbono}
           onCerrar={() => { setShowAbono(false); setError(""); }}
           titulo={<span className="inline-flex items-center gap-2"><ArrowDownCircle size={16} className="text-exito" /> Registrar abono</span>}
-          descripcion={`Saldo pendiente: ${fmt(cuenta.saldo_pendiente)}`}
+          descripcion={`Saldo pendiente: ${dolares(cuenta.saldo_pendiente)}`}
           tamano="sm"
           cerrable={!savingAbono}
           pie={<>
@@ -340,7 +340,7 @@ function DetalleCuenta({ id }: { id: string }) {
             {/* Lo más común: saldar todo de una vez */}
             <Boton variante="secundario" tamano="sm" className="-mt-1"
                    onClick={() => setAbonoForm({ ...abonoForm, monto: cuenta.saldo_pendiente.toFixed(2) })}>
-              Todo el saldo ({fmt(cuenta.saldo_pendiente)})
+              Todo el saldo ({dolares(cuenta.saldo_pendiente)})
             </Boton>
             <div className="grid grid-cols-2 gap-3">
               <Campo etiqueta="Fecha">
@@ -379,7 +379,7 @@ function DetalleCuenta({ id }: { id: string }) {
               Esto <span className="font-semibold">aumenta el monto total</span> de la deuda. Úsalo para intereses, cargos adicionales o un préstamo extra encima del saldo actual.
             </p>
             <Campo etiqueta="Monto a añadir"
-                   ayuda={ajusteNum > 0 ? `Nuevo total: ${fmt(cuenta.monto_total + ajusteNum)}` : undefined}>
+                   ayuda={ajusteNum > 0 ? `Nuevo total: ${dolares(cuenta.monto_total + ajusteNum)}` : undefined}>
               <Entrada teclado="decimal" prefijo="+$" value={ajusteForm.monto} placeholder="0.00" autoFocus
                        onChange={(e) => setAjusteForm({ ...ajusteForm, monto: e.target.value })} />
             </Campo>

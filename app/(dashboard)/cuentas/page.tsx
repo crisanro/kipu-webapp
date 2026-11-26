@@ -33,6 +33,7 @@ import {
   TrendingUp, TrendingDown, Scale, Search,
   AlertTriangle,
 } from "lucide-react";
+import { dolares } from "@/lib/dinero";
 
 // ── Tipos ──────────────────────────────────────────────────────────────────────
 interface Cuenta {
@@ -58,7 +59,6 @@ interface Resumen {
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
-const fmt = (n: number) => `$${n.toFixed(2)}`;
 
 const ESTADOS: Record<Cuenta["estado"], { etiqueta: string; tono: TonoEstado }> = {
   PENDIENTE: { etiqueta: "Pendiente", tono: "alerta" },
@@ -273,7 +273,7 @@ function CuentasContent() {
           <span className="mb-1 flex items-center gap-1.5 text-xs text-sutil">
             <TrendingUp size={14} className="text-exito" aria-hidden /> Por cobrar
           </span>
-          <span className="block truncate text-base font-bold tabular-nums text-exito-texto sm:text-xl">{fmt(totales.por_cobrar)}</span>
+          <span className="block truncate text-base font-bold tabular-nums text-exito-texto sm:text-xl">{dolares(totales.por_cobrar)}</span>
         </button>
         <button
           type="button"
@@ -284,7 +284,7 @@ function CuentasContent() {
           <span className="mb-1 flex items-center gap-1.5 text-xs text-sutil">
             <TrendingDown size={14} className="text-peligro" aria-hidden /> Por pagar
           </span>
-          <span className="block truncate text-base font-bold tabular-nums text-peligro-texto sm:text-xl">{fmt(totales.por_pagar)}</span>
+          <span className="block truncate text-base font-bold tabular-nums text-peligro-texto sm:text-xl">{dolares(totales.por_pagar)}</span>
         </button>
         <div className={cn(tarjeta, "border-borde")}>
           <span className="mb-1 flex items-center gap-1.5 text-xs text-sutil">
@@ -292,7 +292,7 @@ function CuentasContent() {
           </span>
           <span className={cn("block truncate text-base font-bold tabular-nums sm:text-xl",
                               totales.balance >= 0 ? "text-acento" : "text-alerta-texto")}>
-            {fmt(totales.balance)}
+            {dolares(totales.balance)}
           </span>
         </div>
       </div>
@@ -351,11 +351,11 @@ function CuentasContent() {
                   subtitulo={c.razon_social}
                   detalle={
                     <>
-                      {`de ${fmt(c.monto_total)}`}
+                      {`de ${dolares(c.monto_total)}`}
                       {vence && <span className={vencida ? "text-peligro-texto" : undefined}>{` · ${vencida ? "venció" : "vence"} ${vence}`}</span>}
                     </>
                   }
-                  fin={fmt(c.saldo_pendiente)}
+                  fin={dolares(c.saldo_pendiente)}
                   finAbajo={vencida
                     ? <InsigniaEstado tono="peligro" icono={AlertTriangle}>Vencida</InsigniaEstado>
                     : <InsigniaEstado tono={est.tono}>{est.etiqueta}</InsigniaEstado>}

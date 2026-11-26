@@ -32,6 +32,7 @@ import PanelDetalle from "@/components/ui/PanelDetalle";
 import { cn } from "@/components/ui/cn";
 import { useAtajos } from "@/lib/useAtajos";
 import DetalleRecibido from "./ver/components/DetalleRecibido";
+import { dosDecimales } from "@/lib/dinero";
 
 // Lista y detalle lado a lado desde este ancho (components/ui/PanelDetalle.tsx)
 const ANCHO_PANEL = "(min-width: 1280px)";
@@ -77,8 +78,6 @@ interface PaginationInfo {
 }
 
 const UMBRAL_BANCARIZACION = 500.00;
-
-const fmt = (n: any) => parseFloat(String(n ?? 0)).toFixed(2);
 
 const TIPO_COLOR: Record<string, { color: string; bg: string }> = {
   FAC: { color: "var(--kipu-muted)", bg: "color-mix(in srgb, var(--kipu-muted) 10%, transparent)" },
@@ -184,21 +183,21 @@ function DocExpandido({ doc, onVerDetalle }: { doc: DocRecibido; onVerDetalle: (
           style={{ background: "color-mix(in srgb, var(--kipu-text) 4%, transparent)" }}
         >
           <p className="text-[10px] mb-1" style={{ color: "var(--kipu-subtle)" }}>Base sin IVA</p>
-          <p className="text-sm font-bold" style={{ color: "var(--kipu-text)" }}>${fmt(doc.subtotal_base)}</p>
+          <p className="text-sm font-bold" style={{ color: "var(--kipu-text)" }}>${dosDecimales(doc.subtotal_base)}</p>
         </div>
         <div
           className="rounded-lg p-2.5 text-center"
           style={{ background: "color-mix(in srgb, var(--kipu-text) 4%, transparent)" }}
         >
           <p className="text-[10px] mb-1" style={{ color: "var(--kipu-subtle)" }}>IVA</p>
-          <p className="text-sm font-bold" style={{ color: "var(--kipu-text)" }}>${fmt(doc.valor_iva_total)}</p>
+          <p className="text-sm font-bold" style={{ color: "var(--kipu-text)" }}>${dosDecimales(doc.valor_iva_total)}</p>
         </div>
         <div
           className="rounded-lg p-2.5 text-center"
           style={{ background: "color-mix(in srgb, var(--kipu-text) 4%, transparent)" }}
         >
           <p className="text-[10px] mb-1" style={{ color: "var(--kipu-subtle)" }}>Total</p>
-          <p className="text-sm font-bold" style={{ color: "var(--kipu-text)" }}>${fmt(doc.importe_total)}</p>
+          <p className="text-sm font-bold" style={{ color: "var(--kipu-text)" }}>${dosDecimales(doc.importe_total)}</p>
         </div>
       </div>
 
@@ -219,7 +218,7 @@ function DocExpandido({ doc, onVerDetalle }: { doc: DocRecibido; onVerDetalle: (
             className="text-xs font-bold"
             style={{ color: doc.deducible_renta ? "var(--kipu-success)" : "var(--kipu-subtle)" }}
           >
-            {doc.deducible_renta ? `$${fmt(doc.subtotal_base)}` : "No aplica"}
+            {doc.deducible_renta ? `$${dosDecimales(doc.subtotal_base)}` : "No aplica"}
           </p>
         </div>
         <div
@@ -238,7 +237,7 @@ function DocExpandido({ doc, onVerDetalle }: { doc: DocRecibido; onVerDetalle: (
             className="text-xs font-bold"
             style={{ color: doc.credito_tributario_iva ? "var(--kipu-info)" : "var(--kipu-subtle)" }}
           >
-            {doc.credito_tributario_iva ? `$${fmt(doc.valor_iva_total)}` : "No aplica"}
+            {doc.credito_tributario_iva ? `$${dosDecimales(doc.valor_iva_total)}` : "No aplica"}
           </p>
         </div>
       </div>
@@ -485,13 +484,13 @@ export default function FacturasRecibidasPage() {
             </div>
             <div className="flex items-center gap-4">
               <span className="text-xs hidden sm:block" style={{ color: "var(--kipu-muted)" }}>
-                Compras netas <span className="font-medium" style={{ color: "var(--kipu-text)" }}>${fmt(resumenV.importe_total)}</span>
+                Compras netas <span className="font-medium" style={{ color: "var(--kipu-text)" }}>${dosDecimales(resumenV.importe_total)}</span>
               </span>
               <span className="text-xs hidden sm:block" style={{ color: "var(--kipu-muted)" }}>
-                Ded. <span className="font-medium" style={{ color: "var(--kipu-success)" }}>${fmt(resumenV.total_deducible)}</span>
+                Ded. <span className="font-medium" style={{ color: "var(--kipu-success)" }}>${dosDecimales(resumenV.total_deducible)}</span>
               </span>
               <span className="text-xs hidden sm:block" style={{ color: "var(--kipu-muted)" }}>
-                CT IVA <span className="font-medium" style={{ color: "var(--kipu-info)" }}>${fmt(resumenV.iva_credito_tributario)}</span>
+                CT IVA <span className="font-medium" style={{ color: "var(--kipu-info)" }}>${dosDecimales(resumenV.iva_credito_tributario)}</span>
               </span>
               {resumenOpen ? <ChevronUp size={16} style={{ color: "var(--kipu-subtle)" }} /> : <ChevronDown size={16} style={{ color: "var(--kipu-subtle)" }} />}
             </div>
@@ -515,23 +514,23 @@ export default function FacturasRecibidasPage() {
                         <td className="px-3 py-2">
                           Compras <span style={{ color: "var(--kipu-subtle)" }}>({resumenV.compras.cantidad})</span>
                         </td>
-                        <td className="text-right px-3 py-2">${fmt(resumenV.compras.subtotal)}</td>
-                        <td className="text-right px-3 py-2">${fmt(resumenV.compras.iva)}</td>
-                        <td className="text-right px-3 py-2">${fmt(resumenV.compras.total)}</td>
+                        <td className="text-right px-3 py-2">${dosDecimales(resumenV.compras.subtotal)}</td>
+                        <td className="text-right px-3 py-2">${dosDecimales(resumenV.compras.iva)}</td>
+                        <td className="text-right px-3 py-2">${dosDecimales(resumenV.compras.total)}</td>
                       </tr>
                       <tr style={{ borderTop: "1px solid var(--kipu-border)", color: "var(--kipu-danger)" }}>
                         <td className="px-3 py-2">
                           Notas de crédito <span style={{ color: "var(--kipu-subtle)" }}>({resumenV.notas_credito.cantidad}, restan)</span>
                         </td>
-                        <td className="text-right px-3 py-2">−${fmt(resumenV.notas_credito.subtotal)}</td>
-                        <td className="text-right px-3 py-2">−${fmt(resumenV.notas_credito.iva)}</td>
-                        <td className="text-right px-3 py-2">−${fmt(resumenV.notas_credito.total)}</td>
+                        <td className="text-right px-3 py-2">−${dosDecimales(resumenV.notas_credito.subtotal)}</td>
+                        <td className="text-right px-3 py-2">−${dosDecimales(resumenV.notas_credito.iva)}</td>
+                        <td className="text-right px-3 py-2">−${dosDecimales(resumenV.notas_credito.total)}</td>
                       </tr>
                       <tr className="font-bold" style={{ borderTop: "2px solid var(--kipu-border)" }}>
                         <td className="px-3 py-2">Compras netas</td>
-                        <td className="text-right px-3 py-2">${fmt(resumenV.neto.subtotal)}</td>
-                        <td className="text-right px-3 py-2">${fmt(resumenV.neto.iva)}</td>
-                        <td className="text-right px-3 py-2">${fmt(resumenV.neto.total)}</td>
+                        <td className="text-right px-3 py-2">${dosDecimales(resumenV.neto.subtotal)}</td>
+                        <td className="text-right px-3 py-2">${dosDecimales(resumenV.neto.iva)}</td>
+                        <td className="text-right px-3 py-2">${dosDecimales(resumenV.neto.total)}</td>
                       </tr>
                     </tbody>
                   </table>
@@ -547,7 +546,7 @@ export default function FacturasRecibidasPage() {
                   }}
                 >
                   <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: "var(--kipu-subtle)" }}>Deducible renta</p>
-                  <p className="text-lg font-bold" style={{ color: "var(--kipu-success)" }}>${fmt(resumenV.total_deducible)}</p>
+                  <p className="text-lg font-bold" style={{ color: "var(--kipu-success)" }}>${dosDecimales(resumenV.total_deducible)}</p>
                   <p className="text-[10px] mt-1" style={{ color: "var(--kipu-subtle)" }}>base sin IVA, menos notas de crédito</p>
                 </div>
                 <div
@@ -558,7 +557,7 @@ export default function FacturasRecibidasPage() {
                   }}
                 >
                   <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: "var(--kipu-subtle)" }}>Crédito trib. IVA</p>
-                  <p className="text-lg font-bold" style={{ color: "var(--kipu-info)" }}>${fmt(resumenV.iva_credito_tributario)}</p>
+                  <p className="text-lg font-bold" style={{ color: "var(--kipu-info)" }}>${dosDecimales(resumenV.iva_credito_tributario)}</p>
                   <p className="text-[10px] mt-1" style={{ color: "var(--kipu-subtle)" }}>IVA recuperable, menos notas de crédito</p>
                 </div>
                 {resumenV.retenciones && (
@@ -570,9 +569,9 @@ export default function FacturasRecibidasPage() {
                     }}
                   >
                     <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: "var(--kipu-subtle)" }}>Te retuvieron</p>
-                    <p className="text-lg font-bold" style={{ color: "var(--kipu-text)" }}>${fmt(resumenV.retenciones.total)}</p>
+                    <p className="text-lg font-bold" style={{ color: "var(--kipu-text)" }}>${dosDecimales(resumenV.retenciones.total)}</p>
                     <p className="text-[10px] mt-1" style={{ color: "var(--kipu-subtle)" }}>
-                      {resumenV.retenciones.cantidad} retenciones · IVA ${fmt(resumenV.retenciones.iva)} · renta ${fmt(resumenV.retenciones.renta)}
+                      {resumenV.retenciones.cantidad} retenciones · IVA ${dosDecimales(resumenV.retenciones.iva)} · renta ${dosDecimales(resumenV.retenciones.renta)}
                     </p>
                   </div>
                 )}
@@ -613,7 +612,7 @@ export default function FacturasRecibidasPage() {
                   onClick={() => verDetalle(doc.id)}
                   titulo={<>{doc.razon_social_proveedor}{esDemo && <> <EtiquetaEjemplo /></>}</>}
                   subtitulo={`${tipoComprobante(doc.tipo_doc).corta} ${doc.numero_doc} · ${etiquetaPeriodo(doc.fecha_emision, doc.fecha_emision)}`}
-                  fin={`$${fmt(doc.importe_total)}`}
+                  fin={`$${dosDecimales(doc.importe_total)}`}
                   finAbajo={
                     <span className="flex flex-wrap justify-end gap-1">
                       {doc.deducible_renta && <InsigniaEstado tono="exito">Deducible</InsigniaEstado>}
@@ -699,7 +698,7 @@ export default function FacturasRecibidasPage() {
                       </p>
                     </div>
                     <div className="text-right shrink-0">
-                      <p className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>${fmt(doc.importe_total)}</p>
+                      <p className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>${dosDecimales(doc.importe_total)}</p>
                       {doc.estado_pago && ["FAC", "LIQ"].includes(doc.tipo_doc) && (
                         <span
                           className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"

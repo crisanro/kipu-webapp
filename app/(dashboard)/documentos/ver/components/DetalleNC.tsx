@@ -4,8 +4,9 @@ import { useRouter } from "next/navigation";
 import { Building2, Info, User } from "lucide-react";
 import Seccion from "@/components/ui/Seccion";
 import Boton from "@/components/ui/Boton";
-import { fmt, TIPO_ID, type FacturaBase } from "./DetalleShared";
+import { TIPO_ID, type FacturaBase } from "./DetalleShared";
 import { Dato } from "./DetalleFactura";
+import { dosDecimales } from "@/lib/dinero";
 
 interface Props { factura: FacturaBase; }
 
@@ -67,12 +68,12 @@ export default function DetalleNC({ factura }: Props) {
                       )}
                       {parseFloat(item.cantidad).toFixed(2)} × ${parseFloat(item.precioUnitario).toFixed(4)}
                       {parseFloat(item.descuento || 0) > 0 && (
-                        <span className="ml-2 text-alerta-texto">— Desc: ${fmt(item.descuento)}</span>
+                        <span className="ml-2 text-alerta-texto">— Desc: ${dosDecimales(item.descuento)}</span>
                       )}
                     </p>
                   </div>
                   <div className="shrink-0 text-right">
-                    <p className="text-sm font-semibold tabular-nums text-tenue">-${fmt(item.precioTotalSinImpuesto)}</p>
+                    <p className="text-sm font-semibold tabular-nums text-tenue">-${dosDecimales(item.precioTotalSinImpuesto)}</p>
                     {tarifa && <span className="text-xs text-sutil">IVA {tarifa}%</span>}
                   </div>
                 </div>
@@ -88,18 +89,18 @@ export default function DetalleNC({ factura }: Props) {
           {resumenImpuestos.map((imp: any, i: number) => (
             <div key={`sub-${i}`} className="flex justify-between text-tenue">
               <span>Subtotal {imp.tarifa}%</span>
-              <span>${fmt(imp.baseImponible)}</span>
+              <span>${dosDecimales(imp.baseImponible)}</span>
             </div>
           ))}
           {resumenImpuestos.filter((imp: any) => parseFloat(imp.valor) > 0).map((imp: any, i: number) => (
             <div key={`iva-${i}`} className="flex justify-between text-tenue">
               <span>IVA {imp.tarifa}%</span>
-              <span>${fmt(imp.valor)}</span>
+              <span>${dosDecimales(imp.valor)}</span>
             </div>
           ))}
           <div className="mt-2 flex justify-between border-t border-borde pt-2 text-base font-bold text-texto">
             <span>Total acreditado</span>
-            <span>-${fmt(infoNC.valorModificacion)}</span>
+            <span>-${dosDecimales(infoNC.valorModificacion)}</span>
           </div>
         </div>
       </section>

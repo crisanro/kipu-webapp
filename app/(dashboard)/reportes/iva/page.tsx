@@ -21,12 +21,8 @@ import ElegirPeriodo       from "../_components/ElegirPeriodo";
 import Alertas104          from "../_components/Alertas104";
 import AyudaAlDia          from "../_components/AyudaAlDia";
 import { detalleError } from "@/lib/errores";
-
-const fmt = (n: number = 0) =>
-  n.toLocaleString("es-EC", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio",
-               "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+import { montoEC } from "@/lib/dinero";
+import { MESES } from "@/lib/fecha";
 
 /** "2026-10-26" → "26 de octubre de 2026" sin pasar por Date */
 function fechaLarga(ymd?: string) {
@@ -371,7 +367,7 @@ function ReporteIVA({ periodo }: { periodo: string }) {
           }}
         >
           <p className="text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>Ventas netas</p>
-          <p className="text-base font-bold" style={{ color: "var(--kipu-text)" }}>${fmt(casVentas["419"] ?? 0)}</p>
+          <p className="text-base font-bold" style={{ color: "var(--kipu-text)" }}>${montoEC(casVentas["419"] ?? 0)}</p>
         </div>
         <div
           className="rounded-xl p-3 text-center"
@@ -381,7 +377,7 @@ function ReporteIVA({ periodo }: { periodo: string }) {
           }}
         >
           <p className="text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>Compras netas</p>
-          <p className="text-base font-bold" style={{ color: "var(--kipu-text)" }}>${fmt(casCompras["519"] ?? 0)}</p>
+          <p className="text-base font-bold" style={{ color: "var(--kipu-text)" }}>${montoEC(casCompras["519"] ?? 0)}</p>
         </div>
         <div
           className="rounded-xl p-3 text-center"
@@ -411,7 +407,7 @@ function ReporteIVA({ periodo }: { periodo: string }) {
                   : "var(--kipu-text)",
             }}
           >
-            ${fmt(ivaAPagar > 0 ? ivaAPagar : saldoFavor > 0 ? saldoFavor : 0)}
+            ${montoEC(ivaAPagar > 0 ? ivaAPagar : saldoFavor > 0 ? saldoFavor : 0)}
           </p>
         </div>
       </div>

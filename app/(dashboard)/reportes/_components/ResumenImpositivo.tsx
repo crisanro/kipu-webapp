@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Info, Save } from "lucide-react";
 import { detalleError } from "@/lib/errores";
+import { montoEC } from "@/lib/dinero";
 
 interface CampoManual {
   casillero: string;
@@ -51,9 +52,6 @@ interface Props {
     [key: string]: any;
   };
 }
-
-const fmt = (n: number = 0) =>
-  n.toLocaleString("es-EC", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 function FilaCasillero({
   num,
@@ -120,7 +118,7 @@ function FilaCasillero({
         </span>
       </div>
       <span className="text-sm font-bold shrink-0 tabular-nums" style={{ color: highlight ? "var(--kipu-accent)" : rojo || resta ? "var(--kipu-danger)" : verde ? "var(--kipu-success)" : value === 0 ? "var(--kipu-subtle)" : "var(--kipu-text)" }}>
-        {resta && value > 0 ? "-" : ""}${fmt(value)}
+        {resta && value > 0 ? "-" : ""}${montoEC(value)}
       </span>
     </div>
   );

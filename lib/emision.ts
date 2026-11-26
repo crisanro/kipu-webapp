@@ -124,6 +124,17 @@ function codigoError(err: unknown): string {
   return !!detail && typeof detail === "object" && !Array.isArray(detail) ? String(detail.codigo ?? "") : "";
 }
 
+type EmpresaAcceso = {
+  suscripcion_activa?: boolean | null;
+  balance_api?:        number | null;
+  emision_gratis?:     boolean | null;
+} | null | undefined;
+
+/** Puede emitir: plan activo, créditos API o el plan gratis encendido. */
+export function tieneAccesoAEmitir(empresa: EmpresaAcceso): boolean {
+  return !!empresa && (!!empresa.suscripcion_activa || (empresa.balance_api ?? 0) > 0 || !!empresa.emision_gratis);
+}
+
 /** true si se pasó el uso justo del plan gratis: la pantalla ofrece Pro o créditos. */
 export function esUsoJusto(err: unknown): boolean {
   return codigoError(err).startsWith("USO_JUSTO");

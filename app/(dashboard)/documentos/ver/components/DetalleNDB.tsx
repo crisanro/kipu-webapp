@@ -4,8 +4,9 @@ import { useRouter } from "next/navigation";
 import { Building2, CreditCard, Info, User } from "lucide-react";
 import Seccion from "@/components/ui/Seccion";
 import Boton from "@/components/ui/Boton";
-import { fmt, TIPO_ID, type FacturaBase } from "./DetalleShared";
+import { TIPO_ID, type FacturaBase } from "./DetalleShared";
 import { Dato } from "./DetalleFactura";
+import { dosDecimales } from "@/lib/dinero";
 
 interface Props { factura: FacturaBase; }
 
@@ -68,7 +69,7 @@ export default function DetalleNDB({ factura }: Props) {
             {motivos.map((m: any, i: number) => (
               <div key={i} className="flex items-center justify-between gap-3 px-4 py-3">
                 <span className="text-sm text-texto">{m.razon}</span>
-                <span className="shrink-0 text-sm font-semibold tabular-nums text-texto">${fmt(m.valor)}</span>
+                <span className="shrink-0 text-sm font-semibold tabular-nums text-texto">${dosDecimales(m.valor)}</span>
               </div>
             ))}
           </div>
@@ -80,13 +81,13 @@ export default function DetalleNDB({ factura }: Props) {
         <div className="space-y-1.5 text-sm tabular-nums">
           {impuestos.map((imp: any, i: number) => (
             <div key={i} className="flex justify-between text-tenue">
-              <span>IVA {imp.tarifa}% · Base ${fmt(imp.baseImponible)}</span>
-              <span>${fmt(imp.valor)}</span>
+              <span>IVA {imp.tarifa}% · Base ${dosDecimales(imp.baseImponible)}</span>
+              <span>${dosDecimales(imp.valor)}</span>
             </div>
           ))}
           <div className={`flex justify-between text-base font-bold text-texto ${impuestos.length > 0 ? "mt-2 border-t border-borde pt-2" : ""}`}>
             <span>Total nota de débito</span>
-            <span>${fmt(infoNDB.valorTotal)}</span>
+            <span>${dosDecimales(infoNDB.valorTotal)}</span>
           </div>
         </div>
       </section>
@@ -103,7 +104,7 @@ export default function DetalleNDB({ factura }: Props) {
         <Seccion titulo="Forma de pago" icono={CreditCard}
                  resumen={pagos.length === 1 ? formaPago(pagos[0]) : `${pagos.length} formas`}>
           {pagos.map((pago: any, i: number) => (
-            <Dato key={i} etiqueta={formaPago(pago)} valor={<span className="font-medium tabular-nums">${fmt(pago.total)}</span>} />
+            <Dato key={i} etiqueta={formaPago(pago)} valor={<span className="font-medium tabular-nums">${dosDecimales(pago.total)}</span>} />
           ))}
         </Seccion>
       )}

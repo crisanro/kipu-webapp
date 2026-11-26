@@ -21,6 +21,7 @@ import {
 import ReporteCard from "./_components/ReporteCard";
 import { EstadoReporte } from "./_components/EstadoBadge";
 import { detalleError } from "@/lib/errores";
+import { MESES } from "@/lib/fecha";
 
 type Tab = "IVA" | "RENTA" | "ATS";
 
@@ -75,9 +76,6 @@ const DEMO_CARDS: Record<Tab, { periodo: string; estado: string; monto?: string;
   RENTA: [{ periodo: "Año 2025",       estado: "Pendiente", monto: "$314.10" }],
   ATS:   [{ periodo: "julio de 2026",  estado: "Pendiente" }],
 };
-
-const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio",
-               "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
 
 const capitalizar = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 

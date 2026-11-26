@@ -1,6 +1,6 @@
 "use client";
 import { AlertTriangle } from "lucide-react";
-import { r2 } from "@/lib/dinero";
+import { dosDecimales } from "@/lib/dinero";
 import Link from "next/link";
 import AccionesUsoJusto from "./AccionesUsoJusto";
 import { ES_APP_NATIVA } from "@/lib/plataforma";
@@ -36,8 +36,6 @@ interface Props {
   conBarraFija?:     boolean;
 }
 
-const fmt = (n: number) => r2(n).toFixed(2);
-
 export default function ResumenTotales({
   totales, submitting, error, suscripcionActiva, balanceApi, emisionGratis = false, usoJusto = false,
   onEmitir, serie, textoBoton, aviso, conBarraFija = false,
@@ -61,47 +59,47 @@ export default function ResumenTotales({
       <div className="space-y-2 text-sm">
         {totales.subtotal_0 > 0 && (
           <div className="flex justify-between" style={{ color: "var(--kipu-muted)" }}>
-            <span>Subtotal 0%</span><span>${fmt(totales.subtotal_0)}</span>
+            <span>Subtotal 0%</span><span>${dosDecimales(totales.subtotal_0)}</span>
           </div>
         )}
         {(totales.subtotal_no_objeto ?? 0) > 0 && (
           <div className="flex justify-between" style={{ color: "var(--kipu-muted)" }}>
-            <span>Subtotal no objeto de IVA</span><span>${fmt(totales.subtotal_no_objeto ?? 0)}</span>
+            <span>Subtotal no objeto de IVA</span><span>${dosDecimales(totales.subtotal_no_objeto ?? 0)}</span>
           </div>
         )}
         {(totales.subtotal_exento ?? 0) > 0 && (
           <div className="flex justify-between" style={{ color: "var(--kipu-muted)" }}>
-            <span>Subtotal exento de IVA</span><span>${fmt(totales.subtotal_exento ?? 0)}</span>
+            <span>Subtotal exento de IVA</span><span>${dosDecimales(totales.subtotal_exento ?? 0)}</span>
           </div>
         )}
         {totales.subtotal_5 > 0 && (
           <div className="flex justify-between" style={{ color: "var(--kipu-muted)" }}>
-            <span>Subtotal 5%</span><span>${fmt(totales.subtotal_5)}</span>
+            <span>Subtotal 5%</span><span>${dosDecimales(totales.subtotal_5)}</span>
           </div>
         )}
         {totales.subtotal_15 > 0 && (
           <div className="flex justify-between" style={{ color: "var(--kipu-muted)" }}>
-            <span>Subtotal 15%</span><span>${fmt(totales.subtotal_15)}</span>
+            <span>Subtotal 15%</span><span>${dosDecimales(totales.subtotal_15)}</span>
           </div>
         )}
         {totales.descuento > 0 && (
           <div className="flex justify-between" style={{ color: "var(--kipu-warning)" }}>
-            <span>Descuento</span><span>-${fmt(totales.descuento)}</span>
+            <span>Descuento</span><span>-${dosDecimales(totales.descuento)}</span>
           </div>
         )}
         {totales.iva_5 > 0 && (
           <div className="flex justify-between" style={{ color: "var(--kipu-muted)" }}>
-            <span>IVA 5%</span><span>${fmt(totales.iva_5)}</span>
+            <span>IVA 5%</span><span>${dosDecimales(totales.iva_5)}</span>
           </div>
         )}
         {totales.iva_15 > 0 && (
           <div className="flex justify-between" style={{ color: "var(--kipu-muted)" }}>
-            <span>IVA 15%</span><span>${fmt(totales.iva_15)}</span>
+            <span>IVA 15%</span><span>${dosDecimales(totales.iva_15)}</span>
           </div>
         )}
         {totales.propina > 0 && (
           <div className="flex justify-between font-medium" style={{ color: "var(--kipu-accent)" }}>
-            <span>Propina (10%)</span><span>${fmt(totales.propina)}</span>
+            <span>Propina (10%)</span><span>${dosDecimales(totales.propina)}</span>
           </div>
         )}
         <div
@@ -111,7 +109,7 @@ export default function ResumenTotales({
             color: "var(--kipu-text)",
           }}
         >
-          <span>Total</span><span>${fmt(totales.total)}</span>
+          <span>Total</span><span>${dosDecimales(totales.total)}</span>
         </div>
       </div>
 
@@ -226,9 +224,9 @@ export default function ResumenTotales({
             {textoBoton ? "Creando..." : "Emitiendo..."}
           </>
         ) : textoBoton ? (
-          `${textoBoton} · $${fmt(totales.total)}`
+          `${textoBoton} · $${dosDecimales(totales.total)}`
         ) : (
-          `Emitir${serie ? ` desde ${serie}` : ""} · $${fmt(totales.total)}`
+          `Emitir${serie ? ` desde ${serie}` : ""} · $${dosDecimales(totales.total)}`
         )}
       </button>
     </div>

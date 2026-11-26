@@ -27,6 +27,7 @@ import { cn } from "@/components/ui/cn";
 import { useAtajos } from "@/lib/useAtajos";
 import DetalleDocumento from "./ver/components/DetalleDocumento";
 import { ESTADOS_SRI, TIPOS_COMPROBANTE, tipoComprobante } from "@/lib/estados";
+import { dosDecimales } from "@/lib/dinero";
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 interface Documento {
@@ -60,8 +61,6 @@ const TIPOS_FILTRO = ["TODOS", "FAC", "NCR", "NDB", "RET", "LIQ"]
 
 // Estos tipos llevan estado de cobro
 const CON_COBRO = ["FAC", "LIQ", "NDB"];
-
-const fmt = (n: any) => parseFloat(n ?? 0).toFixed(2);
 
 // Lista y detalle lado a lado desde este ancho (components/ui/PanelDetalle.tsx)
 const ANCHO_PANEL = "(min-width: 1280px)";
@@ -124,12 +123,12 @@ function ResumenTipoCard({ tipo, label, color, data }: {
             <div key={i} className="space-y-0.5">
               <div className="flex justify-between text-xs" style={{ color: "var(--kipu-muted)" }}>
                 <span>Subtotal {imp.tarifa}%</span>
-                <span>${fmt(imp.subtotal)}</span>
+                <span>${dosDecimales(imp.subtotal)}</span>
               </div>
               {imp.iva > 0 && (
                 <div className="flex justify-between text-xs pl-3" style={{ color: "var(--kipu-subtle)" }}>
                   <span>IVA {imp.tarifa}%</span>
-                  <span>${fmt(imp.iva)}</span>
+                  <span>${dosDecimales(imp.iva)}</span>
                 </div>
               )}
             </div>
@@ -140,7 +139,7 @@ function ResumenTipoCard({ tipo, label, color, data }: {
           style={{ borderTop: "1px solid var(--kipu-border)" }}
         >
           <span style={{ color: "var(--kipu-muted)" }}>Total</span>
-          <span style={{ color: c.color }}>${fmt(data.total)}</span>
+          <span style={{ color: c.color }}>${dosDecimales(data.total)}</span>
         </div>
       </div>
     </div>
@@ -337,12 +336,12 @@ export default function HistorialPage() {
             <div className="flex items-center gap-3">
               {resumen.por_tipo?.FAC && (
                 <span className="text-xs hidden sm:block" style={{ color: "var(--kipu-muted)" }}>
-                  FAC <span className="font-medium" style={{ color: "var(--kipu-text)" }}>${fmt(resumen.por_tipo.FAC.total)}</span>
+                  FAC <span className="font-medium" style={{ color: "var(--kipu-text)" }}>${dosDecimales(resumen.por_tipo.FAC.total)}</span>
                 </span>
               )}
               {resumen.retenciones?.num_docs > 0 && (
                 <span className="text-xs hidden sm:block" style={{ color: "var(--kipu-muted)" }}>
-                  RET <span className="font-medium" style={{ color: "var(--kipu-warning)" }}>${fmt(resumen.retenciones.total)}</span>
+                  RET <span className="font-medium" style={{ color: "var(--kipu-warning)" }}>${dosDecimales(resumen.retenciones.total)}</span>
                 </span>
               )}
               {resumenOpen
@@ -397,11 +396,11 @@ export default function HistorialPage() {
                         <div key={tipo} className="space-y-0.5">
                           <div className="flex justify-between text-xs" style={{ color: "var(--kipu-muted)" }}>
                             <span>Retención {tipo}</span>
-                            <span style={{ color: "var(--kipu-text)" }}>${fmt(data.valor_retenido)}</span>
+                            <span style={{ color: "var(--kipu-text)" }}>${dosDecimales(data.valor_retenido)}</span>
                           </div>
                           <div className="flex justify-between text-xs pl-3" style={{ color: "var(--kipu-subtle)" }}>
                             <span>Base imponible</span>
-                            <span>${fmt(data.base)}</span>
+                            <span>${dosDecimales(data.base)}</span>
                           </div>
                         </div>
                       ))}
@@ -410,7 +409,7 @@ export default function HistorialPage() {
                         style={{ borderTop: "1px solid var(--kipu-border)" }}
                       >
                         <span style={{ color: "var(--kipu-muted)" }}>Total retenido</span>
-                        <span style={{ color: "var(--kipu-warning)" }}>${fmt(resumen.retenciones.total)}</span>
+                        <span style={{ color: "var(--kipu-warning)" }}>${dosDecimales(resumen.retenciones.total)}</span>
                       </div>
                     </div>
                   </div>
@@ -489,7 +488,7 @@ export default function HistorialPage() {
                       <td className={`px-4 py-3 ${sel ? "xl:hidden" : ""}`}>
                         {CON_COBRO.includes(d.tipo_doc) && <InsigniaCobro estado={d.estado_cobro} />}
                       </td>
-                      <td className="px-4 py-3 text-right font-semibold tabular-nums text-texto">${fmt(d.importe_total)}</td>
+                      <td className="px-4 py-3 text-right font-semibold tabular-nums text-texto">${dosDecimales(d.importe_total)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -506,7 +505,7 @@ export default function HistorialPage() {
                   href={rutas.documento(d.id)}
                   titulo={d.razon_social || "Consumidor final"}
                   subtitulo={`${tipoComprobante(d.tipo_doc).corta} ${d.numero_doc ?? ""} · ${etiquetaPeriodo(d.fecha_emision, d.fecha_emision)}`}
-                  fin={`$${fmt(d.importe_total)}`}
+                  fin={`$${dosDecimales(d.importe_total)}`}
                   finAbajo={
                     <span className="flex flex-wrap justify-end gap-1">
                       {CON_COBRO.includes(d.tipo_doc) && <InsigniaCobro estado={d.estado_cobro} />}

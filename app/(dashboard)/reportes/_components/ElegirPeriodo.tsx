@@ -15,12 +15,8 @@ import api from "@/lib/api";
 import { detalleError } from "@/lib/errores";
 import { ES_APP_NATIVA } from "@/lib/plataforma";
 import Alertas104, { type Alerta104 } from "./Alertas104";
-
-const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio",
-               "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
-
-const dinero = (n: number = 0) =>
-  n.toLocaleString("es-EC", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+import { montoEC } from "@/lib/dinero";
+import { MESES } from "@/lib/fecha";
 
 interface TotalPeriodo {
   iva_a_pagar:   number;
@@ -30,8 +26,8 @@ interface TotalPeriodo {
 /** "IVA a pagar $12,40" o "Saldo a favor $3,10" */
 function textoTotal(t: TotalPeriodo) {
   return t.iva_a_pagar === 0 && t.saldo_a_favor > 0
-    ? `Saldo a favor $${dinero(t.saldo_a_favor)}`
-    : `IVA a pagar $${dinero(t.iva_a_pagar)}`;
+    ? `Saldo a favor $${montoEC(t.saldo_a_favor)}`
+    : `IVA a pagar $${montoEC(t.iva_a_pagar)}`;
 }
 
 interface OpcionPeriodo {

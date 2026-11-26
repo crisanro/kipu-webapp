@@ -4,7 +4,7 @@
 
 import { useState, useMemo } from "react";
 import { errorIdentificacion } from "@/lib/identificacion";
-import { r2 } from "@/lib/dinero";
+import { r2, dosDecimales } from "@/lib/dinero";
 import { useBorrador } from "@/lib/borradores";
 import BloqueoPlanPro from "@/components/dashboard/BloqueoPlanPro";
 import { useAuthStore } from "@/store/auth.store";
@@ -20,7 +20,6 @@ import EmisionLayout from "../components/EmisionLayout";
 import { useEmision } from "../components/useEmision";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-const fmt = (n: number) => r2(n).toFixed(2);
 
 function calcTotales(items: Item[]) {
   const base = items.reduce(
@@ -143,7 +142,7 @@ export default function NuevaLiqPage() {
     // Redondeado: 1.10 + 2.20 en coma flotante da 3.3000000000000003 > 3.30
     const totalCubierto = r2(pagos.reduce((s, p) => s + (p.total ?? 0), 0));
     if (totalCubierto > totales.total) {
-      setError(`Los pagos ($${fmt(totalCubierto)}) superan el total ($${fmt(totales.total)}).`); return;
+      setError(`Los pagos ($${dosDecimales(totalCubierto)}) superan el total ($${dosDecimales(totales.total)}).`); return;
     }
 
     const payload = {

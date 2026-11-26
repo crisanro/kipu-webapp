@@ -2,6 +2,7 @@
 import { rutas } from "@/lib/rutas";
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, Clock, AlertTriangle, XCircle, Ban } from "lucide-react";
+import { dosDecimales } from "@/lib/dinero";
 
 interface Props {
   documentos: any[];
@@ -61,8 +62,6 @@ const ESTADO_CONFIG: Record<string, { label: string; color: string; bg: string; 
 const TIPO_LABEL: Record<string, string> = {
   FAC: "FAC", LIQ: "LIQ", NCR: "NC", NDB: "ND", RET: "RET",
 };
-
-const fmt = (n: any) => parseFloat(n ?? 0).toFixed(2);
 
 export default function UltimosDocumentos({ documentos }: Props) {
   const recientes = documentos.slice(0, 6);
@@ -171,7 +170,7 @@ export default function UltimosDocumentos({ documentos }: Props) {
                     className="text-sm font-bold"
                     style={{ color: "var(--kipu-text)" }}
                   >
-                    ${fmt(d.total)}
+                    ${dosDecimales(d.total)}
                   </p>
                   <p className="text-xs" style={{ color: estado.color }}>
                     {estado.label}

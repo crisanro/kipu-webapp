@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { r2 } from "@/lib/dinero";
+import { r2, dosDecimales } from "@/lib/dinero";
 import { Plus, Trash2, AlertTriangle, Info, Wallet } from "lucide-react";
 import Seccion from "@/components/ui/Seccion";
 import Hoja from "@/components/ui/Hoja";
@@ -39,8 +39,6 @@ const FORMAS_PAGO: { value: FormaPagoCode; label: string }[] = [
 const LIMITE_EFECTIVO = 500;
 const COD_EFECTIVO: FormaPagoCode = "01";
 const COD_DEFAULT_FINANCIERO: FormaPagoCode = "20"; // fallback cuando se bloquea efectivo
-
-const fmt = (n: number) => r2(n).toFixed(2);
 
 // Nombre corto para el resumen de la sección plegada
 const NOMBRE_CORTO: Record<FormaPagoCode, string> = {
@@ -148,7 +146,7 @@ export default function PagosMixtos({
           }}
         >
           <Info size={13} className="shrink-0" />
-          Transacciones ≥ ${fmt(LIMITE_EFECTIVO)} deben utilizar el sistema financiero.
+          Transacciones ≥ ${dosDecimales(LIMITE_EFECTIVO)} deben utilizar el sistema financiero.
         </div>
       )}
 
@@ -245,7 +243,7 @@ export default function PagosMixtos({
                 <div className="flex items-center gap-2 shrink-0 ml-auto sm:ml-0">
                   <div className="text-right">
                     <p className="text-xs font-medium" style={{ color: "var(--kipu-accent)" }}>
-                      ${fmt(Math.max(0, saldoRestante))}
+                      ${dosDecimales(Math.max(0, saldoRestante))}
                     </p>
                     <p className="text-[10px]" style={{ color: "var(--kipu-subtle)" }}>saldo restante</p>
                   </div>
@@ -322,7 +320,7 @@ export default function PagosMixtos({
           }}
         >
           <AlertTriangle size={13} />
-          Los pagos (${fmt(totalCubierto)}) superan el total (${fmt(totalFactura)}).
+          Los pagos (${dosDecimales(totalCubierto)}) superan el total (${dosDecimales(totalFactura)}).
         </div>
       )}
 
@@ -330,7 +328,7 @@ export default function PagosMixtos({
       {pagos.length > 1 && esSaldoValido && (
         <div className="flex justify-between text-xs px-1" style={{ color: "var(--kipu-subtle)" }}>
           <span>Cubierto con monto fijo</span>
-          <span className="font-medium" style={{ color: "var(--kipu-text)" }}>${fmt(totalCubierto)}</span>
+          <span className="font-medium" style={{ color: "var(--kipu-text)" }}>${dosDecimales(totalCubierto)}</span>
         </div>
       )}
 
