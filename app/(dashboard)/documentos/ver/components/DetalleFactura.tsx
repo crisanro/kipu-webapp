@@ -1,23 +1,10 @@
 "use client";
-import { Building2, CreditCard, Info, User } from "lucide-react";
+import { User } from "lucide-react";
 import Seccion from "@/components/ui/Seccion";
-import {
-  FORMA_PAGO, TIPO_ID,
-  type FacturaBase
-} from "./DetalleShared";
+import { Dato, SeccionAdicionales, SeccionEmisor, SeccionFormaPago, TIPO_ID, type FacturaBase } from "./DetalleShared";
 import { dosDecimales } from "@/lib/dinero";
 
 interface Props { factura: FacturaBase; }
-
-/** Fila etiqueta → valor de las secciones (Cliente, Emisor, Pago…). */
-export function Dato({ etiqueta, valor }: { etiqueta: string; valor: React.ReactNode }) {
-  return (
-    <div className="flex justify-between gap-4 py-1 text-sm">
-      <span className="shrink-0 text-tenue">{etiqueta}</span>
-      <span className="min-w-0 break-words text-right text-texto">{valor}</span>
-    </div>
-  );
-}
 
 export default function DetalleFactura({ factura }: Props) {
   const datos   = factura.datos ?? {};
@@ -36,10 +23,6 @@ export default function DetalleFactura({ factura }: Props) {
     ? (Array.isArray(datos.resumenImpuestos) ? datos.resumenImpuestos : [datos.resumenImpuestos])
     : [];
 
-  const adicionales = (datos.infoAdicional?.campoAdicional
-    ? (Array.isArray(datos.infoAdicional.campoAdicional) ? datos.infoAdicional.campoAdicional : [datos.infoAdicional.campoAdicional])
-    : []).filter((a: any) => a["@nombre"] !== "PROVEEDOR_SISTEMA_INFORMATICO");
-
   // Contraparte: comprador (FAC) o proveedor (LIQ)
   const esLiq   = factura.tipo_doc === "LIQ";
   const cliente = factura.cliente ?? {};
@@ -50,8 +33,6 @@ export default function DetalleFactura({ factura }: Props) {
   const tipoId  = (esLiq ? info.tipoIdentificacionProveedor : info.tipoIdentificacionComprador) || "05";
   const direccion = (esLiq ? info.direccionProveedor : info.direccionComprador)
                   || cliente.direccion || "—";
-
-  const formaPago = (p: any) => FORMA_PAGO[p.formaPago] ?? p.formaPago;
 
   return (
     <>
@@ -135,33 +116,13 @@ export default function DetalleFactura({ factura }: Props) {
       </Seccion>
 
       {/* Formas de pago */}
-      {pagos.length > 0 && (
-        <Seccion titulo="Forma de pago" icono={CreditCard}
-                 resumen={pagos.length === 1 ? formaPago(pagos[0]) : `${pagos.length} formas`}>
-          {pagos.map((pago: any, i: number) => (
-            <Dato key={i} etiqueta={formaPago(pago)} valor={<span className="font-medium tabular-nums">${dosDecimales(pago.total)}</span>} />
-          ))}
-        </Seccion>
-      )}
+      <SeccionFormaPago pagos={pagos} />
 
       {/* Info adicional */}
-      {adicionales.length > 0 && (
-        <Seccion titulo="Información adicional" icono={Info}
-                 resumen={adicionales.length === 1 ? "1 campo" : `${adicionales.length} campos`}>
-          {adicionales.map((campo: any, i: number) => (
-            <Dato key={i} etiqueta={campo["@nombre"]} valor={campo["#text"]} />
-          ))}
-        </Seccion>
-      )}
+      <SeccionAdicionales datos={datos} />
 
       {/* Emisor */}
-      <Seccion titulo="Emisor" icono={Building2} resumen={trib.ruc}>
-        <Dato etiqueta="Razón social"    valor={trib.razonSocial} />
-        <Dato etiqueta="RUC"             valor={trib.ruc} />
-        <Dato etiqueta="Dirección"       valor={trib.dirMatriz} />
-        <Dato etiqueta="Establecimiento" valor={`${trib.estab}-${trib.ptoEmi}`} />
-        <Dato etiqueta="Ambiente"        valor={trib.ambiente == 2 ? "Producción" : "Pruebas"} />
-      </Seccion>
+      <SeccionEmisor trib={trib} />
     </>
   );
 }
