@@ -41,20 +41,15 @@ function TablaDetalle({ titulo, rows, columnas, color = "indigo" }: {
 
   return (
     <div
-      className="rounded-xl overflow-hidden"
-      style={{
-        background: "var(--kipu-surface)",
-        border: "1px solid var(--kipu-border)",
-      }}
+      className="rounded-xl overflow-hidden bg-superficie border border-borde"
     >
       <div
-        className="px-4 py-3 flex items-center justify-between"
-        style={{ borderBottom: "1px solid var(--kipu-border)" }}
+        className="px-4 py-3 flex items-center justify-between border-b border-borde"
       >
         <div className="flex items-center gap-2">
           <FileText size={14} style={{ color: iconColor }} />
-          <p className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>{titulo}</p>
-          <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>({numeroEC(rows.length)})</span>
+          <p className="text-sm font-semibold text-texto">{titulo}</p>
+          <span className="text-xs text-sutil">({numeroEC(rows.length)})</span>
         </div>
       </div>
 
@@ -76,7 +71,7 @@ function TablaDetalle({ titulo, rows, columnas, color = "indigo" }: {
               ))}
             </tr>
           </thead>
-          <tbody style={{ borderTop: "1px solid var(--kipu-border)" }}>
+          <tbody className="border-t border-borde">
             {visibles.map((row, idx) => (
               <tr
                 key={idx}
@@ -87,7 +82,7 @@ function TablaDetalle({ titulo, rows, columnas, color = "indigo" }: {
               >
                 {columnas.map(c => (
                   <td key={c.key} className={`px-4 py-2.5 ${c.right ? "text-right" : ""} ${c.mono ? "font-mono" : ""}`}>
-                    <span style={{ color: "var(--kipu-text)" }}>{row[c.key] ?? "—"}</span>
+                    <span className="text-texto">{row[c.key] ?? "—"}</span>
                   </td>
                 ))}
               </tr>
@@ -238,7 +233,7 @@ function ReporteATS({ periodo }: { periodo: string }) {
             className="w-7 h-7 border-2 border-t-transparent rounded-full animate-spin mx-auto"
             style={{ borderColor: "#22d3ee", borderTopColor: "transparent" }}
           />
-          <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>Generando Anexo Transaccional...</p>
+          <p className="text-sm text-sutil">Generando Anexo Transaccional...</p>
         </div>
       </div>
     );
@@ -248,14 +243,10 @@ function ReporteATS({ periodo }: { periodo: string }) {
     return (
       <div className="p-6 max-w-2xl mx-auto">
         <div
-          className="flex items-start gap-3 rounded-xl px-4 py-3"
-          style={{
-            background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
-            border: "1px solid color-mix(in srgb, var(--kipu-danger) 20%, transparent)",
-          }}
+          className="flex items-start gap-3 rounded-xl px-4 py-3 bg-peligro-suave border border-peligro/20"
         >
-          <AlertTriangle size={16} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-danger)" }} />
-          <p className="text-sm" style={{ color: "var(--kipu-danger)" }}>{error}</p>
+          <AlertTriangle size={16} className="shrink-0 mt-0.5 text-peligro" />
+          <p className="text-sm text-peligro">{error}</p>
         </div>
       </div>
     );
@@ -354,7 +345,7 @@ function ReporteATS({ periodo }: { periodo: string }) {
               >
                 ATS
               </span>
-              <h1 className="text-xl font-bold capitalize" style={{ color: "var(--kipu-text)" }}>{periodoFmt}</h1>
+              <h1 className="text-xl font-bold capitalize text-texto">{periodoFmt}</h1>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
               {!esDemo && (
@@ -417,15 +408,11 @@ function ReporteATS({ periodo }: { periodo: string }) {
 
       {esDemo && (
         <div
-          className="flex items-start gap-3 rounded-xl px-4 py-3"
-          style={{
-            background: "color-mix(in srgb, var(--kipu-accent) 10%, transparent)",
-            border: "1px solid color-mix(in srgb, var(--kipu-accent) 20%, transparent)",
-          }}
+          className="flex items-start gap-3 rounded-xl px-4 py-3 bg-acento/10 border border-acento/20"
         >
-          <Info size={15} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-accent)" }} />
-          <p className="text-xs" style={{ color: "var(--kipu-muted)" }}>
-            <span className="font-semibold" style={{ color: "var(--kipu-text)" }}>Estos son datos de ejemplo. </span>
+          <Info size={15} className="shrink-0 mt-0.5 text-acento" />
+          <p className="text-xs text-tenue">
+            <span className="font-semibold text-texto">Estos son datos de ejemplo. </span>
             {data?.motivo === "no_obligado"
               ? "El ATS lo presentan los obligados a llevar contabilidad y las sociedades; según tu configuración no te corresponde."
               : ES_APP_NATIVA
@@ -443,14 +430,10 @@ function ReporteATS({ periodo }: { periodo: string }) {
 
       {error && (
         <div
-          className="flex items-start gap-2 rounded-lg px-3 py-2.5"
-          style={{
-            background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
-            border: "1px solid color-mix(in srgb, var(--kipu-danger) 20%, transparent)",
-          }}
+          className="flex items-start gap-2 rounded-lg px-3 py-2.5 bg-peligro-suave border border-peligro/20"
         >
-          <AlertTriangle size={14} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-danger)" }} />
-          <p className="text-sm" style={{ color: "var(--kipu-danger)" }}>{error}</p>
+          <AlertTriangle size={14} className="shrink-0 mt-0.5 text-peligro" />
+          <p className="text-sm text-peligro">{error}</p>
         </div>
       )}
 
@@ -464,14 +447,10 @@ function ReporteATS({ periodo }: { periodo: string }) {
         ].map(({ label, value, sub, color }) => (
           <div
             key={label}
-            className="rounded-xl p-3 text-center"
-            style={{
-              background: "var(--kipu-surface)",
-              border: "1px solid var(--kipu-border)",
-            }}
+            className="rounded-xl p-3 text-center bg-superficie border border-borde"
           >
-            <p className="text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>{label}</p>
-            <p className="text-xl font-bold" style={{ color: "var(--kipu-text)" }}>{value}</p>
+            <p className="text-xs mb-1 text-sutil">{label}</p>
+            <p className="text-xl font-bold text-texto">{value}</p>
             <p className="text-[10px] mt-0.5" style={{ color: "var(--kipu-subtle)" }}>{sub}</p>
           </div>
         ))}
@@ -502,7 +481,7 @@ function ReporteATS({ periodo }: { periodo: string }) {
 
       {/* Detalle ventas */}
       <div>
-        <p className="text-sm font-semibold mb-2" style={{ color: "var(--kipu-text)" }}>
+        <p className="text-sm font-semibold mb-2 text-texto">
           Comprobantes emitidos — ventas
         </p>
 
@@ -515,11 +494,7 @@ function ReporteATS({ periodo }: { periodo: string }) {
           ].map(({ label, value, color }) => (
             <div
               key={label}
-              className="rounded-lg px-3 py-2"
-              style={{
-                background: "var(--kipu-surface)",
-                border: "1px solid var(--kipu-border)",
-              }}
+              className="rounded-lg px-3 py-2 bg-superficie border border-borde"
             >
               <p className="text-[10px]" style={{ color: "var(--kipu-subtle)" }}>{label}</p>
               <p className="text-sm font-bold" style={{ color: color }}>${montoEC(value)}</p>
@@ -537,7 +512,7 @@ function ReporteATS({ periodo }: { periodo: string }) {
 
       {/* Detalle compras */}
       <div>
-        <p className="text-sm font-semibold mb-2" style={{ color: "var(--kipu-text)" }}>
+        <p className="text-sm font-semibold mb-2 text-texto">
           Comprobantes recibidos — compras
         </p>
 
@@ -550,11 +525,7 @@ function ReporteATS({ periodo }: { periodo: string }) {
           ].map(({ label, value, color }) => (
             <div
               key={label}
-              className="rounded-lg px-3 py-2"
-              style={{
-                background: "var(--kipu-surface)",
-                border: "1px solid var(--kipu-border)",
-              }}
+              className="rounded-lg px-3 py-2 bg-superficie border border-borde"
             >
               <p className="text-[10px]" style={{ color: "var(--kipu-subtle)" }}>{label}</p>
               <p className="text-sm font-bold" style={{ color: color }}>${montoEC(value)}</p>
@@ -572,7 +543,7 @@ function ReporteATS({ periodo }: { periodo: string }) {
 
       {/* Retenciones */}
       <div>
-        <p className="text-sm font-semibold mb-2" style={{ color: "var(--kipu-text)" }}>Retenciones</p>
+        <p className="text-sm font-semibold mb-2 text-texto">Retenciones</p>
         <SeccionRetenciones
           modo="ATS"
           detalleEmitidas={retEmitidas}
@@ -600,15 +571,11 @@ function ReporteATS({ periodo }: { periodo: string }) {
       {/* Notas */}
       {reporte?.notas?.length > 0 && (
         <div
-          className="rounded-xl p-4 space-y-1.5"
-          style={{
-            background: "var(--kipu-surface)",
-            border: "1px solid var(--kipu-border)",
-          }}
+          className="rounded-xl p-4 space-y-1.5 bg-superficie border border-borde"
         >
-          <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: "var(--kipu-subtle)" }}>Notas</p>
+          <p className="text-xs font-semibold uppercase tracking-wider mb-2 text-sutil">Notas</p>
           {reporte.notas.map((nota: string, i: number) => (
-            <p key={i} className="text-xs" style={{ color: "var(--kipu-subtle)" }}>· {nota}</p>
+            <p key={i} className="text-xs text-sutil">· {nota}</p>
           ))}
         </div>
       )}

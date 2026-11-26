@@ -120,8 +120,7 @@ export default function ElegirPeriodo({
     <button
       type="button"
       onClick={onVolver}
-      className="hidden items-center gap-1.5 text-xs transition-colors hover:underline lg:flex"
-      style={{ color: "var(--kipu-subtle)" }}
+      className="hidden items-center gap-1.5 text-xs transition-colors hover:underline lg:flex text-sutil"
     >
       <ArrowLeft size={14} /> Volver a reportes
     </button>
@@ -130,7 +129,7 @@ export default function ElegirPeriodo({
   if (cargando) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
-        <Loader2 size={22} className="animate-spin" style={{ color: "var(--kipu-accent)" }} />
+        <Loader2 size={22} className="animate-spin text-acento" />
       </div>
     );
   }
@@ -140,23 +139,21 @@ export default function ElegirPeriodo({
     return (
       <div className="p-4 md:p-6 max-w-2xl mx-auto space-y-5">
         {volver}
-        <div className="rounded-2xl p-5 text-center space-y-2"
-             style={{ background: "var(--kipu-surface)", border: "1px solid var(--kipu-border)" }}>
-          <CalendarCheck size={22} className="mx-auto" style={{ color: "var(--kipu-subtle)" }} />
+        <div className="rounded-2xl p-5 text-center space-y-2 bg-superficie border border-borde">
+          <CalendarCheck size={22} className="mx-auto text-sutil" />
           {ES_APP_NATIVA ? (
-            <p className="text-sm" style={{ color: "var(--kipu-text)" }}>
+            <p className="text-sm text-texto">
               No tienes declaraciones disponibles en este ciclo.
             </p>
           ) : (
             <>
-              <p className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>
+              <p className="text-sm font-semibold text-texto">
                 Ya usaste la declaración de este ciclo.
               </p>
-              <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>
+              <p className="text-sm text-sutil">
                 Con tu próxima renovación tendrás otra. Si quieres todos los meses, mira los planes.
               </p>
-              <Link href="/planes" className="inline-block text-sm font-semibold hover:underline"
-                    style={{ color: "var(--kipu-accent)" }}>
+              <Link href="/planes" className="inline-block text-sm font-semibold hover:underline text-acento">
                 Ver planes
               </Link>
             </>
@@ -170,26 +167,24 @@ export default function ElegirPeriodo({
     <div className="p-4 md:p-6 max-w-2xl mx-auto space-y-5">
       {volver}
 
-      <div className="rounded-2xl p-5 space-y-4"
-           style={{ background: "var(--kipu-surface)", border: "1px solid var(--kipu-border)" }}>
+      <div className="rounded-2xl p-5 space-y-4 bg-superficie border border-borde">
         <div className="text-center space-y-1.5">
-          <CalendarCheck size={22} className="mx-auto" style={{ color: "var(--kipu-accent)" }} />
-          <h1 className="text-lg font-bold" style={{ color: "var(--kipu-text)" }}>
+          <CalendarCheck size={22} className="mx-auto text-acento" />
+          <h1 className="text-lg font-bold text-texto">
             ¿Para qué periodo usas la declaración de este ciclo?
           </h1>
-          <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>
+          <p className="text-sm text-sutil">
             Tu plan incluye una declaración por ciclo. Elige el periodo y verás su formulario 104 completo.
           </p>
           {(estado?.sin_usar ?? 0) > 1 && (
-            <p className="text-sm font-semibold" style={{ color: "var(--kipu-accent)" }}>
+            <p className="text-sm font-semibold text-acento">
               Te quedan {estado!.sin_usar} declaraciones
             </p>
           )}
         </div>
 
         {fueraDeVentana && (
-          <p className="text-xs rounded-lg px-3 py-2"
-             style={{ background: "color-mix(in srgb, var(--kipu-text) 5%, transparent)", color: "var(--kipu-subtle)" }}>
+          <p className="text-xs rounded-lg px-3 py-2 bg-texto/5 text-sutil">
             {capital(periodoVistoFmt)}{totalVisto ? ` (${textoTotal(totalVisto)})` : ""} ya no se puede
             elegir: la declaración es para el último periodo cerrado o el que está en curso.
           </p>
@@ -199,11 +194,9 @@ export default function ElegirPeriodo({
         {fueraDeVentana && avisoVisto && <Alertas104 alertas={[avisoVisto]} encabezado={false} />}
 
         {otrasVisto > 0 && (
-          <div className="rounded-lg px-3 py-2 flex items-start gap-2"
-               style={{ background: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)",
-                        border: "1px solid color-mix(in srgb, var(--kipu-warning) 30%, transparent)" }}>
-            <AlertTriangle size={14} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-warning)" }} />
-            <p className="text-xs" style={{ color: "var(--kipu-text)" }}>
+          <div className="rounded-lg px-3 py-2 flex items-start gap-2 bg-alerta/10 border border-alerta/30">
+            <AlertTriangle size={14} className="shrink-0 mt-0.5 text-alerta" />
+            <p className="text-xs text-texto">
               Encontramos {otrasVisto === 1 ? "1 alerta" : `${otrasVisto} alertas`} en {periodoVistoFmt}:
               las verás con el formulario 104 completo.
             </p>
@@ -227,30 +220,29 @@ export default function ElegirPeriodo({
                 }}
               >
                 <span>
-                  <span className="block text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>
+                  <span className="block text-sm font-semibold text-texto">
                     {capital(o.nombre)}
                   </span>
-                  <span className="block text-xs" style={{ color: "var(--kipu-subtle)" }}>
+                  <span className="block text-xs text-sutil">
                     {o.en_curso ? "En curso · " : ""}vence el {diaYMes(o.vencimiento)}
                   </span>
                   {o.total && (
-                    <span className="block text-xs font-medium tabular-nums mt-0.5" style={{ color: "var(--kipu-text)" }}>
+                    <span className="block text-xs font-medium tabular-nums mt-0.5 text-texto">
                       {textoTotal(o.total)}{o.en_curso ? " hasta hoy" : ""}
                     </span>
                   )}
                   {o.aviso && (
-                    <span className="flex items-center gap-1 text-xs mt-0.5" style={{ color: "var(--kipu-warning)" }}>
+                    <span className="flex items-center gap-1 text-xs mt-0.5 text-alerta">
                       <Info size={12} className="shrink-0" /> {o.aviso.titulo}
                     </span>
                   )}
                 </span>
                 {o.habilitado ? (
-                  <span className="text-xs font-semibold shrink-0" style={{ color: "var(--kipu-success)" }}>
+                  <span className="text-xs font-semibold shrink-0 text-exito">
                     Ya habilitado · Abrir
                   </span>
                 ) : o.periodo === estado.sugerido ? (
-                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full text-white shrink-0"
-                        style={{ background: "var(--kipu-accent)" }}>
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full text-white shrink-0 bg-acento">
                     Sugerido
                   </span>
                 ) : null}
@@ -262,14 +254,13 @@ export default function ElegirPeriodo({
         {/* El aviso completo del periodo marcado, antes de usar la declaración */}
         {opcion?.aviso && <Alertas104 alertas={[opcion.aviso]} encabezado={false} />}
 
-        {error && <p className="text-xs text-center" style={{ color: "var(--kipu-danger)" }}>{error}</p>}
+        {error && <p className="text-xs text-center text-peligro">{error}</p>}
 
         <button
           type="button"
           disabled={!opcion}
           onClick={() => setConfirmando(true)}
-          className="w-full py-2.5 rounded-lg text-sm font-semibold text-white transition-opacity hover:opacity-90 active:scale-[0.98] disabled:opacity-50"
-          style={{ background: "var(--kipu-accent)" }}
+          className="w-full py-2.5 rounded-lg text-sm font-semibold text-white transition-opacity hover:opacity-90 active:scale-[0.98] disabled:opacity-50 bg-acento"
         >
           {opcion ? `Usar para ${nombreCorto(opcion)}` : "Elige un periodo"}
         </button>
@@ -279,9 +270,8 @@ export default function ElegirPeriodo({
       {confirmando && opcion && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4"
              role="dialog" aria-modal="true" aria-labelledby="confirmar-periodo">
-          <div className="rounded-xl w-full max-w-sm p-5 space-y-4"
-               style={{ background: "var(--kipu-surface)", border: "1px solid var(--kipu-border)" }}>
-            <p id="confirmar-periodo" className="text-sm" style={{ color: "var(--kipu-text)" }}>
+          <div className="rounded-xl w-full max-w-sm p-5 space-y-4 bg-superficie border border-borde">
+            <p id="confirmar-periodo" className="text-sm text-texto">
               Vas a usar la declaración de este ciclo para {nombreCorto(opcion).toUpperCase()}. No podrás
               cambiarla hasta tu próxima renovación.
             </p>
@@ -290,8 +280,7 @@ export default function ElegirPeriodo({
                 type="button"
                 disabled={enviando}
                 onClick={() => setConfirmando(false)}
-                className="px-4 py-2 rounded-lg text-sm transition-colors disabled:opacity-50"
-                style={{ border: "1px solid var(--kipu-border)", color: "var(--kipu-text)" }}
+                className="px-4 py-2 rounded-lg text-sm transition-colors disabled:opacity-50 border border-borde text-texto"
               >
                 Cancelar
               </button>
@@ -299,8 +288,7 @@ export default function ElegirPeriodo({
                 type="button"
                 disabled={enviando}
                 onClick={usar}
-                className="px-4 py-2 rounded-lg text-sm font-semibold text-white flex items-center gap-2 transition-opacity hover:opacity-90 disabled:opacity-60"
-                style={{ background: "var(--kipu-accent)" }}
+                className="px-4 py-2 rounded-lg text-sm font-semibold text-white flex items-center gap-2 transition-opacity hover:opacity-90 disabled:opacity-60 bg-acento"
               >
                 {enviando && <Loader2 size={14} className="animate-spin" />}
                 Sí, usar para {nombreCorto(opcion)}

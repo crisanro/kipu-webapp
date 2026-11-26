@@ -34,11 +34,7 @@ export default function DocumentosIncluidos({
 
   return (
     <div
-      className="rounded-xl overflow-hidden"
-      style={{
-        background: "var(--kipu-surface)",
-        border: "1px solid var(--kipu-border)",
-      }}
+      className="rounded-xl overflow-hidden bg-superficie border border-borde"
     >
 
       {/* Header */}
@@ -52,80 +48,70 @@ export default function DocumentosIncluidos({
       >
         <div className="flex items-center gap-2">
           <div
-            className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-            style={{ background: "color-mix(in srgb, var(--kipu-text) 8%, transparent)" }}
+            className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 bg-texto/8"
           >
-            <Shield size={14} style={{ color: "var(--kipu-subtle)" }} />
+            <Shield className="text-sutil" size={14} />
           </div>
           <div className="text-left">
-            <p className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>
+            <p className="text-sm font-semibold text-texto">
               Trazabilidad — {numeroEC(total)} documentos incluidos
             </p>
-            <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+            <p className="text-xs text-sutil">
               Respaldo completo para auditoría SRI · {periodoFmt}
             </p>
           </div>
         </div>
         {expandido ? (
-          <ChevronUp size={16} className="shrink-0" style={{ color: "var(--kipu-subtle)" }} />
+          <ChevronUp size={16} className="shrink-0 text-sutil" />
         ) : (
-          <ChevronDown size={16} className="shrink-0" style={{ color: "var(--kipu-subtle)" }} />
+          <ChevronDown size={16} className="shrink-0 text-sutil" />
         )}
       </button>
 
       {expandido && (
         <div
-          className="p-4 space-y-4"
-          style={{ borderTop: "1px solid var(--kipu-border)" }}
+          className="p-4 space-y-4 border-t border-borde"
         >
 
           {/* Contadores */}
           <div className="grid grid-cols-2 gap-3">
             <div
-              className="rounded-xl p-4 text-center"
-              style={{ background: "color-mix(in srgb, var(--kipu-text) 4%, transparent)" }}
+              className="rounded-xl p-4 text-center bg-texto/4"
             >
               <div
-                className="w-8 h-8 rounded-lg flex items-center justify-center mx-auto mb-2"
-                style={{ background: "color-mix(in srgb, var(--kipu-accent) 20%, transparent)" }}
+                className="w-8 h-8 rounded-lg flex items-center justify-center mx-auto mb-2 bg-acento/20"
               >
-                <FileText size={14} style={{ color: "var(--kipu-accent)" }} />
+                <FileText className="text-acento" size={14} />
               </div>
-              <p className="text-2xl font-bold" style={{ color: "var(--kipu-text)" }}>{numeroEC(totalEmitidos)}</p>
-              <p className="text-xs mt-0.5" style={{ color: "var(--kipu-subtle)" }}>Documentos emitidos</p>
+              <p className="text-2xl font-bold text-texto">{numeroEC(totalEmitidos)}</p>
+              <p className="text-xs mt-0.5 text-sutil">Documentos emitidos</p>
               <p className="text-[10px] mt-1" style={{ color: "var(--kipu-subtle)" }}>FAC · LIQ · NCR · NDB · RET</p>
             </div>
             <div
-              className="rounded-xl p-4 text-center"
-              style={{ background: "color-mix(in srgb, var(--kipu-text) 4%, transparent)" }}
+              className="rounded-xl p-4 text-center bg-texto/4"
             >
               <div
-                className="w-8 h-8 rounded-lg flex items-center justify-center mx-auto mb-2"
-                style={{ background: "color-mix(in srgb, var(--kipu-success) 20%, transparent)" }}
+                className="w-8 h-8 rounded-lg flex items-center justify-center mx-auto mb-2 bg-exito/20"
               >
-                <FileText size={14} style={{ color: "var(--kipu-success)" }} />
+                <FileText className="text-exito" size={14} />
               </div>
-              <p className="text-2xl font-bold" style={{ color: "var(--kipu-text)" }}>{numeroEC(totalRecibidos)}</p>
-              <p className="text-xs mt-0.5" style={{ color: "var(--kipu-subtle)" }}>Documentos recibidos</p>
+              <p className="text-2xl font-bold text-texto">{numeroEC(totalRecibidos)}</p>
+              <p className="text-xs mt-0.5 text-sutil">Documentos recibidos</p>
               <p className="text-[10px] mt-1" style={{ color: "var(--kipu-subtle)" }}>XML · Físicos · Retenciones</p>
             </div>
           </div>
 
           {/* Info auditoría */}
           <div
-            className="rounded-xl p-4"
-            style={{
-              background: "color-mix(in srgb, var(--kipu-success) 5%, transparent)",
-              border: "1px solid color-mix(in srgb, var(--kipu-success) 20%, transparent)",
-            }}
+            className="rounded-xl p-4 bg-exito/5 border border-exito/20"
           >
             <div className="flex items-start gap-2">
-              <Shield size={14} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-success)" }} />
+              <Shield size={14} className="shrink-0 mt-0.5 text-exito" />
               <div>
-                <p className="text-xs font-semibold" style={{ color: "var(--kipu-success)" }}>
+                <p className="text-xs font-semibold text-exito">
                   Listo para auditoría SRI
                 </p>
-                <p className="text-xs mt-1" style={{ color: "var(--kipu-success)" }}>
+                <p className="text-xs mt-1 text-exito">
                   Todos los documentos de este período están registrados y vinculados a este reporte.
                   Si el SRI te audita, puedes mostrar el historial completo desde Kipu.
                 </p>
@@ -136,13 +122,13 @@ export default function DocumentosIncluidos({
           {/* Metadatos del reporte */}
           {(generadoAt || regeneradoAt) && (
             <div className="space-y-1.5">
-              <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--kipu-subtle)" }}>
+              <p className="text-xs font-semibold uppercase tracking-wider text-sutil">
                 Metadatos del reporte
               </p>
               {generadoAt && (
                 <div className="flex items-center justify-between text-xs">
-                  <span style={{ color: "var(--kipu-subtle)" }}>Generado</span>
-                  <span style={{ color: "var(--kipu-text)" }}>
+                  <span className="text-sutil">Generado</span>
+                  <span className="text-texto">
                     {new Date(generadoAt).toLocaleString("es-EC", {
                       day: "2-digit", month: "short", year: "numeric",
                       hour: "2-digit", minute: "2-digit",
@@ -152,8 +138,8 @@ export default function DocumentosIncluidos({
               )}
               {regeneradoAt && (
                 <div className="flex items-center justify-between text-xs">
-                  <span style={{ color: "var(--kipu-subtle)" }}>Última regeneración</span>
-                  <span style={{ color: "var(--kipu-warning)" }}>
+                  <span className="text-sutil">Última regeneración</span>
+                  <span className="text-alerta">
                     {new Date(regeneradoAt).toLocaleString("es-EC", {
                       day: "2-digit", month: "short", year: "numeric",
                       hour: "2-digit", minute: "2-digit",
@@ -162,55 +148,49 @@ export default function DocumentosIncluidos({
                 </div>
               )}
               <div className="flex items-center justify-between text-xs">
-                <span style={{ color: "var(--kipu-subtle)" }}>Tipo reporte</span>
-                <span style={{ color: "var(--kipu-text)" }}>{tipo}</span>
+                <span className="text-sutil">Tipo reporte</span>
+                <span className="text-texto">{tipo}</span>
               </div>
               <div className="flex items-center justify-between text-xs">
-                <span style={{ color: "var(--kipu-subtle)" }}>Período</span>
-                <span style={{ color: "var(--kipu-text)" }}>{periodoFmt}</span>
+                <span className="text-sutil">Período</span>
+                <span className="text-texto">{periodoFmt}</span>
               </div>
             </div>
           )}
 
           {/* Links al historial */}
           <div className="space-y-2 pt-1">
-            <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--kipu-subtle)" }}>
+            <p className="text-xs font-semibold uppercase tracking-wider text-sutil">
               Ver documentos del período
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <Link
                 href={`/documentos?fecha_inicio=${fechaInicio}&fecha_fin=${fechaFin}`}
-                className="flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg transition-colors group"
-                style={{
-                  background: "color-mix(in srgb, var(--kipu-text) 5%, transparent)",
-                }}
+                className="flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg transition-colors group bg-texto/5"
                 onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 10%, transparent)"}
                 onMouseLeave={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 5%, transparent)"}
               >
                 <div className="flex items-center gap-2">
-                  <FileText size={13} style={{ color: "var(--kipu-accent)" }} />
-                  <span className="text-xs transition-colors" style={{ color: "var(--kipu-text)" }}>
+                  <FileText className="text-acento" size={13} />
+                  <span className="text-xs transition-colors text-texto">
                     Comprobantes emitidos
                   </span>
                 </div>
-                <ExternalLink size={12} className="transition-colors" style={{ color: "var(--kipu-subtle)" }} />
+                <ExternalLink size={12} className="transition-colors text-sutil" />
               </Link>
               <Link
                 href={`/documentos/recibidos?fecha_inicio=${fechaInicio}&fecha_fin=${fechaFin}`}
-                className="flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg transition-colors group"
-                style={{
-                  background: "color-mix(in srgb, var(--kipu-text) 5%, transparent)",
-                }}
+                className="flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg transition-colors group bg-texto/5"
                 onMouseEnter={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 10%, transparent)"}
                 onMouseLeave={e => e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 5%, transparent)"}
               >
                 <div className="flex items-center gap-2">
-                  <FileText size={13} style={{ color: "var(--kipu-success)" }} />
-                  <span className="text-xs transition-colors" style={{ color: "var(--kipu-text)" }}>
+                  <FileText className="text-exito" size={13} />
+                  <span className="text-xs transition-colors text-texto">
                     Documentos recibidos
                   </span>
                 </div>
-                <ExternalLink size={12} className="transition-colors" style={{ color: "var(--kipu-subtle)" }} />
+                <ExternalLink size={12} className="transition-colors text-sutil" />
               </Link>
             </div>
           </div>

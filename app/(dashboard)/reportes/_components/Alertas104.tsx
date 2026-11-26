@@ -30,7 +30,7 @@ export default function Alertas104({ alertas, encabezado = true }: {
   return (
     <section className="space-y-2" aria-label="Alertas de tu declaración">
       {encabezado && (
-        <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--kipu-subtle)" }}>
+        <p className="text-xs font-semibold uppercase tracking-wide text-sutil">
           {alertas.length === 1 ? "1 alerta en tu declaración" : `${alertas.length} alertas en tu declaración`}
         </p>
       )}
@@ -49,8 +49,8 @@ export default function Alertas104({ alertas, encabezado = true }: {
           >
             <Icono size={16} className="shrink-0 mt-0.5" style={{ color }} />
             <div className="min-w-0 flex-1 space-y-1.5">
-              <p className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>{a.titulo}</p>
-              <p className="text-xs leading-relaxed" style={{ color: "var(--kipu-text)" }}>{a.detalle}</p>
+              <p className="text-sm font-semibold text-texto">{a.titulo}</p>
+              <p className="text-xs leading-relaxed text-texto">{a.detalle}</p>
               {a.ejemplos.length > 0 && (
                 <ul className="text-[11px] space-y-0.5" style={{ color: "var(--kipu-subtle)" }}>
                   {a.ejemplos.map((ej) => <li key={ej} className="truncate">· {ej}</li>)}

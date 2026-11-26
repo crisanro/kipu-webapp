@@ -134,7 +134,7 @@ function ReporteIVA({ periodo }: { periodo: string }) {
             className="w-7 h-7 border-2 border-t-transparent rounded-full animate-spin mx-auto"
             style={{ borderColor: "var(--kipu-accent)", borderTopColor: "transparent" }}
           />
-          <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>Calculando casilleros...</p>
+          <p className="text-sm text-sutil">Calculando casilleros...</p>
         </div>
       </div>
     );
@@ -144,14 +144,10 @@ function ReporteIVA({ periodo }: { periodo: string }) {
     return (
       <div className="p-6 max-w-2xl mx-auto">
         <div
-          className="flex items-start gap-3 rounded-xl px-4 py-3"
-          style={{
-            background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
-            border: "1px solid color-mix(in srgb, var(--kipu-danger) 20%, transparent)",
-          }}
+          className="flex items-start gap-3 rounded-xl px-4 py-3 bg-peligro-suave border border-peligro/20"
         >
-          <AlertTriangle size={16} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-danger)" }} />
-          <p className="text-sm" style={{ color: "var(--kipu-danger)" }}>{error}</p>
+          <AlertTriangle size={16} className="shrink-0 mt-0.5 text-peligro" />
+          <p className="text-sm text-peligro">{error}</p>
         </div>
       </div>
     );
@@ -242,16 +238,11 @@ function ReporteIVA({ periodo }: { periodo: string }) {
           <div>
             <div className="flex items-center gap-2 flex-wrap mb-1">
               <span
-                className="text-xs font-bold px-2 py-0.5 rounded-full"
-                style={{
-                  background: "color-mix(in srgb, var(--kipu-accent) 20%, transparent)",
-                  color: "var(--kipu-accent)",
-                  border: "1px solid color-mix(in srgb, var(--kipu-accent) 20%, transparent)",
-                }}
+                className="text-xs font-bold px-2 py-0.5 rounded-full bg-acento/20 text-acento border border-acento/20"
               >
                 IVA 104
               </span>
-              <h1 className="text-xl font-bold capitalize" style={{ color: "var(--kipu-text)" }}>{periodoFmt}</h1>
+              <h1 className="text-xl font-bold capitalize text-texto">{periodoFmt}</h1>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
               {!esDemo && (
@@ -323,15 +314,11 @@ function ReporteIVA({ periodo }: { periodo: string }) {
       {/* Datos de ejemplo */}
       {esDemo && (
         <div
-          className="flex items-start gap-3 rounded-xl px-4 py-3"
-          style={{
-            background: "color-mix(in srgb, var(--kipu-accent) 10%, transparent)",
-            border: "1px solid color-mix(in srgb, var(--kipu-accent) 20%, transparent)",
-          }}
+          className="flex items-start gap-3 rounded-xl px-4 py-3 bg-acento/10 border border-acento/20"
         >
-          <Info size={15} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-accent)" }} />
-          <p className="text-xs" style={{ color: "var(--kipu-muted)" }}>
-            <span className="font-semibold" style={{ color: "var(--kipu-text)" }}>Estos son datos de ejemplo: </span>
+          <Info size={15} className="shrink-0 mt-0.5 text-acento" />
+          <p className="text-xs text-tenue">
+            <span className="font-semibold text-texto">Estos son datos de ejemplo: </span>
             así se ve el formulario 104 completo. El de tus meses se calcula con tus comprobantes
             reales{ES_APP_NATIVA ? "." : " y se desbloquea con Kipu Pro."}
           </p>
@@ -341,14 +328,10 @@ function ReporteIVA({ periodo }: { periodo: string }) {
       {/* Alerta error */}
       {error && (
         <div
-          className="flex items-start gap-2 rounded-lg px-3 py-2.5"
-          style={{
-            background: "color-mix(in srgb, var(--kipu-danger) 10%, transparent)",
-            border: "1px solid color-mix(in srgb, var(--kipu-danger) 20%, transparent)",
-          }}
+          className="flex items-start gap-2 rounded-lg px-3 py-2.5 bg-peligro-suave border border-peligro/20"
         >
-          <AlertTriangle size={14} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-danger)" }} />
-          <p className="text-sm" style={{ color: "var(--kipu-danger)" }}>{error}</p>
+          <AlertTriangle size={14} className="shrink-0 mt-0.5 text-peligro" />
+          <p className="text-sm text-peligro">{error}</p>
         </div>
       )}
 
@@ -364,24 +347,16 @@ function ReporteIVA({ periodo }: { periodo: string }) {
       {/* Resumen rápido top */}
       <div className="grid grid-cols-3 gap-3">
         <div
-          className="rounded-xl p-3 text-center"
-          style={{
-            background: "var(--kipu-surface)",
-            border: "1px solid var(--kipu-border)",
-          }}
+          className="rounded-xl p-3 text-center bg-superficie border border-borde"
         >
-          <p className="text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>Ventas netas</p>
-          <p className="text-base font-bold" style={{ color: "var(--kipu-text)" }}>${montoEC(casVentas["419"] ?? 0)}</p>
+          <p className="text-xs mb-1 text-sutil">Ventas netas</p>
+          <p className="text-base font-bold text-texto">${montoEC(casVentas["419"] ?? 0)}</p>
         </div>
         <div
-          className="rounded-xl p-3 text-center"
-          style={{
-            background: "var(--kipu-surface)",
-            border: "1px solid var(--kipu-border)",
-          }}
+          className="rounded-xl p-3 text-center bg-superficie border border-borde"
         >
-          <p className="text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>Compras netas</p>
-          <p className="text-base font-bold" style={{ color: "var(--kipu-text)" }}>${montoEC(casCompras["519"] ?? 0)}</p>
+          <p className="text-xs mb-1 text-sutil">Compras netas</p>
+          <p className="text-base font-bold text-texto">${montoEC(casCompras["519"] ?? 0)}</p>
         </div>
         <div
           className="rounded-xl p-3 text-center"
@@ -398,7 +373,7 @@ function ReporteIVA({ periodo }: { periodo: string }) {
                 : "1px solid var(--kipu-border)",
           }}
         >
-          <p className="text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>
+          <p className="text-xs mb-1 text-sutil">
             {ivaAPagar > 0 ? "A pagar" : saldoFavor > 0 ? "Saldo a favor" : "IVA neto"}
           </p>
           <p
@@ -476,17 +451,13 @@ function ReporteIVA({ periodo }: { periodo: string }) {
       {/* Notas */}
       {reporte?.notas?.length > 0 && (
         <div
-          className="rounded-xl p-4 space-y-1.5"
-          style={{
-            background: "var(--kipu-surface)",
-            border: "1px solid var(--kipu-border)",
-          }}
+          className="rounded-xl p-4 space-y-1.5 bg-superficie border border-borde"
         >
-          <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: "var(--kipu-subtle)" }}>
+          <p className="text-xs font-semibold uppercase tracking-wider mb-2 text-sutil">
             Notas
           </p>
           {reporte.notas.map((nota: string, i: number) => (
-            <p key={i} className="text-xs" style={{ color: "var(--kipu-subtle)" }}>· {nota}</p>
+            <p key={i} className="text-xs text-sutil">· {nota}</p>
           ))}
         </div>
       )}
@@ -494,14 +465,10 @@ function ReporteIVA({ periodo }: { periodo: string }) {
       {/* Botón marcar declarado */}
       {!esDemo && decl && !declarado && !enCurso && (
         <div
-          className="rounded-xl p-4"
-          style={{
-            background: "var(--kipu-surface)",
-            border: "1px solid var(--kipu-border)",
-          }}
+          className="rounded-xl p-4 bg-superficie border border-borde"
         >
-          <p className="text-sm font-medium mb-1" style={{ color: "var(--kipu-text)" }}>¿Ya declaraste en el SRI?</p>
-          <p className="text-xs mb-3" style={{ color: "var(--kipu-subtle)" }}>
+          <p className="text-sm font-medium mb-1 text-texto">¿Ya declaraste en el SRI?</p>
+          <p className="text-xs mb-3 text-sutil">
             Marca {periodoFmt} como declarado para mantener tu historial al día.
             Esto no declara por ti: solo registra que ya lo hiciste en el portal del SRI.
           </p>
@@ -509,8 +476,7 @@ function ReporteIVA({ periodo }: { periodo: string }) {
             type="button"
             onClick={() => setConfirmando(true)}
             disabled={marcando}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-white text-sm font-medium transition-colors disabled:opacity-50"
-            style={{ background: "var(--kipu-success)" }}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-white text-sm font-medium transition-colors disabled:opacity-50 bg-exito"
           >
             {marcando ? (
               <>
@@ -537,14 +503,10 @@ function ReporteIVA({ periodo }: { periodo: string }) {
       {/* Ya declarado */}
       {declarado && (
         <div
-          className="flex items-center gap-3 rounded-xl px-4 py-3"
-          style={{
-            background: "color-mix(in srgb, var(--kipu-success) 10%, transparent)",
-            border: "1px solid color-mix(in srgb, var(--kipu-success) 20%, transparent)",
-          }}
+          className="flex items-center gap-3 rounded-xl px-4 py-3 bg-exito/10 border border-exito/20"
         >
-          <CheckCircle2 size={16} className="shrink-0" style={{ color: "var(--kipu-success)" }} />
-          <p className="text-sm font-medium" style={{ color: "var(--kipu-success)" }}>
+          <CheckCircle2 size={16} className="shrink-0 text-exito" />
+          <p className="text-sm font-medium text-exito">
             IVA de {periodoFmt} declarado ante el SRI ✓
           </p>
         </div>

@@ -107,8 +107,7 @@ function DemoCards({ tab }: { tab: Tab }) {
         <Link
           key={i}
           href={href}
-          className="block rounded-xl p-4 transition-all group"
-          style={{ background: "var(--kipu-surface)", border: "1px solid var(--kipu-border)" }}
+          className="block rounded-xl p-4 transition-all group bg-superficie border border-borde"
           onMouseEnter={e => e.currentTarget.style.borderColor = "color-mix(in srgb, var(--kipu-text) 30%, transparent)"}
           onMouseLeave={e => e.currentTarget.style.borderColor = "var(--kipu-border)"}
         >
@@ -128,7 +127,7 @@ function DemoCards({ tab }: { tab: Tab }) {
                   >
                     {TAB_CONFIG[tab].label}
                   </span>
-                  <p className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>{card.periodo}</p>
+                  <p className="text-sm font-semibold text-texto">{card.periodo}</p>
                   <span
                     className="text-[10px] px-1.5 py-0.5 rounded font-medium"
                     style={{
@@ -140,8 +139,8 @@ function DemoCards({ tab }: { tab: Tab }) {
                     DEMO
                   </span>
                 </div>
-                {card.monto && <p className="text-xs font-semibold" style={{ color: "var(--kipu-danger)" }}>A pagar: {card.monto}</p>}
-                {card.saldo && <p className="text-xs font-semibold" style={{ color: "var(--kipu-success)" }}>Saldo favor: {card.saldo}</p>}
+                {card.monto && <p className="text-xs font-semibold text-peligro">A pagar: {card.monto}</p>}
+                {card.saldo && <p className="text-xs font-semibold text-exito">Saldo favor: {card.saldo}</p>}
               </div>
             </div>
             <div className="flex items-center gap-2 shrink-0">
@@ -151,14 +150,14 @@ function DemoCards({ tab }: { tab: Tab }) {
               >
                 {card.estado}
               </span>
-              <ChevronRight size={14} style={{ color: "var(--kipu-subtle)" }} />
+              <ChevronRight className="text-sutil" size={14} />
             </div>
           </div>
         </Link>
       ))}
       <div className="flex items-center gap-2 justify-center py-2">
-        <Lock size={12} style={{ color: "var(--kipu-subtle)" }} />
-        <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
+        <Lock className="text-sutil" size={12} />
+        <p className="text-xs text-sutil">
           {ES_APP_NATIVA ? "Datos de ejemplo — no incluido en tu plan actual" : "Datos de ejemplo — suscríbete para ver los tuyos"}
         </p>
       </div>
@@ -268,8 +267,7 @@ export default function ReportesPage() {
 
   const TabsBar = tabsVisibles.length < 2 ? null : (
     <div
-      className="flex gap-1 rounded-xl p-1"
-      style={{ background: "var(--kipu-surface)", border: "1px solid var(--kipu-border)" }}
+      className="flex gap-1 rounded-xl p-1 bg-superficie border border-borde"
     >
       {tabsVisibles.map((t) => {
         const activo = tab === t;
@@ -309,14 +307,13 @@ export default function ReportesPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div
-            className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
-            style={{ background: "color-mix(in srgb, var(--kipu-accent) 20%, transparent)" }}
+            className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 bg-acento/20"
           >
-            <BarChart3 size={18} style={{ color: "var(--kipu-accent)" }} />
+            <BarChart3 className="text-acento" size={18} />
           </div>
           <div>
-            <h1 className="text-xl font-bold" style={{ color: "var(--kipu-text)" }}>Reportes tributarios</h1>
-            <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>Declaraciones organizadas y listas para el SRI</p>
+            <h1 className="text-xl font-bold text-texto">Reportes tributarios</h1>
+            <p className="text-sm text-sutil">Declaraciones organizadas y listas para el SRI</p>
           </div>
         </div>
         {verReales && (
@@ -325,8 +322,7 @@ export default function ReportesPage() {
             onClick={cargar}
             disabled={loading}
             aria-label="Actualizar"
-            className="p-2 rounded-lg transition-colors disabled:opacity-40"
-            style={{ border: "1px solid var(--kipu-border)", color: "var(--kipu-subtle)" }}
+            className="p-2 rounded-lg transition-colors disabled:opacity-40 border border-borde text-sutil"
           >
             {loading ? (
               <div
@@ -343,17 +339,13 @@ export default function ReportesPage() {
       {/* ── PLAN GRATIS: el total es gratis, el 104 completo con Pro ─────────── */}
       {planGratis && !ES_APP_NATIVA && (
         <div
-          className="flex items-start gap-3 rounded-xl px-4 py-3"
-          style={{
-            background: "color-mix(in srgb, var(--kipu-accent) 8%, transparent)",
-            border: "1px solid color-mix(in srgb, var(--kipu-accent) 25%, transparent)",
-          }}
+          className="flex items-start gap-3 rounded-xl px-4 py-3 bg-acento/8 border border-acento/25"
         >
-          <Lock size={15} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-accent)" }} />
-          <p className="text-xs" style={{ color: "var(--kipu-muted)" }}>
-            <span className="font-semibold" style={{ color: "var(--kipu-text)" }}>Ver el total de tu IVA es gratis. </span>
+          <Lock size={15} className="shrink-0 mt-0.5 text-acento" />
+          <p className="text-xs text-tenue">
+            <span className="font-semibold text-texto">Ver el total de tu IVA es gratis. </span>
             El formulario 104 completo se desbloquea con Kipu Pro, que además incluye Renta y ATS.{" "}
-            <Link href="/planes" className="font-semibold underline" style={{ color: "var(--kipu-accent)" }}>
+            <Link href="/planes" className="font-semibold underline text-acento">
               Ver planes
             </Link>
           </p>
@@ -366,22 +358,17 @@ export default function ReportesPage() {
           {/* Oferta de suscripción con precio: solo en la web */}
           {!planGratis && !ES_APP_NATIVA && (
           <div
-            className="relative overflow-hidden rounded-2xl p-5"
-            style={{
-              background: "color-mix(in srgb, var(--kipu-accent) 10%, transparent)",
-              border: "1px solid color-mix(in srgb, var(--kipu-accent) 30%, transparent)",
-            }}
+            className="relative overflow-hidden rounded-2xl p-5 bg-acento/10 border border-acento/30"
           >
             <div className="flex items-start gap-4">
               <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                style={{ background: "color-mix(in srgb, var(--kipu-accent) 30%, transparent)" }}
+                className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-acento/30"
               >
-                <Lock size={18} style={{ color: "var(--kipu-accent)" }} />
+                <Lock className="text-acento" size={18} />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold mb-1" style={{ color: "var(--kipu-text)" }}>Incluido en tu suscripción</p>
-                <p className="text-xs mb-3" style={{ color: "var(--kipu-subtle)" }}>
+                <p className="text-sm font-bold mb-1 text-texto">Incluido en tu suscripción</p>
+                <p className="text-xs mb-3 text-sutil">
                   Accede a tus declaraciones calculadas automáticamente. El sistema cruza tus documentos y llena los casilleros por ti.
                 </p>
                 <div className="flex flex-wrap gap-2 mb-4">
@@ -406,8 +393,7 @@ export default function ReportesPage() {
                 </div>
                 <Link
                   href="/planes"
-                  className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-white text-sm font-semibold transition-colors"
-                  style={{ background: "var(--kipu-accent)" }}
+                  className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-white text-sm font-semibold transition-colors bg-acento"
                   onMouseEnter={e => e.currentTarget.style.background = "var(--kipu-accent-h)"}
                   onMouseLeave={e => e.currentTarget.style.background = "var(--kipu-accent)"}
                 >
@@ -444,7 +430,7 @@ export default function ReportesPage() {
           {obl?.advertencias?.map((a) => (
             <Aviso key={a} tono="warning">
               {a}{" "}
-              <Link href="/configuracion" className="underline" style={{ color: "var(--kipu-warning)" }}>
+              <Link href="/configuracion" className="underline text-alerta">
                 Ir a configuración
               </Link>
             </Aviso>
@@ -454,27 +440,24 @@ export default function ReportesPage() {
 
           {/* Selector de año */}
           <div
-            className="flex items-center justify-between rounded-xl px-4 py-2.5"
-            style={{ background: "var(--kipu-surface)", border: "1px solid var(--kipu-border)" }}
+            className="flex items-center justify-between rounded-xl px-4 py-2.5 bg-superficie border border-borde"
           >
             <button
               type="button"
               onClick={() => setAnio((a) => a - 1)}
               disabled={anio <= anioInicio}
               aria-label="Año anterior"
-              className="p-1.5 rounded-lg transition-colors disabled:opacity-30"
-              style={{ color: "var(--kipu-subtle)" }}
+              className="p-1.5 rounded-lg transition-colors disabled:opacity-30 text-sutil"
             >
               <ChevronLeft size={16} />
             </button>
-            <span className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>{anio}</span>
+            <span className="text-sm font-semibold text-texto">{anio}</span>
             <button
               type="button"
               onClick={() => setAnio((a) => Math.min(a + 1, anioActual))}
               disabled={anio >= anioActual}
               aria-label="Año siguiente"
-              className="p-1.5 rounded-lg transition-colors disabled:opacity-30"
-              style={{ color: "var(--kipu-subtle)" }}
+              className="p-1.5 rounded-lg transition-colors disabled:opacity-30 text-sutil"
             >
               <ChevronRight size={16} />
             </button>
@@ -512,17 +495,17 @@ export default function ReportesPage() {
               </Aviso>
               {tab === "ATS" && (
                 <>
-                  <p className="text-xs text-center" style={{ color: "var(--kipu-subtle)" }}>Así se vería si aplicara:</p>
+                  <p className="text-xs text-center text-sutil">Así se vería si aplicara:</p>
                   <DemoCards tab="ATS" />
                 </>
               )}
             </>
           ) : items.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
-              <FileText size={40} className="mb-3" style={{ color: "var(--kipu-subtle)" }} />
-              <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>No hay periodos por declarar en {anio}</p>
+              <FileText size={40} className="mb-3 text-sutil" />
+              <p className="text-sm text-tenue">No hay periodos por declarar en {anio}</p>
               {obl && anio <= anioInicio && (
-                <p className="text-xs mt-1" style={{ color: "var(--kipu-subtle)" }}>
+                <p className="text-xs mt-1 text-sutil">
                   Tus declaraciones en Kipu empiezan en {mesAnio(obl.inicio)}.
                 </p>
               )}
@@ -555,30 +538,29 @@ export default function ReportesPage() {
               </div>
 
               <div
-                className="rounded-xl p-4"
-                style={{ background: "var(--kipu-surface)", border: "1px solid var(--kipu-border)" }}
+                className="rounded-xl p-4 bg-superficie border border-borde"
               >
-                <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "var(--kipu-subtle)" }}>
+                <p className="text-xs font-semibold uppercase tracking-wider mb-3 text-sutil">
                   Resumen {anio}
                 </p>
                 <div className="grid grid-cols-3 gap-3 text-center">
                   <div>
-                    <p className="text-lg font-bold" style={{ color: "var(--kipu-text)" }}>
+                    <p className="text-lg font-bold text-texto">
                       {items.filter(({ decl }) => decl.declarado).length}
                     </p>
-                    <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Declarados</p>
+                    <p className="text-xs text-sutil">Declarados</p>
                   </div>
                   <div>
-                    <p className="text-lg font-bold" style={{ color: "var(--kipu-warning)" }}>
+                    <p className="text-lg font-bold text-alerta">
                       {items.filter(({ decl }) => !decl.declarado && !decl.en_curso).length}
                     </p>
-                    <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Pendientes</p>
+                    <p className="text-xs text-sutil">Pendientes</p>
                   </div>
                   <div>
-                    <p className="text-lg font-bold" style={{ color: "var(--kipu-danger)" }}>
+                    <p className="text-lg font-bold text-peligro">
                       {items.filter(({ decl }) => decl.estado === "VENCIDO").length}
                     </p>
-                    <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Vencidos</p>
+                    <p className="text-xs text-sutil">Vencidos</p>
                   </div>
                 </div>
               </div>
@@ -586,8 +568,7 @@ export default function ReportesPage() {
               {!tieneSuscripcion && (
                 <Link
                   href={`${rutas.reporteIva("2026-07")}&demo=1`}
-                  className="flex items-center justify-center gap-1 py-1 text-xs"
-                  style={{ color: "var(--kipu-subtle)" }}
+                  className="flex items-center justify-center gap-1 py-1 text-xs text-sutil"
                 >
                   Ver un ejemplo del 104 completo
                   <ChevronRight size={12} />
