@@ -91,8 +91,15 @@ function ReporteRenta({ anio }: { anio: string }) {
               <span className="text-sutil">(-) Notas de crédito emitidas</span>
               <span className="font-mono text-red-400">-${montoEC(data?.notas_credito_emitidas)}</span>
             </div>
+            {/* Liquidaciones de compra a tu nombre: las emitió tu cliente, son ventas tuyas */}
+            {(data?.ventas_liquidaciones_recibidas ?? 0) > 0 && (
+              <div className="flex justify-between">
+                <span className="text-sutil">(+) Ventas con liquidación de compra (la emitió tu cliente)</span>
+                <span className="font-mono font-medium">${montoEC(data?.ventas_liquidaciones_recibidas)}</span>
+              </div>
+            )}
             <div className="pt-2 flex justify-between font-bold text-sm border-t border-borde">
-              <span>Total Ingresos Facturados</span>
+              <span>{(data?.ventas_liquidaciones_recibidas ?? 0) > 0 ? "Total Ingresos" : "Total Ingresos Facturados"}</span>
               <span className="text-emerald-500">${montoEC(data?.ventas_netas)}</span>
             </div>
           </div>
@@ -117,6 +124,16 @@ function ReporteRenta({ anio }: { anio: string }) {
               <span>Total Gastos Deducibles</span>
               <span className="text-sky-400">${montoEC(data?.total_gastos_deducibles)}</span>
             </div>
+            {/* Activos fijos: fuera del total, se deducen por depreciación */}
+            {(data?.activos_fijos_comprados ?? 0) > 0 && (
+              <div className="pt-2 space-y-0.5 border-t border-borde">
+                <div className="flex justify-between">
+                  <span className="text-sutil">Activos fijos comprados en el año</span>
+                  <span className="font-mono font-medium">${montoEC(data?.activos_fijos_comprados)}</span>
+                </div>
+                <p className="text-[10px] text-sutil">Se deducen por depreciación, no completos.</p>
+              </div>
+            )}
           </div>
         </div>
       </div>

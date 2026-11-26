@@ -52,6 +52,7 @@ const validarRuc = (ruc: string): string | null => {
 export type DatosEmpresa = {
   ruc: string; razon_social: string; nombre_comercial: string; direccion_matriz: string;
   obligado_contabilidad: string; contribuyente_especial: string;
+  descripcion_negocio: string;   // opcional: contexto para clasificar las compras
 };
 
 /** "Siguiente" en el teclado: al campo que sigue; en el último, envía el formulario. */
@@ -88,6 +89,7 @@ export default function FormularioEmpresa({ onCreada, pie }: {
     direccion_matriz:       "",
     obligado_contabilidad:  "NO",
     contribuyente_especial: "",
+    descripcion_negocio:    "",
   });
 
   const rucValido = form.ruc.length === 13 && /^\d+$/.test(form.ruc) && form.ruc.endsWith("001");
@@ -283,9 +285,21 @@ export default function FormularioEmpresa({ onCreada, pie }: {
               <Entrada
                 teclado="numero"
                 name="contribuyente_especial"
-                enterKeyHint="go"
+                enterKeyHint="next"
                 value={form.contribuyente_especial}
                 onChange={(e) => cambiar("contribuyente_especial", e.target.value)}
+              />
+            </Campo>
+
+            <Campo etiqueta="Describe tu negocio en una línea" opcional
+                   ayuda="Ayuda a Kipu a saber qué compras son de tu negocio.">
+              <Entrada
+                name="descripcion_negocio"
+                enterKeyHint="go"
+                maxLength={120}
+                value={form.descripcion_negocio}
+                onChange={(e) => cambiar("descripcion_negocio", e.target.value)}
+                placeholder="Ej.: consultorio odontológico, venta de repuestos de motos"
               />
             </Campo>
 
@@ -309,6 +323,8 @@ export default function FormularioEmpresa({ onCreada, pie }: {
                   { label: "Obligado a contabilidad", value: form.obligado_contabilidad === "SI" ? "Sí" : "No" },
                   ...(form.contribuyente_especial
                     ? [{ label: "Contribuyente especial", value: form.contribuyente_especial }] : []),
+                  ...(form.descripcion_negocio.trim()
+                    ? [{ label: "Tu negocio", value: form.descripcion_negocio.trim() }] : []),
                 ].map(({ label, value }) => (
                   <div key={label} className="flex justify-between gap-4 text-sm">
                     <dt className="shrink-0 text-sutil">{label}</dt>

@@ -5,7 +5,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft, FileText, Download, Pencil, Save, MoreVertical,
-  Link2, Shield, Receipt, Lock, Building2, ListChecks,
+  Link2, Shield, Receipt, Lock, Building2, ListChecks, CheckCircle2,
 } from "lucide-react";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
@@ -37,6 +37,19 @@ const RET = { href: "/documentos/emitir/ret", requierePro: true, requiereRetenci
 
 const fecha = (f?: string | null) => (f && /^\d{4}-\d{2}-\d{2}$/.test(f) ? etiquetaPeriodo(f, f) : f || "—");
 
+// Clasificación de la compra (backend: clasificacion_service). Las anteriores a
+// la clasificación (ANTERIOR), las retenciones y las liquidaciones recibidas
+// (para la empresa son una venta) no muestran nada.
+const TIPOS_CLASIFICABLES = ["FAC", "NDB", "NVE", "NCR"];
+// Activo fijo: mismos tipos que el backend (clasificacion_service.TIPOS_CON_ACTIVO_FIJO)
+const TIPOS_ACTIVO_FIJO   = ["FAC", "NDB", "NCR", "NVE"];
+const ETIQUETA_CLASIFICACION: Record<string, string> = {
+  SIN:     "Sin clasificar",
+  REGLA:   "Sugerida por Kipu",
+  IA:      "Sugerida por Kipu",
+  USUARIO: "Revisada por ti",
+};
+
 /** Fila etiqueta → valor de las secciones. */
 function Dato({ etiqueta, valor }: { etiqueta: string; valor: React.ReactNode }) {
   return (
@@ -59,22 +72,31 @@ function ModalClasificacion({ doc, onClose, onSaved }: {
   const [notas,  setNotas]  = useState(doc.notas ?? "");
   const [saving, setSaving] = useState(false);
   const [error,  setError]  = useState("");
+  // ¿Tocó algún interruptor? Solo entonces se mandan las marcas, como suyas
+  // (marcas_del_usuario): alimentan la regla de ese proveedor
+  const [marcasTocadas, setMarcasTocadas] = useState(false);
 
   const editItem = (idx: number, field: string, val: boolean) => {
     setItems(prev => prev.map((item, i) =>
       i === idx ? { ...item, [field]: val } : item
     ));
+    setMarcasTocadas(true);
   };
 
   const guardar = async () => {
+    const payload: Record<string, unknown> = {};
+    if (marcasTocadas) {
+      payload.items_detalle          = items;
+      payload.deducible_renta        = items.some(i => i.deducible_renta);
+      payload.credito_tributario_iva = items.some(i => i.credito_tributario_iva);
+      payload.marcas_del_usuario     = true;
+    }
+    if (notas !== (doc.notas ?? "")) payload.notas = notas || null;
+    if (Object.keys(payload).length === 0) { onClose(); return; }   // nada que guardar
+
     setSaving(true); setError("");
     try {
-      await api.patch(`/api/v1/app/recibidos/${doc.id}`, {
-        items_detalle:          items,
-        deducible_renta:        items.some(i => i.deducible_renta),
-        credito_tributario_iva: items.some(i => i.credito_tributario_iva),
-        notas:                  notas || null,
-      });
+      await api.patch(`/api/v1/app/recibidos/${doc.id}`, payload);
       onSaved();
       onClose();
     } catch (err: any) {
@@ -225,6 +247,7 @@ export default function DetalleRecibido({ id, enPanel = false }: { id: string; e
 
   const [editando,    setEditando]    = useState(false);
   const [guardandoAf, setGuardandoAf] = useState(false);
+  const [confirmando, setConfirmando] = useState(false);
   const [menu,        setMenu]        = useState(false);
   const archivo = useArchivoOriginal(doc);
 
@@ -240,17 +263,32 @@ export default function DetalleRecibido({ id, enPanel = false }: { id: string; e
   const pago           = doc.estado_pago && ["FAC", "LIQ"].includes(doc.tipo_doc) ? ESTADOS_PAGO[doc.estado_pago] : undefined;
   const totalDeducible = items.filter(i => i.deducible_renta).reduce((s, i) => s + i.subtotal, 0);
   const totalCredito   = items.filter(i => i.credito_tributario_iva).reduce((s, i) => s + i.valor_iva, 0);
-  const puedeRetener   = ["FAC", "LIQ"].includes(doc.tipo_doc) && !doc.retencion_emitida && verRet;
+  // Solo a una factura: la liquidación recibida la emitió tu cliente, es una venta
+  // tuya y no se le emite retención
+  const puedeRetener   = doc.tipo_doc === "FAC" && !doc.retencion_emitida && verRet;
   const vinculos       = (doc.doc_origen_recibido_id ? 1 : 0) + (doc.doc_origen_emitido_id ? 1 : 0) + (doc.retencion_emitida ? 1 : 0);
+  const clasificacion  = TIPOS_CLASIFICABLES.includes(doc.tipo_doc)
+    ? ETIQUETA_CLASIFICACION[doc.fuente_clasificacion ?? "SIN"] : undefined;
 
   const cambiarActivoFijo = async (valor: boolean) => {
     setGuardandoAf(true);
     try {
-      await api.patch(`/api/v1/app/recibidos/${doc.id}`, { activo_fijo: valor });
+      await api.patch(`/api/v1/app/recibidos/${doc.id}`, { activo_fijo: valor, marcas_del_usuario: true });
       await cargar();
     } catch {
       avisos.error("No se pudo guardar. Intenta de nuevo.");
     } finally { setGuardandoAf(false); }
+  };
+
+  // "Están bien así": confirma las marcas como suyas sin cambiarlas
+  const confirmarMarcas = async () => {
+    setConfirmando(true);
+    try {
+      await api.patch(`/api/v1/app/recibidos/${doc.id}`, { marcas_del_usuario: true });
+      await cargar();
+    } catch {
+      avisos.error("No se pudo guardar. Intenta de nuevo.");
+    } finally { setConfirmando(false); }
   };
 
   const acciones: Accion[] = archivo.accion ? [archivo.accion] : [];
@@ -303,6 +341,33 @@ export default function DetalleRecibido({ id, enPanel = false }: { id: string; e
           <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-texto">
             <Shield size={16} className="text-acento" aria-hidden /> Clasificación fiscal
           </h2>
+
+          {/* Cómo quedó clasificada y "Están bien así" */}
+          {clasificacion && (
+            <div className="mb-3 flex items-start justify-between gap-3 rounded-lg bg-presionado p-3">
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-texto">{clasificacion}</p>
+                {(doc.motivo_clasificacion || !doc.fuente_clasificacion) && (
+                  <p className="mt-0.5 text-xs text-sutil">
+                    {doc.fuente_clasificacion
+                      ? doc.motivo_clasificacion
+                      : "Se cuenta como deducible y con crédito si tiene IVA. Revisa las marcas: si están bien, confírmalas."}
+                  </p>
+                )}
+              </div>
+              {doc.fuente_clasificacion !== "USUARIO" && (
+                <button
+                  type="button"
+                  disabled={confirmando}
+                  onClick={() => void confirmarMarcas()}
+                  className="flex shrink-0 items-center gap-1.5 rounded-lg border border-exito/25 bg-exito-suave px-3 py-1.5 text-xs font-medium text-exito-texto transition-colors disabled:opacity-50"
+                >
+                  <CheckCircle2 size={12} aria-hidden /> Están bien así
+                </button>
+              )}
+            </div>
+          )}
+
           <div className={cn("grid gap-2", doc.tipo_doc !== "RET" ? "grid-cols-2" : "grid-cols-1")}>
             {doc.tipo_doc !== "RET" && (
               <div className="rounded-lg bg-exito-suave p-3">
@@ -316,12 +381,14 @@ export default function DetalleRecibido({ id, enPanel = false }: { id: string; e
             </div>
           </div>
 
-          {/* Activo fijo: computador, vehículo, maquinaria… (104: 501/511/521) */}
-          {["FAC", "NDB", "NCR"].includes(doc.tipo_doc) && (
+          {/* Activo fijo: computador, vehículo, maquinaria… (104: 501/511/521; NV: 508) */}
+          {TIPOS_ACTIVO_FIJO.includes(doc.tipo_doc) && (
             <div className="mt-3 border-t border-borde pt-2">
               <Interruptor
                 etiqueta="Es un activo fijo"
-                descripcion="Equipos, vehículos o maquinaria que usarás más de un año. Se declara en el casillero 501."
+                descripcion={doc.tipo_doc === "NVE"
+                  ? "Muebles o equipos que usarás más de un año."
+                  : "Equipos, vehículos o maquinaria que usarás más de un año. Se declara en el casillero 501."}
                 activo={!!doc.datos?.activo_fijo}
                 deshabilitado={guardandoAf}
                 onCambio={cambiarActivoFijo}

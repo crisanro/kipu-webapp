@@ -28,6 +28,9 @@ interface CampoFiscal {
   editable:  boolean;
   opciones?: { valor: string; etiqueta: string }[];
   render?:   (v: unknown) => string;
+  maxLength?:   number;
+  placeholder?: string;
+  ayuda?:       string;   // texto chico debajo del valor y del campo al editar
 }
 
 const CAMPOS_FISCALES: CampoFiscal[] = [
@@ -41,6 +44,11 @@ const CAMPOS_FISCALES: CampoFiscal[] = [
   { key: "contribuyente_especial", label: "Contribuyente especial (Nro.)", editable: true },
   { key: "ambiente",               label: "Ambiente SRI",                 editable: false,
     render: (v) => v === 2 ? "Producción" : "Pruebas" },
+  // Contexto para clasificar las compras (backend: clasificacion_ia_service)
+  { key: "actividad_economica",    label: "Actividad económica (SRI)",    editable: false },
+  { key: "descripcion_negocio",    label: "Describe tu negocio en una línea", editable: true,
+    maxLength: 120, placeholder: "Ej.: consultorio odontológico, venta de repuestos de motos",
+    ayuda: "Opcional. Ayuda a Kipu a saber qué compras son de tu negocio." },
 ];
 
 const REGIMEN_OPCIONES = [
@@ -132,6 +140,7 @@ export function DatosEmpresa({ legal, health, onActualizar }: {
                 <span className="min-w-0 flex-1">
                   <span className="block text-xs text-sutil">{c.label}</span>
                   <span className="mt-0.5 block break-words text-sm font-medium text-texto">{texto}</span>
+                  {c.ayuda && <span className="mt-0.5 block text-xs text-sutil">{c.ayuda}</span>}
                 </span>
                 {c.editable && <ChevronRight size={18} className="shrink-0 text-sutil" aria-hidden />}
               </>
@@ -161,9 +170,11 @@ export function DatosEmpresa({ legal, health, onActualizar }: {
         {editando && (editando.opciones ? (
           <ChipsFiltro etiqueta={editando.label} opciones={editando.opciones} valor={valor} onCambio={setValor} />
         ) : (
-          <Campo etiqueta={editando.label} error={error || null}>
+          <Campo etiqueta={editando.label} error={error || null} ayuda={editando.ayuda}>
             <Entrada
               value={valor}
+              maxLength={editando.maxLength}
+              placeholder={editando.placeholder}
               onChange={(e) => setValor(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); guardar(); } }}
               enterKeyHint="done"
