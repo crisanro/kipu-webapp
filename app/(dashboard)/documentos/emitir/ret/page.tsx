@@ -27,6 +27,7 @@ import CamposAdicionales, { CampoAdicional } from "../components/CamposAdicional
 import DocOrigenSelector, { DocOrigen, numeroDocOrigen, payloadDocOrigen } from "../components/DocOrigenSelector";
 import EmisionLayout from "../components/EmisionLayout";
 import { InputDecimal } from "../components/HojaItem";
+import PorcentajeRetencion, { MotivoOtroPorcentaje, MOTIVO_MINIMO } from "./components/PorcentajeRetencion";
 import { genId } from "../components/ItemsEditor";
 import { useEmision } from "../components/useEmision";
 import { getPaisesOrdenados } from "@/lib/catalogos/paises-sri";
@@ -42,16 +43,18 @@ const CLASE_VALOR =
   "h-9 w-full rounded-lg border border-borde bg-superficie px-3 text-sm tabular-nums text-texto tactil:h-11 tactil:text-base " +
   "placeholder:text-sutil focus:border-acento focus:outline-none";
 
-/** Valor retenido: el % de la base, redondeado como el backend. */
-const retenido = (base: number, pct: number) => r2(base * (pct / 100));
+/** Valor retenido: el % de la base, redondeado como el backend (sin % elegido, 0). */
+const retenido = (base: number, pct: number | null) => pct === null ? 0 : r2(base * (pct / 100));
 
 interface ImpuestoRet {
   _id:               string;
   codigo:            string;
   codigoRetencion:   string;
   baseImponible:     number;
-  porcentajeRetener: number;
+  porcentajeRetener: number | null;   // null: código sin % sugerido, todavía sin elegir
   valorRetenido:     number;
+  otroPct?:          boolean;         // "Usar otro porcentaje" (fuera del catálogo)
+  motivoOverride?:   string;          // obligatorio con otroPct
 }
 
 // ── Catálogos de retención ───────────────────────────────────────────────────
@@ -62,13 +65,18 @@ interface ImpuestoRet {
 interface OpcionRet {
   cod:   string;
   label: string;
-  pct:   number;
+  pct:   number | null;   // el sugerido (null: el catálogo no sugiere, hay que elegir)
+  pcts?: number[];        // los permitidos por el catálogo (sin la lista: solo pct)
 }
 
 // No residentes: el % depende del régimen fiscal (tipoRegi)
 interface OpcionNoResidente extends OpcionRet {
-  pctParaiso: number;   // paraíso fiscal (02) o régimen preferente (03)
+  pctParaiso: number | null;   // paraíso fiscal (02) o régimen preferente (03)
 }
+
+/** Los % que permite el catálogo para una opción. */
+const permitidosDe = (o?: OpcionRet): number[] =>
+  o ? (o.pcts?.length ? o.pcts : o.pct === null ? [] : [o.pct]) : [];
 
 // Lo que usa la pantalla. En cada lista, el primero es el sugerido.
 interface CatalogoUI {
@@ -89,7 +97,7 @@ const RESPALDO_RESIDENTES: OpcionRet[] = [
   { cod: "308",  label: "Utilización de imagen o renombre (incl. influencers)", pct: 10 },
   { cod: "309",  label: "Servicios de medios de comunicación y agencias de publicidad", pct: 3 },
   // El catálogo indica "1 /0 según resolución NAC-DGERCGC26-00000028"; se sugiere 1.
-  { cod: "310",  label: "Transporte privado de pasajeros o transporte de carga", pct: 1 },
+  { cod: "310",  label: "Transporte privado de pasajeros o transporte de carga", pct: 1, pcts: [1, 0] },
   { cod: "312",  label: "Transferencia de bienes muebles corporales",       pct: 2  },
   { cod: "319",  label: "Arrendamiento mercantil (prestado por sociedades)", pct: 2 },
   { cod: "320",  label: "Arrendamiento de bienes inmuebles",                pct: 10 },
@@ -107,8 +115,9 @@ const RESPALDO_RESIDENTES: OpcionRet[] = [
 // con convenio, el % queda editable.
 // NOTA: 501 confirmado en el Catálogo ATS. Mapeo al casillero 422/472 del 103 deducido (501A ↔ 421 por descripción idéntica), sin tabla oficial.
 const RESPALDO_NO_RESIDENTES: OpcionNoResidente[] = [
-  { cod: "501",  label: "Beneficios / servicios empresariales", pct: 25, pctParaiso: 37 },
-  { cod: "501A", label: "Servicios técnicos, administrativos, consultoría y regalías", pct: 25, pctParaiso: 37 },
+  { cod: "501",  label: "Beneficios / servicios empresariales", pct: 25, pctParaiso: 37, pcts: [25, 37] },
+  { cod: "501A", label: "Servicios técnicos, administrativos, consultoría y regalías", pct: 25, pctParaiso: 37,
+    pcts: [3, 5, 8, 10, 15, 25, 37] },
 ];
 
 // Códigos de IVA (respaldo)
@@ -162,22 +171,26 @@ function primeroEl<T extends { cod: string }>(lista: T[], cod: string): T[] {
   return i <= 0 ? lista : [lista[i], ...lista.slice(0, i), ...lista.slice(i + 1)];
 }
 
-// Catálogo del backend → listas de la pantalla. Solo códigos con
-// ofrecer_en_ui y con % sugerido: los que tienen varios % sin sugerido (326,
-// 504…) esperan al selector de % de la Fase B. Una lista vacía usa el respaldo.
+// Catálogo del backend → listas de la pantalla: los códigos con ofrecer_en_ui y
+// sus % permitidos. Los que no tienen % sugerido (326, 504…) obligan a elegir
+// (PorcentajeRetencion). Una lista vacía usa el respaldo.
 function catalogoUI(c: CatalogoRetenciones): CatalogoUI {
-  const renta = c.renta.codigos.filter(x => x.ofrecer_en_ui && x.porcentaje_sugerido !== null);
+  const renta = c.renta.codigos.filter(x => x.ofrecer_en_ui);
   const residentes = renta
     .filter(x => x.residencia === "residente")
-    .map(x => ({ cod: x.codigo, label: x.descripcion, pct: x.porcentaje_sugerido as number }));
+    .map(x => ({ cod: x.codigo, label: x.descripcion, pct: x.porcentaje_sugerido, pcts: x.porcentajes }));
   const noResidentes = renta
     .filter(x => x.residencia === "no_residente")
-    .map(x => ({
-      cod:        x.codigo,
-      label:      x.descripcion.replace(/^Pago a no residentes\s*[-–]\s*/i, ""),
-      pct:        x.porcentaje_sugerido as number,
-      pctParaiso: x.porcentaje_sugerido_paraiso ?? (x.porcentaje_sugerido as number),
-    }));
+    .map(x => {
+      const paraiso = x.porcentaje_sugerido_paraiso ?? x.porcentaje_sugerido;
+      return {
+        cod:        x.codigo,
+        label:      x.descripcion.replace(/^Pago a no residentes\s*[-–]\s*/i, ""),
+        pct:        x.porcentaje_sugerido,
+        pctParaiso: paraiso,
+        pcts:       paraiso !== null && !x.porcentajes.includes(paraiso) ? [...x.porcentajes, paraiso] : x.porcentajes,
+      };
+    });
   const impuesto = (l: CatalogoRetenciones["iva"]) => l.map(i => ({ cod: i.codigo, label: i.descripcion, pct: i.porcentaje }));
   const iva = impuesto(c.iva);
   const isd = impuesto(c.isd);
@@ -206,7 +219,8 @@ function getOpciones(cat: CatalogoUI, codigo: string, exterior: boolean, tipoReg
   if (codigo === "2") return cat.iva;
   if (codigo === "6") return cat.isd;
   if (!exterior) return cat.residentes;
-  return cat.noResidentes.map(o => ({ cod: o.cod, label: o.label, pct: tipoRegi === "01" ? o.pct : o.pctParaiso }));
+  return cat.noResidentes.map(o => ({ cod: o.cod, label: o.label, pct: tipoRegi === "01" ? o.pct : o.pctParaiso,
+                                       pcts: o.pcts }));
 }
 
 // Selector de renta: "Más usados" (en el orden de la constante) y después el
@@ -254,19 +268,25 @@ function retencionesSugeridas(cat: CatalogoUI, base: number, iva: number): Impue
   return lineasSugeridas(cat, base, [iva], false, "01");
 }
 
-/** La línea con otro código de retención: su % y el valor retenido salen de la opción. */
+/** La línea con otro código de retención: su % y el valor retenido salen de la opción
+ *  (y se deja "otro porcentaje": el nuevo código tiene sus propios permitidos). */
 const conOpcion = (l: ImpuestoRet, opcion: OpcionRet): ImpuestoRet => ({
   ...l, codigoRetencion: opcion.cod, porcentajeRetener: opcion.pct,
-  valorRetenido: retenido(l.baseImponible, opcion.pct),
+  valorRetenido: retenido(l.baseImponible, opcion.pct), otroPct: false, motivoOverride: "",
 });
 
 // Ajusta las líneas de renta al catálogo del tipo de pago y régimen actuales:
 // un código que no está en la lista toma el primero de ella, y el % se toma de
-// la lista (así un cambio de régimen pasa el 501 de 25% a 37%).
+// la lista (así un cambio de régimen pasa el 501 de 25% a 37%). Una línea con
+// "otro porcentaje" conserva su % y su motivo si el código sigue en la lista.
 function reajustarRenta(cat: CatalogoUI, lineas: ImpuestoRet[], exterior: boolean, tipoRegi: string): ImpuestoRet[] {
   const opciones = getOpciones(cat, "1", exterior, tipoRegi);
-  return lineas.map(l => l.codigo !== "1" ? l
-    : conOpcion(l, opciones.find(o => o.cod === l.codigoRetencion) ?? opciones[0]));
+  return lineas.map(l => {
+    if (l.codigo !== "1") return l;
+    const opcion = opciones.find(o => o.cod === l.codigoRetencion);
+    if (opcion && l.otroPct) return l;
+    return conOpcion(l, opcion ?? opciones[0]);
+  });
 }
 
 // Al cambiar de catálogo (otra fecha de sustento): solo las líneas de renta
@@ -600,6 +620,17 @@ export default function NuevaRetPage() {
     }));
   };
 
+  // "Usar otro porcentaje": se escribe el % (y se pide el motivo); al volver, el
+  // sugerido del catálogo para ese código
+  const usarOtroPct = (id: string, activo: boolean) => {
+    setImpuestos(impuestos.map(imp => {
+      if (imp._id !== id) return imp;
+      if (activo) return { ...imp, otroPct: true, motivoOverride: imp.motivoOverride ?? "" };
+      const opcion = getOpciones(catalogo, imp.codigo, esExterior, tipoRegi).find(o => o.cod === imp.codigoRetencion);
+      return opcion ? conOpcion(imp, opcion) : { ...imp, otroPct: false, motivoOverride: "" };
+    }));
+  };
+
   // ── Borrador (con documento de fuera la pantalla llega cargada: no se ofrece el viejo) ──
   const desdeDocumento = !!(searchParams.get("doc_origen_recibido_id") || searchParams.get("doc_origen_emitido_id"));
   const datosBorrador = useMemo(() => ({
@@ -660,6 +691,14 @@ export default function NuevaRetPage() {
     if (!docOrigen)                     { setError("Selecciona el documento sustento."); return; }
     if (!estabSelected || !ptoSelected) { setError("Elige el establecimiento y el punto de emisión."); return; }
     if (impuestos.some(i => i.baseImponible <= 0)) { setError("La base imponible debe ser mayor a $0."); return; }
+    const sinPct = impuestos.findIndex(i => i.porcentajeRetener === null);
+    if (sinPct >= 0) { setError(`Elige el porcentaje de la retención ${sinPct + 1}.`); return; }
+    const sinMotivo = impuestos.findIndex(i => i.otroPct && !pctEditable(i)
+                                             && (i.motivoOverride ?? "").trim().length < MOTIVO_MINIMO);
+    if (sinMotivo >= 0) {
+      setError(`Escribe por qué usas otro porcentaje en la retención ${sinMotivo + 1} (al menos ${MOTIVO_MINIMO} caracteres).`);
+      return;
+    }
     if (esExterior && !paisEfecPago)    { setError("Selecciona el país del pago al exterior (en Período y sustento)."); return; }
 
     if (enProduccion && !confirmado) { setConfirmarProduccion(true); return; }
@@ -688,6 +727,8 @@ export default function NuevaRetPage() {
         baseImponible:     i.baseImponible,
         porcentajeRetener: i.porcentajeRetener,
         valorRetenido:     i.valorRetenido,
+        // Fuera del catálogo: el backend lo registra (retencion_overrides) con este motivo
+        ...(i.otroPct && !pctEditable(i) ? { motivo_override: (i.motivoOverride ?? "").trim() } : {}),
       })),
       campos_adicionales: camposAdicionales.filter(c => c.nombre && c.valor),
       // La liquidación es nuestra (emitida); la factura y la nota de débito, recibidas
@@ -754,7 +795,7 @@ export default function NuevaRetPage() {
           <div className="space-y-2 text-sm">
             {impuestos.map((imp) => (
               <div key={imp._id} className="flex justify-between gap-3 text-tenue">
-                <span>{TIPOS_IMPUESTO.find(t => t.value === imp.codigo)?.label ?? "Retención"} {imp.codigoRetencion} · {imp.porcentajeRetener}%</span>
+                <span>{TIPOS_IMPUESTO.find(t => t.value === imp.codigo)?.label ?? "Retención"} {imp.codigoRetencion} · {imp.porcentajeRetener === null ? "—" : `${imp.porcentajeRetener}%`}</span>
                 <span className="tabular-nums">${dosDecimales(imp.valorRetenido)}</span>
               </div>
             ))}
@@ -934,8 +975,9 @@ export default function NuevaRetPage() {
         )}
 
         {impuestos.map((imp, idx) => {
-          const opciones = getOpciones(catalogo, imp.codigo, esExterior, tipoRegi);
-          const pctLibre = pctEditable(imp);
+          const opciones   = getOpciones(catalogo, imp.codigo, esExterior, tipoRegi);
+          const pctLibre   = pctEditable(imp);
+          const permitidos = permitidosDe(opciones.find(o => o.cod === imp.codigoRetencion));
           return (
             <div key={imp._id} className="space-y-3 rounded-lg border border-borde p-3">
               <div className="flex min-h-8 items-center justify-between">
@@ -981,21 +1023,26 @@ export default function NuevaRetPage() {
                                   onChange={v => editImpuesto(imp._id, "baseImponible", v)} className={CLASE_VALOR} />
                   )}
                 </Campo>
-                <Campo etiqueta="% a retener" id={`ret-pct-${imp._id}`}
-                       ayuda={pctLibre ? "Según la tarifa del convenio." : undefined}>
-                  {pctLibre ? (
-                    <InputDecimal id={`ret-pct-${imp._id}`} value={imp.porcentajeRetener}
-                                  onChange={v => editImpuesto(imp._id, "porcentajeRetener", Math.min(100, v))}
-                                  className={CLASE_VALOR} />
-                  ) : (
-                    <Fijo>{imp.porcentajeRetener}%</Fijo>
-                  )}
-                </Campo>
+                <PorcentajeRetencion
+                  id={`ret-pct-${imp._id}`}
+                  permitidos={permitidos}
+                  valor={imp.porcentajeRetener}
+                  libre={pctLibre}
+                  permiteOtro={imp.codigo === "1"}
+                  otro={!!imp.otroPct}
+                  onPct={v => editImpuesto(imp._id, "porcentajeRetener", v)}
+                  onOtro={activo => usarOtroPct(imp._id, activo)}
+                />
                 <Campo etiqueta="Valor retenido" id={`ret-valor-${imp._id}`} className="col-span-2 sm:col-span-1">
                   <InputDecimal id={`ret-valor-${imp._id}`} value={imp.valorRetenido} placeholder="0.00"
                                 onChange={v => editImpuesto(imp._id, "valorRetenido", v)} className={CLASE_VALOR} />
                 </Campo>
               </div>
+              {imp.otroPct && !pctLibre && (
+                <MotivoOtroPorcentaje id={`ret-motivo-${imp._id}`} codigo={imp.codigoRetencion}
+                                      permitidos={permitidos} motivo={imp.motivoOverride ?? ""}
+                                      onMotivo={m => editImpuesto(imp._id, "motivoOverride", m)} />
+              )}
             </div>
           );
         })}
