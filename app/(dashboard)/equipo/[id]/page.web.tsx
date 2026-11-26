@@ -20,6 +20,8 @@ interface Detalle {
   contacto: { nombre: string | null; email: string | null; whatsapp: string | null } | null;
   suscripcion: { estado: string; cancela: boolean; pagado_hasta: string | null };
   clave_guardada_at: string | null;
+  clave_se_borra_el: string | null;     // terminó Al Día (términos 2.0): ya no se usa
+  horas_revision: number;               // 24 (términos 1.0) o 48 (2.0 y Kipu Renta)
   asignaciones: { contador: string; desde: string; hasta: string | null; motivo: string | null; asignado_por: string | null }[];
   gestiones: Gestion[];
   accesos_clave: { accion: string; motivo: string; email: string | null; fecha: string }[];
@@ -27,7 +29,9 @@ interface Detalle {
 interface Contador { id: string; nombre: string; activo: boolean }
 
 // ── Una declaración y sus acciones ────────────────────────────────────────────
-function FilaGestion({ g, emisorId, alCambiar }: { g: Gestion; emisorId: number; alCambiar: () => void }) {
+function FilaGestion({ g, emisorId, horas, alCambiar }: {
+  g: Gestion; emisorId: number; horas: number; alCambiar: () => void;
+}) {
   const confirmar = useConfirmar();
   const [modo,     setModo]     = useState<"" | "resumen" | "presentar">("");
   const [resumen,  setResumen]  = useState(g.resumen ?? "");
@@ -84,7 +88,7 @@ function FilaGestion({ g, emisorId, alCambiar }: { g: Gestion; emisorId: number;
         <p className="text-xs" style={{ color: "var(--kipu-muted)" }}>
           Resumen enviado el {new Date(g.resumen_enviado_at).toLocaleString("es-EC", { dateStyle: "short", timeStyle: "short" })}
           {g.valor_a_pagar !== null && ` · $${g.valor_a_pagar.toFixed(2)}`}
-          {ahora - new Date(g.resumen_enviado_at).getTime() < 864e5 && " · espera 24 h antes de presentar"}
+          {ahora - new Date(g.resumen_enviado_at).getTime() < horas * 36e5 && ` · espera ${horas} h antes de presentar`}
         </p>
       )}
       {g.estado === "PRESENTADO" && (
@@ -148,7 +152,7 @@ function FilaGestion({ g, emisorId, alCambiar }: { g: Gestion; emisorId: number;
             </button>
           </div>
           <p className="text-[11px]" style={{ color: "var(--kipu-subtle)" }}>
-            El cliente recibe el resumen, el valor y la fecha límite, y tiene 24 horas para avisar si algo no está bien.
+            El cliente recibe el resumen, el valor y la fecha límite, y tiene {horas} horas para avisar si algo no está bien.
           </p>
         </div>
       )}
@@ -358,7 +362,11 @@ export default function ClienteAlDiaPage() {
       {/* Clave del SRI */}
       <div className="rounded-xl p-5 space-y-2" style={caja}>
         <p className="font-semibold text-sm" style={{ color: "var(--kipu-text)" }}>Clave del SRI</p>
-        {d.clave_guardada_at
+        {d.clave_se_borra_el
+          ? <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>
+              El servicio terminó: la clave ya no se usa y se borra el {fecha(d.clave_se_borra_el)}, salvo que vuelva a contratar.
+            </p>
+          : d.clave_guardada_at
           ? <VerClave emisorId={emisorId} alVer={recargar} />
           : <p className="text-sm" style={{ color: "var(--kipu-warning)" }}>El cliente todavía no la guarda (Kipu Al Día → Tu clave del SRI).</p>}
         {d.accesos_clave.length > 0 && (
@@ -375,7 +383,9 @@ export default function ClienteAlDiaPage() {
         <p className="font-semibold text-sm pb-2" style={{ color: "var(--kipu-text)" }}>Declaraciones</p>
         {d.gestiones.length === 0
           ? <p className="text-sm pb-3" style={{ color: "var(--kipu-muted)" }}>Nada que declarar por ahora.</p>
-          : d.gestiones.map(g => <FilaGestion key={g.id} g={g} emisorId={emisorId} alCambiar={recargar} />)}
+          : d.gestiones.map(g => (
+              <FilaGestion key={g.id} g={g} emisorId={emisorId} horas={d.horas_revision} alCambiar={recargar} />
+            ))}
       </div>
 
       {/* Contador */}

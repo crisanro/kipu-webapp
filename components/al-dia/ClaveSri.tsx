@@ -7,15 +7,19 @@ import api from "@/lib/api";
 import { detalleError } from "@/lib/errores";
 
 interface Acceso { accion: "GUARDAR" | "VER" | "BORRAR"; motivo: string; quien: string; fecha: string }
-interface EstadoClave { guardada: boolean; actualizada_at: string | null; accesos: Acceso[] }
+interface EstadoClave {
+  guardada: boolean; actualizada_at: string | null; accesos: Acceso[];
+  se_borra_el: string | null;   // terminó Al Día (términos 2.0): ya no se usa y se borra ese día
+}
 
 const ACCION: Record<Acceso["accion"], string> = { GUARDAR: "Guardó", VER: "Usó", BORRAR: "Borró" };
 
 /**
  * Clave del portal del SRI para que el equipo de Kipu declare por el cliente.
  * Se guarda cifrada; nunca se vuelve a mostrar aquí. Se ve quién la usó y para qué.
+ * Sin el servicio activo (`contratado` false: espera su borrado) solo se puede borrar.
  */
-export default function ClaveSri() {
+export default function ClaveSri({ contratado = true }: { contratado?: boolean }) {
   const confirmar = useConfirmar();
   const [estado,   setEstado]   = useState<EstadoClave | null>(null);
   const [clave,    setClave]    = useState("");
@@ -60,7 +64,9 @@ export default function ClaveSri() {
   const borrar = async () => {
     if (!(await confirmar({
       titulo: "¿Borrar tu clave del SRI?",
-      mensaje: "Sin ella no podemos presentar tus declaraciones.",
+      mensaje: estado?.se_borra_el
+        ? "La borramos ahora, sin esperar la fecha. Si vuelves a contratar, tendrás que ingresarla de nuevo."
+        : "Sin ella no podemos presentar tus declaraciones.",
       textoConfirmar: "Borrar clave", peligro: true,
     }))) return;
     setEnviando(true);
@@ -77,7 +83,7 @@ export default function ClaveSri() {
   };
 
   const caja = { background: "var(--kipu-surface)", border: "1px solid var(--kipu-border)" };
-  const mostrarFormulario = estado && (!estado.guardada || editando);
+  const mostrarFormulario = estado && contratado && (!estado.guardada || editando);
 
   return (
     <div id="clave-sri" className="rounded-xl p-5 space-y-4 scroll-mt-6" style={caja}>
@@ -90,16 +96,26 @@ export default function ClaveSri() {
 
       {estado?.guardada && !editando && (
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>
-            Guardada y cifrada
-            {estado.actualizada_at && ` desde el ${new Date(estado.actualizada_at).toLocaleDateString("es-EC")}`}.
-            Por seguridad no la mostramos aquí.
-          </p>
+          {estado.se_borra_el ? (
+            <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>
+              Tu servicio Kipu Al Día terminó: ya no usamos tu clave y la borraremos el{" "}
+              {new Date(`${estado.se_borra_el}T12:00:00`).toLocaleDateString("es-EC")}. Si vuelves a contratar antes,
+              no tendrás que ingresarla de nuevo. Si prefieres, bórrala ya.
+            </p>
+          ) : (
+            <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>
+              Guardada y cifrada
+              {estado.actualizada_at && ` desde el ${new Date(estado.actualizada_at).toLocaleDateString("es-EC")}`}.
+              Por seguridad no la mostramos aquí.
+            </p>
+          )}
           <div className="flex gap-3 text-sm">
-            <button type="button" onClick={() => { setEditando(true); setAviso(""); }} className="underline"
-                    style={{ color: "var(--kipu-accent)" }}>
-              La cambié
-            </button>
+            {!estado.se_borra_el && (
+              <button type="button" onClick={() => { setEditando(true); setAviso(""); }} className="underline"
+                      style={{ color: "var(--kipu-accent)" }}>
+                La cambié
+              </button>
+            )}
             <button type="button" onClick={borrar} disabled={enviando}
                     className="inline-flex items-center gap-1 underline disabled:opacity-50" style={{ color: "var(--kipu-danger)" }}>
               <Trash2 size={13} /> Borrar

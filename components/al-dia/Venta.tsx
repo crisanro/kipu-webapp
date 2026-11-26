@@ -272,7 +272,7 @@ const PASOS: { icono: ReactNode; titulo: string; texto: string }[] = [
     // En la app sin "sin límite": sería prometer una función digital (reglas de las tiendas)
     texto: `Con Kipu, ${ES_APP_NATIVA ? "como siempre" : "sin límite"}. Tus compras las tomamos de los comprobantes que el SRI tiene a tu nombre.` },
   { icono: <MessageCircle size={16} />, titulo: "Te mandamos el resumen por WhatsApp",
-    texto: "Lo que vendiste, lo que compraste y cuánto pagar. Tienes 24 horas para revisarlo." },
+    texto: "Lo que vendiste, lo que compraste y cuánto pagar. Tienes 48 horas para revisarlo." },
   { icono: <FileCheck2 size={16} />,    titulo: "Presentamos y te llega el comprobante",
     texto: "Dentro del plazo del SRI. Tú solo pagas el valor que te indicamos, antes de la fecha límite." },
 ];
@@ -422,11 +422,11 @@ const PREGUNTAS: [string, string][] = [
   ["Si contrato hoy, ¿cuál es la primera declaración que hacen?",
    "La del mes en que contratas, que se presenta el mes siguiente (si declaras semestral, la del semestre en curso). Las de meses anteriores no están incluidas: las presentas tú o, si nos avisas con tiempo, las hacemos como extra ($10 por periodo)."],
   ["¿Y si no estoy de acuerdo con el resumen?",
-   "Respóndenos el WhatsApp dentro de las 24 horas y lo corregimos antes de presentar. Si no nos dices nada, lo presentamos con esa información."],
+   "Respóndenos el WhatsApp dentro de las 48 horas y lo corregimos antes de presentar. Si no nos dices nada, lo presentamos con esa información."],
   ["¿El IVA se los pago a ustedes?",
    "No. El impuesto lo pagas tú al SRI; nosotros te avisamos el valor exacto y la fecha límite. A Kipu solo le pagas la mensualidad."],
   ["¿Qué pasa con mi clave del SRI?",
-   "Se guarda cifrada y solo se usa para tus declaraciones, descargar tus comprobantes y consultas. Ves cada vez que alguien la usa, y la borramos el día que termina el servicio."],
+   "Se guarda cifrada y solo se usa para tus declaraciones, descargar tus comprobantes y consultas. Ves cada vez que alguien la usa, y la borramos 30 días después de que termina el servicio, o antes si lo pides."],
   ["¿Puedo cancelar cuando quiera?",
    "Sí, desde Kipu o escribiéndonos. No hay permanencia ni penalidad; el servicio sigue hasta el final del mes que ya pagaste."],
   ["¿Y si un mes no se pudo cobrar?",
