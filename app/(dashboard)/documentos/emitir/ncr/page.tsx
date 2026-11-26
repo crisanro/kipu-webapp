@@ -3,47 +3,26 @@
 // devuelven o rebajan. Con ?doc_id=… llega con la factura y sus ítems cargados.
 
 import { useState, useEffect, useMemo } from "react";
-import { r2 } from "@/lib/dinero";
 import { tipoIvaDesdeXml } from "@/lib/iva";
 import { useSearchParams } from "next/navigation";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
 import { useBorrador } from "@/lib/borradores";
-import { AlertTriangle, MessageSquareText } from "lucide-react";
+import { MessageSquareText } from "lucide-react";
 import ChipsFiltro from "@/components/ui/ChipsFiltro";
 import { Entrada } from "@/components/ui/Campo";
 import PuntoEmision from "../components/PuntoEmision";
 import PantallaResultado from "../components/PantallaResultado";
 import { usePuntoEmision } from "../components/usePuntoEmision";
 import CamposAdicionales, { CampoAdicional } from "../components/CamposAdicionales";
-import ItemsEditor, { Item, calcItem, genId, EMPTY_ITEM } from "../components/ItemsEditor";
+import ItemsEditor, { Item, calcItem, calcTotales, genId, EMPTY_ITEM } from "../components/ItemsEditor";
 import ResumenTotales from "../components/ResumenTotales";
-import DocOrigenSelector, { DocOrigen } from "../components/DocOrigenSelector";
+import DocOrigenSelector, {
+  DocOrigen, AvisoOrigenConsumidorFinal, docOrigenDeDocumento, esConsumidorFinal, numeroDocOrigen, payloadDocOrigen,
+} from "../components/DocOrigenSelector";
 import EmisionLayout from "../components/EmisionLayout";
 import { useEmision } from "../components/useEmision";
 import { tieneAccesoAEmitir } from "@/lib/emision";
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
-function calcTotales(items: Item[]) {
-  const base = items.reduce(
-    (acc, item) => {
-      const c = calcItem(item);
-      acc.subtotal    = r2(acc.subtotal + c.base);
-      acc.descuento   = r2(acc.descuento + c.descuento);
-      acc.iva         = r2(acc.iva + c.iva);
-      acc.subtotal_0  = r2(acc.subtotal_0  + (item.tipo_iva === "0"  ? c.base : 0));
-      acc.subtotal_no_objeto = r2(acc.subtotal_no_objeto + (item.tipo_iva === "NA" ? c.base : 0));
-      acc.subtotal_exento    = r2(acc.subtotal_exento    + (item.tipo_iva === "EX" ? c.base : 0));
-      acc.subtotal_5  = r2(acc.subtotal_5  + (item.tipo_iva === "5"  ? c.base : 0));
-      acc.subtotal_15 = r2(acc.subtotal_15 + (item.tipo_iva === "15" ? c.base : 0));
-      acc.iva_5       = r2(acc.iva_5  + (item.tipo_iva === "5"  ? c.iva : 0));
-      acc.iva_15      = r2(acc.iva_15 + (item.tipo_iva === "15" ? c.iva : 0));
-      return acc;
-    },
-    { subtotal: 0, descuento: 0, iva: 0, subtotal_0: 0, subtotal_no_objeto: 0, subtotal_exento: 0, subtotal_5: 0, subtotal_15: 0, iva_5: 0, iva_15: 0 }
-  );
-  return { ...base, propina: 0, total: r2(base.subtotal + base.iva) };
-}
 
 const MOTIVOS = [
   { valor: "DEVOLUCION DE BIEN",       etiqueta: "Devolución" },
@@ -67,12 +46,8 @@ export default function NuevaNcrPage() {
   // Doc origen
   const [docOrigen, setDocOrigen] = useState<DocOrigen>(null);
 
-  // Validación Consumidor Final
-  const esConsumidorFinal = docOrigen?.tipo === "kipu"
-    ? docOrigen.data.identificacion === "9999999999999"
-    : docOrigen?.tipo === "manual"
-    ? docOrigen.data.cliente?.identificacion === "9999999999999"
-    : false;
+  // El SRI no deja modificar comprobantes a Consumidor Final
+  const aConsumidorFinal = esConsumidorFinal(docOrigen);
 
   // Formulario
   const [motivo,              setMotivo]              = useState(MOTIVOS[0].valor);
@@ -81,7 +56,7 @@ export default function NuevaNcrPage() {
   const [camposAdicionales,   setCamposAdicionales]   = useState<CampoAdicional[]>([]);
 
   // Establecimiento y punto de emisión
-  const pe = usePuntoEmision(docOrigen?.tipo === "kipu" ? docOrigen.data.numero_doc : docOrigen?.tipo === "manual" ? docOrigen.data.numero : null);
+  const pe = usePuntoEmision(numeroDocOrigen(docOrigen));
   const { estabSelected, ptoSelected } = pe;
 
   const totales = calcTotales(items);
@@ -117,22 +92,7 @@ export default function NuevaNcrPage() {
       try {
         const res = await api.get(`/api/v1/app/documentos/${docId}`);
         const d   = res.data.data;
-        const info = d.datos?.infoFactura || d.datos?.infoLiquidacionCompra || {};
-
-        setDocOrigen({
-          tipo: "kipu",
-          data: {
-            id:             d.id,
-            numero_doc:     d.numero_doc,
-            tipo_doc:       d.tipo_doc || "FAC",
-            cod_doc:        d.cod_doc || "01",
-            fecha_emision:  d.fecha_emision,
-            importe_total:  d.importe_total,
-            razon_social:   info.razonSocialComprador || info.razonSocialProveedor || "",
-            identificacion: info.identificacionComprador || info.identificacionProveedor || "",
-            estado_sri:     d.estado_sri,
-          }
-        });
+        setDocOrigen(docOrigenDeDocumento(d));
 
         // Pre-llenar ítems desde la factura origen
         const detalles = d.datos?.detalles?.detalle ?? [];
@@ -170,7 +130,7 @@ export default function NuevaNcrPage() {
   const emitir = async () => {
     setError("");
 
-    if (esConsumidorFinal) {
+    if (aConsumidorFinal) {
       setError("Por normativa del SRI, no se pueden emitir notas de crédito para comprobantes a Consumidor Final.");
       return;
     }
@@ -198,16 +158,8 @@ export default function NuevaNcrPage() {
         };
       }),
       campos_adicionales: camposAdicionales.filter(c => c.nombre && c.valor),
+      ...payloadDocOrigen(docOrigen),
     };
-
-    if (docOrigen.tipo === "kipu") {
-      payload.doc_origen_id = docOrigen.data.id;
-    } else {
-      payload.doc_origen_numero  = docOrigen.data.numero;
-      payload.doc_origen_fecha   = docOrigen.data.fecha;
-      payload.doc_origen_cod_doc = docOrigen.data.cod_doc;
-      payload.cliente_origen     = docOrigen.data.cliente;
-    }
 
     const r = await em.enviar("/api/v1/app/documentos/emit/NCR", payload,
                               { tipo: "NCR", porDefecto: "Error al emitir la nota de crédito." });
@@ -222,16 +174,13 @@ export default function NuevaNcrPage() {
   return (
     <EmisionLayout
       titulo="Nueva nota de crédito"
-      subtitulo={<>{empresa?.razon_social} · {empresa?.ambiente === 2 ? "Producción" : "Pruebas"}</>}
+      puntoEmision={<PuntoEmision {...pe} />}
       tiposEmision={["NCR"]}
       borrador={borrador.pendiente && {
         hace: borrador.pendiente.hace, que: "una nota de crédito",
         onSeguir: seguirBorrador, onDescartar: borrador.descartar,
       }}
-      lateral={<>
-        <div className="hidden lg:block">
-          <PuntoEmision {...pe} />
-        </div>
+      lateral={
         <ResumenTotales
           serie={pe.serie}
           totales={totales}
@@ -244,21 +193,16 @@ export default function NuevaNcrPage() {
           onEmitir={emitir}
           conBarraFija
         />
-      </>}
+      }
       barra={{
         total:         totales.total,
         texto:         `Emitir${pe.serie ? ` desde ${pe.serie}` : ""}`,
         onEmitir:      emitir,
         enviando:      submitting,
-        deshabilitado: !puedeEmitir || esConsumidorFinal,
+        deshabilitado: !puedeEmitir || aConsumidorFinal,
         error,
       }}
     >
-      {/* Punto emisión — solo celular */}
-      <div className="lg:hidden">
-        <PuntoEmision {...pe} />
-      </div>
-
       <DocOrigenSelector
         tiposDoc="FAC"
         tabla="emitidos"
@@ -267,17 +211,7 @@ export default function NuevaNcrPage() {
         label="Factura a modificar"
       />
 
-      {esConsumidorFinal && (
-        <div className="flex items-start gap-3 rounded-xl border border-peligro/20 bg-peligro-suave px-4 py-3" role="alert">
-          <AlertTriangle size={16} className="mt-0.5 shrink-0 text-peligro" aria-hidden />
-          <div>
-            <p className="text-sm font-medium text-peligro-texto">No disponible para Consumidor Final</p>
-            <p className="mt-1 text-xs text-tenue">
-              Por normativa del SRI, los comprobantes emitidos a Consumidor Final no se modifican con notas de crédito ni de débito.
-            </p>
-          </div>
-        </div>
-      )}
+      {aConsumidorFinal && <AvisoOrigenConsumidorFinal />}
 
       {/* Motivo */}
       <section className="space-y-3 rounded-xl border border-borde bg-superficie p-4">

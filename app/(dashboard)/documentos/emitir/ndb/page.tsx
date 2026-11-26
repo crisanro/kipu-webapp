@@ -9,7 +9,7 @@ import { useSearchParams } from "next/navigation";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
 import { useBorrador } from "@/lib/borradores";
-import { AlertTriangle, Plus, Trash2, ReceiptText } from "lucide-react";
+import { Plus, Trash2, ReceiptText } from "lucide-react";
 import Boton from "@/components/ui/Boton";
 import BotonIcono from "@/components/ui/BotonIcono";
 import { Campo, Entrada, Selector } from "@/components/ui/Campo";
@@ -19,13 +19,14 @@ import { usePuntoEmision } from "../components/usePuntoEmision";
 import CamposAdicionales, { CampoAdicional } from "../components/CamposAdicionales";
 import EstadoCobro, { DatosCobro, cobroInicial } from "../components/EstadoCobro";
 import ResumenTotales from "../components/ResumenTotales";
-import DocOrigenSelector, { DocOrigen } from "../components/DocOrigenSelector";
+import DocOrigenSelector, {
+  DocOrigen, AvisoOrigenConsumidorFinal, docOrigenDeDocumento, esConsumidorFinal, numeroDocOrigen, payloadDocOrigen,
+} from "../components/DocOrigenSelector";
 import EmisionLayout from "../components/EmisionLayout";
 import { InputDecimal } from "../components/HojaItem";
+import { genId } from "../components/ItemsEditor";
 import { useEmision } from "../components/useEmision";
 import { tieneAccesoAEmitir } from "@/lib/emision";
-
-const genId = () => Math.random().toString(36).slice(2);
 
 const TARIFAS_IVA = [
   { value: "15", label: "15%", codPorcentaje: "4" },
@@ -101,11 +102,8 @@ export default function NuevaNdbPage() {
   // Doc origen
   const [docOrigen, setDocOrigen] = useState<DocOrigen>(null);
 
-  const esConsumidorFinal = docOrigen?.tipo === "kipu"
-    ? docOrigen.data.identificacion === "9999999999999"
-    : docOrigen?.tipo === "manual"
-    ? docOrigen.data.cliente?.identificacion === "9999999999999"
-    : false;
+  // El SRI no deja modificar comprobantes a Consumidor Final
+  const aConsumidorFinal = esConsumidorFinal(docOrigen);
 
   // Motivos (cargos) con su tarifa de IVA
   const [motivos, setMotivos] = useState<Motivo[]>(() => [motivoVacio()]);
@@ -117,7 +115,7 @@ export default function NuevaNdbPage() {
   const [cobro, setCobro] = useState<DatosCobro>(cobroInicial);
 
   // Establecimiento y punto de emisión
-  const pe = usePuntoEmision(docOrigen?.tipo === "kipu" ? docOrigen.data.numero_doc : docOrigen?.tipo === "manual" ? docOrigen.data.numero : null);
+  const pe = usePuntoEmision(numeroDocOrigen(docOrigen));
   const { estabSelected, ptoSelected } = pe;
 
   const totales = calcTotalesNdb(motivos);
@@ -145,25 +143,8 @@ export default function NuevaNdbPage() {
     if (!docId) return;
     const cargar = async () => {
       try {
-        const res  = await api.get(`/api/v1/app/documentos/${docId}`);
-        const d    = res.data.data;
-        const info = d.datos?.infoFactura || d.datos?.infoLiquidacionCompra || {};
-
-        setDocOrigen({
-          tipo: "kipu",
-          data: {
-            id:             d.id,
-            numero_doc:     d.numero_doc,
-            tipo_doc:       d.tipo_doc || "FAC",
-            cod_doc:        d.cod_doc || "01",
-            fecha_emision:  d.fecha_emision,
-            importe_total:  d.importe_total,
-            razon_social:   info.razonSocialComprador || info.razonSocialProveedor || "",
-            identificacion: info.identificacionComprador || info.identificacionProveedor || "",
-            estado_sri:     d.estado_sri,
-          }
-        });
-
+        const res = await api.get(`/api/v1/app/documentos/${docId}`);
+        setDocOrigen(docOrigenDeDocumento(res.data.data));
       } catch (e) { console.error(e); }
     };
     cargar();
@@ -193,7 +174,7 @@ export default function NuevaNdbPage() {
   const emitir = async () => {
     setError("");
 
-    if (esConsumidorFinal) {
+    if (aConsumidorFinal) {
       setError("Por normativa del SRI, no se pueden emitir notas de débito para comprobantes a Consumidor Final.");
       return;
     }
@@ -203,26 +184,21 @@ export default function NuevaNdbPage() {
     if (totales.total <= 0)             { setError("El valor total debe ser mayor a $0."); return; }
     if (!puedeEmitir) { setError("Se requiere suscripción activa o créditos API."); return; }
 
-    // Agrupar impuestos por tarifa para el payload
-    const impuestosPorTarifa: Record<string, { base: number; valor: number }> = {};
-    motivos.forEach(m => {
-      const tarifa = m.tipo_iva || "0";
-      if (!impuestosPorTarifa[tarifa]) impuestosPorTarifa[tarifa] = { base: 0, valor: 0 };
-      impuestosPorTarifa[tarifa].base  = r2(impuestosPorTarifa[tarifa].base + (m.valor || 0));
-    });
-    // El backend recalcula el IVA sobre la base de cada tarifa; aquí igual
-    Object.entries(impuestosPorTarifa).forEach(([tarifa, d]) => { d.valor = r2(d.base * parseFloat(tarifa) / 100); });
-
-    const impuestos = Object.entries(impuestosPorTarifa).map(([tarifa, datos]) => {
-      const tarifaInfo = TARIFAS_IVA.find(t => t.value === tarifa) || TARIFAS_IVA[2];
-      return {
-        codigo:           "2",
-        codigoPorcentaje: tarifaInfo.codPorcentaje,
-        tarifa:           tarifa,
-        baseImponible:    datos.base,
-        valor:            datos.valor,
-      };
-    });
+    // Un impuesto por cada tarifa usada, con la base y el IVA ya agrupados en totales
+    const porTarifa: Record<string, { base: number; valor: number }> = {
+      "15": { base: totales.subtotal_15, valor: totales.iva_15 },
+      "5":  { base: totales.subtotal_5,  valor: totales.iva_5  },
+      "0":  { base: totales.subtotal_0,  valor: 0 },
+    };
+    const tarifasUsadas = [...new Set(motivos.map(m => m.tipo_iva === "15" || m.tipo_iva === "5" ? m.tipo_iva : "0"))]
+      .sort((a, b) => Number(a) - Number(b));
+    const impuestos = tarifasUsadas.map(tarifa => ({
+      codigo:           "2",
+      codigoPorcentaje: TARIFAS_IVA.find(t => t.value === tarifa)!.codPorcentaje,
+      tarifa,
+      baseImponible:    porTarifa[tarifa].base,
+      valor:            porTarifa[tarifa].valor,
+    }));
 
     const payload: Record<string, unknown> = {
       establecimiento:    estabSelected,
@@ -238,16 +214,8 @@ export default function NuevaNdbPage() {
       numero_comprobante_pago: cobro.estado === "PAGADO" && cobro.referencia.trim()
                                  ? cobro.referencia.trim()
                                  : null,
+      ...payloadDocOrigen(docOrigen),
     };
-
-    if (docOrigen.tipo === "kipu") {
-      payload.doc_origen_id = docOrigen.data.id;
-    } else {
-      payload.doc_origen_numero  = docOrigen.data.numero;
-      payload.doc_origen_fecha   = docOrigen.data.fecha;
-      payload.doc_origen_cod_doc = docOrigen.data.cod_doc;
-      payload.cliente_origen     = docOrigen.data.cliente;
-    }
 
     const r = await em.enviar("/api/v1/app/documentos/emit/NDB", payload,
                               { tipo: "NDB", porDefecto: "Error al emitir la nota de débito." });
@@ -261,16 +229,13 @@ export default function NuevaNdbPage() {
   return (
     <EmisionLayout
       titulo="Nueva nota de débito"
-      subtitulo={<>{empresa?.razon_social} · {empresa?.ambiente === 2 ? "Producción" : "Pruebas"}</>}
+      puntoEmision={<PuntoEmision {...pe} />}
       tiposEmision={["NDB"]}
       borrador={borrador.pendiente && {
         hace: borrador.pendiente.hace, que: "una nota de débito",
         onSeguir: seguirBorrador, onDescartar: borrador.descartar,
       }}
-      lateral={<>
-        <div className="hidden lg:block">
-          <PuntoEmision {...pe} />
-        </div>
+      lateral={
         <ResumenTotales
           serie={pe.serie}
           totales={totales}
@@ -283,20 +248,16 @@ export default function NuevaNdbPage() {
           onEmitir={emitir}
           conBarraFija
         />
-      </>}
+      }
       barra={{
         total:         totales.total,
         texto:         `Emitir${pe.serie ? ` desde ${pe.serie}` : ""}`,
         onEmitir:      emitir,
         enviando:      submitting,
-        deshabilitado: !puedeEmitir || esConsumidorFinal,
+        deshabilitado: !puedeEmitir || aConsumidorFinal,
         error,
       }}
     >
-      <div className="lg:hidden">
-        <PuntoEmision {...pe} />
-      </div>
-
       <DocOrigenSelector
         tiposDoc="FAC"
         tabla="emitidos"
@@ -305,17 +266,7 @@ export default function NuevaNdbPage() {
         label="Factura a modificar"
       />
 
-      {esConsumidorFinal && (
-        <div className="flex items-start gap-3 rounded-xl border border-peligro/20 bg-peligro-suave px-4 py-3" role="alert">
-          <AlertTriangle size={16} className="mt-0.5 shrink-0 text-peligro" aria-hidden />
-          <div>
-            <p className="text-sm font-medium text-peligro-texto">No disponible para Consumidor Final</p>
-            <p className="mt-1 text-xs text-tenue">
-              Por normativa del SRI, los comprobantes emitidos a Consumidor Final no se modifican con notas de crédito ni de débito.
-            </p>
-          </div>
-        </div>
-      )}
+      {aConsumidorFinal && <AvisoOrigenConsumidorFinal />}
 
       {/* Motivos (cargos) */}
       <section className="space-y-3 rounded-xl border border-borde bg-superficie p-4">

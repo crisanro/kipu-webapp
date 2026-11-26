@@ -2,7 +2,7 @@
 
 import { useRef, useCallback, useState, useEffect, lazy, Suspense } from "react";
 import { etiquetaIva, opcionesIva } from "@/lib/iva";
-import { dosDecimales } from "@/lib/dinero";
+import { dosDecimales, r2 } from "@/lib/dinero";
 import {
   calcularLinea, aplicarIvaIncluido, conIvaIncluido, sinIvaIncluido,
   totalEsperadoConIva, tarifaPct,
@@ -54,6 +54,29 @@ interface Props {
 /** Subtotal, descuento (en dólares sin IVA), base, IVA y total de la línea. */
 export function calcItem(item: Item) {
   return calcularLinea(item);
+}
+
+/** Totales del comprobante por tarifa (factura, liquidación, nota de crédito). Propina: 10 % del subtotal. */
+export function calcTotales(items: Item[], incluirPropina = false) {
+  const base = items.reduce(
+    (acc, item) => {
+      const c = calcItem(item);
+      acc.subtotal    = r2(acc.subtotal + c.base);
+      acc.descuento   = r2(acc.descuento + c.descuento);
+      acc.iva         = r2(acc.iva + c.iva);
+      acc.subtotal_0  = r2(acc.subtotal_0  + (item.tipo_iva === "0"  ? c.base : 0));
+      acc.subtotal_no_objeto = r2(acc.subtotal_no_objeto + (item.tipo_iva === "NA" ? c.base : 0));
+      acc.subtotal_exento    = r2(acc.subtotal_exento    + (item.tipo_iva === "EX" ? c.base : 0));
+      acc.subtotal_5  = r2(acc.subtotal_5  + (item.tipo_iva === "5"  ? c.base : 0));
+      acc.subtotal_15 = r2(acc.subtotal_15 + (item.tipo_iva === "15" ? c.base : 0));
+      acc.iva_5       = r2(acc.iva_5  + (item.tipo_iva === "5"  ? c.iva : 0));
+      acc.iva_15      = r2(acc.iva_15 + (item.tipo_iva === "15" ? c.iva : 0));
+      return acc;
+    },
+    { subtotal: 0, descuento: 0, iva: 0, subtotal_0: 0, subtotal_no_objeto: 0, subtotal_exento: 0, subtotal_5: 0, subtotal_15: 0, iva_5: 0, iva_15: 0 }
+  );
+  const propina = incluirPropina ? r2(base.subtotal * 0.10) : 0;
+  return { ...base, propina, total: r2(base.subtotal + base.iva + propina) };
 }
 
 // Preferencia de la persona: "Sumar IVA" o "IVA incluido" (vale para todos los comprobantes)

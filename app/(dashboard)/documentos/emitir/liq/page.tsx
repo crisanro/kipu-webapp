@@ -12,7 +12,7 @@ import PuntoEmision from "../components/PuntoEmision";
 import PantallaResultado from "../components/PantallaResultado";
 import { usePuntoEmision } from "../components/usePuntoEmision";
 import ClienteSelector from "../components/ClienteSelector";
-import ItemsEditor, { Item, calcItem, genId, EMPTY_ITEM } from "../components/ItemsEditor";
+import ItemsEditor, { Item, calcItem, calcTotales, genId, EMPTY_ITEM } from "../components/ItemsEditor";
 import PagosMixtos, { PagoItem, PAGO_INICIAL } from "../components/PagosMixtos";
 import CamposAdicionales, { CampoAdicional } from "../components/CamposAdicionales";
 import ResumenTotales from "../components/ResumenTotales";
@@ -20,27 +20,6 @@ import EmisionLayout from "../components/EmisionLayout";
 import { useEmision } from "../components/useEmision";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-function calcTotales(items: Item[]) {
-  const base = items.reduce(
-    (acc, item) => {
-      const c = calcItem(item);
-      acc.subtotal    = r2(acc.subtotal + c.base);
-      acc.descuento   = r2(acc.descuento + c.descuento);
-      acc.iva         = r2(acc.iva + c.iva);
-      acc.subtotal_0  = r2(acc.subtotal_0  + (item.tipo_iva === "0"  ? c.base : 0));
-      acc.subtotal_no_objeto = r2(acc.subtotal_no_objeto + (item.tipo_iva === "NA" ? c.base : 0));
-      acc.subtotal_exento    = r2(acc.subtotal_exento    + (item.tipo_iva === "EX" ? c.base : 0));
-      acc.subtotal_5  = r2(acc.subtotal_5  + (item.tipo_iva === "5"  ? c.base : 0));
-      acc.subtotal_15 = r2(acc.subtotal_15 + (item.tipo_iva === "15" ? c.base : 0));
-      acc.iva_5       = r2(acc.iva_5  + (item.tipo_iva === "5"  ? c.iva : 0));
-      acc.iva_15      = r2(acc.iva_15 + (item.tipo_iva === "15" ? c.iva : 0));
-      return acc;
-    },
-    { subtotal: 0, descuento: 0, iva: 0, subtotal_0: 0, subtotal_no_objeto: 0, subtotal_exento: 0, subtotal_5: 0, subtotal_15: 0, iva_5: 0, iva_15: 0 }
-  );
-  return { ...base, propina: 0, total: r2(base.subtotal + base.iva) };
-}
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 interface Proveedor {
@@ -197,7 +176,6 @@ export default function NuevaLiqPage() {
   return (
     <EmisionLayout
       titulo="Nueva liquidación de compra"
-      subtitulo={<>{empresa?.razon_social} · {empresa?.ambiente === 2 ? "Producción" : "Pruebas"}</>}
       tiposEmision={["LIQ"]}
       borrador={borrador.pendiente && {
         hace: borrador.pendiente.hace, que: "una liquidación de compra",

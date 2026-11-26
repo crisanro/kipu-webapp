@@ -776,7 +776,6 @@ export default function NuevaRetPage() {
   return (
     <EmisionLayout
       titulo="Nueva retención"
-      subtitulo={<>{empresa?.razon_social} · {empresa?.ambiente === 2 ? "Producción" : "Pruebas"}</>}
       tiposEmision={["RET"]}
       borrador={borrador.pendiente && {
         hace: borrador.pendiente.hace, que: "una retención",
