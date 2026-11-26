@@ -1,11 +1,10 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { rutas } from "@/lib/rutas";
 import Link from "next/link";
-import { useLista, useFiltrosUrl } from "@/lib/useLista";
+import { useLista, useFiltrosUrl, useBusquedaUrl } from "@/lib/useLista";
 import { SegmentosDocumentos } from "@/components/shell/BarraPestanas";
-import { hoyEC, inicioMesEC } from "@/lib/fecha";
 import { usePermiso } from "@/hooks/usePermiso";
 import SinAcceso from "@/components/SinAcceso";
 import { useAuthStore } from "@/store/auth.store";
@@ -13,11 +12,12 @@ import { demoRecibidos, resumenRecibidos } from "@/lib/demos";
 import { BannerEjemplo, EtiquetaEjemplo } from "@/components/EjemploPro";
 import { ES_APP_NATIVA } from "@/lib/plataforma";
 import {
-  Plus, FileText, RefreshCw, Search,
+  Plus, FileText, Search,
   ChevronDown, ChevronUp, TrendingUp, ArrowUpRight,
-  Receipt, ExternalLink, ChevronLeft, ChevronRight,
-  AlertTriangle, CreditCard
+  Receipt, ExternalLink, AlertTriangle, CreditCard,
 } from "lucide-react";
+import Paginacion, { type InfoPaginacion } from "@/components/ui/Paginacion";
+import { AvisoRango, AyudaAtajos, BotonActualizar, enPanel, useNavegacionLista, usePeriodo } from "../_comun";
 import FilaLista, { GrupoFilas } from "@/components/ui/FilaLista";
 import { InsigniaEstado, InsigniaPago } from "@/components/ui/InsigniaEstado";
 import { EsqueletoFilas } from "@/components/ui/Esqueleto";
@@ -30,12 +30,8 @@ import Boton from "@/components/ui/Boton";
 import { tipoComprobante } from "@/lib/estados";
 import PanelDetalle from "@/components/ui/PanelDetalle";
 import { cn } from "@/components/ui/cn";
-import { useAtajos } from "@/lib/useAtajos";
 import DetalleRecibido from "./ver/components/DetalleRecibido";
 import { dosDecimales } from "@/lib/dinero";
-
-// Lista y detalle lado a lado desde este ancho (components/ui/PanelDetalle.tsx)
-const ANCHO_PANEL = "(min-width: 1280px)";
 
 // ── Tipos ──────────────────────────────────────────────────────────────────────
 interface DocRecibido {
@@ -68,15 +64,6 @@ interface Resumen {
   retenciones?:   { cantidad: number; total: number; iva: number; renta: number; otros: number };
 }
 
-interface PaginationInfo {
-  page:        number;
-  limit:       number;
-  total_items: number;
-  total_pages: number;
-  has_next:    boolean;
-  has_prev:    boolean;
-}
-
 const UMBRAL_BANCARIZACION = 500.00;
 
 const TIPO_COLOR: Record<string, { color: string; bg: string }> = {
@@ -93,20 +80,6 @@ const FUENTE_COLOR: Record<string, { color: string; bg: string }> = {
   FISICO: { color: "var(--kipu-warning)", bg: "color-mix(in srgb, var(--kipu-warning) 10%, transparent)" },
   API:    { color: "#22d3ee", bg: "color-mix(in srgb, #22d3ee 10%, transparent)" },
 };
-
-// ── Storage helpers ────────────────────────────────────────────────────────────
-const SS_KEY_INICIO = "kipu_recibidos_fecha_inicio";
-const SS_KEY_FIN    = "kipu_recibidos_fecha_fin";
-
-// Sin fechas guardadas en la sesión: el mes en curso (solo hoy casi siempre salía vacío)
-function leerFecha(key: string, porDefecto: string): string {
-  try { return sessionStorage.getItem(key) || porDefecto; }
-  catch { return porDefecto; }
-}
-
-function guardarFecha(key: string, val: string) {
-  try { sessionStorage.setItem(key, val); } catch {}
-}
 
 // ── Componente Insignia de Bancarización ────────────────────────────────────────
 function BadgeBancarizacion({ doc }: { doc: DocRecibido }) {
@@ -294,13 +267,6 @@ function DocExpandido({ doc, onVerDetalle }: { doc: DocRecibido; onVerDetalle: (
 export default function FacturasRecibidasPage() {
   const puedeVer = usePermiso("documentos_recibidos");
   const router = useRouter();
-  const searchParams = useSearchParams();
-
-  // Período: el de la URL (?fecha_inicio=), el de la sesión o el mes en curso
-  const [fechaInicio, setFechaInicio] = useState<string>(() =>
-    searchParams.get("fecha_inicio") || leerFecha(SS_KEY_INICIO, inicioMesEC()));
-  const [fechaFin, setFechaFin] = useState<string>(() =>
-    searchParams.get("fecha_fin") || leerFecha(SS_KEY_FIN, hoyEC()));
 
   // Búsqueda y página en la URL: al volver de un comprobante la lista queda igual
   // sel: la compra abierta en el panel de la derecha (compu, 1280 px o más)
@@ -308,84 +274,43 @@ export default function FacturasRecibidasPage() {
   const queryActivo = filtros.q;
   const page        = Math.max(1, Number(filtros.page) || 1);
   const irAPagina   = (n: number) => cambiarFiltros({ page: String(n) });
-  const [query, setQuery]             = useState(filtros.q);   // lo que se escribe (se busca 400 ms después)
-  const debounceRef                   = useRef<NodeJS.Timeout | null>(null);
+  const [query, cambiarQuery] = useBusquedaUrl("q", { page: "" });   // se busca 400 ms después
+  const periodo = usePeriodo("recibidos", () => irAPagina(1));
 
   // Con Plan Pro, o con el plan gratis encendido (importar recibidas es para todos)
   const tieneSub = useAuthStore((s) => !!(s.empresa?.suscripcion_activa || s.empresa?.emision_gratis));
   const [expandido, setExpandido]     = useState<string | null>(null);
   const [resumenOpen, setResumenOpen] = useState(false);
 
-  const diasRango = fechaInicio && fechaFin
-    ? Math.ceil((new Date(fechaFin).getTime() - new Date(fechaInicio).getTime()) / (1000 * 60 * 60 * 24))
-    : 0;
-
-  const handleQueryChange = (val: string) => {
-    setQuery(val);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => cambiarFiltros({ q: val.trim(), page: "1" }), 400);
-  };
-  useEffect(() => () => { if (debounceRef.current) clearTimeout(debounceRef.current); }, []);
-
   // Lista paginada (25) con su resumen: con caché, al volver aparece al instante
   // y se actualiza por detrás (lib/useLista.ts)
   const params = new URLSearchParams();
-  if (fechaInicio) params.append("fecha_inicio", fechaInicio);
-  if (fechaFin)    params.append("fecha_fin",    fechaFin);
-  if (queryActivo) params.append("q",            queryActivo);
+  if (periodo.inicio) params.append("fecha_inicio", periodo.inicio);
+  if (periodo.fin)    params.append("fecha_fin",    periodo.fin);
+  if (queryActivo)    params.append("q",            queryActivo);
   params.append("page", String(page));
   params.append("limit", "25");
-  const lista = useLista<{ data?: DocRecibido[]; resumen?: Resumen | null; pagination?: PaginationInfo | null }>(
-    diasRango <= 365 ? `/api/v1/app/recibidos?${params}` : null);
+  const lista = useLista<{ data?: DocRecibido[]; resumen?: Resumen | null; pagination?: InfoPaginacion | null }>(
+    periodo.valido ? `/api/v1/app/recibidos?${params}` : null);
   const docs       = lista.datos?.data ?? [];
   const resumen    = lista.datos?.resumen ?? null;
   const pagination = lista.datos?.pagination ?? null;
   const loading    = lista.cargando;
 
-  // Nuevo período (PeriodoFechas): se recuerda en la sesión y vuelve a la página 1
-  const cambiarPeriodo = (inicio: string, fin: string) => {
-    guardarFecha(SS_KEY_INICIO, inicio);
-    guardarFecha(SS_KEY_FIN, fin);
-    setFechaInicio(inicio);
-    setFechaFin(fin);
-    irAPagina(1);
-  };
   const irARegistrar = () => router.push("/documentos/recibidos/nueva");
 
   // ── Compu: panel de detalle y atajos de teclado ──────────────────────────────
   // (con los ejemplos del plan no hay panel ni atajos: docs viene vacío)
   const sel = filtros.sel;
-  const buscadorRef = useRef<HTMLInputElement>(null);
-  const filasRef    = useRef<Map<string, HTMLDivElement>>(new Map());
-  const [marcada, setMarcada] = useState(-1);   // fila marcada con j/k (-1: ninguna)
-  const enPanel = () => window.matchMedia(ANCHO_PANEL).matches;
-
-  const mover = (paso: number) => {
-    if (docs.length === 0) return;
-    const actual = marcada >= 0 ? marcada : docs.findIndex(d => d.id === sel);
-    const nueva  = Math.min(docs.length - 1, Math.max(0, actual + paso));
-    setMarcada(nueva);
-    const doc = docs[nueva];
-    filasRef.current.get(doc.id)?.scrollIntoView({ block: "nearest" });
-    // Con el panel abierto, el detalle sigue a la fila marcada
-    if (sel && enPanel()) cambiarFiltros({ sel: doc.id });
-  };
-  useAtajos({
-    "/":         () => buscadorRef.current?.focus(),
-    "n":         irARegistrar,
-    "j":         () => mover(1),  "ArrowDown": () => mover(1),
-    "k":         () => mover(-1), "ArrowUp":   () => mover(-1),
-    "Enter":     () => {
-      const d = docs[marcada];
-      if (!d) return;
-      if (enPanel()) cambiarFiltros({ sel: d.id }); else router.push(rutas.recibido(d.id));
-    },
-    "Escape":    () => {
-      if (sel) cambiarFiltros({ sel: "" });
-      else if (expandido) setExpandido(null);
-      else setMarcada(-1);
-    },
-  }, true, { n: "Registrar compra" });
+  const { buscadorRef, marcada, setMarcada, refFila } = useNavegacionLista({
+    ids:        docs.map(d => d.id),
+    sel,
+    cambiarSel: (id) => cambiarFiltros({ sel: id }),
+    rutaDe:     rutas.recibido,
+    nuevo:      irARegistrar,
+    textoNuevo: "Registrar compra",
+    alEscapar:  () => { if (!expandido) return false; setExpandido(null); return true; },
+  });
 
   if (!puedeVer) return <SinAcceso />;
 
@@ -407,35 +332,23 @@ export default function FacturasRecibidasPage() {
           <h1 className="text-xl font-bold text-texto">Documentos recibidos</h1>
           <p className="text-sm text-sutil">{resumenV ? `${resumenV.total_documentos} en el período` : "—"}</p>
         </div>
-        <PeriodoFechas inicio={fechaInicio} fin={fechaFin} onCambio={cambiarPeriodo} className="mr-auto lg:mr-0" />
-        <button
-          onClick={() => void lista.recargar()}
-          disabled={diasRango > 365}
-          aria-label="Actualizar"
-          title="Actualizar"
-          className="inline-flex size-9 items-center justify-center rounded-full border border-borde bg-superficie text-tenue transition-colors hover:text-texto disabled:opacity-40 tactil:size-10"
-        >
-          {/* Gira mientras se actualiza por detrás (la lista guardada sigue a la vista) */}
-          <RefreshCw size={16} className={lista.actualizando ? "animate-spin" : undefined} />
-        </button>
+        <PeriodoFechas inicio={periodo.inicio} fin={periodo.fin} onCambio={periodo.cambiar} className="mr-auto lg:mr-0" />
+        <BotonActualizar onClick={() => void lista.recargar()} deshabilitado={!periodo.valido}
+                         girando={lista.actualizando} />
         <Boton onClick={irARegistrar} icono={<Plus size={16} />} className="hidden lg:inline-flex">Registrar</Boton>
       </div>
 
       <Entrada
         teclado="buscar"
         value={query}
-        onChange={e => handleQueryChange(e.target.value)}
+        onChange={e => cambiarQuery(e.target.value)}
         placeholder="Buscar por proveedor o número…"
         aria-label="Buscar compras"
         prefijo={<Search size={16} />}
         ref={buscadorRef}
       />
 
-      {diasRango > 365 && (
-        <p className="text-xs font-medium text-alerta-texto">
-          El rango máximo de consulta es de 365 días (1 año).
-        </p>
-      )}
+      <AvisoRango valido={periodo.valido} />
 
       {esDemo && (
         <BannerEjemplo
@@ -460,7 +373,7 @@ export default function FacturasRecibidasPage() {
             <div className="flex items-center gap-2">
               <TrendingUp size={15} style={{ color: "var(--kipu-success)" }} />
               <span className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>Resumen fiscal</span>
-              <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>{fechaInicio} → {fechaFin}</span>
+              <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>{periodo.inicio} → {periodo.fin}</span>
             </div>
             <div className="flex items-center gap-4">
               <span className="text-xs hidden sm:block" style={{ color: "var(--kipu-muted)" }}>
@@ -617,7 +530,7 @@ export default function FacturasRecibidasPage() {
               return (
                 <div
                   key={doc.id}
-                  ref={el => { if (el) filasRef.current.set(doc.id, el); else filasRef.current.delete(doc.id); }}
+                  ref={refFila(doc.id)}
                   style={{
                     borderTop: index > 0 ? "1px solid var(--kipu-border)" : "none",
                   }}
@@ -714,59 +627,8 @@ export default function FacturasRecibidasPage() {
       {/* Celular: registrar una compra (el + de la barra es para emitir) */}
       {!esDemo && <BotonFlotante onClick={irARegistrar} etiqueta="Registrar compra" />}
 
-      {/* Controles de Paginación */}
-      {pagination && pagination.total_pages > 1 && (
-        <div
-          className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 rounded-xl"
-          style={{
-            background: "var(--kipu-surface)",
-            border: "1px solid var(--kipu-border)",
-          }}
-        >
-          <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
-            Mostrando <span className="font-semibold" style={{ color: "var(--kipu-text)" }}>{docs.length}</span> de{" "}
-            <span className="font-semibold" style={{ color: "var(--kipu-text)" }}>{pagination.total_items}</span> comprobantes
-          </p>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => irAPagina(Math.max(page - 1, 1))}
-              disabled={!pagination.has_prev || loading}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors disabled:opacity-40"
-              style={{
-                background: "var(--kipu-surface)",
-                border: "1px solid var(--kipu-border)",
-                color: "var(--kipu-text)",
-              }}
-            >
-              <ChevronLeft size={14} /> Anterior
-            </button>
-            <span className="text-xs font-medium px-2" style={{ color: "var(--kipu-subtle)" }}>
-              Página {pagination.page} de {pagination.total_pages}
-            </span>
-            <button
-              type="button"
-              onClick={() => irAPagina(Math.min(page + 1, pagination.total_pages))}
-              disabled={!pagination.has_next || loading}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors disabled:opacity-40"
-              style={{
-                background: "var(--kipu-surface)",
-                border: "1px solid var(--kipu-border)",
-                color: "var(--kipu-text)",
-              }}
-            >
-              Siguiente <ChevronRight size={14} />
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Compu con mouse: los atajos, a la vista */}
-      <p className="hidden text-center text-[11px] text-sutil raton:lg:block">
-        Atajos: <kbd className="font-mono">/</kbd> buscar · <kbd className="font-mono">n</kbd> registrar compra ·{" "}
-        <kbd className="font-mono">j</kbd> <kbd className="font-mono">k</kbd> moverse · <kbd className="font-mono">Enter</kbd> abrir ·{" "}
-        <kbd className="font-mono">Esc</kbd> cerrar
-      </p>
+      <Paginacion info={pagination} enPantalla={docs.length} cargando={loading} onCambio={irAPagina} />
+      <AyudaAtajos nuevo="registrar compra" />
     </div>
 
     {/* Compu (1280 px o más): la compra elegida, a la derecha */}
