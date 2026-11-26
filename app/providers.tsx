@@ -9,6 +9,7 @@ import { useAuthStore } from "@/store/auth.store";
 import { SWRProvider } from "@/lib/swrConfig";
 import api from "@/lib/api";
 import { aEmpresa } from "@/lib/empresa";
+import { SESSION_EMPRESA_KEY } from "@/lib/cuenta";
 import { olvidarDispositivoLocal } from "@/lib/notifications";
 import { guardarVolver } from "@/lib/volver";
 import { ProveedorAvisos } from "@/components/ui/Avisos";
@@ -38,9 +39,6 @@ const esRutaSinEmpresa = (path: string) =>
   RUTAS_SIN_EMPRESA.some((r) => path === r || path.startsWith(r + "/"));
 
 const LS_KEYS = ["kipu-ext-token", "kipu-ext-emisor", "kipu-ext-ruc", "kipu-ext-razon"];
-
-// Empresa elegida en esta pestaña (sobrevive recargas, no nuevos logins)
-export const SESSION_EMPRESA_KEY = "kipu-empresa-sesion";
 
 function limpiarStorage() {
   LS_KEYS.forEach((k) => localStorage.removeItem(k));

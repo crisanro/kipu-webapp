@@ -5,6 +5,7 @@
 // afecta (subir o borrar la firma) hay que volver a leerla del servidor.
 import api from "@/lib/api";
 import { useAuthStore, type Empresa } from "@/store/auth.store";
+import { SESSION_EMPRESA_KEY } from "@/lib/cuenta";
 
 /** Fila de /usuarios/empresas → empresa del store. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -41,4 +42,22 @@ export async function refrescarEmpresaActual(): Promise<void> {
   } catch {
     // Sin red: se queda lo que había; la próxima carga lo corrige
   }
+}
+
+/**
+ * Cambia a otra empresa del usuario recargando la página: providers.tsx abre la
+ * empresa que queda escrita en sessionStorage (y la extensión lee kipu-ext-*).
+ * Lo demás de la pestaña se borra: era de la empresa anterior.
+ */
+export function abrirEmpresa(e: { id: number; ruc: string; razon_social: string }, ruta: string,
+                             { reemplazar = false }: { reemplazar?: boolean } = {}): void {
+  try {
+    localStorage.setItem("kipu-ext-emisor", String(e.id));
+    localStorage.setItem("kipu-ext-ruc", e.ruc);
+    localStorage.setItem("kipu-ext-razon", e.razon_social);
+    sessionStorage.clear();
+    sessionStorage.setItem(SESSION_EMPRESA_KEY, String(e.id));   // después del clear
+  } catch {}
+  if (reemplazar) window.location.replace(ruta);
+  else window.location.href = ruta;
 }

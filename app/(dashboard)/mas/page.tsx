@@ -16,7 +16,7 @@ import { EVENTO_CERRAR_SESION, EVENTO_SELECTOR_EMPRESA } from "@/components/shel
 import { useEsCliente } from "@/components/ui/Hoja";
 import { cn } from "@/components/ui/cn";
 import Interruptor from "@/components/ui/Interruptor";
-import { ES_APP_NATIVA, esRutaSoloWeb, rutaFueraDelPlan } from "@/lib/plataforma";
+import { ES_APP_NATIVA, esRutaSoloWeb, nombrePlan, rutaFueraDelPlan } from "@/lib/plataforma";
 import { useAuthStore } from "@/store/auth.store";
 import { useSandboxStore } from "@/store/sandbox.store";
 
@@ -95,11 +95,7 @@ export default function MasPage() {
     !(ES_APP_NATIVA && esRutaSoloWeb(i.href));
 
   const planGratis = !empresa.suscripcion_activa && !!empresa.emision_gratis;
-  // En la app no se nombra el Pro ni se marca "Gratis" (las tiendas no permiten
-  // invitar a comprar fuera de ellas). Al Día sí: es el servicio de un contador.
-  const plan = !empresa.suscripcion_activa ? (ES_APP_NATIVA ? null : "Gratis")
-    : empresa.suscripcion?.plan === "AL_DIA" ? "Kipu Al Día"
-    : ES_APP_NATIVA ? "Plan activo" : "Kipu Pro";
+  const plan = nombrePlan(empresa);   // en la app, sin "Gratis" ni "Kipu Pro"
   const firmaOk = empresa.firma_ok ?? false;
   const puedeProduccion = firmaOk && empresa.ambiente === 2;
 

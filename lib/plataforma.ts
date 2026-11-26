@@ -15,8 +15,11 @@ export const ES_APP_NATIVA = process.env.NEXT_PUBLIC_PLATAFORMA === "native";
 /** Pantallas que la app no tiene (sus páginas son `page.web.tsx`). */
 export const RUTAS_SOLO_WEB = ["/planes", "/renta", "/admin", "/equipo", "/api-keys", "/blog"];
 
-export const esRutaSoloWeb = (ruta: string) =>
-  RUTAS_SOLO_WEB.some((r) => ruta === r || ruta.startsWith(r + "/") || ruta.startsWith(r + "?") || ruta.startsWith(r + "#"));
+/** La ruta es `r` o algo dentro de ella (/planes, /planes/exitoso, /planes?tab=…, /planes#…). */
+const empiezaCon = (ruta: string, r: string) =>
+  ruta === r || ruta.startsWith(r + "/") || ruta.startsWith(r + "?") || ruta.startsWith(r + "#");
+
+export const esRutaSoloWeb = (ruta: string) => RUTAS_SOLO_WEB.some((r) => empiezaCon(ruta, r));
 
 // ── Lo que incluye el plan, en la app ─────────────────────────────────────────
 // En la web, lo que el plan no incluye se muestra con datos de ejemplo para
@@ -35,9 +38,6 @@ const RUTAS_CON_SUSCRIPCION = [
 /** Con suscripción o con el plan gratis (emision_gratis): en Reportes, solo el IVA. */
 const RUTAS_CON_PLAN = ["/documentos/recibidos", "/reportes"];
 
-const empiezaCon = (ruta: string, r: string) =>
-  ruta === r || ruta.startsWith(r + "/") || ruta.startsWith(r + "?") || ruta.startsWith(r + "#");
-
 /** true: en la app esta ruta no se muestra ni se puede abrir con este plan. */
 export function rutaFueraDelPlan(ruta: string, empresa: EmpresaPlan): boolean {
   if (!ES_APP_NATIVA || !empresa) return false;
@@ -45,6 +45,17 @@ export function rutaFueraDelPlan(ruta: string, empresa: EmpresaPlan): boolean {
   if (RUTAS_CON_SUSCRIPCION.some((r) => empiezaCon(ruta, r))) return true;
   if (RUTAS_CON_PLAN.some((r) => empiezaCon(ruta, r))) return !empresa.emision_gratis;
   return false;
+}
+
+/**
+ * Nombre del plan para mostrar (menú lateral y Más). En la app no se nombra
+ * Kipu Pro ni se marca "Gratis": las tiendas no permiten invitar a comprar fuera
+ * de ellas. Al Día sí, es el servicio de un contador. null: no mostrar nombre.
+ */
+export function nombrePlan(empresa: { suscripcion_activa?: boolean | null; suscripcion?: { plan?: string | null } | null }): string | null {
+  if (!empresa.suscripcion_activa) return ES_APP_NATIVA ? null : "Gratis";
+  if (empresa.suscripcion?.plan === "AL_DIA") return "Kipu Al Día";
+  return ES_APP_NATIVA ? "Plan activo" : "Kipu Pro";
 }
 
 // ── Mensajes del backend, en la app ───────────────────────────────────────────

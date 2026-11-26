@@ -46,10 +46,6 @@ export function planDeSoporte(empresa: Pick<Empresa, "suscripcion_activa" | "sus
   return empresa.suscripcion?.plan === "AL_DIA" ? "AL_DIA" : "PRO";
 }
 
-/** ¿Puede escribir al soporte por WhatsApp? Solo Pro y Al Día. */
-export const tieneSoporte = (empresa: Parameters<typeof planDeSoporte>[0]) =>
-  planDeSoporte(empresa) !== "GRATIS";
-
 /** Enlace de WhatsApp con el mensaje prellenado: RUC, empresa, plan y correo. */
 export function enlaceWhatsApp(
   empresa: Pick<Empresa, "ruc" | "razon_social" | "suscripcion_activa" | "suscripcion"> | null | undefined,

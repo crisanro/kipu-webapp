@@ -9,7 +9,6 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { signOut } from "firebase/auth";
 import { AlertTriangle, Building2, Download, Loader2, LogOut, Trash2, UserCheck } from "lucide-react";
 import api from "@/lib/api";
 import { guardarYCompartir } from "@/lib/nativo";
@@ -19,6 +18,7 @@ import { ES_APP_NATIVA } from "@/lib/plataforma";
 import { CUENTA_ELIMINADA } from "@/lib/cuenta";
 import PinInput from "@/components/PinInput";
 import { detalleError } from "@/lib/errores";
+import { cerrarSesion } from "@/lib/notifications";
 
 type Accion = "SALIR" | "TRANSFERIR" | "ELIMINAR";
 
@@ -61,7 +61,6 @@ async function conDetalle(err: unknown): Promise<never> {
 export default function EliminarCuenta({ onCancelar }: { onCancelar?: () => void }) {
   const router   = useRouter();
   const empresa  = useAuthStore((s) => s.empresa);
-  const logout   = useAuthStore((s) => s.logout);
   const email    = auth.currentUser?.email ?? "";
 
   const [resumen,    setResumen]    = useState<Resumen | null>(null);
@@ -116,8 +115,8 @@ export default function EliminarCuenta({ onCancelar }: { onCancelar?: () => void
       sessionStorage.setItem(CUENTA_ELIMINADA,
         r.data?.inmediata ? "" : fechaLarga(r.data?.fecha_eliminacion ?? resumen.fecha_eliminacion));
     } catch {}
-    try { await signOut(auth); } catch {}
-    logout();
+    // La cuenta ya no existe: el backend no acepta la baja del dispositivo
+    await cerrarSesion({ darDeBaja: false });
     router.replace("/login");
   };
 

@@ -3,16 +3,15 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { auth } from "@/lib/firebase";
-import { signOut } from "firebase/auth";
 import { useAuthStore } from "@/store/auth.store";
 import { useSandboxStore } from "@/store/sandbox.store";
 import PWAInstallBanner from "@/components/PWAInstallBanner";
 import AvisoShell from "@/components/shell/AvisoShell";
 import {
   registrarNotificaciones,
-  desregistrarNotificaciones,
   escucharPrimerPlano,
   permisoNotificaciones,
+  cerrarSesion,
 } from "@/lib/notifications";
 import { ES_APP_NATIVA, rutaFueraDelPlan } from "@/lib/plataforma";
 import api from "@/lib/api";
@@ -50,7 +49,7 @@ function notifPospuestas(): boolean {
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { empresa, empresas, role, logout } = useAuthStore();
+  const { empresa, empresas, role } = useAuthStore();
   const { activo: sandbox, setSandbox, porPruebas, forzarPorPruebas } = useSandboxStore();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -158,18 +157,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const handleLogout = async () => {
     if (cerrandoSesion) return;
     setCerrandoSesion(true);
-    try {
-      // Dar de baja el dispositivo ANTES de cerrar sesión (necesita el token
-      // válido), pero sin dejar esperando: como mucho 3 s y se cierra igual.
-      await Promise.race([
-        desregistrarNotificaciones(),
-        new Promise((resolve) => setTimeout(resolve, 3000)),
-      ]);
-    } finally {
-      try { await signOut(auth); } catch {}
-      logout();
-      router.replace("/login");
-    }
+    await cerrarSesion();
+    router.replace("/login");
   };
 
   // Pago fallido: Stripe reintenta y el plan sigue activo. En la web, enlace al

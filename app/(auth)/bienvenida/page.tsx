@@ -9,7 +9,7 @@ import { useAvisos } from "@/components/ui/Avisos";
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { auth } from "@/lib/firebase";
-import { signOut } from "firebase/auth";
+import { aEmpresa } from "@/lib/empresa";
 import LogoKipu from "@/components/auth/LogoKipu";
 import Link from "next/link";
 import { enlaceWhatsAppFalla } from "@/lib/soporte";
@@ -20,6 +20,7 @@ import { Building2, Plus, Loader2, CheckCircle2, ChevronRight, CircleHelp, Messa
 import VerificarCorreo from "@/components/auth/VerificarCorreo";
 import EliminarCuenta from "@/components/cuenta/EliminarCuenta";
 import Boton from "@/components/ui/Boton";
+import { cerrarSesion } from "@/lib/notifications";
 
 export default function BienvenidaPage() {
   const confirmar = useConfirmar();
@@ -65,32 +66,13 @@ export default function BienvenidaPage() {
       setUnido(true);
       setTimeout(async () => {
         try {
-          const token = await auth.currentUser?.getIdToken(true);
-          const res   = await api.get("/api/v1/app/usuarios/empresas", {
-            headers: { Authorization: `Bearer ${token}` },
-          });
+          // Token nuevo: ya pertenece a la empresa (el interceptor de lib/api lo envía)
+          await auth.currentUser?.getIdToken(true);
+          const res  = await api.get("/api/v1/app/usuarios/empresas");
           const data = res.data.data ?? [];
           if (data.length > 0) {
             setEmpresas(data);
-            const e = data[0];
-            setEmpresa({
-              id:                    e.id,
-              ruc:                   e.ruc,
-              razon_social:          e.razon_social,
-              nombre_comercial:      e.nombre_comercial,
-              ambiente:              e.ambiente,
-              tipo_emisor:           e.tipo_emisor,
-              rol:                   e.rol,
-              permisos:              e.permisos ?? {},
-              firma_ok:              e.firma_ok,
-              suscripcion_activa:    e.suscripcion_activa,
-              suscripcion:           e.suscripcion,
-              balance_api:           e.balance_api,
-              emision_gratis:        e.emision_gratis ?? false,
-              emite_retenciones:     e.emite_retenciones ?? false,
-              obligado_contabilidad: e.obligado_contabilidad ?? null,
-              periodo_iva:           e.periodo_iva ?? null,
-            });
+            setEmpresa(aEmpresa(data[0]));
           }
         } catch {}
         router.replace("/dashboard");
@@ -103,8 +85,7 @@ export default function BienvenidaPage() {
   };
 
   const handleCerrarSesion = async () => {
-    await signOut(auth);
-    logout();
+    await cerrarSesion();
     router.replace("/login");
   };
 
