@@ -19,15 +19,15 @@ import ChipsFiltro from "@/components/ui/ChipsFiltro";
 import Hoja from "@/components/ui/Hoja";
 import Seccion from "@/components/ui/Seccion";
 import { Campo, Entrada, Selector } from "@/components/ui/Campo";
-import { cn } from "@/components/ui/cn";
 import AccionesUsoJusto from "../components/AccionesUsoJusto";
 import PuntoEmision from "../components/PuntoEmision";
 import PantallaResultado from "../components/PantallaResultado";
 import { usePuntoEmision } from "../components/usePuntoEmision";
 import CamposAdicionales, { CampoAdicional } from "../components/CamposAdicionales";
-import DocOrigenSelector, { DocOrigen } from "../components/DocOrigenSelector";
+import DocOrigenSelector, { DocOrigen, numeroDocOrigen, payloadDocOrigen } from "../components/DocOrigenSelector";
 import EmisionLayout from "../components/EmisionLayout";
 import { InputDecimal } from "../components/HojaItem";
+import { genId } from "../components/ItemsEditor";
 import { useEmision } from "../components/useEmision";
 import { getPaisesOrdenados } from "@/lib/catalogos/paises-sri";
 import {
@@ -41,7 +41,9 @@ import { tieneAccesoAEmitir } from "@/lib/emision";
 const CLASE_VALOR =
   "h-9 w-full rounded-lg border border-borde bg-superficie px-3 text-sm tabular-nums text-texto tactil:h-11 tactil:text-base " +
   "placeholder:text-sutil focus:border-acento focus:outline-none";
-const genId = () => Math.random().toString(36).slice(2);
+
+/** Valor retenido: el % de la base, redondeado como el backend. */
+const retenido = (base: number, pct: number) => r2(base * (pct / 100));
 
 interface ImpuestoRet {
   _id:               string;
@@ -224,7 +226,7 @@ function lineaRenta(cat: CatalogoUI, base: number, exterior: boolean, tipoRegi: 
   return {
     _id: genId(), codigo: "1", codigoRetencion: opcion.cod,
     baseImponible: r2(base), porcentajeRetener: opcion.pct,
-    valorRetenido: r2(base * (opcion.pct / 100)),
+    valorRetenido: retenido(base, opcion.pct),
   };
 }
 
@@ -242,7 +244,7 @@ function lineasSugeridas(cat: CatalogoUI, base: number, ivas: number[], exterior
     lineaRenta(cat, base, exterior, tipoRegi),
     ...ivas.filter(v => v > 0).map(v => ({
       _id: genId(), codigo: "2", ...iva,
-      baseImponible: r2(v), valorRetenido: r2(v * (iva.porcentajeRetener / 100)),
+      baseImponible: r2(v), valorRetenido: retenido(v, iva.porcentajeRetener),
     })),
   ];
 }
@@ -252,33 +254,27 @@ function retencionesSugeridas(cat: CatalogoUI, base: number, iva: number): Impue
   return lineasSugeridas(cat, base, [iva], false, "01");
 }
 
+/** La línea con otro código de retención: su % y el valor retenido salen de la opción. */
+const conOpcion = (l: ImpuestoRet, opcion: OpcionRet): ImpuestoRet => ({
+  ...l, codigoRetencion: opcion.cod, porcentajeRetener: opcion.pct,
+  valorRetenido: retenido(l.baseImponible, opcion.pct),
+});
+
 // Ajusta las líneas de renta al catálogo del tipo de pago y régimen actuales:
 // un código que no está en la lista toma el primero de ella, y el % se toma de
 // la lista (así un cambio de régimen pasa el 501 de 25% a 37%).
 function reajustarRenta(cat: CatalogoUI, lineas: ImpuestoRet[], exterior: boolean, tipoRegi: string): ImpuestoRet[] {
   const opciones = getOpciones(cat, "1", exterior, tipoRegi);
-  return lineas.map(l => {
-    if (l.codigo !== "1") return l;
-    const opcion = opciones.find(o => o.cod === l.codigoRetencion) ?? opciones[0];
-    return {
-      ...l, codigoRetencion: opcion.cod, porcentajeRetener: opcion.pct,
-      valorRetenido: r2(l.baseImponible * (opcion.pct / 100)),
-    };
-  });
+  return lineas.map(l => l.codigo !== "1" ? l
+    : conOpcion(l, opciones.find(o => o.cod === l.codigoRetencion) ?? opciones[0]));
 }
 
 // Al cambiar de catálogo (otra fecha de sustento): solo las líneas de renta
 // cuyo código ya no se ofrece pasan al primero de la lista; las demás no se tocan.
 function reemplazarNoOfrecidos(cat: CatalogoUI, lineas: ImpuestoRet[], exterior: boolean, tipoRegi: string): ImpuestoRet[] {
   const opciones = getOpciones(cat, "1", exterior, tipoRegi);
-  return lineas.map(l => {
-    if (l.codigo !== "1" || opciones.some(o => o.cod === l.codigoRetencion)) return l;
-    const opcion = opciones[0];
-    return {
-      ...l, codigoRetencion: opcion.cod, porcentajeRetener: opcion.pct,
-      valorRetenido: r2(l.baseImponible * (opcion.pct / 100)),
-    };
-  });
+  return lineas.map(l => l.codigo !== "1" || opciones.some(o => o.cod === l.codigoRetencion) ? l
+    : conOpcion(l, opciones[0]));
 }
 
 // Proveedor del exterior: tipo de identificación 08. Si el registro no trae el
@@ -386,8 +382,6 @@ export default function NuevaRetPage() {
   const enProduccion  = empresa?.ambiente === 2 && !sandboxActivo;
   // Activar las retenciones es de quien configura la empresa (mismo permiso que Configuración)
   const puedeConfigurar = usePermiso("configuracion");
-  // Con plan gratis no se gastan créditos (mismo criterio que ResumenTotales)
-  const usaCreditos  = !empresa?.suscripcion_activa && !empresa?.emision_gratis && (empresa?.balance_api ?? 0) > 0;
 
   // Lista de países ordenada desde el módulo externo
   const paisesOrdenados = getPaisesOrdenados();
@@ -455,7 +449,7 @@ export default function NuevaRetPage() {
   const [camposAdicionales, setCamposAdicionales] = useState<CampoAdicional[]>([]);
 
   // Establecimiento y punto de emisión
-  const pe = usePuntoEmision(origenTipo === "liq_emitida" ? (docOrigen?.tipo === "kipu" ? docOrigen.data.numero_doc : docOrigen?.tipo === "manual" ? docOrigen.data.numero : null) : null);
+  const pe = usePuntoEmision(origenTipo === "liq_emitida" ? numeroDocOrigen(docOrigen) : null);
   const { estabSelected, ptoSelected } = pe;
 
   // En producción, una retención genera la obligación del 103 (y del 104 si
@@ -593,24 +587,14 @@ export default function NuevaRetPage() {
       if (imp._id !== id) return imp;
       const updated = { ...imp, [field]: value };
       if (field === "baseImponible" || field === "porcentajeRetener") {
-        updated.valorRetenido = r2(
-          (field === "baseImponible" ? value : updated.baseImponible) *
-          ((field === "porcentajeRetener" ? value : updated.porcentajeRetener) / 100)
-        );
+        updated.valorRetenido = retenido(updated.baseImponible, updated.porcentajeRetener);
       }
       if (field === "codigo") {
-        const opciones = getOpciones(catalogo, value, esExterior, tipoRegi);
-        updated.codigoRetencion   = opciones[0].cod;
-        updated.porcentajeRetener = opciones[0].pct;
-        updated.valorRetenido     = r2(updated.baseImponible * (opciones[0].pct / 100));
+        return conOpcion(updated, getOpciones(catalogo, value, esExterior, tipoRegi)[0]);
       }
       if (field === "codigoRetencion") {
-        const opciones = getOpciones(catalogo, updated.codigo, esExterior, tipoRegi);
-        const opcion   = opciones.find(o => o.cod === value);
-        if (opcion) {
-          updated.porcentajeRetener = opcion.pct;
-          updated.valorRetenido     = r2(updated.baseImponible * (opcion.pct / 100));
-        }
+        const opcion = getOpciones(catalogo, updated.codigo, esExterior, tipoRegi).find(o => o.cod === value);
+        if (opcion) return conOpcion(updated, opcion);
       }
       return updated;
     }));
@@ -706,27 +690,9 @@ export default function NuevaRetPage() {
         valorRetenido:     i.valorRetenido,
       })),
       campos_adicionales: camposAdicionales.filter(c => c.nombre && c.valor),
+      // La liquidación es nuestra (emitida); la factura y la nota de débito, recibidas
+      ...payloadDocOrigen(docOrigen, origenTipo === "liq_emitida" ? "doc_origen_emitido_id" : "doc_origen_recibido_id"),
     };
-
-    if (origenTipo === "liq_emitida") {
-      if (docOrigen.tipo === "kipu") {
-        payload.doc_origen_emitido_id = docOrigen.data.id;
-      } else {
-        payload.doc_origen_numero  = docOrigen.data.numero;
-        payload.doc_origen_fecha   = docOrigen.data.fecha;
-        payload.doc_origen_cod_doc = docOrigen.data.cod_doc;
-        payload.cliente_origen     = docOrigen.data.cliente;
-      }
-    } else {
-      if (docOrigen.tipo === "kipu") {
-        payload.doc_origen_recibido_id = docOrigen.data.id;
-      } else {
-        payload.doc_origen_numero  = docOrigen.data.numero;
-        payload.doc_origen_fecha   = docOrigen.data.fecha;
-        payload.doc_origen_cod_doc = docOrigen.data.cod_doc;
-        payload.cliente_origen     = docOrigen.data.cliente;
-      }
-    }
 
     const r = await em.enviar("/api/v1/app/documentos/emit/RET", payload,
                               { tipo: "RET", porDefecto: "Error al emitir la retención." });
@@ -776,16 +742,13 @@ export default function NuevaRetPage() {
   return (
     <EmisionLayout
       titulo="Nueva retención"
+      puntoEmision={<PuntoEmision {...pe} />}
       tiposEmision={["RET"]}
       borrador={borrador.pendiente && {
         hace: borrador.pendiente.hace, que: "una retención",
         onSeguir: seguirBorrador, onDescartar: borrador.descartar,
       }}
-      lateral={<>
-        <div className="hidden lg:block">
-          <PuntoEmision {...pe} />
-        </div>
-
+      lateral={
         <section className="space-y-3 rounded-xl border border-borde bg-superficie p-4 lg:sticky lg:top-4">
           <h2 className="text-sm font-semibold text-texto">Resumen</h2>
           <div className="space-y-2 text-sm">
@@ -801,15 +764,9 @@ export default function NuevaRetPage() {
             </div>
           </div>
 
+          {/* Sin suscripción la pantalla no llega aquí (BloqueoPlanPro): siempre va incluida */}
           {puedeEmitir && (
-            <p className={cn("rounded-lg px-3 py-2 text-xs",
-              usaCreditos ? "bg-alerta-suave text-alerta-texto" : "bg-exito-suave text-exito-texto")}>
-              {usaCreditos
-                ? `Consumirá 1 crédito API · Disponibles: ${empresa?.balance_api}`
-                : !empresa?.suscripcion_activa
-                  ? "Plan gratis · uso justo de comprobantes al mes"
-                  : "Incluido en tu suscripción"}
-            </p>
+            <p className="rounded-lg bg-exito-suave px-3 py-2 text-xs text-exito-texto">Incluido en tu suscripción</p>
           )}
 
           {error && (
@@ -822,7 +779,7 @@ export default function NuevaRetPage() {
             {`Emitir retención${pe.serie ? ` desde ${pe.serie}` : ""} · $${dosDecimales(totalRetenido)}`}
           </Boton>
         </section>
-      </>}
+      }
       barra={{
         total:         totalRetenido,
         texto:         "Emitir retención",
@@ -832,10 +789,6 @@ export default function NuevaRetPage() {
         error,
       }}
     >
-      <div className="lg:hidden">
-        <PuntoEmision {...pe} />
-      </div>
-
       {/* Sobre qué documento se retiene */}
       <section className="space-y-3 rounded-xl border border-borde bg-superficie p-4">
         <h2 className="text-sm font-semibold text-texto">¿Sobre qué documento retienes?</h2>

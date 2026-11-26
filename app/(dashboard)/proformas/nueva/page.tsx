@@ -18,27 +18,10 @@ import Boton from "@/components/ui/Boton";
 import { Campo, Entrada } from "@/components/ui/Campo";
 
 // ── Componentes reutilizados de factura ────────────────────────────────────────
-import ClienteSelector from "../../documentos/emitir/components/ClienteSelector";
+import ClienteSelector, { type Cliente, type ClienteNuevo } from "../../documentos/emitir/components/ClienteSelector";
 import ItemsEditor, { Item, calcItem, genId, EMPTY_ITEM } from "../../documentos/emitir/components/ItemsEditor";
 import CamposAdicionales, { CampoAdicional } from "../../documentos/emitir/components/CamposAdicionales";
 import EmisionLayout from "../../documentos/emitir/components/EmisionLayout";
-
-// ── Tipos ──────────────────────────────────────────────────────────────────────
-interface Cliente {
-  id:                      string;
-  razon_social:            string;
-  identificacion:          string;
-  tipo_identificacion_sri: string;
-  email:                   string;
-  direccion:               string;
-}
-
-interface ClienteNuevo {
-  tipo_identificacion_sri: string;
-  identificacion:          string;
-  razon_social:            string;
-  email:                   string;
-}
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 

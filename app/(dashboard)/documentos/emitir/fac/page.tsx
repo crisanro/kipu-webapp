@@ -13,9 +13,9 @@ import { CheckCircle2, AlertTriangle, CreditCard, Copy, MessageCircle } from "lu
 import PuntoEmision from "../components/PuntoEmision";
 import PantallaResultado from "../components/PantallaResultado";
 import { usePuntoEmision } from "../components/usePuntoEmision";
-import ClienteSelector from "../components/ClienteSelector";
-import ItemsEditor, { Item, calcItem, calcTotales, genId, EMPTY_ITEM } from "../components/ItemsEditor";
-import PagosMixtos, { PagoItem, PAGO_INICIAL } from "../components/PagosMixtos";
+import ClienteSelector, { type Cliente, type ClienteNuevo } from "../components/ClienteSelector";
+import ItemsEditor, { Item, calcTotales, genId, itemsParaEnviar, EMPTY_ITEM } from "../components/ItemsEditor";
+import PagosMixtos, { PagoItem, errorPagos, pagoInicial } from "../components/PagosMixtos";
 import EstadoCobro, { DatosCobro, cobroInicial, PasarelaEstado, MomentoFactura } from "../components/EstadoCobro";
 import CamposAdicionales, { CampoAdicional } from "../components/CamposAdicionales";
 import ResumenTotales from "../components/ResumenTotales";
@@ -23,23 +23,6 @@ import EmisionLayout from "../components/EmisionLayout";
 import { useEmision } from "../components/useEmision";
 import { useBorrador } from "@/lib/borradores";
 import { tieneAccesoAEmitir } from "@/lib/emision";
-
-// ── Tipos ──────────────────────────────────────────────────────────────────────
-interface Cliente {
-  id: string;
-  razon_social: string;
-  identificacion: string;
-  tipo_identificacion_sri: string;
-  email: string;
-  direccion: string;
-}
-
-interface ClienteNuevo {
-  tipo_identificacion_sri: string;
-  identificacion: string;
-  razon_social: string;
-  email: string;
-}
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -93,7 +76,7 @@ export default function NuevaFacturaPage() {
   const [items, setItems] = useState<Item[]>([{ _id: genId(), ...EMPTY_ITEM }]);
 
   // ── Estado pagos ────────────────────────────────────────────────────────────
-  const [pagos,   setPagos]   = useState<PagoItem[]>([{ ...PAGO_INICIAL }]);
+  const [pagos,   setPagos]   = useState<PagoItem[]>(() => [pagoInicial()]);
   const [propina, setPropina] = useState(false);
 
   // ── Estado cobro ────────────────────────────────────────────────────────────
@@ -228,7 +211,7 @@ export default function NuevaFacturaPage() {
     setEsConsumidorFinal(false);
     setClienteNuevo(null);
     setItems([{ _id: genId(), ...EMPTY_ITEM }]);
-    setPagos([{ ...PAGO_INICIAL, _id: Math.random().toString(36).slice(2) }]);
+    setPagos([pagoInicial()]);
     setPropina(false);
     setCobro(cobroInicial());
     setLinkPago(!!pasarela?.marcar_por_defecto);
@@ -306,12 +289,8 @@ export default function NuevaFacturaPage() {
       return;
     }
 
-    // Redondeado: 1.10 + 2.20 en coma flotante da 3.3000000000000003 > 3.30
-    const totalCubierto = r2(pagos.reduce((s, p) => s + (p.total ?? 0), 0));
-    if (totalCubierto > totales.total) {
-      setError(`Los pagos ($${dosDecimales(totalCubierto)}) superan el total ($${dosDecimales(totales.total)}).`);
-      return;
-    }
+    const errPagos = errorPagos(pagos, totales.total);
+    if (errPagos) { setError(errPagos); return; }
 
     // Derivar forma_pago_cobro del primer pago
     const formaPagoPrincipal = pagos[0]?.forma_pago ?? "01";
@@ -333,21 +312,7 @@ export default function NuevaFacturaPage() {
         email:          clienteNuevo.email,
       } : undefined,
 
-      items: items.map(i => {
-        const c = calcItem(i);
-        return {
-          codigo:          i.codigo || undefined,
-          descripcion:     i.descripcion,
-          cantidad:        i.cantidad,
-          precio_unitario: i.precio,
-          descuento:       c.descuento,
-          tipo_iva:        i.tipo_iva,
-          unidad_medida:   i.unidad,
-          guardar_catalogo: !!i.guardar_catalogo,
-          // Al guardarlo en el catálogo, conserva el precio final que se escribió
-          ...(i.guardar_catalogo && i.precio_iva !== undefined ? { precio_con_iva: i.precio_iva } : {}),
-        };
-      }),
+      items: itemsParaEnviar(items, { catalogo: true }),
 
       pagos: pagos.map(p => ({
         forma_pago: p.forma_pago,
@@ -501,18 +466,14 @@ export default function NuevaFacturaPage() {
   return (
     <EmisionLayout
       titulo="Nueva factura"
+      puntoEmision={<PuntoEmision {...pe} />}
       tiposEmision={["FAC", "FAC-COBRO"]}
       borrador={borrador.pendiente && {
         hace: borrador.pendiente.hace, que: "una factura",
         onSeguir: seguirBorrador, onDescartar: borrador.descartar,
       }}
-      lateral={<>
-        {/* Punto de emisión — compu (en el celular va arriba del formulario) */}
-        <div className="hidden lg:block">
-          <PuntoEmision {...pe} />
-        </div>
-
-        {/* Totales + botón emitir (en el celular el botón está en la barra fija) */}
+      lateral={
+        // Totales + botón emitir (en el celular el botón está en la barra fija)
         <ResumenTotales
           serie={pe.serie}
           totales={totales}
@@ -527,7 +488,7 @@ export default function NuevaFacturaPage() {
           textoBoton={soloLink ? "Crear link de cobro" : undefined}
           conBarraFija
         />
-      </>}
+      }
       barra={{
         total:         totales.total,
         texto:         soloLink ? "Crear link de cobro" : `Emitir${pe.serie ? ` desde ${pe.serie}` : ""}`,
@@ -537,11 +498,6 @@ export default function NuevaFacturaPage() {
         error,
       }}
     >
-      {/* Punto de emisión — solo celular */}
-      <div className="lg:hidden">
-        <PuntoEmision {...pe} />
-      </div>
-
       {/* Cliente */}
       <ClienteSelector
         clienteSelected={clienteSelected}

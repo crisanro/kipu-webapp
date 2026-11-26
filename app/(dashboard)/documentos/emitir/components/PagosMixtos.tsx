@@ -6,6 +6,7 @@ import { Plus, Trash2, AlertTriangle, Info, Wallet } from "lucide-react";
 import Seccion from "@/components/ui/Seccion";
 import Hoja from "@/components/ui/Hoja";
 import Boton from "@/components/ui/Boton";
+import { genId } from "./ItemsEditor";
 
 // ── Tipos ──────────────────────────────────────────────────────────────────────
 export type FormaPagoCode = "01" | "15" | "16" | "17" | "18" | "19" | "20" | "21";
@@ -45,13 +46,21 @@ const NOMBRE_CORTO: Record<FormaPagoCode, string> = {
   "01": "Efectivo", "15": "Compensación", "16": "Débito", "17": "Dinero electrónico",
   "18": "Prepago", "19": "Crédito", "20": "Transferencia", "21": "Endoso",
 };
-const genId = () => Math.random().toString(36).slice(2);
 
-export const PAGO_INICIAL: PagoItem = {
+/** Un pago en efectivo por el saldo (cubre todo por defecto), con su propio _id. */
+export const pagoInicial = (): PagoItem => ({
   _id:        genId(),
   forma_pago: "01",
   total:      null, // saldo restante — cubre todo por defecto
-};
+});
+
+/** Error si los pagos pasan del total. Redondeado: 1.10 + 2.20 en coma flotante da 3.3000000000000003 > 3.30. */
+export function errorPagos(pagos: PagoItem[], total: number): string | null {
+  const cubierto = r2(pagos.reduce((s, p) => s + (p.total ?? 0), 0));
+  return cubierto > total
+    ? `Los pagos ($${dosDecimales(cubierto)}) superan el total ($${dosDecimales(total)}).`
+    : null;
+}
 
 // ── Componente ─────────────────────────────────────────────────────────────────
 export default function PagosMixtos({
