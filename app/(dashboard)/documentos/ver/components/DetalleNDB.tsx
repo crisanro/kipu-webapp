@@ -1,11 +1,10 @@
 "use client";
 import { rutas } from "@/lib/rutas";
 import { useRouter } from "next/navigation";
-import { Building2, CreditCard, Info, User } from "lucide-react";
+import { User } from "lucide-react";
 import Seccion from "@/components/ui/Seccion";
 import Boton from "@/components/ui/Boton";
-import { FORMA_PAGO, TIPO_ID, type FacturaBase } from "./DetalleShared";
-import { Dato } from "./DetalleFactura";
+import { Dato, SeccionAdicionales, SeccionEmisor, SeccionFormaPago, TIPO_ID, type FacturaBase } from "./DetalleShared";
 import { dosDecimales } from "@/lib/dinero";
 
 interface Props { factura: FacturaBase; }
@@ -27,14 +26,6 @@ export default function DetalleNDB({ factura }: Props) {
   const pagos = infoNDB.pagos?.pago
     ? (Array.isArray(infoNDB.pagos.pago) ? infoNDB.pagos.pago : [infoNDB.pagos.pago])
     : [];
-
-  const adicionales = (datos.infoAdicional?.campoAdicional
-    ? (Array.isArray(datos.infoAdicional.campoAdicional)
-        ? datos.infoAdicional.campoAdicional
-        : [datos.infoAdicional.campoAdicional])
-    : []).filter((a: any) => a["@nombre"] !== "PROVEEDOR_SISTEMA_INFORMATICO");
-
-  const formaPago = (p: any) => FORMA_PAGO[p.formaPago] ?? p.formaPago;
 
   return (
     <>
@@ -91,33 +82,13 @@ export default function DetalleNDB({ factura }: Props) {
       </Seccion>
 
       {/* Pagos */}
-      {pagos.length > 0 && (
-        <Seccion titulo="Forma de pago" icono={CreditCard}
-                 resumen={pagos.length === 1 ? formaPago(pagos[0]) : `${pagos.length} formas`}>
-          {pagos.map((pago: any, i: number) => (
-            <Dato key={i} etiqueta={formaPago(pago)} valor={<span className="font-medium tabular-nums">${dosDecimales(pago.total)}</span>} />
-          ))}
-        </Seccion>
-      )}
+      <SeccionFormaPago pagos={pagos} />
 
       {/* Info adicional */}
-      {adicionales.length > 0 && (
-        <Seccion titulo="Información adicional" icono={Info}
-                 resumen={adicionales.length === 1 ? "1 campo" : `${adicionales.length} campos`}>
-          {adicionales.map((campo: any, i: number) => (
-            <Dato key={i} etiqueta={campo["@nombre"]} valor={campo["#text"]} />
-          ))}
-        </Seccion>
-      )}
+      <SeccionAdicionales datos={datos} />
 
       {/* Emisor */}
-      <Seccion titulo="Emisor" icono={Building2} resumen={trib.ruc}>
-        <Dato etiqueta="Razón social"    valor={trib.razonSocial} />
-        <Dato etiqueta="RUC"             valor={trib.ruc} />
-        <Dato etiqueta="Dirección"       valor={trib.dirMatriz} />
-        <Dato etiqueta="Establecimiento" valor={`${trib.estab}-${trib.ptoEmi}`} />
-        <Dato etiqueta="Ambiente"        valor={trib.ambiente == 2 ? "Producción" : "Pruebas"} />
-      </Seccion>
+      <SeccionEmisor trib={trib} />
     </>
   );
 }

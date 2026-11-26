@@ -1,11 +1,10 @@
 "use client";
 import { rutas } from "@/lib/rutas";
 import { useRouter } from "next/navigation";
-import { Building2, Info, User } from "lucide-react";
+import { User } from "lucide-react";
 import Seccion from "@/components/ui/Seccion";
 import Boton from "@/components/ui/Boton";
-import { TIPO_ID, type FacturaBase } from "./DetalleShared";
-import { Dato } from "./DetalleFactura";
+import { Dato, SeccionAdicionales, SeccionEmisor, TIPO_ID, type FacturaBase } from "./DetalleShared";
 import { dosDecimales } from "@/lib/dinero";
 
 interface Props { factura: FacturaBase; }
@@ -23,10 +22,6 @@ export default function DetalleNC({ factura }: Props) {
   const resumenImpuestos = datos.resumenImpuestos
     ? (Array.isArray(datos.resumenImpuestos) ? datos.resumenImpuestos : [datos.resumenImpuestos])
     : [];
-
-  const adicionales = (datos.infoAdicional?.campoAdicional
-    ? (Array.isArray(datos.infoAdicional.campoAdicional) ? datos.infoAdicional.campoAdicional : [datos.infoAdicional.campoAdicional])
-    : []).filter((a: any) => a["@nombre"] !== "PROVEEDOR_SISTEMA_INFORMATICO");
 
   // «Nueva factura a partir de esta» está en el menú ⋮ (ComprobantesRelacionados)
 
@@ -113,23 +108,10 @@ export default function DetalleNC({ factura }: Props) {
       </Seccion>
 
       {/* Info adicional */}
-      {adicionales.length > 0 && (
-        <Seccion titulo="Información adicional" icono={Info}
-                 resumen={adicionales.length === 1 ? "1 campo" : `${adicionales.length} campos`}>
-          {adicionales.map((campo: any, i: number) => (
-            <Dato key={i} etiqueta={campo["@nombre"]} valor={campo["#text"]} />
-          ))}
-        </Seccion>
-      )}
+      <SeccionAdicionales datos={datos} />
 
       {/* Emisor */}
-      <Seccion titulo="Emisor" icono={Building2} resumen={trib.ruc}>
-        <Dato etiqueta="Razón social"    valor={trib.razonSocial} />
-        <Dato etiqueta="RUC"             valor={trib.ruc} />
-        <Dato etiqueta="Dirección"       valor={trib.dirMatriz} />
-        <Dato etiqueta="Establecimiento" valor={`${trib.estab}-${trib.ptoEmi}`} />
-        <Dato etiqueta="Ambiente"        valor={trib.ambiente == 2 ? "Producción" : "Pruebas"} />
-      </Seccion>
+      <SeccionEmisor trib={trib} />
 
     </>
   );
