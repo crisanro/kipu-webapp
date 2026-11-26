@@ -1,6 +1,6 @@
 "use client";
 import { rutas } from "@/lib/rutas";
-import { useRef, useState } from "react";
+import { useRef, Suspense } from "react";
 import { useAtajos } from "@/lib/useAtajos";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -11,7 +11,7 @@ import { demoProformas } from "@/lib/demos";
 import { BannerEjemplo, EtiquetaEjemplo } from "@/components/EjemploPro";
 import SoloWeb from "@/components/SoloWeb";
 import { ES_APP_NATIVA } from "@/lib/plataforma";
-import { useLista } from "@/lib/useLista";
+import { useLista, useBusquedaUrl } from "@/lib/useLista";
 import FilaLista, { GrupoFilas } from "@/components/ui/FilaLista";
 import { InsigniaEstado } from "@/components/ui/InsigniaEstado";
 import { EsqueletoFilas } from "@/components/ui/Esqueleto";
@@ -48,7 +48,8 @@ interface Proforma {
 export default function ProformasPage() {
   const puedeVer = usePermiso("emitir");
   if (!puedeVer) return <SinAcceso />;
-  return <ProformasContenido />;
+  // La búsqueda vive en la URL (useSearchParams): necesita un Suspense encima
+  return <Suspense fallback={<div className="p-4 md:p-6"><EsqueletoFilas filas={6} /></div>}><ProformasContenido /></Suspense>;
 }
 
 // Separado del chequeo de permiso: los hooks se llaman siempre en el mismo orden
@@ -56,7 +57,7 @@ export default function ProformasPage() {
 function ProformasContenido() {
 
   const router = useRouter();
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useBusquedaUrl();   // en la URL: sigue al volver de una proforma
 
   const empresa  = useAuthStore((s) => s.empresa);
   const tieneSub = empresa?.suscripcion_activa ?? false;
