@@ -59,6 +59,15 @@ export const ESTADOS_COBRO: Record<string, { etiqueta: string; tono: TonoEstado 
   ANULADO:   { etiqueta: "Anulado",    tono: "neutro" },
 };
 
+/** Cómo se cobró (forma_pago_cobro, abonos de cuentas): los valores que acepta el backend. */
+export const FORMAS_COBRO: { valor: string; etiqueta: string }[] = [
+  { valor: "EFECTIVO",      etiqueta: "Efectivo" },
+  { valor: "TRANSFERENCIA", etiqueta: "Transferencia" },
+  { valor: "TARJETA",       etiqueta: "Tarjeta" },
+  { valor: "CHEQUE",        etiqueta: "Cheque" },
+  { valor: "OTRO",          etiqueta: "Otro" },
+];
+
 /** Compras recibidas: lo mismo visto desde quien paga. */
 export const ESTADOS_PAGO: Record<string, { etiqueta: string; tono: TonoEstado }> = {
   PENDIENTE: { etiqueta: "Por pagar", tono: "alerta" },
