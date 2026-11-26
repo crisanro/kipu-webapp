@@ -1,10 +1,11 @@
 "use client";
 import { rutas } from "@/lib/rutas";
 import { Link2 } from "lucide-react";
-import { type FacturaBase, TIPO_LABEL, fmt } from "./utils";
+import { type FacturaBase, TIPO_LABEL } from "./utils";
 import Seccion from "@/components/ui/Seccion";
 import FilaLista from "@/components/ui/FilaLista";
 import { InsigniaSri } from "@/components/ui/InsigniaEstado";
+import { dosDecimales } from "@/lib/dinero";
 
 // Documento que originó este comprobante y los que se emitieron a partir de él,
 // en una sección plegable: tocar uno lo abre.
@@ -21,7 +22,7 @@ export default function DocumentosVinculados({ factura }: { factura: FacturaBase
       className="-mx-4 w-auto"
       titulo={<span className="font-mono">{d.numero_doc}</span>}
       subtitulo={[etiqueta, TIPO_LABEL[d.tipo_doc] ?? d.tipo_doc].filter(Boolean).join(" · ")}
-      fin={`$${fmt(d.importe_total)}`}
+      fin={`$${dosDecimales(d.importe_total)}`}
       finAbajo={d.estado_sri ? <InsigniaSri estado={d.estado_sri} conIcono={false} /> : undefined}
     />
   );

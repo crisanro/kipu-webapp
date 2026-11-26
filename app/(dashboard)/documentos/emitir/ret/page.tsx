@@ -4,7 +4,7 @@
 // retenciones activadas en Configuración.
 
 import { useState, useEffect, useRef, useMemo } from "react";
-import { r2 } from "@/lib/dinero";
+import { r2, dosDecimales } from "@/lib/dinero";
 import { useSearchParams } from "next/navigation";
 import api from "@/lib/api";
 import { useBorrador } from "@/lib/borradores";
@@ -35,8 +35,8 @@ import {
   MAS_USADOS_RESIDENTES, MAS_USADOS_NO_RESIDENTES,
 } from "@/lib/catalogos/retenciones";
 import { formatoPeriodo } from "@/lib/teclado";
-
-const fmt = (n: number) => r2(n).toFixed(2);
+import { MESES } from "@/lib/fecha";
+import { tieneAccesoAEmitir } from "@/lib/emision";
 
 const CLASE_VALOR =
   "h-9 w-full rounded-lg border border-borde bg-superficie px-3 text-sm tabular-nums text-texto tactil:h-11 tactil:text-base " +
@@ -370,9 +370,6 @@ const FORMAS_PAGO_RET = [
   { value: "15", label: "Compensación de deudas" },
 ];
 
-const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio",
-  "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
-
 // "11/2026" → "noviembre de 2026" (si no tiene ese formato, se devuelve tal cual)
 // PENDIENTE-CONSULTA: confirmar con contador si el 103 corresponde a periodoFiscal o al mes de emisión de la RET (caso: compra fin de mes, RET inicio del mes siguiente).
 function mesDelPeriodo(periodo: string): string {
@@ -672,7 +669,7 @@ export default function NuevaRetPage() {
     setConfirmarProduccion(false);
   };
 
-  const puedeEmitir = !!empresa && (empresa.suscripcion_activa || empresa.balance_api > 0 || !!empresa.emision_gratis);
+  const puedeEmitir = tieneAccesoAEmitir(empresa);
 
   const emitir = async (confirmado = false) => {
     setError("");
@@ -796,12 +793,12 @@ export default function NuevaRetPage() {
             {impuestos.map((imp) => (
               <div key={imp._id} className="flex justify-between gap-3 text-tenue">
                 <span>{TIPOS_IMPUESTO.find(t => t.value === imp.codigo)?.label ?? "Retención"} {imp.codigoRetencion} · {imp.porcentajeRetener}%</span>
-                <span className="tabular-nums">${fmt(imp.valorRetenido)}</span>
+                <span className="tabular-nums">${dosDecimales(imp.valorRetenido)}</span>
               </div>
             ))}
             <div className="flex justify-between border-t border-borde pt-2 text-base font-bold text-texto">
               <span>Total retenido</span>
-              <span className="tabular-nums">${fmt(totalRetenido)}</span>
+              <span className="tabular-nums">${dosDecimales(totalRetenido)}</span>
             </div>
           </div>
 
@@ -823,7 +820,7 @@ export default function NuevaRetPage() {
 
           <Boton anchoCompleto tamano="lg" onClick={() => emitir()} cargando={submitting} disabled={!puedeEmitir}
                  className="hidden h-auto min-h-11 whitespace-normal py-2.5 lg:flex">
-            {`Emitir retención${pe.serie ? ` desde ${pe.serie}` : ""} · $${fmt(totalRetenido)}`}
+            {`Emitir retención${pe.serie ? ` desde ${pe.serie}` : ""} · $${dosDecimales(totalRetenido)}`}
           </Boton>
         </section>
       </>}
@@ -1026,7 +1023,7 @@ export default function NuevaRetPage() {
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                 <Campo etiqueta="Base imponible" id={`ret-base-${imp._id}`}>
                   {esLiqEmitida ? (
-                    <Fijo>${fmt(imp.baseImponible)}</Fijo>
+                    <Fijo>${dosDecimales(imp.baseImponible)}</Fijo>
                   ) : (
                     <InputDecimal id={`ret-base-${imp._id}`} value={imp.baseImponible} placeholder="0.00"
                                   onChange={v => editImpuesto(imp._id, "baseImponible", v)} className={CLASE_VALOR} />
@@ -1058,7 +1055,7 @@ export default function NuevaRetPage() {
             </Boton>
           ) : <span />}
           <p className="text-sm text-tenue">
-            Total <span className="font-bold tabular-nums text-texto">${fmt(totalRetenido)}</span>
+            Total <span className="font-bold tabular-nums text-texto">${dosDecimales(totalRetenido)}</span>
           </p>
         </div>
       </section>

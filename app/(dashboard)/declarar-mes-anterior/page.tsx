@@ -24,6 +24,7 @@ import { ES_APP_NATIVA } from "@/lib/plataforma";
 import { rutas } from "@/lib/rutas";
 import { ModalConfirmar } from "@/components/DeclaracionWidget";
 import { CHROME_EXT_URL, FIREFOX_EXT_URL } from "../documentos/recibidos/nueva/_components/TabSRI";
+import { montoEC } from "@/lib/dinero";
 
 const CADA_MS   = 10_000;          // el conteo de compras, mientras la pantalla está visible
 const CORTE_MS  = 15 * 60_000;     // a los 15 minutos deja de consultar solo
@@ -43,9 +44,6 @@ interface MesAnterior {
 }
 
 type Respuesta = { aplica: true; data: MesAnterior } | { aplica: false; motivo: string };
-
-const dinero = (n: number = 0) =>
-  n.toLocaleString("es-EC", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 const plural = (n: number, uno: string, varios: string) => `${n} ${n === 1 ? uno : varios}`;
 
@@ -182,7 +180,7 @@ export default function DeclararMesAnteriorPage() {
              style={{ background: "color-mix(in srgb, var(--kipu-accent) 8%, transparent)" }}>
           <p className="text-sm" style={{ color: "var(--kipu-text)" }}>
             Ya tienes <strong>{plural(d.compras.cantidad, "compra", "compras")}</strong> de {mes} en Kipu
-            {d.compras.cantidad > 0 && <span style={{ color: "var(--kipu-subtle)" }}> · ${dinero(d.compras.total)}</span>}
+            {d.compras.cantidad > 0 && <span style={{ color: "var(--kipu-subtle)" }}> · ${montoEC(d.compras.total)}</span>}
           </p>
           {pausado ? (
             <button type="button" onClick={() => { setPausado(false); setRonda((r) => r + 1); }}

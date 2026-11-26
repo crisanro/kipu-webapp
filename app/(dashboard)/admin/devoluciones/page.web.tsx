@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import { CheckCircle2, Loader2, Mail, MessageCircle, RotateCw, Undo2 } from "lucide-react";
 import api from "@/lib/api";
 import { detalleError } from "@/lib/errores";
+import { dolares } from "@/lib/dinero";
 
 interface Devolucion {
   id:                       number;
@@ -37,7 +38,6 @@ const ESTADO: Record<string, { texto: string; color: string }> = {
   PROCESANDO:              { texto: "Procesando",               color: "var(--kipu-info)" },
 };
 
-const dinero = (n: number) => `$${n.toFixed(2)}`;
 const fecha = (iso: string) =>
   new Date(iso).toLocaleDateString("es-EC", { day: "numeric", month: "short", year: "numeric" });
 
@@ -155,7 +155,7 @@ export default function AdminDevolucionesPage() {
 
       {soloPendientes && pendientes.length > 0 && (
         <p className="text-sm" style={{ color: "var(--kipu-text)" }}>
-          <strong>{pendientes.length}</strong> por transferir · <strong>{dinero(porTransferir)}</strong> en total
+          <strong>{pendientes.length}</strong> por transferir · <strong>{dolares(porTransferir)}</strong> en total
         </p>
       )}
 
@@ -198,13 +198,13 @@ export default function AdminDevolucionesPage() {
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="text-lg font-bold tabular-nums" style={{ color: "var(--kipu-text)" }}>{dinero(d.monto)}</p>
+                    <p className="text-lg font-bold tabular-nums" style={{ color: "var(--kipu-text)" }}>{dolares(d.monto)}</p>
                     <span className="text-[11px] font-semibold" style={{ color: e.color }}>{e.texto}</span>
                   </div>
                 </div>
 
                 <p className="text-xs" style={{ color: "var(--kipu-muted)" }}>
-                  Pagó {dinero(d.pagado)} por Kipu Pro{d.dias_no_usados !== null && ` · le quedaban ${d.dias_no_usados} días`}
+                  Pagó {dolares(d.pagado)} por Kipu Pro{d.dias_no_usados !== null && ` · le quedaban ${d.dias_no_usados} días`}
                   {" · "}{d.metodo === "TARJETA" ? "pagó con tarjeta" : "pagó por transferencia"}
                   {d.referencia_transferencia && ` · referencia ${d.referencia_transferencia}`}
                 </p>
@@ -223,7 +223,7 @@ export default function AdminDevolucionesPage() {
                       <span>{d.contacto ?? "Sin contacto"}</span>
                       {d.whatsapp && (
                         <a href={`https://wa.me/${wa(d.whatsapp)}?text=${encodeURIComponent(
-                             `Hola, te escribimos de Kipu por la devolución de ${dinero(d.monto)} de tu Kipu Pro. ¿A qué cuenta bancaria te la transferimos?`)}`}
+                             `Hola, te escribimos de Kipu por la devolución de ${dolares(d.monto)} de tu Kipu Pro. ¿A qué cuenta bancaria te la transferimos?`)}`}
                            target="_blank" rel="noopener noreferrer"
                            className="inline-flex items-center gap-1 font-medium hover:underline" style={{ color: "var(--kipu-accent)" }}>
                           <MessageCircle size={12} /> {d.whatsapp}

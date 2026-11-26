@@ -23,8 +23,8 @@ import Link from "next/link";
 import { AlertTriangle, FileClock, X } from "lucide-react";
 import Boton from "@/components/ui/Boton";
 import BotonIcono from "@/components/ui/BotonIcono";
-import { r2 } from "@/lib/dinero";
-import { hayEmisionSinConfirmar } from "@/lib/emision";
+import { dosDecimales } from "@/lib/dinero";
+import { hayEmisionSinConfirmar, tieneAccesoAEmitir } from "@/lib/emision";
 import { useAuthStore } from "@/store/auth.store";
 import SoloWeb from "@/components/SoloWeb";
 
@@ -38,8 +38,6 @@ export interface BarraEmision {
   /** El error del último intento: en el celular se ve sobre la barra. */
   error?:         string;
 }
-
-const fmt = (n: number) => r2(n).toFixed(2);
 
 // Campos donde aparece el teclado (no casillas ni botones)
 function abreTeclado(el: EventTarget | null): boolean {
@@ -127,7 +125,7 @@ export default function EmisionLayout({
   const escribiendo = useEscribiendo();
   useAtajoEmitir(barra);
   const empresa = useAuthStore((s) => s.empresa);
-  const sinAcceso = !!empresa && !empresa.suscripcion_activa && empresa.balance_api === 0 && !empresa.emision_gratis;
+  const sinAcceso = !!empresa && !tieneAccesoAEmitir(empresa);
   // Al abrir: ¿quedó un envío sin respuesta (se cortó la conexión, se cerró la app)?
   const [sinConfirmar, setSinConfirmar] = useState(() =>
     typeof window !== "undefined" && !!tiposEmision?.length && hayEmisionSinConfirmar(tiposEmision));
@@ -207,7 +205,7 @@ export default function EmisionLayout({
           <div className="flex items-center gap-3">
             <div className="min-w-0">
               <p className="text-xs text-sutil">Total</p>
-              <p className="text-xl font-bold tabular-nums text-texto">${fmt(barra.total)}</p>
+              <p className="text-xl font-bold tabular-nums text-texto">${dosDecimales(barra.total)}</p>
             </div>
             <Boton
               onClick={barra.onEmitir}

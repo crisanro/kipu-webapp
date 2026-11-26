@@ -2,8 +2,7 @@
 "use client";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-
-const fmt = (n: any) => parseFloat(n ?? 0).toFixed(2);
+import { dosDecimales } from "@/lib/dinero";
 
 interface Props {
   docs: any[];
@@ -83,7 +82,7 @@ export default function DocumentosRecibidos({ docs = [] }: Props) {
               </div>
               <div className="text-right shrink-0">
                 <p className="text-sm font-bold" style={{ color: "var(--kipu-text)" }}>
-                  ${fmt(d.importe_total)}
+                  ${dosDecimales(d.importe_total)}
                 </p>
                 {d.credito_tributario_iva && (
                   <p className="text-xs" style={{ color: "var(--kipu-accent)" }}>

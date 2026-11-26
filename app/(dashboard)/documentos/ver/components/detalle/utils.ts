@@ -113,8 +113,6 @@ export const TIPO_ID: Record<string, string> = {
   "08": "Identificación del Exterior",
 };
 
-export const fmt = (n: any) => parseFloat(n ?? 0).toFixed(2);
-
 // Portal donde el usuario ingresa la solicitud de anulación
 export const SRI_EN_LINEA_URL = "https://srienlinea.sri.gob.ec";
 

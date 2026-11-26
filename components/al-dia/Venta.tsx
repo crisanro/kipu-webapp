@@ -12,14 +12,12 @@ import {
   Receipt, ShieldCheck, Users, XCircle,
 } from "lucide-react";
 import api from "@/lib/api";
-import { hoyEC } from "@/lib/fecha";
+import { hoyEC, MESES } from "@/lib/fecha";
 import { EtiquetaEjemplo } from "@/components/EjemploPro";
 import { ES_APP_NATIVA } from "@/lib/plataforma";
+import { dolares } from "@/lib/dinero";
 
-const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio",
-               "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
 const caja  = { background: "var(--kipu-surface)", border: "1px solid var(--kipu-border)" };
-const dinero = (n: number) => `$${n.toFixed(2)}`;
 const fechaCorta = (d: Date) => d.toLocaleDateString("es-EC", { day: "2-digit", month: "2-digit", year: "numeric" });
 
 // ── Calendario del SRI: el día de vencimiento sale del noveno dígito del RUC ──
@@ -225,15 +223,15 @@ export function DemoAlDia({ ruc, semestral, enProduccion }: {
             {ventas ? (
               <>
                 Hola 👋, te escribe el equipo de Kipu. Revisamos tu {ventas.mes}: emitiste{" "}
-                <b>{ventas.docs} comprobante{ventas.docs !== 1 ? "s" : ""}</b> por <b>{dinero(ventas.total)}</b>{" "}
-                (IVA cobrado {dinero(ventas.iva)}). Ya restamos el IVA de tus compras y te pasamos el valor
+                <b>{ventas.docs} comprobante{ventas.docs !== 1 ? "s" : ""}</b> por <b>{dolares(ventas.total)}</b>{" "}
+                (IVA cobrado {dolares(ventas.iva)}). Ya restamos el IVA de tus compras y te pasamos el valor
                 a pagar. Si está bien, no hagas nada: lo presentamos antes de la fecha límite.
               </>
             ) : (
               <>
-                Hola 👋, te escribe el equipo de Kipu. Revisamos tu {MESES[(Number(hoyEC().slice(5, 7)) + 10) % 12]}: vendiste <b>{dinero(3240.5)}</b> y
-                compraste <b>{dinero(890)}</b>. IVA cobrado {dinero(486.08)} − IVA de tus compras {dinero(133.5)} ={" "}
-                <b>{dinero(352.58)} a pagar</b>. Si está bien, no hagas nada: lo presentamos antes de la fecha límite.
+                Hola 👋, te escribe el equipo de Kipu. Revisamos tu {MESES[(Number(hoyEC().slice(5, 7)) + 10) % 12]}: vendiste <b>{dolares(3240.5)}</b> y
+                compraste <b>{dolares(890)}</b>. IVA cobrado {dolares(486.08)} − IVA de tus compras {dolares(133.5)} ={" "}
+                <b>{dolares(352.58)} a pagar</b>. Si está bien, no hagas nada: lo presentamos antes de la fecha límite.
                 Si algo no cuadra, respóndenos aquí.
               </>
             )}

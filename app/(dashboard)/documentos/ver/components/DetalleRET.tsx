@@ -11,7 +11,8 @@ import { Building2, Info, UserRound } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import Seccion from "@/components/ui/Seccion";
 import Boton from "@/components/ui/Boton";
-import { fmt, FORMA_PAGO, TIPO_ID, type FacturaBase } from "./DetalleShared";
+import { FORMA_PAGO, TIPO_ID, type FacturaBase } from "./DetalleShared";
+import { dosDecimales } from "@/lib/dinero";
 
 interface Props { factura: FacturaBase; }
 
@@ -156,7 +157,7 @@ export default function DetalleRET({ factura }: Props) {
             <h2 className="text-sm font-semibold text-texto">Impuestos retenidos</h2>
             {porTipo.length > 1 && (
               <p className="mt-0.5 text-xs text-sutil">
-                {porTipo.map(t => `${TIPO_IMPUESTO[t.cod]} $${fmt(t.total)}`).join(" · ")}
+                {porTipo.map(t => `${TIPO_IMPUESTO[t.cod]} $${dosDecimales(t.total)}`).join(" · ")}
               </p>
             )}
           </div>
@@ -177,11 +178,11 @@ export default function DetalleRET({ factura }: Props) {
                       </span>
                     </div>
                     <span className="shrink-0 text-sm font-semibold tabular-nums text-texto">
-                      ${fmt(valor(imp))}
+                      ${dosDecimales(valor(imp))}
                     </span>
                   </div>
                   <p className="pl-1 text-xs text-sutil">
-                    Base ${fmt(imp.baseImponible)} × {imp.porcentajeRetener || imp.tarifa}%
+                    Base ${dosDecimales(imp.baseImponible)} × {imp.porcentajeRetener || imp.tarifa}%
                   </p>
                   {/* RET v1.0: cada impuesto traía su documento sustento */}
                   {imp.numDocSustento && (
@@ -196,7 +197,7 @@ export default function DetalleRET({ factura }: Props) {
           </div>
           <div className="flex justify-between border-t border-borde px-4 py-3 font-bold tabular-nums text-texto">
             <span className="text-sm">Total retenido</span>
-            <span>${fmt(totalRetenido)}</span>
+            <span>${dosDecimales(totalRetenido)}</span>
           </div>
         </section>
       )}
@@ -212,7 +213,7 @@ export default function DetalleRET({ factura }: Props) {
                   <p className="font-mono text-sm font-medium text-texto">{origen.numero_doc}</p>
                   <p className="text-xs text-sutil">
                     {factura.doc_origen_emitido ? "Liquidación de Compra" : factura.doc_origen_recibido.razon_social_proveedor}
-                    {" · "}${fmt(origen.importe_total)}
+                    {" · "}${dosDecimales(origen.importe_total)}
                   </p>
                 </div>
                 {factura.doc_origen_emitido ? (
@@ -247,9 +248,9 @@ export default function DetalleRET({ factura }: Props) {
                     { label: "Sujeto a retención por norma legal", value: s.pagExtSujRetNorLeg },
                     { label: "Pago a régimen fiscal preferente",   value: s.pagoRegFis },
                   ] : []),
-                  { label: "Subtotal",      value: `$${fmt(s.totalSinImpuestos)}` },
-                  { label: "IVA",           value: `$${fmt(iva)}` },
-                  { label: "Total",         value: `$${fmt(s.importeTotal)}` },
+                  { label: "Subtotal",      value: `$${dosDecimales(s.totalSinImpuestos)}` },
+                  { label: "IVA",           value: `$${dosDecimales(iva)}` },
+                  { label: "Total",         value: `$${dosDecimales(s.importeTotal)}` },
                   { label: "Forma de pago", value: lista(s.pagos?.pago).map(p => FORMA_PAGO[p.formaPago ?? ""] ?? p.formaPago).join(", ") },
                 ]} />
               </div>

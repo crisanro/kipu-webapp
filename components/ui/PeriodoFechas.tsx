@@ -10,14 +10,12 @@
 
 import { useState } from "react";
 import { CalendarDays, ChevronDown } from "lucide-react";
-import { hoyEC } from "@/lib/fecha";
+import { hoyEC, MESES } from "@/lib/fecha";
 import Hoja from "./Hoja";
 import Boton from "./Boton";
 import { Campo, Entrada } from "./Campo";
 import { cn } from "./cn";
 
-const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio",
-               "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
 const MAXIMO_DIAS = 365;
 
 // ── Fechas como texto AAAA-MM-DD (sin husos horarios de por medio) ────────────

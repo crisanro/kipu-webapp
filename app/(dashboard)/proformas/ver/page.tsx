@@ -22,9 +22,8 @@ import {
   User, StickyNote, MoreVertical, Share2, ListChecks,
 } from "lucide-react";
 import { detalleError } from "@/lib/errores";
+import { dolares, dosDecimales } from "@/lib/dinero";
 
-const fmt  = (n: number) => `$${n.toFixed(2)}`;
-const fmt2 = (n: number) => n.toFixed(2);
 const fecha = (f?: string | null) => (f && /^\d{4}-\d{2}-\d{2}$/.test(f) ? etiquetaPeriodo(f, f) : f || "");
 
 const TIPO_ID: Record<string, string> = {
@@ -76,11 +75,11 @@ function DetalleProforma({ id }: { id: string }) {
       `Proforma ${data.numero}${data.emisor ? ` · ${data.emisor.nombre_comercial || data.emisor.razon_social}` : ""}`,
       ...(data.cliente ? [`Cliente: ${data.cliente.razon_social}`] : []),
       "",
-      ...data.items.map((it: any) => `• ${it.cantidad} × ${it.descripcion}: ${fmt(it.total)}`),
+      ...data.items.map((it: any) => `• ${it.cantidad} × ${it.descripcion}: ${dolares(it.total)}`),
       "",
-      `Subtotal: ${fmt(data.subtotal)}`,
-      `IVA: ${fmt(data.total_iva)}`,
-      `TOTAL: ${fmt(data.total)}`,
+      `Subtotal: ${dolares(data.subtotal)}`,
+      `IVA: ${dolares(data.total_iva)}`,
+      `TOTAL: ${dolares(data.total)}`,
       ...(data.fecha_validez ? [`Válida hasta: ${data.fecha_validez}`] : []),
     ];
     const texto = lineas.join("\n");
@@ -216,7 +215,7 @@ function DetalleProforma({ id }: { id: string }) {
             : <InsigniaEstado tono="info" icono={Clock} className="shrink-0">Vigente</InsigniaEstado>}
         </div>
 
-        <p className="mt-4 text-3xl font-bold tabular-nums text-texto">{fmt(data.total)}</p>
+        <p className="mt-4 text-3xl font-bold tabular-nums text-texto">{dolares(data.total)}</p>
         <p className={`mt-1 text-xs ${vencida ? "text-peligro-texto" : "text-tenue"}`}>
           {data.fecha_validez
             ? `${vencida ? "Venció" : "Válida hasta"} ${fecha(data.fecha_validez).toLowerCase()}`
@@ -266,20 +265,20 @@ function DetalleProforma({ id }: { id: string }) {
             <div key={i} className="flex items-start justify-between gap-3 px-4 py-3">
               <div className="min-w-0 flex-1">
                 <p className="text-sm text-texto">{it.descripcion}</p>
-                <p className="text-xs text-sutil">{it.cantidad} × {fmt(it.precio_unitario)} · IVA {it.tipo_iva}%</p>
+                <p className="text-xs text-sutil">{it.cantidad} × {dolares(it.precio_unitario)} · IVA {it.tipo_iva}%</p>
               </div>
               <div className="shrink-0 text-right tabular-nums">
-                <p className="text-sm font-semibold text-texto">{fmt(it.total)}</p>
-                {it.valor_iva > 0 && <p className="text-xs text-sutil">IVA {fmt(it.valor_iva)}</p>}
+                <p className="text-sm font-semibold text-texto">{dolares(it.total)}</p>
+                {it.valor_iva > 0 && <p className="text-xs text-sutil">IVA {dolares(it.valor_iva)}</p>}
               </div>
             </div>
           ))}
         </div>
         <div className="space-y-1.5 border-t border-borde px-4 py-3 text-sm tabular-nums">
-          <div className="flex justify-between text-tenue"><span>Subtotal</span><span>{fmt(data.subtotal)}</span></div>
-          <div className="flex justify-between text-tenue"><span>IVA</span><span>{fmt(data.total_iva)}</span></div>
+          <div className="flex justify-between text-tenue"><span>Subtotal</span><span>{dolares(data.subtotal)}</span></div>
+          <div className="flex justify-between text-tenue"><span>IVA</span><span>{dolares(data.total_iva)}</span></div>
           <div className="flex justify-between border-t border-borde pt-1.5 text-base font-bold text-texto">
-            <span>Total</span><span>{fmt(data.total)}</span>
+            <span>Total</span><span>{dolares(data.total)}</span>
           </div>
         </div>
       </section>
@@ -377,10 +376,10 @@ function DetalleProforma({ id }: { id: string }) {
                   <tr key={i} style={{ background: i % 2 === 0 ? "#fff" : "#f0faf6" }}>
                     <td style={{ padding: "7px 8px", borderBottom: "1px solid #e5e7eb" }}>{it.descripcion}</td>
                     <td style={{ padding: "7px 8px", textAlign: "right", borderBottom: "1px solid #e5e7eb" }}>{it.cantidad}</td>
-                    <td style={{ padding: "7px 8px", textAlign: "right", borderBottom: "1px solid #e5e7eb" }}>${fmt2(it.precio_unitario)}</td>
+                    <td style={{ padding: "7px 8px", textAlign: "right", borderBottom: "1px solid #e5e7eb" }}>${dosDecimales(it.precio_unitario)}</td>
                     <td style={{ padding: "7px 8px", textAlign: "right", borderBottom: "1px solid #e5e7eb" }}>{it.tipo_iva}%</td>
-                    <td style={{ padding: "7px 8px", textAlign: "right", borderBottom: "1px solid #e5e7eb" }}>${fmt2(it.subtotal)}</td>
-                    <td style={{ padding: "7px 8px", textAlign: "right", borderBottom: "1px solid #e5e7eb", fontWeight: "bold" }}>${fmt2(it.total)}</td>
+                    <td style={{ padding: "7px 8px", textAlign: "right", borderBottom: "1px solid #e5e7eb" }}>${dosDecimales(it.subtotal)}</td>
+                    <td style={{ padding: "7px 8px", textAlign: "right", borderBottom: "1px solid #e5e7eb", fontWeight: "bold" }}>${dosDecimales(it.total)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -389,13 +388,13 @@ function DetalleProforma({ id }: { id: string }) {
             {/* Totales */}
             <div style={{ width: "240px", marginLeft: "auto", marginBottom: "20px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: "11px", color: "#444", borderBottom: "1px solid #eee" }}>
-                <span>Subtotal</span><span>${fmt2(data.subtotal)}</span>
+                <span>Subtotal</span><span>${dosDecimales(data.subtotal)}</span>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: "11px", color: "#444", borderBottom: "1px solid #eee" }}>
-                <span>IVA</span><span>${fmt2(data.total_iva)}</span>
+                <span>IVA</span><span>${dosDecimales(data.total_iva)}</span>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 0 0", fontSize: "15px", fontWeight: "bold", color: "#059669", borderTop: "2px solid #059669", marginTop: "4px" }}>
-                <span>TOTAL</span><span>${fmt2(data.total)}</span>
+                <span>TOTAL</span><span>${dosDecimales(data.total)}</span>
               </div>
             </div>
 

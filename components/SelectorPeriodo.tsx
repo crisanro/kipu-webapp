@@ -1,4 +1,5 @@
 "use client";
+import { dolares } from "@/lib/dinero";
 
 // Mensual / Anual en las pantallas de planes: /planes (solo web: Pro y Al Día)
 // y /al-dia (web y app: solo Al Día). Los montos nunca se escriben aquí: salen
@@ -33,8 +34,6 @@ export function periodoDisponible(p: PreciosPlan | null | undefined, pedido: Per
   return p[otro] ? otro : pedido;
 }
 
-const dinero = (n: number) => `$${n.toFixed(2)}`;
-
 export default function SelectorPeriodo({ valor, onCambio, precios, disponibles }: {
   valor:    Periodo;
   onCambio: (p: Periodo) => void;
@@ -49,7 +48,7 @@ export default function SelectorPeriodo({ valor, onCambio, precios, disponibles 
   const ahorro    = ahorroAnual(precios);
   const opciones: { id: Periodo; texto: string }[] = [
     { id: "MENSUAL", texto: "Mensual" },
-    { id: "ANUAL",   texto: ahorro !== null ? `Anual · ahorras ${dinero(ahorro)}` : "Anual" },
+    { id: "ANUAL",   texto: ahorro !== null ? `Anual · ahorras ${dolares(ahorro)}` : "Anual" },
   ];
 
   return (

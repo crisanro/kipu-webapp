@@ -12,8 +12,8 @@ import {
   ShieldOff, CalendarClock, Receipt,
 } from "lucide-react";
 import { detalleError } from "@/lib/errores";
+import { dosDecimales } from "@/lib/dinero";
 
-const fmt     = (n: any) => parseFloat(n ?? 0).toFixed(2);
 const fmtDate = (d: any) => d ? new Date(d).toLocaleDateString("es-EC", { day: "2-digit", month: "short", year: "numeric" }) : "—";
 
 // ── Estado de suscripción ───────────────────────────────────────────────────
@@ -949,7 +949,7 @@ export default function AdminEmisorDetallePage() {
                       style={{ borderTop: i > 0 ? "1px solid var(--kipu-border)" : "none" }}
                     >
                       <div className="flex items-center justify-between">
-                        <span className="font-medium" style={{ color: "var(--kipu-text)" }}>${fmt(d.monto)}</span>
+                        <span className="font-medium" style={{ color: "var(--kipu-text)" }}>${dosDecimales(d.monto)}</span>
                         <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>{fmtDate(tf.created_at)}</span>
                       </div>
                       <p className="text-xs font-mono mt-0.5" style={{ color: "var(--kipu-subtle)" }}>{d.referencia_pago}</p>
@@ -1042,7 +1042,7 @@ export default function AdminEmisorDetallePage() {
                         </p>
                       </div>
                       <span className="text-sm font-semibold shrink-0" style={{ color: "var(--kipu-text)" }}>
-                        ${fmt(d.importe_total)}
+                        ${dosDecimales(d.importe_total)}
                       </span>
                     </div>
                   );

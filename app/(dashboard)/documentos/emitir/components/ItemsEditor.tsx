@@ -2,7 +2,7 @@
 
 import { useRef, useCallback, useState, useEffect, lazy, Suspense } from "react";
 import { etiquetaIva, opcionesIva } from "@/lib/iva";
-import { r2 } from "@/lib/dinero";
+import { dosDecimales } from "@/lib/dinero";
 import {
   calcularLinea, aplicarIvaIncluido, conIvaIncluido, sinIvaIncluido,
   totalEsperadoConIva, tarifaPct,
@@ -50,7 +50,6 @@ interface Props {
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
-const fmt = (n: number) => r2(n).toFixed(2);
 
 /** Subtotal, descuento (en dólares sin IVA), base, IVA y total de la línea. */
 export function calcItem(item: Item) {
@@ -376,7 +375,7 @@ export default function ItemsEditor({ items, onChange }: Props) {
                   </p>
                 </div>
                 <span className="text-sm font-medium shrink-0" style={{ color: "var(--kipu-accent)" }}>
-                  ${fmt(p.precio)}
+                  ${dosDecimales(p.precio)}
                 </span>
               </button>
             ))}
@@ -403,11 +402,11 @@ export default function ItemsEditor({ items, onChange }: Props) {
                     {item.descripcion.trim() || "Toca para escribir el ítem"}
                   </span>
                   <span className="block text-xs text-sutil">
-                    ${fmt(precio)}{conIva ? " c/IVA" : ""} · IVA {etiquetaIva(item.tipo_iva)}
-                    {c.descuento > 0 && <> · desc. ${fmt(c.descuento)}</>}
+                    ${dosDecimales(precio)}{conIva ? " c/IVA" : ""} · IVA {etiquetaIva(item.tipo_iva)}
+                    {c.descuento > 0 && <> · desc. ${dosDecimales(c.descuento)}</>}
                   </span>
                 </span>
-                <span className="shrink-0 text-sm font-semibold tabular-nums text-texto">${fmt(c.total)}</span>
+                <span className="shrink-0 text-sm font-semibold tabular-nums text-texto">${dosDecimales(c.total)}</span>
                 <ChevronRight size={16} className="shrink-0 text-sutil" aria-hidden />
               </button>
             </li>
@@ -641,7 +640,7 @@ export default function ItemsEditor({ items, onChange }: Props) {
                       Total Ítem
                     </span>
                     <span className="text-sm font-bold" style={{ color: "var(--kipu-accent)" }}>
-                      ${fmt(c.total)}
+                      ${dosDecimales(c.total)}
                     </span>
                   </div>
                 </div>
@@ -651,12 +650,12 @@ export default function ItemsEditor({ items, onChange }: Props) {
               {conIva && tarifaPct(item.tipo_iva) > 0 && c.total > 0 && (
                 <div className="flex items-center justify-between gap-x-3 gap-y-1 flex-wrap text-[11px]">
                   <span style={{ color: "var(--kipu-subtle)" }}>
-                    Sin IVA <b style={{ color: "var(--kipu-text)" }}>${fmt(c.base)}</b>
-                    {" · "}IVA {etiquetaIva(item.tipo_iva)} <b style={{ color: "var(--kipu-text)" }}>${fmt(c.iva)}</b>
+                    Sin IVA <b style={{ color: "var(--kipu-text)" }}>${dosDecimales(c.base)}</b>
+                    {" · "}IVA {etiquetaIva(item.tipo_iva)} <b style={{ color: "var(--kipu-text)" }}>${dosDecimales(c.iva)}</b>
                   </span>
                   {redondeado && (
                     <span style={{ color: "color-mix(in srgb, var(--kipu-warning) 70%, var(--kipu-text))" }}>
-                      Queda en ${fmt(c.total)}: el SRI redondea el IVA al centavo
+                      Queda en ${dosDecimales(c.total)}: el SRI redondea el IVA al centavo
                     </span>
                   )}
                 </div>

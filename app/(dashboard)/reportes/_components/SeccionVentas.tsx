@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { ChevronDown, ChevronUp, TrendingUp } from "lucide-react";
+import { montoEC, numeroEC } from "@/lib/dinero";
 
 interface DesgloseTarifa {
   tarifa:    number;
@@ -26,9 +27,6 @@ interface Props {
   desglose:   DesgloseTarifa[];
   casilleros: CasillerosVentas;
 }
-
-const fmt  = (n: number = 0) => n.toLocaleString("es-EC", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const fmtN = (n: number = 0) => n.toLocaleString("es-EC", { minimumFractionDigits: 0 });
 
 function CeldaCasillero({ num, label, value, highlight = false }: {
   num: string;
@@ -72,7 +70,7 @@ function CeldaCasillero({ num, label, value, highlight = false }: {
               : "var(--kipu-text)",
         }}
       >
-        ${fmt(value)}
+        ${montoEC(value)}
       </p>
     </div>
   );
@@ -126,8 +124,8 @@ export default function SeccionVentas({ desglose, casilleros }: Props) {
               Ventas y otras operaciones
             </p>
             <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
-              {fmtN(casilleros["111"])} comprobantes emitidos
-              {(casilleros["113"] ?? 0) > 0 && ` · ${fmtN(casilleros["113"])} anulados`}
+              {numeroEC(casilleros["111"])} comprobantes emitidos
+              {(casilleros["113"] ?? 0) > 0 && ` · ${numeroEC(casilleros["113"])} anulados`}
             </p>
           </div>
         </div>
@@ -136,7 +134,7 @@ export default function SeccionVentas({ desglose, casilleros }: Props) {
           <div className="text-right hidden sm:block">
             <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Total neto ventas</p>
             <p className="text-sm font-bold" style={{ color: "var(--kipu-accent)" }}>
-              ${fmt(casilleros["419"] ?? 0)}
+              ${montoEC(casilleros["419"] ?? 0)}
             </p>
           </div>
           {expandido ? (
@@ -162,7 +160,7 @@ export default function SeccionVentas({ desglose, casilleros }: Props) {
                     Ventas gravadas tarifa {d.tarifa}%
                   </span>
                   <span className="text-[10px]" style={{ color: "var(--kipu-subtle)" }}>
-                    {fmtN(d.num_docs)} doc(s) · N/C: -${fmt(d.ncr)}
+                    {numeroEC(d.num_docs)} doc(s) · N/C: -${montoEC(d.ncr)}
                   </span>
                 </div>
 
@@ -196,7 +194,7 @@ export default function SeccionVentas({ desglose, casilleros }: Props) {
                   Ventas gravadas tarifa 0%
                 </span>
                 <span className="text-[10px]" style={{ color: "var(--kipu-subtle)" }}>
-                  {fmtN(tarifa0.num_docs)} doc(s) · N/C: -${fmt(tarifa0.ncr)}
+                  {numeroEC(tarifa0.num_docs)} doc(s) · N/C: -${montoEC(tarifa0.ncr)}
                 </span>
               </div>
 
@@ -291,7 +289,7 @@ export default function SeccionVentas({ desglose, casilleros }: Props) {
               >
                 <p className="text-xs mb-0.5" style={{ color: "var(--kipu-subtle)" }}>Emitidos (FAC + NDB + LIQ)</p>
                 <p className="text-base font-bold" style={{ color: "var(--kipu-text)" }}>
-                  {fmtN(casilleros["111"])}
+                  {numeroEC(casilleros["111"])}
                 </p>
                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ background: "color-mix(in srgb, var(--kipu-text) 8%, transparent)", color: "var(--kipu-subtle)" }}>
                   111
@@ -316,7 +314,7 @@ export default function SeccionVentas({ desglose, casilleros }: Props) {
                     color: (casilleros["113"] ?? 0) > 0 ? "var(--kipu-danger)" : "var(--kipu-text)",
                   }}
                 >
-                  {fmtN(casilleros["113"])}
+                  {numeroEC(casilleros["113"])}
                 </p>
                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ background: "color-mix(in srgb, var(--kipu-text) 8%, transparent)", color: "var(--kipu-subtle)" }}>
                   113

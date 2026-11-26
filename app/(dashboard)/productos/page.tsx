@@ -17,7 +17,7 @@ import { useAtajos } from "@/lib/useAtajos";
 import { useNuevoDesdePaleta } from "@/lib/comandos";
 import { etiquetaIva, opcionesIva } from "@/lib/iva";
 import { baseDesdeTotal, tarifaPct } from "@/lib/precios";
-import { r2 } from "@/lib/dinero";
+import { r2, dosDecimales } from "@/lib/dinero";
 import api from "@/lib/api";
 import { SegmentosPersonas } from "@/components/shell/BarraPestanas";
 import { usePermiso } from "@/hooks/usePermiso";
@@ -57,8 +57,6 @@ const EMPTY_FORM = {
 
 const UNIDADES = ["UNIDAD", "SERVICIO", "KG", "LB", "LT", "MT", "CM", "CAJA", "PAQUETE", "HORA"];
 const PRODUCTOS_LIMIT = 50;
-
-const fmt = (n: number) => n?.toFixed(2) ?? "0.00";
 
 /** Precio que se muestra en la lista: el final si es "IVA incluido", la base si es "+ IVA". */
 const precioVisible = (p: Producto) =>
@@ -336,7 +334,7 @@ export default function ProductosPage() {
                   apagada={!p.activo}
                   titulo={p.descripcion}
                   subtitulo={`${p.codigo || "Sin código"} · IVA ${etiquetaIva(p.tipo_iva)} · ${p.unidad}`}
-                  fin={`$${fmt(precioVisible(p))}`}
+                  fin={`$${dosDecimales(precioVisible(p))}`}
                   finAbajo={
                     <span className="flex flex-wrap justify-end gap-1">
                       {!p.activo && <InsigniaEstado tono="neutro">Inactivo</InsigniaEstado>}
@@ -397,7 +395,7 @@ export default function ProductosPage() {
                     </p>
                   </div>
                   <span className="hidden md:block col-span-2 text-sm font-semibold text-center" style={{ color: "var(--kipu-text)" }}>
-                    ${fmt(precioVisible(p))}
+                    ${dosDecimales(precioVisible(p))}
                     {tarifaPct(p.tipo_iva) > 0 && (
                       <span className="block text-[10px] font-normal" style={{ color: "var(--kipu-subtle)" }}>
                         {p.precio_incluye_iva ? "IVA incluido" : "+ IVA"}
@@ -442,7 +440,7 @@ export default function ProductosPage() {
                   </span>
                   <div className="md:col-span-2 flex items-center justify-end gap-2 shrink-0">
                     <span className="text-sm font-semibold md:hidden text-right" style={{ color: "var(--kipu-text)" }}>
-                      ${fmt(precioVisible(p))}
+                      ${dosDecimales(precioVisible(p))}
                       {tarifaPct(p.tipo_iva) > 0 && (
                         <span className="block text-[10px] font-normal" style={{ color: "var(--kipu-subtle)" }}>
                           {p.precio_incluye_iva ? "IVA incl." : "+ IVA"}
@@ -528,7 +526,7 @@ export default function ProductosPage() {
         abierta={!!menuDe}
         onCerrar={() => setMenuDe(null)}
         titulo={menuDe?.descripcion ?? ""}
-        descripcion={menuDe ? `${menuDe.codigo || "Sin código"} · $${fmt(precioVisible(menuDe))}` : undefined}
+        descripcion={menuDe ? `${menuDe.codigo || "Sin código"} · $${dosDecimales(precioVisible(menuDe))}` : undefined}
         acciones={menuDe ? [
           { etiqueta: "Editar", icono: Pencil, onClick: () => abrirEditar(menuDe) },
           menuDe.activo
@@ -699,7 +697,7 @@ export default function ProductosPage() {
                 const d = desglose(parseFloat(form.precio), form.incluye_iva, form.tipo_iva);
                 if (d.pct === 0) return (
                   <p className="text-[11px]" style={{ color: "var(--kipu-subtle)" }}>
-                    Sin IVA: tu cliente paga ${fmt(d.final)}.
+                    Sin IVA: tu cliente paga ${dosDecimales(d.final)}.
                   </p>
                 );
                 const redondeo = form.incluye_iva && d.final !== r2(parseFloat(form.precio));
@@ -707,8 +705,8 @@ export default function ProductosPage() {
                   <div className="text-[11px] rounded-lg px-3 py-2 space-y-0.5"
                        style={{ background: "color-mix(in srgb, var(--kipu-text) 4%, transparent)", color: "var(--kipu-muted)" }}>
                     <p>
-                      Base ${fmt(d.base)} · IVA {d.pct}% ${fmt(d.iva)} ·{" "}
-                      <strong style={{ color: "var(--kipu-text)" }}>Tu cliente paga ${fmt(d.final)}</strong>
+                      Base ${dosDecimales(d.base)} · IVA {d.pct}% ${dosDecimales(d.iva)} ·{" "}
+                      <strong style={{ color: "var(--kipu-text)" }}>Tu cliente paga ${dosDecimales(d.final)}</strong>
                     </p>
                     <p style={{ color: "var(--kipu-subtle)" }}>
                       {form.incluye_iva
@@ -717,7 +715,7 @@ export default function ProductosPage() {
                     </p>
                     {redondeo && (
                       <p style={{ color: "var(--kipu-warning)" }}>
-                        Con el redondeo del SRI no hay una base exacta para ese precio: queda en ${fmt(d.final)}.
+                        Con el redondeo del SRI no hay una base exacta para ese precio: queda en ${dosDecimales(d.final)}.
                       </p>
                     )}
                   </div>

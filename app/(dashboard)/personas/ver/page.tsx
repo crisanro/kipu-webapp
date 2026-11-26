@@ -26,6 +26,7 @@ import {
   MoreVertical, MessageCircle, Wallet, Key, ChevronDown,
 } from "lucide-react";
 import { detalleError } from "@/lib/errores";
+import { dosDecimales } from "@/lib/dinero";
 
 const FACTURAS_LIMIT = 10; // ← Cambia a 20 cuando estés listo
 
@@ -44,7 +45,6 @@ const ESTADOS_CUENTA: Record<string, { etiqueta: string; tono: TonoEstado }> = {
   ANULADO:   { etiqueta: "Anulado",   tono: "neutro" },
 };
 
-const fmt   = (n: any) => parseFloat(n ?? 0).toFixed(2);
 const fecha = (f?: string | null) => (f && /^\d{4}-\d{2}-\d{2}$/.test(f) ? etiquetaPeriodo(f, f) : f || "");
 
 // ── Validaciones ──────────────────────────────────────────────────────────────
@@ -274,7 +274,7 @@ function DetallePersona({ id }: { id: string }) {
         <div className="grid grid-cols-2 gap-2 sm:gap-3">
           <div className="rounded-xl border border-borde bg-superficie p-3 sm:p-4">
             <p className="text-xs text-sutil">Total facturado</p>
-            <p className="truncate text-xl font-bold tabular-nums text-texto sm:text-2xl">${fmt(resumen.suma_facturada)}</p>
+            <p className="truncate text-xl font-bold tabular-nums text-texto sm:text-2xl">${dosDecimales(resumen.suma_facturada)}</p>
             <p className="text-xs text-sutil">solo autorizadas</p>
           </div>
           <div className="rounded-xl border border-borde bg-superficie p-3 sm:p-4">
@@ -318,7 +318,7 @@ function DetallePersona({ id }: { id: string }) {
                   href={rutas.documento(f.id)}
                   titulo={<span className="font-mono">{f.numero_doc}</span>}
                   subtitulo={fecha(f.fecha_emision)}
-                  fin={`$${fmt(f.importe_total)}`}
+                  fin={`$${dosDecimales(f.importe_total)}`}
                   finAbajo={<InsigniaSri estado={f.estado_sri} conIcono={false} />}
                 />
               ))}
@@ -343,8 +343,8 @@ function DetallePersona({ id }: { id: string }) {
             <div className="mb-2 flex items-center justify-between gap-2 px-1">
               <h2 className="text-sm font-semibold text-texto">Cuentas</h2>
               <div className="flex items-center gap-3 text-xs tabular-nums">
-                {resumenCuentas.por_cobrar > 0 && <span className="text-exito-texto">${fmt(resumenCuentas.por_cobrar)} por cobrar</span>}
-                {resumenCuentas.por_pagar > 0 && <span className="text-peligro-texto">${fmt(resumenCuentas.por_pagar)} por pagar</span>}
+                {resumenCuentas.por_cobrar > 0 && <span className="text-exito-texto">${dosDecimales(resumenCuentas.por_cobrar)} por cobrar</span>}
+                {resumenCuentas.por_pagar > 0 && <span className="text-peligro-texto">${dosDecimales(resumenCuentas.por_pagar)} por pagar</span>}
                 <Boton variante="fantasma" tamano="sm" icono={<Plus size={14} />}
                        onClick={() => router.push(`/cuentas?cliente=${id}`)}>
                   Nueva
@@ -373,7 +373,7 @@ function DetallePersona({ id }: { id: string }) {
                       }
                       titulo={c.concepto}
                       subtitulo={[fecha(c.fecha_emision), c.fecha_vencimiento && `vence ${fecha(c.fecha_vencimiento).toLowerCase()}`].filter(Boolean).join(" · ")}
-                      fin={`$${fmt(c.saldo_pendiente)}`}
+                      fin={`$${dosDecimales(c.saldo_pendiente)}`}
                       finAbajo={<InsigniaEstado tono={est.tono}>{est.etiqueta}</InsigniaEstado>}
                     />
                   );

@@ -2,9 +2,10 @@
 import { Building2, CreditCard, Info, User } from "lucide-react";
 import Seccion from "@/components/ui/Seccion";
 import {
-  fmt, FORMA_PAGO, TIPO_ID,
+  FORMA_PAGO, TIPO_ID,
   type FacturaBase
 } from "./DetalleShared";
+import { dosDecimales } from "@/lib/dinero";
 
 interface Props { factura: FacturaBase; }
 
@@ -75,12 +76,12 @@ export default function DetalleFactura({ factura }: Props) {
                       )}
                       {parseFloat(item.cantidad).toFixed(2)} × ${parseFloat(item.precioUnitario).toFixed(4)}
                       {parseFloat(item.descuento || 0) > 0 && (
-                        <span className="ml-2 text-alerta-texto">— Desc: ${fmt(item.descuento)}</span>
+                        <span className="ml-2 text-alerta-texto">— Desc: ${dosDecimales(item.descuento)}</span>
                       )}
                     </p>
                   </div>
                   <div className="shrink-0 text-right">
-                    <p className="text-sm font-semibold tabular-nums text-texto">${fmt(item.precioTotalSinImpuesto)}</p>
+                    <p className="text-sm font-semibold tabular-nums text-texto">${dosDecimales(item.precioTotalSinImpuesto)}</p>
                     {tarifa && <span className="text-xs text-sutil">IVA {tarifa}%</span>}
                   </div>
                 </div>
@@ -96,30 +97,30 @@ export default function DetalleFactura({ factura }: Props) {
           {resumenImpuestos.map((imp: any, i: number) => (
             <div key={`sub-${i}`} className="flex justify-between text-tenue">
               <span>Subtotal {imp.tarifa}%</span>
-              <span>${fmt(imp.baseImponible)}</span>
+              <span>${dosDecimales(imp.baseImponible)}</span>
             </div>
           ))}
           {parseFloat(info.totalDescuento) > 0 && (
             <div className="flex justify-between text-alerta-texto">
               <span>Descuento</span>
-              <span>-${fmt(info.totalDescuento)}</span>
+              <span>-${dosDecimales(info.totalDescuento)}</span>
             </div>
           )}
           {resumenImpuestos.filter((imp: any) => parseFloat(imp.valor) > 0).map((imp: any, i: number) => (
             <div key={`iva-${i}`} className="flex justify-between text-tenue">
               <span>IVA {imp.tarifa}%</span>
-              <span>${fmt(imp.valor)}</span>
+              <span>${dosDecimales(imp.valor)}</span>
             </div>
           ))}
           {parseFloat(info.propina) > 0 && (
             <div className="flex justify-between text-tenue">
               <span>Propina</span>
-              <span>${fmt(info.propina)}</span>
+              <span>${dosDecimales(info.propina)}</span>
             </div>
           )}
           <div className="mt-2 flex justify-between border-t border-borde pt-2 text-base font-bold text-texto">
             <span>Total</span>
-            <span>${fmt(factura.importe_total)}</span>
+            <span>${dosDecimales(factura.importe_total)}</span>
           </div>
         </div>
       </section>
@@ -138,7 +139,7 @@ export default function DetalleFactura({ factura }: Props) {
         <Seccion titulo="Forma de pago" icono={CreditCard}
                  resumen={pagos.length === 1 ? formaPago(pagos[0]) : `${pagos.length} formas`}>
           {pagos.map((pago: any, i: number) => (
-            <Dato key={i} etiqueta={formaPago(pago)} valor={<span className="font-medium tabular-nums">${fmt(pago.total)}</span>} />
+            <Dato key={i} etiqueta={formaPago(pago)} valor={<span className="font-medium tabular-nums">${dosDecimales(pago.total)}</span>} />
           ))}
         </Seccion>
       )}

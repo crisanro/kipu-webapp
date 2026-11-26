@@ -5,6 +5,7 @@ import {
   X, ChevronDown, ChevronUp, FileText, Link2, AlertTriangle,
 } from "lucide-react";
 import { detalleError } from "@/lib/errores";
+import { dosDecimales } from "@/lib/dinero";
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 export interface ItemDetalle {
@@ -53,8 +54,6 @@ interface Props {
   onDone:            () => void;
   suscripcionActiva: boolean;
 }
-
-const fmt = (n: any) => parseFloat(String(n ?? 0)).toFixed(2);
 
 const TIPO_LABEL: Record<string, string> = {
   FAC: "Factura", NCR: "Nota de Crédito",
@@ -174,7 +173,7 @@ export default function ReviewXML({ parsed, xmlFile, onBack, onDone, suscripcion
           <p className="text-sm" style={{ color: "var(--kipu-subtle)" }}>{parsed.razon_social_proveedor}</p>
         </div>
         <div className="text-right">
-          <p className="text-lg font-bold" style={{ color: "var(--kipu-text)" }}>${fmt(parsed.importe_total)}</p>
+          <p className="text-lg font-bold" style={{ color: "var(--kipu-text)" }}>${dosDecimales(parsed.importe_total)}</p>
           <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>{parsed.fecha_emision}</p>
         </div>
       </div>
@@ -228,7 +227,7 @@ export default function ReviewXML({ parsed, xmlFile, onBack, onDone, suscripcion
                   </span>
                   <p className="text-sm font-mono" style={{ color: "var(--kipu-text)" }}>{vinculoSelected.numero_doc}</p>
                 </div>
-                <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>{vinculoSelected.razon_social} · ${fmt(vinculoSelected.importe_total)}</p>
+                <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>{vinculoSelected.razon_social} · ${dosDecimales(vinculoSelected.importe_total)}</p>
               </div>
               <button
                 type="button"
@@ -294,7 +293,7 @@ export default function ReviewXML({ parsed, xmlFile, onBack, onDone, suscripcion
                             <p className="text-xs truncate" style={{ color: "var(--kipu-subtle)" }}>{d.razon_social}</p>
                           </div>
                         </div>
-                        <span className="text-sm font-bold shrink-0" style={{ color: "var(--kipu-accent)" }}>${fmt(d.importe_total)}</span>
+                        <span className="text-sm font-bold shrink-0" style={{ color: "var(--kipu-accent)" }}>${dosDecimales(d.importe_total)}</span>
                       </button>
                     );
                   })}
@@ -349,11 +348,11 @@ export default function ReviewXML({ parsed, xmlFile, onBack, onDone, suscripcion
               >
                 <div className="col-span-4">
                   <p className="text-xs truncate" style={{ color: "var(--kipu-text)" }}>{item.descripcion}</p>
-                  <p className="text-[10px]" style={{ color: "var(--kipu-subtle)" }}>{item.cantidad} × ${fmt(item.precio_unitario)}</p>
+                  <p className="text-[10px]" style={{ color: "var(--kipu-subtle)" }}>{item.cantidad} × ${dosDecimales(item.precio_unitario)}</p>
                 </div>
-                <div className="col-span-2 text-right text-xs" style={{ color: "var(--kipu-muted)" }}>${fmt(item.subtotal)}</div>
+                <div className="col-span-2 text-right text-xs" style={{ color: "var(--kipu-muted)" }}>${dosDecimales(item.subtotal)}</div>
                 <div className="col-span-2 text-right text-xs" style={{ color: "var(--kipu-muted)" }}>
-                  {item.tarifa_iva > 0 ? `${item.tarifa_iva}% $${fmt(item.valor_iva)}` : "—"}
+                  {item.tarifa_iva > 0 ? `${item.tarifa_iva}% $${dosDecimales(item.valor_iva)}` : "—"}
                 </div>
                 <div className="col-span-2 flex justify-center">
                   <button
@@ -409,17 +408,17 @@ export default function ReviewXML({ parsed, xmlFile, onBack, onDone, suscripcion
         <div className="space-y-2 text-sm">
           <div className="flex justify-between" style={{ color: "var(--kipu-muted)" }}>
             <span>Total documento</span>
-            <span className="font-bold" style={{ color: "var(--kipu-text)" }}>${fmt(parsed.importe_total)}</span>
+            <span className="font-bold" style={{ color: "var(--kipu-text)" }}>${dosDecimales(parsed.importe_total)}</span>
           </div>
           {parsed.tipo_doc !== "RET" && (
             <div className="flex justify-between" style={{ color: "var(--kipu-muted)" }}>
               <span>Deducible renta</span>
-              <span style={{ color: "var(--kipu-success)" }}>${fmt(totalDeducible)}</span>
+              <span style={{ color: "var(--kipu-success)" }}>${dosDecimales(totalDeducible)}</span>
             </div>
           )}
           <div className="flex justify-between" style={{ color: "var(--kipu-muted)" }}>
             <span>Crédito tributario IVA</span>
-            <span style={{ color: "var(--kipu-accent)" }}>${fmt(totalCredito)}</span>
+            <span style={{ color: "var(--kipu-accent)" }}>${dosDecimales(totalCredito)}</span>
           </div>
         </div>
         <div className="mt-3 pt-3" style={{ borderTop: "1px solid var(--kipu-border)" }}>
@@ -476,7 +475,7 @@ export default function ReviewXML({ parsed, xmlFile, onBack, onDone, suscripcion
             Guardando...
           </>
         ) : (
-          `Registrar ${TIPO_LABEL[parsed.tipo_doc] ?? parsed.tipo_doc} · $${fmt(parsed.importe_total)}`
+          `Registrar ${TIPO_LABEL[parsed.tipo_doc] ?? parsed.tipo_doc} · $${dosDecimales(parsed.importe_total)}`
         )}
       </button>
     </div>

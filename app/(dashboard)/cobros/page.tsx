@@ -23,6 +23,7 @@ import {
   Link2, Plus, Copy, MessageCircle, RefreshCw, Ban, FileText, Share2, Loader2,
 } from "lucide-react";
 import { detalleError } from "@/lib/errores";
+import { dolares } from "@/lib/dinero";
 
 // "Facturar cuando el cliente pague": la factura ya armada espera el pago del link
 interface Cobro {
@@ -60,7 +61,6 @@ const FILTROS = [
 
 const NUEVO_LINK = "/documentos/emitir/fac?cuando=al_pagar";
 const LIMITE = 50;
-const fmt = (n: number) => `$${n.toFixed(2)}`;
 const fecha = (s: string | null) =>
   s ? new Date(s).toLocaleDateString("es-EC", { day: "2-digit", month: "short", year: "numeric" }) : "";
 const textoPago = (url: string) => `Hola, te comparto el link para tu pago: ${url}`;
@@ -227,7 +227,7 @@ function CobrosContenido() {
                     detalle={aviso && (
                       <span className={c.estado === "EXPIRADO" ? undefined : "text-peligro-texto"}>{aviso}</span>
                     )}
-                    fin={fmt(c.monto)}
+                    fin={dolares(c.monto)}
                     finAbajo={trabajando
                       ? <InsigniaEstado tono="info" icono={Loader2} className="[&_svg]:animate-spin">Consultando…</InsigniaEstado>
                       : <InsigniaEstado tono={est.tono}>{est.etiqueta}</InsigniaEstado>}
@@ -253,7 +253,7 @@ function CobrosContenido() {
       <HojaAcciones
         abierta={!!menuDe}
         onCerrar={() => setMenuDe(null)}
-        titulo={menuDe ? `${menuDe.cliente_nombre || "Cliente"} · ${fmt(menuDe.monto)}` : ""}
+        titulo={menuDe ? `${menuDe.cliente_nombre || "Cliente"} · ${dolares(menuDe.monto)}` : ""}
         descripcion={menuDe ? (
           <>
             {[ESTADOS[menuDe.estado].etiqueta, menuDe.cliente_identificacion, menuDe.link?.nombre_pasarela].filter(Boolean).join(" · ")}

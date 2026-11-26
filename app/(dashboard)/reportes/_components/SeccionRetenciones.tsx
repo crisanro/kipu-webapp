@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { ChevronDown, ChevronUp, FileText, ArrowUpRight, ArrowDownLeft } from "lucide-react";
+import { montoEC } from "@/lib/dinero";
 
 interface LineaRetencion {
   porcentaje: number;
@@ -58,8 +59,6 @@ interface Props {
   detalleRecibidas?: RetEnRecibida[];
   modo: "IVA" | "ATS";
 }
-
-const fmt  = (n: number = 0) => n.toLocaleString("es-EC", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 const PCT_CAS: Record<number, { cas: string; label: string }> = {
   10:  { cas: "721", label: "Retención del 10%" },
@@ -119,7 +118,7 @@ function CeldaCasillero({ num, label, value, highlight = false, warning = false 
               : "var(--kipu-text)",
         }}
       >
-        ${fmt(value)}
+        ${montoEC(value)}
       </p>
     </div>
   );
@@ -197,7 +196,7 @@ export default function SeccionRetenciones({
                 <div className="text-right hidden sm:block">
                   <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Total a pagar (801)</p>
                   <p className="text-sm font-bold" style={{ color: "var(--kipu-warning)" }}>
-                    ${fmt(retEmitidas.casilleros["801"] ?? retEmitidas.casilleros["799"] ?? 0)}
+                    ${montoEC(retEmitidas.casilleros["801"] ?? retEmitidas.casilleros["799"] ?? 0)}
                   </p>
                 </div>
               )}
@@ -309,10 +308,10 @@ export default function SeccionRetenciones({
                             {ret.impuestos.map((imp, i) => (
                               <div key={i} className="flex items-center justify-between text-[10px]">
                                 <span style={{ color: "var(--kipu-subtle)" }}>
-                                  Cód. {imp.codigo} ({imp.porcentaje}%) · Base ${fmt(imp.base_imponible)}
+                                  Cód. {imp.codigo} ({imp.porcentaje}%) · Base ${montoEC(imp.base_imponible)}
                                 </span>
                                 <span className="font-bold" style={{ color: "var(--kipu-warning)" }}>
-                                  ${fmt(imp.valor_retenido)}
+                                  ${montoEC(imp.valor_retenido)}
                                 </span>
                               </div>
                             ))}
@@ -368,7 +367,7 @@ export default function SeccionRetenciones({
                 <div className="text-right hidden sm:block">
                   <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>Casillero 609</p>
                   <p className="text-sm font-bold" style={{ color: "var(--kipu-info)" }}>
-                    ${fmt(retRecibidas.casilleros["609"] ?? 0)}
+                    ${montoEC(retRecibidas.casilleros["609"] ?? 0)}
                   </p>
                 </div>
               )}
@@ -410,7 +409,7 @@ export default function SeccionRetenciones({
                     </div>
                   </div>
                   <p className="text-base font-bold tabular-nums" style={{ color: "var(--kipu-info)" }}>
-                    ${fmt(retRecibidas.casilleros["609"] ?? 0)}
+                    ${montoEC(retRecibidas.casilleros["609"] ?? 0)}
                   </p>
                 </div>
               )}
@@ -460,7 +459,7 @@ export default function SeccionRetenciones({
                             {ret.impuestos.map((imp, i) => (
                               <div key={i} className="flex items-center justify-between text-[10px]">
                                 <span style={{ color: "var(--kipu-subtle)" }}>
-                                  {imp.porcentaje ?? imp.tarifa}% · Base ${fmt(imp.base_imponible)}
+                                  {imp.porcentaje ?? imp.tarifa}% · Base ${montoEC(imp.base_imponible)}
                                   {imp.aplica_credito && (
                                     <span className="ml-1 font-medium" style={{ color: "var(--kipu-success)" }}>
                                       · crédito
@@ -468,7 +467,7 @@ export default function SeccionRetenciones({
                                   )}
                                 </span>
                                 <span className="font-bold" style={{ color: "var(--kipu-info)" }}>
-                                  ${fmt(imp.valor)}
+                                  ${montoEC(imp.valor)}
                                 </span>
                               </div>
                             ))}

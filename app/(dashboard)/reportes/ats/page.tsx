@@ -15,10 +15,7 @@ import DocumentosIncluidos from "../_components/DocumentosIncluidos";
 import EstadoBadge         from "../_components/EstadoBadge";
 import { ES_APP_NATIVA } from "@/lib/plataforma";
 import { detalleError } from "@/lib/errores";
-
-const fmt  = (n: number = 0) =>
-  n.toLocaleString("es-EC", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const fmtN = (n: number = 0) => n.toLocaleString("es-EC");
+import { montoEC, numeroEC } from "@/lib/dinero";
 
 function TablaDetalle({ titulo, rows, columnas, color = "indigo" }: {
   titulo:   string;
@@ -57,7 +54,7 @@ function TablaDetalle({ titulo, rows, columnas, color = "indigo" }: {
         <div className="flex items-center gap-2">
           <FileText size={14} style={{ color: iconColor }} />
           <p className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>{titulo}</p>
-          <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>({fmtN(rows.length)})</span>
+          <span className="text-xs" style={{ color: "var(--kipu-subtle)" }}>({numeroEC(rows.length)})</span>
         </div>
       </div>
 
@@ -307,15 +304,15 @@ function ReporteATS({ periodo }: { periodo: string }) {
   // Formatear valores para tabla
   const ventasFormateadas = detalleVentas.map((r: any) => ({
     ...r,
-    base_iva_nz: `$${fmt(r.base_iva_nz)}`,
-    base_iva_0:  `$${fmt(r.base_iva_0)}`,
-    iva:         `$${fmt(r.iva)}`,
+    base_iva_nz: `$${montoEC(r.base_iva_nz)}`,
+    base_iva_0:  `$${montoEC(r.base_iva_0)}`,
+    iva:         `$${montoEC(r.iva)}`,
   }));
 
   const comprasFormateadas = detalleCompras.map((r: any) => ({
     ...r,
-    base_iva_nz:  `$${fmt(r.base_iva_nz)}`,
-    iva_credito:  `$${fmt(r.iva_credito)}`,
+    base_iva_nz:  `$${montoEC(r.base_iva_nz)}`,
+    iva_credito:  `$${montoEC(r.iva_credito)}`,
     fuente:       r.fuente === "FISICO" ? "📄 Físico" : r.fuente === "EMITIDA" ? "🧾 Liquidación emitida" : "🔵 XML",
   }));
 
@@ -460,10 +457,10 @@ function ReporteATS({ periodo }: { periodo: string }) {
       {/* Resumen rápido */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: "Ventas",      value: fmtN(totalesVentas.num_docs  ?? 0), sub: `$${fmt(totalesVentas.total  ?? 0)}`, color: "var(--kipu-accent)" },
-          { label: "Compras",     value: fmtN(totalesCompras.num_docs ?? 0), sub: `$${fmt(totalesCompras.total ?? 0)}`, color: "var(--kipu-success)" },
-          { label: "Ret. emit.",  value: fmtN(retEmitidas.length),           sub: "comprobantes",                       color: "var(--kipu-warning)" },
-          { label: "Ret. recib.", value: fmtN(retRecibidas.length),          sub: "comprobantes",                       color: "var(--kipu-info)" },
+          { label: "Ventas",      value: numeroEC(totalesVentas.num_docs  ?? 0), sub: `$${montoEC(totalesVentas.total  ?? 0)}`, color: "var(--kipu-accent)" },
+          { label: "Compras",     value: numeroEC(totalesCompras.num_docs ?? 0), sub: `$${montoEC(totalesCompras.total ?? 0)}`, color: "var(--kipu-success)" },
+          { label: "Ret. emit.",  value: numeroEC(retEmitidas.length),           sub: "comprobantes",                       color: "var(--kipu-warning)" },
+          { label: "Ret. recib.", value: numeroEC(retRecibidas.length),          sub: "comprobantes",                       color: "var(--kipu-info)" },
         ].map(({ label, value, sub, color }) => (
           <div
             key={label}
@@ -525,7 +522,7 @@ function ReporteATS({ periodo }: { periodo: string }) {
               }}
             >
               <p className="text-[10px]" style={{ color: "var(--kipu-subtle)" }}>{label}</p>
-              <p className="text-sm font-bold" style={{ color: color }}>${fmt(value)}</p>
+              <p className="text-sm font-bold" style={{ color: color }}>${montoEC(value)}</p>
             </div>
           ))}
         </div>
@@ -560,7 +557,7 @@ function ReporteATS({ periodo }: { periodo: string }) {
               }}
             >
               <p className="text-[10px]" style={{ color: "var(--kipu-subtle)" }}>{label}</p>
-              <p className="text-sm font-bold" style={{ color: color }}>${fmt(value)}</p>
+              <p className="text-sm font-bold" style={{ color: color }}>${montoEC(value)}</p>
             </div>
           ))}
         </div>

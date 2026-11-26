@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Gauge } from "lucide-react";
 import api from "@/lib/api";
+import { numeroEC } from "@/lib/dinero";
+import { MESES } from "@/lib/fecha";
 
 interface Uso {
   plan_pro:  boolean;
@@ -16,10 +18,6 @@ interface Uso {
   mes:       string;
   reinicia:  string;
 }
-
-const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto",
-               "septiembre", "octubre", "noviembre", "diciembre"];
-const num = (n: number) => n.toLocaleString("es-EC");
 
 export default function UsoApi() {
   const [uso, setUso] = useState<Uso | null>(null);
@@ -34,7 +32,7 @@ export default function UsoApi() {
   const nombreMes = MESES[mes - 1];
   const reinicia = new Date(`${uso.reinicia}T12:00:00`);
   const fechaReinicio = `${reinicia.getDate()} de ${MESES[reinicia.getMonth()]}`;
-  const creditos = `${num(uso.creditos)} crédito${uso.creditos === 1 ? "" : "s"}`;
+  const creditos = `${numeroEC(uso.creditos)} crédito${uso.creditos === 1 ? "" : "s"}`;
 
   // Sin plan Pro: cada comprobante por API usa 1 crédito
   if (!uso.plan_pro) {
@@ -48,7 +46,7 @@ export default function UsoApi() {
           Cada comprobante por API usa 1 crédito. Te quedan <strong style={{ color: "var(--kipu-text)" }}>{creditos}</strong>.
         </p>
         <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
-          Con el Plan Pro tienes {num(uso.cupo_plan_pro)} comprobantes por API incluidos cada mes.{" "}
+          Con el Plan Pro tienes {numeroEC(uso.cupo_plan_pro)} comprobantes por API incluidos cada mes.{" "}
           <Link href="/planes" className="underline" style={{ color: "var(--kipu-accent)" }}>Ver planes</Link>
         </p>
       </div>
@@ -74,8 +72,8 @@ export default function UsoApi() {
 
       <div>
         <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>
-          Llevas <strong style={{ color: "var(--kipu-text)" }}>{num(uso.usados)}</strong> de{" "}
-          <strong style={{ color: "var(--kipu-text)" }}>{num(uso.limite)}</strong> comprobantes por API incluidos en tu Plan Pro
+          Llevas <strong style={{ color: "var(--kipu-text)" }}>{numeroEC(uso.usados)}</strong> de{" "}
+          <strong style={{ color: "var(--kipu-text)" }}>{numeroEC(uso.limite)}</strong> comprobantes por API incluidos en tu Plan Pro
         </p>
         <div className="mt-2 h-2 rounded-full overflow-hidden"
              style={{ background: "color-mix(in srgb, var(--kipu-text) 8%, transparent)" }}
@@ -91,9 +89,9 @@ export default function UsoApi() {
             <Link href="/planes" className="underline">Recargar créditos</Link>
           </>
         ) : cerca ? (
-          <>Te quedan {num(uso.restantes)}. Al llegar a {num(uso.limite)} se usarán tus créditos (tienes {creditos}).</>
+          <>Te quedan {numeroEC(uso.restantes)}. Al llegar a {numeroEC(uso.limite)} se usarán tus créditos (tienes {creditos}).</>
         ) : (
-          <>Te quedan {num(uso.restantes)} este mes. Desde el panel web la emisión es ilimitada.</>
+          <>Te quedan {numeroEC(uso.restantes)} este mes. Desde el panel web la emisión es ilimitada.</>
         )}
       </p>
     </div>

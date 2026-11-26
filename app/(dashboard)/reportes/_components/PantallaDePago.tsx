@@ -11,9 +11,7 @@ import { AlertTriangle, ArrowLeft, Calculator, CheckCircle2, Sparkles } from "lu
 import api from "@/lib/api";
 import { ES_APP_NATIVA } from "@/lib/plataforma";
 import Alertas104, { type Alerta104 } from "./Alertas104";
-
-const dinero = (n: number = 0) =>
-  n.toLocaleString("es-EC", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+import { montoEC } from "@/lib/dinero";
 
 interface Props {
   periodoFmt:       string;
@@ -57,7 +55,7 @@ export default function PantallaDePago({ periodoFmt, enCurso, total, alertasCant
           Tu declaración de {periodoFmt} {enCurso ? "va así hasta hoy" : "ya está calculada"}
         </h1>
         <p className="text-3xl font-bold tabular-nums" style={{ color: "var(--kipu-text)" }}>
-          ${dinero(aFavor ? total.saldo_a_favor : total.iva_a_pagar)}
+          ${montoEC(aFavor ? total.saldo_a_favor : total.iva_a_pagar)}
         </p>
         <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
           {aFavor ? "Saldo a favor para el próximo periodo" : "IVA a pagar"}
@@ -110,7 +108,7 @@ export default function PantallaDePago({ periodoFmt, enCurso, total, alertasCant
           <Sparkles size={15} style={{ color: "var(--kipu-accent)" }} /> Kipu Pro
         </span>
         <p className="text-xl font-bold" style={{ color: "var(--kipu-text)" }}>
-          {precioPro ? `$${dinero(precioPro.total)}` : "Todo el año"}
+          {precioPro ? `$${montoEC(precioPro.total)}` : "Todo el año"}
           {precioPro && <span className="text-xs font-normal" style={{ color: "var(--kipu-subtle)" }}> al año</span>}
         </p>
         <ul className="text-xs space-y-1" style={{ color: "var(--kipu-subtle)" }}>
