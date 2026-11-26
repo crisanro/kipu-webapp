@@ -13,14 +13,15 @@ import { useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
-  Building2, ChevronRight, CircleUser, CreditCard, FileSignature, Landmark, LogOut, Store, Trash2, UserCog,
-  type LucideIcon,
+  Building2, ChevronRight, CircleUser, CreditCard, FileSignature, ImageIcon, Landmark, LogOut, Store, Trash2,
+  UserCog, type LucideIcon,
 } from "lucide-react";
 import { auth } from "@/lib/firebase";
 import { useLista } from "@/lib/useLista";
 import type { HealthData } from "@/components/Checklist";
 import { DatosEmpresa, ImpuestosEmpresa } from "@/components/configuracion/TabEmpresa";
 import TabFirma from "@/components/configuracion/TabFirma";
+import TabLogo from "@/components/configuracion/TabLogo";
 import TabCobrosEnLinea from "@/components/configuracion/TabCobrosEnLinea";
 import EliminarCuenta from "@/components/cuenta/EliminarCuenta";
 import { tienePermiso } from "@/components/dashboard/DashboardNav";
@@ -30,17 +31,18 @@ import { cn } from "@/components/ui/cn";
 import { useAuthStore } from "@/store/auth.store";
 import { usePermiso } from "@/hooks/usePermiso";
 
-type Sec = "empresa" | "impuestos" | "firma" | "cobros" | "eliminar";
+type Sec = "empresa" | "logo" | "impuestos" | "firma" | "cobros" | "eliminar";
 
 const TITULOS: Record<Sec, string> = {
   empresa:   "Datos de la empresa",
+  logo:      "Logo de la empresa",
   impuestos: "Impuestos y leyendas",
   firma:     "Firma electrónica",
   cobros:    "Cobros en línea",
   eliminar:  "Eliminar mi cuenta",
 };
 
-const DE_EMPRESA: Sec[] = ["empresa", "impuestos", "firma", "cobros"];
+const DE_EMPRESA: Sec[] = ["empresa", "logo", "impuestos", "firma", "cobros"];
 
 // Enlaces de antes (y de los correos del backend) con ancla
 const POR_ANCLA: Record<string, Sec> = {
@@ -48,7 +50,7 @@ const POR_ANCLA: Record<string, Sec> = {
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- forma de /emisor/config
-type Config = { data?: { legal?: any; firma?: any } };
+type Config = { data?: { legal?: any; firma?: any; logo?: { configurado?: boolean; url?: string | null } } };
 type Dashboard = { data?: { health?: HealthData | null } };
 
 export default function ConfiguracionPage() {
@@ -70,6 +72,7 @@ export default function ConfiguracionPage() {
   const dash = useLista<Dashboard>(puedeVer ? `/api/v1/app/dashboard?fecha_inicio=${hoy}&fecha_fin=${hoy}` : null);
   const legal = cfg.datos?.data?.legal ?? null;
   const firma = cfg.datos?.data?.firma ?? null;
+  const logo  = cfg.datos?.data?.logo ?? null;
   const health = dash.datos?.data?.health ?? null;
   const recargar = () => { cfg.recargar(); dash.recargar(); };
 
@@ -94,6 +97,7 @@ export default function ConfiguracionPage() {
 
   const subtitulo: Partial<Record<Sec, string>> = {
     empresa:   empresa ? `${empresa.razon_social} · ${empresa.ambiente === 2 ? "Producción" : "Pruebas"}` : undefined,
+    logo:      cfg.datos ? (logo?.configurado ? "Sale en tus comprobantes" : "Sin logo") : undefined,
     impuestos: legal ? `IVA ${(legal.obligado_contabilidad === "SI" ? "MENSUAL" : legal.periodo_iva ?? "MENSUAL").toLowerCase()}`
                        + (legal.emite_retenciones ? " · emite retenciones" : "") : undefined,
     firma:     firma ? (firma.configurada ? firma.mensaje_vencimiento : "Sin configurar") : undefined,
@@ -119,6 +123,7 @@ export default function ConfiguracionPage() {
       {puedeVer ? (
         <Grupo titulo="Empresa">
           <Fila sec="empresa"   activa={secCompu} icono={Building2}     subtitulo={subtitulo.empresa} />
+          <Fila sec="logo"      activa={secCompu} icono={ImageIcon}     subtitulo={subtitulo.logo} />
           <Fila sec="impuestos" activa={secCompu} icono={Landmark}      subtitulo={subtitulo.impuestos} />
           <Fila sec="firma"     activa={secCompu} icono={FileSignature} subtitulo={subtitulo.firma}
                 alerta={!!firma && !firmaOk} />
@@ -167,6 +172,8 @@ export default function ConfiguracionPage() {
         <div className="space-y-3"><Esqueleto className="h-14" /><Esqueleto className="h-14" /><Esqueleto className="h-14" /></div>
       ) : s === "empresa" ? (
         <DatosEmpresa legal={legal} health={health} onActualizar={recargar} />
+      ) : s === "logo" ? (
+        <TabLogo logo={logo} onActualizar={recargar} />
       ) : s === "impuestos" ? (
         // key: al llegar los datos nuevos, el formulario parte de ellos
         <ImpuestosEmpresa key={JSON.stringify(legal)} legal={legal} onActualizar={recargar} />
