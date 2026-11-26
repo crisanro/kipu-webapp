@@ -6,7 +6,9 @@ import { LogOut, CheckCircle2, Plus, Star } from "lucide-react";
 import Hoja from "@/components/ui/Hoja";
 import Boton from "@/components/ui/Boton";
 import { useAuthStore } from "@/store/auth.store";
-import { SESSION_EMPRESA_KEY } from "@/app/providers";
+import { abrirEmpresa } from "@/lib/empresa";
+import { detalleError } from "@/lib/errores";
+import { useAvisos } from "@/components/ui/Avisos";
 import api from "@/lib/api";
 
 export function ModalLogout({ onConfirm, onCancel, cerrando = false }: {
@@ -35,7 +37,8 @@ export function ModalLogout({ onConfirm, onCancel, cerrando = false }: {
 
 export function SelectorEmpresa({ onClose }: { onClose: () => void }) {
   const router = useRouter();
-  const { empresas, empresa, setEmpresa, setEmpresas } = useAuthStore();
+  const { empresas, empresa, setEmpresas } = useAuthStore();
+  const avisos = useAvisos();
   const [cambiando, setCambiando] = useState<number | null>(null);
   const [guardandoDefault, setGuardandoDefault] = useState<number | null>(null);
   const [defaultId, setDefaultId] = useState<number | null>(
@@ -49,37 +52,13 @@ export function SelectorEmpresa({ onClose }: { onClose: () => void }) {
     }
     setCambiando(e.id);
     try {
-      const res = await api.post("/api/v1/app/usuarios/empresas/cambiar", { emisor_id: e.id });
-      const data = res.data.data;
-      setEmpresa({
-        id: e.id,
-        ruc: data.ruc,
-        razon_social: data.razon_social,
-        nombre_comercial: e.nombre_comercial,
-        ambiente: data.ambiente,
-        tipo_emisor: data.tipo_emisor,
-        rol: data.rol,
-        permisos: data.permisos,
-        firma_ok: e.firma_ok,
-        suscripcion_activa: data.suscripcion_activa,
-        suscripcion: data.suscripcion,
-        balance_api: data.balance_api,
-        emision_gratis: data.emision_gratis ?? false,
-        emite_retenciones: data.emite_retenciones ?? false,
-        obligado_contabilidad: data.obligado_contabilidad ?? e.obligado_contabilidad ?? null,
-        periodo_iva: data.periodo_iva ?? e.periodo_iva ?? null,
-      });
-      localStorage.setItem("kipu-ext-emisor", String(e.id));
-      localStorage.setItem("kipu-ext-ruc", data.ruc);
-      localStorage.setItem("kipu-ext-razon", data.razon_social);
-      sessionStorage.clear();
-      // DESPUÉS del clear: recordar la empresa elegida para la recarga
-      sessionStorage.setItem(SESSION_EMPRESA_KEY, String(e.id));
+      // El backend confirma que sigue siendo suya; la recarga trae la empresa
+      // completa del servidor (antes se armaba aquí a mano y se perdía al recargar)
+      await api.post("/api/v1/app/usuarios/empresas/cambiar", { emisor_id: e.id });
       onClose();
-      window.location.href = "/dashboard";
+      abrirEmpresa(e, "/dashboard");
     } catch (err) {
-      console.error(err);
-    } finally {
+      avisos.error(detalleError(err, "No se pudo cambiar de empresa. Intenta de nuevo."));
       setCambiando(null);
     }
   };

@@ -13,7 +13,7 @@ import { useSearchParams } from "next/navigation";
 import { AlertTriangle, Gauge, Loader2, Sparkles } from "lucide-react";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
-import { SESSION_EMPRESA_KEY } from "@/app/providers";
+import { abrirEmpresa } from "@/lib/empresa";
 import SolicitarAmpliacion from "@/components/uso-justo/SolicitarAmpliacion";
 import SoloWeb from "@/components/SoloWeb";
 import { ES_APP_NATIVA } from "@/lib/plataforma";
@@ -64,14 +64,7 @@ export default function UsoJustoPage() {
 
   useEffect(() => {
     if (!destino) return;
-    try {
-      localStorage.setItem("kipu-ext-emisor", String(destino.id));
-      localStorage.setItem("kipu-ext-ruc", destino.ruc);
-      localStorage.setItem("kipu-ext-razon", destino.razon_social);
-      sessionStorage.clear();
-      sessionStorage.setItem(SESSION_EMPRESA_KEY, String(destino.id));
-    } catch {}
-    window.location.replace("/uso-justo");
+    abrirEmpresa(destino, "/uso-justo", { reemplazar: true });
   }, [destino]);
 
   const cargar = useCallback(() => {

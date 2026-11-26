@@ -139,43 +139,6 @@ export function useNotificaciones(authLoading: boolean = false) {
   };
 }
 
-// ── Badge ──────────────────────────────────────────────────────────────────────
-export function NotificacionesBadge({
-  noLeidas,
-  onClick,
-}: {
-  noLeidas: number;
-  onClick:  () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="relative flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm transition-colors"
-      style={{ color: "var(--kipu-subtle)" }}
-      onMouseEnter={e => {
-        e.currentTarget.style.color = "var(--kipu-text)";
-        e.currentTarget.style.background = "color-mix(in srgb, var(--kipu-text) 5%, transparent)";
-      }}
-      onMouseLeave={e => {
-        e.currentTarget.style.color = "var(--kipu-subtle)";
-        e.currentTarget.style.background = "transparent";
-      }}
-    >
-      <Bell size={16} />
-      <span>Notificaciones</span>
-      {noLeidas > 0 && (
-        <span
-          className="ml-auto flex items-center justify-center w-5 h-5 rounded-full text-white text-[10px] font-bold"
-          style={{ background: "var(--kipu-accent)" }}
-        >
-          {noLeidas > 9 ? "9+" : noLeidas}
-        </span>
-      )}
-    </button>
-  );
-}
-
 // ── Drawer ─────────────────────────────────────────────────────────────────────
 interface DrawerProps {
   open:           boolean;

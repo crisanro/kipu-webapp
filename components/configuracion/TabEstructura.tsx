@@ -48,6 +48,22 @@ const inputDisStyle = {
   color: "var(--kipu-subtle)",
 };
 
+// Botón de acción de cada fila (fuera del componente: dentro se montaba de nuevo en cada pintada)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function BtnAccion({ onClick, style, title, children }: any) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="p-1.5 rounded-lg transition-colors flex items-center justify-center"
+      style={style}
+      title={title}
+    >
+      {children}
+    </button>
+  );
+}
+
 export default function TabEstructura({ estructura, onActualizar }: Props) {
   const avisos    = useAvisos();
 
@@ -80,84 +96,37 @@ export default function TabEstructura({ estructura, onActualizar }: Props) {
 
   const cerrar = () => { setModal(null); setError(""); };
 
-  // ── Crear establecimiento ────────────────────────────────────────────────────
-  const crearEstab = async () => {
+  // ── Crear y editar: guardar, olvidar la estructura guardada y cerrar ─────────
+  const BASE = "/api/v1/app/estructura";
+  const enviar = async (metodo: "post" | "put", url: string, body: object, porDefecto: string, despues?: () => void) => {
     setError(""); setSaving(true);
     try {
-      await api.post("/api/v1/app/estructura/establecimientos", estabForm);
-      invalidarEstructuraLocal(); cerrar();
-      setEstabForm({ codigo: "001", nombre_comercial: "", direccion: "" });
-    } catch (e: any) {
-      setError(detalleError(e, "Error al crear."));
+      await api[metodo](url, body);
+      invalidarEstructuraLocal(); cerrar(); despues?.();
+    } catch (e: unknown) {
+      setError(detalleError(e, porDefecto));
     } finally { setSaving(false); }
   };
+  const crearEstab   = () => enviar("post", `${BASE}/establecimientos`, estabForm, "Error al crear.",
+                                    () => setEstabForm({ codigo: "001", nombre_comercial: "", direccion: "" }));
+  const guardarEstab = (id: number) => enviar("put", `${BASE}/establecimientos/${id}`, editEstab, "Error al actualizar.");
+  const crearPunto   = () => enviar("post", `${BASE}/puntos-emision`, puntoForm, "Error al crear.");
+  const guardarPunto = (id: number) => enviar("put", `${BASE}/puntos-emision/${id}`, editPunto, "Error al actualizar.");
 
-  // ── Editar establecimiento ───────────────────────────────────────────────────
-  const guardarEstab = async (estabId: number) => {
-    setError(""); setSaving(true);
+  // ── Activar o desactivar ─────────────────────────────────────────────────────
+  const alternar = async (url: string, id: number, activo: boolean, porDefecto: string) => {
+    setToggling(id);
     try {
-      await api.put(`/api/v1/app/estructura/establecimientos/${estabId}`, editEstab);
-      invalidarEstructuraLocal(); cerrar();
-    } catch (e: any) {
-      setError(detalleError(e, "Error al actualizar."));
-    } finally { setSaving(false); }
-  };
-
-  // ── Crear punto ──────────────────────────────────────────────────────────────
-  const crearPunto = async () => {
-    setError(""); setSaving(true);
-    try {
-      await api.post("/api/v1/app/estructura/puntos-emision", puntoForm);
-      invalidarEstructuraLocal(); cerrar();
-    } catch (e: any) {
-      setError(detalleError(e, "Error al crear."));
-    } finally { setSaving(false); }
-  };
-
-  // ── Editar punto ─────────────────────────────────────────────────────────────
-  const guardarPunto = async (puntoId: number) => {
-    setError(""); setSaving(true);
-    try {
-      await api.put(`/api/v1/app/estructura/puntos-emision/${puntoId}`, editPunto);
-      invalidarEstructuraLocal(); cerrar();
-    } catch (e: any) {
-      setError(detalleError(e, "Error al actualizar."));
-    } finally { setSaving(false); }
-  };
-
-  // ── Toggle activo ────────────────────────────────────────────────────────────
-  const toggleEstab = async (estabId: number, activo: boolean) => {
-    setToggling(estabId);
-    try {
-      await api.put(`/api/v1/app/estructura/establecimientos/${estabId}`, { is_active: !activo });
+      await api.put(url, { is_active: !activo });
       invalidarEstructuraLocal();
-    } catch (e: any) {
-      avisos.error(detalleError(e, "No se pudo cambiar el establecimiento."));
+    } catch (e: unknown) {
+      avisos.error(detalleError(e, porDefecto));
     } finally { setToggling(null); }
   };
-
-  const togglePunto = async (puntoId: number, activo: boolean) => {
-    setToggling(puntoId);
-    try {
-      await api.put(`/api/v1/app/estructura/puntos-emision/${puntoId}`, { is_active: !activo });
-      invalidarEstructuraLocal();
-    } catch (e: any) {
-      avisos.error(detalleError(e, "No se pudo cambiar el punto de emisión."));
-    } finally { setToggling(null); }
-  };
-
-  // ── Botones de acción ────────────────────────────────────────────────────────
-  const BtnAccion = ({ onClick, style, title, children }: any) => (
-    <button
-      type="button"
-      onClick={onClick}
-      className="p-1.5 rounded-lg transition-colors flex items-center justify-center"
-      style={style}
-      title={title}
-    >
-      {children}
-    </button>
-  );
+  const toggleEstab = (id: number, activo: boolean) =>
+    alternar(`${BASE}/establecimientos/${id}`, id, activo, "No se pudo cambiar el establecimiento.");
+  const togglePunto = (id: number, activo: boolean) =>
+    alternar(`${BASE}/puntos-emision/${id}`, id, activo, "No se pudo cambiar el punto de emisión.");
 
   // ── Render ───────────────────────────────────────────────────────────────────
   return (

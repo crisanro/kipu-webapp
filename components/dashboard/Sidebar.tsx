@@ -19,11 +19,11 @@ import {
   Lock,
   Search,
 } from "lucide-react";
-import { clsx } from "clsx";
+import { cn } from "@/components/ui/cn";
 import { NAV_GROUPS, aplicaALaEmpresa, bloqueadoPorPlan, tienePermiso } from "./DashboardNav";
 import { ThemeToggle } from "./ThemeToggle";
 import { useAuthStore } from "@/store/auth.store";
-import { ES_APP_NATIVA, rutaFueraDelPlan } from "@/lib/plataforma";
+import { ES_APP_NATIVA, nombrePlan, rutaFueraDelPlan } from "@/lib/plataforma";
 
 // Tarjeta del plan: enlace a /planes en la web; en la app de las tiendas no se
 // ofrecen planes, así que es solo un recuadro informativo
@@ -108,11 +108,8 @@ export function Sidebar({
   };
 
   const planGratis = !empresa.suscripcion_activa && !!empresa.emision_gratis;   // plan gratis encendido
-  // Nombre visible del plan (el backend manda PRO o AL_DIA). Sin suscripción es "Gratis", tenga o no créditos.
-  // En la app no se nombra Kipu Pro (reglas de las tiendas): "Plan activo".
-  const planLabel = !empresa.suscripcion_activa ? "Gratis"
-    : empresa.suscripcion?.plan === "AL_DIA" ? "Kipu Al Día"
-    : ES_APP_NATIVA ? "Plan activo" : "Kipu Pro";
+  // Mismo nombre que en Más: en la app, sin "Gratis" ni "Kipu Pro" (null = sin nombre)
+  const planLabel = nombrePlan(empresa);
   // Con el plan gratis el panel emite sin créditos: no hay que alarmar por no tenerlos
   const sinCreditos = !empresa.suscripcion_activa && !planGratis && (empresa.balance_api ?? 0) === 0;
 
@@ -124,7 +121,7 @@ export function Sidebar({
 
   return (
     <aside
-      className={clsx(
+      className={cn(
         "fixed lg:static inset-y-0 left-0 z-30 w-64 flex flex-col transition-transform duration-200",
         // En móvil es un panel fijo de alto completo: dentro del área segura (globals.css)
         "max-lg:pt-[var(--sa-top)] max-lg:pb-[var(--sa-bottom)]",
@@ -368,23 +365,25 @@ export function Sidebar({
         {/* Plan activo: en la web lleva a /planes; en la app solo informa */}
         <EnlacePlan>
           <p className="text-xs mb-1" style={{ color: "var(--kipu-subtle)" }}>
-            Plan activo
+            {planLabel ? "Plan activo" : "Tu cuenta"}
           </p>
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-bold" style={{ color: "var(--kipu-text)" }}>
-                {planLabel}
-              </p>
-              <p className="text-xs" style={{ color: "var(--kipu-muted)" }}>
-                {empresa.suscripcion?.estado === "TRIAL"
-                  ? "⏳ En prueba"
-                  : empresa.suscripcion_activa
-                  ? "✅ Activo"
-                  : planGratis
-                  ? "🆓 Facturas gratis desde el panel"
-                  : "🆓 Emitiendo con créditos"}
-              </p>
-            </div>
+            {planLabel && (
+              <div>
+                <p className="text-sm font-bold" style={{ color: "var(--kipu-text)" }}>
+                  {planLabel}
+                </p>
+                <p className="text-xs" style={{ color: "var(--kipu-muted)" }}>
+                  {empresa.suscripcion?.estado === "TRIAL"
+                    ? "⏳ En prueba"
+                    : empresa.suscripcion_activa
+                    ? "✅ Activo"
+                    : planGratis
+                    ? "🆓 Facturas gratis desde el panel"
+                    : "🆓 Emitiendo con créditos"}
+                </p>
+              </div>
+            )}
             {empresa.suscripcion_activa && empresa.balance_api > 0 && (
               <div className="text-right">
                 <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>

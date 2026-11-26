@@ -6,20 +6,18 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { auth } from "@/lib/firebase";
-import { signOut } from "firebase/auth";
-import { useAuthStore } from "@/store/auth.store";
 import { Zap, CheckCircle2, MessageCircle } from "lucide-react";
 import { enlaceWhatsAppFalla } from "@/lib/soporte";
 import FormularioEmpresa from "@/components/auth/FormularioEmpresa";
+import { cerrarSesion } from "@/lib/notifications";
 
 // ── Pie de soporte — visible en todos los pasos ───────────────────────────────
 function SoporteFooter({ ruc }: { ruc: string }) {
   const router = useRouter();
   const texto = `Hola, necesito ayuda para configurar mi empresa en Kipu${ruc ? ` (RUC ${ruc})` : ""}.`;
   // Al verificar el correo se llega directo aquí: es la única salida de la cuenta
-  const cerrarSesion = async () => {
-    await signOut(auth);
-    useAuthStore.getState().logout();
+  const salir = async () => {
+    await cerrarSesion();
     router.replace("/login");
   };
   return (
@@ -35,7 +33,7 @@ function SoporteFooter({ ruc }: { ruc: string }) {
       </a>
       <button
         type="button"
-        onClick={cerrarSesion}
+        onClick={salir}
         className="min-h-11 px-3 text-xs text-sutil transition-colors hover:text-texto"
       >
         Cerrar sesión

@@ -1,7 +1,9 @@
 // lib/notifications.ts
 import { getToken, deleteToken, onMessage, type MessagePayload } from "firebase/messaging";
-import { getFirebaseMessaging } from "./firebase";
+import { signOut } from "firebase/auth";
+import { auth, getFirebaseMessaging } from "./firebase";
 import api from "./api";
+import { useAuthStore } from "@/store/auth.store";
 import { rutaInterna } from "./rutas";
 import { ES_APP_NATIVA } from "./plataforma";
 
@@ -134,6 +136,23 @@ export async function desregistrarNotificaciones(): Promise<void> {
   // En segundo plano: puede tardar varios segundos y el cierre de sesión no
   // debe esperarlo (antes el botón parecía no responder).
   void olvidarDispositivoLocal();
+}
+
+// ── Cerrar sesión (todas las salidas de la app pasan por aquí) ────────────────
+// Da de baja el dispositivo ANTES de cerrar sesión (necesita el token válido),
+// pero sin dejar esperando: como mucho 3 s y se cierra igual. Con la cuenta ya
+// eliminada el backend no la acepta: basta con olvidar el token local.
+// Quien llama decide a dónde ir después (normalmente /login).
+export async function cerrarSesion({ darDeBaja = true }: { darDeBaja?: boolean } = {}): Promise<void> {
+  try {
+    await Promise.race([
+      darDeBaja ? desregistrarNotificaciones() : olvidarDispositivoLocal(),
+      new Promise((resolve) => setTimeout(resolve, 3000)),
+    ]);
+  } finally {
+    try { await signOut(auth); } catch {}
+    useAuthStore.getState().logout();
+  }
 }
 
 // ── Olvidar el token solo en este navegador (sesión expirada / 401) ───────────

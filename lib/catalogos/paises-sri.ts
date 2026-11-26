@@ -316,16 +316,3 @@ export function getPaisesOrdenados(): PaisSRI[] {
   return [...frecuentes, ...resto];
 }
 
-/** Busca un país por código */
-export function getPaisPorCodigo(codigo: string): PaisSRI | undefined {
-  return PAISES_SRI.find(p => p.codigo === codigo);
-}
-
-/** Busca países por nombre (búsqueda parcial, case-insensitive) */
-export function buscarPaises(query: string): PaisSRI[] {
-  const q = query.toUpperCase().trim();
-  if (!q) return getPaisesOrdenados();
-  return PAISES_SRI.filter(p =>
-    p.nombre.includes(q) || p.codigo.includes(q)
-  );
-}

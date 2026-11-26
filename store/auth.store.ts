@@ -1,6 +1,7 @@
 // store/auth.store.ts
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { useSandboxStore } from "./sandbox.store";
 
 interface Suscripcion {
   activa:  boolean;
@@ -84,8 +85,10 @@ export const useAuthStore = create<AuthState>()(
         if (typeof window !== "undefined") {
           localStorage.removeItem("kipu-auth");        // ← store de zustand
           localStorage.removeItem("kipu-ext-token");   // ← token extensión
-          // kipu:empresas ya no existe
         }
+        // El sandbox también se guarda en el navegador: sin esto, quien entraba
+        // después en ese mismo navegador heredaba el sandbox encendido
+        useSandboxStore.getState().setSandbox(false);
         set({ uid: null, email: null, profile_id: null,
               role: null, equipoAlDia: false, listo: false, empresa: null, empresas: [] });
       },
