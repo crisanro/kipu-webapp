@@ -8,13 +8,14 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import {
-  CheckCircle2, FileCheck2, KeyRound, Loader2, MessageCircle, ShieldCheck, XCircle,
+  CheckCircle2, FileCheck2, KeyRound, Loader2, MessageCircle, ShieldCheck,
 } from "lucide-react";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
 import ClaveSri from "@/components/al-dia/ClaveSri";
 import PanelCliente from "@/components/al-dia/PanelCliente";
 import TextoTerminos from "@/components/al-dia/TextoTerminos";
+import { CajaHero, ListaConMarca, ListaPreguntas, PasosNumerados, TarjetaInfo } from "@/components/al-dia/Venta";
 import type { EstadoRenta } from "@/components/renta/OfertaRenta";
 
 // Contacto de ventas (transferencia, cambio de plan): el mismo número configurado
@@ -64,20 +65,13 @@ const PREGUNTAS = (anio: number): [string, string][] => [
    "Para personas naturales no obligadas a llevar contabilidad, en régimen general o RIMPE Emprendedor. Si eres sociedad u obligado a llevar contabilidad, escríbenos."],
 ];
 
+// Las piezas (recuadro de arriba, pasos, listas, tarjetas y preguntas) son las de
+// la venta de Kipu Al Día (components/al-dia/Venta.tsx)
 function Venta({ estado, onContratar }: { estado: EstadoRenta; onContratar: () => void }) {
   const anio = estado.anio;
   return (
     <>
-      {/* Hero */}
-      <div className="rounded-2xl p-6 md:p-8 space-y-4"
-           style={{
-             background: "linear-gradient(135deg, color-mix(in srgb, var(--kipu-accent) 14%, var(--kipu-surface)), var(--kipu-surface))",
-             border: "1px solid color-mix(in srgb, var(--kipu-accent) 30%, transparent)",
-           }}>
-        <div className="flex items-center gap-2">
-          <FileCheck2 size={18} style={{ color: "var(--kipu-accent)" }} />
-          <span className="text-sm font-semibold" style={{ color: "var(--kipu-accent)" }}>Kipu Renta</span>
-        </div>
+      <CajaHero icono={<FileCheck2 size={18} />} nombre="Kipu Renta">
         <h1 className="text-2xl md:text-3xl font-extrabold leading-tight" style={{ color: "var(--kipu-text)" }}>
           Tu renta {anio},<br />te la declaramos.
         </h1>
@@ -105,48 +99,19 @@ function Venta({ estado, onContratar }: { estado: EstadoRenta; onContratar: () =
         <p className="text-xs" style={{ color: "var(--kipu-subtle)" }}>
           Con gastos personales · Sustitutiva gratis si nos equivocamos · Tu clave se borra al presentar
         </p>
-      </div>
+      </CajaHero>
 
-      {/* Cómo funciona */}
-      <section className="space-y-3">
-        <h2 className="text-lg font-bold" style={{ color: "var(--kipu-text)" }}>Cómo funciona</h2>
-        <ol className="grid sm:grid-cols-2 gap-3">
-          {PASOS(anio).map((p, i) => (
-            <li key={p.titulo} className="rounded-xl p-4 flex gap-3" style={caja}>
-              <span className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-sm font-bold"
-                    style={{ color: "var(--kipu-accent)", background: "color-mix(in srgb, var(--kipu-accent) 12%, transparent)" }}>
-                {i + 1}
-              </span>
-              <div>
-                <p className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>{p.titulo}</p>
-                <p className="text-xs mt-0.5" style={{ color: "var(--kipu-muted)" }}>{p.texto}</p>
-              </div>
-            </li>
-          ))}
-        </ol>
-      </section>
+      <PasosNumerados pasos={PASOS(anio)} />
 
       {/* Qué incluye y qué no */}
       <section className="grid md:grid-cols-2 gap-3">
         <div className="rounded-xl p-5 space-y-3" style={caja}>
           <h2 className="text-base font-bold" style={{ color: "var(--kipu-text)" }}>Qué incluye</h2>
-          <ul className="space-y-2">
-            {INCLUYE.map((t) => (
-              <li key={t} className="flex gap-2 text-sm" style={{ color: "var(--kipu-text)" }}>
-                <CheckCircle2 size={15} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-success)" }} /> {t}
-              </li>
-            ))}
-          </ul>
+          <ListaConMarca items={INCLUYE} incluido />
         </div>
         <div className="rounded-xl p-5 space-y-3" style={caja}>
           <h2 className="text-base font-bold" style={{ color: "var(--kipu-text)" }}>Qué no incluye</h2>
-          <ul className="space-y-2">
-            {NO_INCLUYE.map((t) => (
-              <li key={t} className="flex gap-2 text-sm" style={{ color: "var(--kipu-text)" }}>
-                <XCircle size={15} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-subtle)" }} /> {t}
-              </li>
-            ))}
-          </ul>
+          <ListaConMarca items={NO_INCLUYE} incluido={false} />
           <p className="text-xs pt-1" style={{ color: "var(--kipu-subtle)" }}>
             Si necesitas algo de esto, te cotizamos aparte y esperamos tu visto bueno antes de empezar.
           </p>
@@ -155,42 +120,17 @@ function Venta({ estado, onContratar }: { estado: EstadoRenta; onContratar: () =
 
       {/* Garantía y clave */}
       <section className="grid md:grid-cols-2 gap-3">
-        <div className="rounded-xl p-5 space-y-2" style={caja}>
-          <p className="flex items-center gap-2 text-base font-bold" style={{ color: "var(--kipu-text)" }}>
-            <ShieldCheck size={18} style={{ color: "var(--kipu-accent)" }} /> Nuestra garantía
-          </p>
-          <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>
-            Si la declaración que presentamos necesita corregirse, la sustitutiva va por nuestra cuenta. Una persona
-            del equipo de Kipu revisa tu declaración antes de presentarla.
-          </p>
-        </div>
-        <div className="rounded-xl p-5 space-y-2" style={caja}>
-          <p className="flex items-center gap-2 text-base font-bold" style={{ color: "var(--kipu-text)" }}>
-            <KeyRound size={18} style={{ color: "var(--kipu-accent)" }} /> Tu clave, cuidada
-          </p>
-          <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>
-            Se guarda cifrada y ves cada vez que alguien la usa. El día que presentamos tu renta la borramos y te
-            avisamos para que la cambies.
-          </p>
-        </div>
+        <TarjetaInfo icono={<ShieldCheck size={18} />} titulo="Nuestra garantía">
+          Si la declaración que presentamos necesita corregirse, la sustitutiva va por nuestra cuenta. Una persona
+          del equipo de Kipu revisa tu declaración antes de presentarla.
+        </TarjetaInfo>
+        <TarjetaInfo icono={<KeyRound size={18} />} titulo="Tu clave, cuidada">
+          Se guarda cifrada y ves cada vez que alguien la usa. El día que presentamos tu renta la borramos y te
+          avisamos para que la cambies.
+        </TarjetaInfo>
       </section>
 
-      {/* Preguntas */}
-      <section className="space-y-3">
-        <h2 className="text-lg font-bold" style={{ color: "var(--kipu-text)" }}>Preguntas frecuentes</h2>
-        <div className="rounded-xl overflow-hidden" style={caja}>
-          {PREGUNTAS(anio).map(([p, r], i) => (
-            <details key={p} className="group px-4 py-3" style={{ borderTop: i ? "1px solid var(--kipu-border)" : "none" }}>
-              <summary className="text-sm font-medium list-none flex items-center justify-between gap-3"
-                       style={{ color: "var(--kipu-text)" }}>
-                {p}
-                <span className="text-lg leading-none transition-transform group-open:rotate-45" style={{ color: "var(--kipu-subtle)" }}>+</span>
-              </summary>
-              <p className="text-sm mt-2" style={{ color: "var(--kipu-muted)" }}>{r}</p>
-            </details>
-          ))}
-        </div>
-      </section>
+      <ListaPreguntas preguntas={PREGUNTAS(anio)} />
     </>
   );
 }

@@ -8,8 +8,7 @@
 // montos, y un solo botón de WhatsApp; se contrata y se paga por fuera.
 import { useEffect, useState, type ReactNode } from "react";
 import {
-  CalendarCheck, CheckCircle2, Clock, FileCheck2, KeyRound, MessageCircle,
-  Receipt, ShieldCheck, Users, XCircle,
+  CalendarCheck, CheckCircle2, Clock, FileCheck2, MessageCircle, ShieldCheck, Users, XCircle,
 } from "lucide-react";
 import api from "@/lib/api";
 import { hoyEC, MESES } from "@/lib/fecha";
@@ -19,6 +18,96 @@ import { dolares } from "@/lib/dinero";
 
 const caja  = { background: "var(--kipu-surface)", border: "1px solid var(--kipu-border)" };
 const fechaCorta = (d: Date) => d.toLocaleDateString("es-EC", { day: "2-digit", month: "2-digit", year: "numeric" });
+
+// ── Piezas de la venta: también las usa Kipu Renta (app/(dashboard)/renta/page.web.tsx) ──
+
+/** Recuadro de arriba, con degradado: ícono y nombre del servicio, y lo demás adentro. */
+export function CajaHero({ icono, nombre, children }: { icono: ReactNode; nombre: ReactNode; children: ReactNode }) {
+  return (
+    <div className="rounded-2xl p-6 md:p-8 space-y-4"
+         style={{
+           background: "linear-gradient(135deg, color-mix(in srgb, var(--kipu-accent) 14%, var(--kipu-surface)), var(--kipu-surface))",
+           border: "1px solid color-mix(in srgb, var(--kipu-accent) 30%, transparent)",
+         }}>
+      <div className="flex items-center gap-2 text-acento">
+        {icono}
+        <span className="text-sm font-semibold">{nombre}</span>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+/** "Cómo funciona": los pasos, numerados. */
+export function PasosNumerados({ pasos }: { pasos: { titulo: string; texto: string }[] }) {
+  return (
+    <section className="space-y-3">
+      <h2 className="text-lg font-bold" style={{ color: "var(--kipu-text)" }}>Cómo funciona</h2>
+      <ol className="grid sm:grid-cols-2 gap-3">
+        {pasos.map((p, i) => (
+          <li key={p.titulo} className="rounded-xl p-4 flex gap-3" style={caja}>
+            <span className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-sm font-bold"
+                  style={{ color: "var(--kipu-accent)", background: "color-mix(in srgb, var(--kipu-accent) 12%, transparent)" }}>
+              {i + 1}
+            </span>
+            <div>
+              <p className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>{p.titulo}</p>
+              <p className="text-xs mt-0.5" style={{ color: "var(--kipu-muted)" }}>{p.texto}</p>
+            </div>
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
+/** Lista con ✓ (incluido) o ✗ (no incluido). */
+export function ListaConMarca({ items, incluido }: { items: string[]; incluido: boolean }) {
+  const Marca = incluido ? CheckCircle2 : XCircle;
+  return (
+    <ul className="space-y-2">
+      {items.map((t) => (
+        <li key={t} className="flex gap-2 text-sm" style={{ color: "var(--kipu-text)" }}>
+          <Marca size={15} className="shrink-0 mt-0.5"
+                 style={{ color: incluido ? "var(--kipu-success)" : "var(--kipu-subtle)" }} /> {t}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** Tarjeta de confianza: garantía, quién lo hace, la clave… */
+export function TarjetaInfo({ icono, titulo, children }: { icono: ReactNode; titulo: string; children: ReactNode }) {
+  return (
+    <div className="rounded-xl p-5 space-y-2" style={caja}>
+      <p className="flex items-center gap-2 text-base font-bold" style={{ color: "var(--kipu-text)" }}>
+        <span className="inline-flex text-acento">{icono}</span> {titulo}
+      </p>
+      <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>{children}</p>
+    </div>
+  );
+}
+
+/** Preguntas frecuentes, desplegables. */
+export function ListaPreguntas({ preguntas }: { preguntas: [string, string][] }) {
+  return (
+    <section className="space-y-3">
+      <h2 className="text-lg font-bold" style={{ color: "var(--kipu-text)" }}>Preguntas frecuentes</h2>
+      <div className="rounded-xl overflow-hidden" style={caja}>
+        {preguntas.map(([p, r], i) => (
+          <details key={p} className="group px-4 py-3" style={{ borderTop: i ? "1px solid var(--kipu-border)" : "none" }}>
+            <summary className="text-sm font-medium list-none flex items-center justify-between gap-3"
+                     style={{ color: "var(--kipu-text)" }}>
+              {p}
+              <span className="text-lg leading-none transition-transform group-open:rotate-45" style={{ color: "var(--kipu-subtle)" }}>+</span>
+            </summary>
+            <p className="text-sm mt-2" style={{ color: "var(--kipu-muted)" }}>{r}</p>
+          </details>
+        ))}
+      </div>
+    </section>
+  );
+}
 
 // ── Calendario del SRI: el día de vencimiento sale del noveno dígito del RUC ──
 const DIA_POR_DIGITO: Record<string, number> = {
@@ -88,17 +177,7 @@ export function HeroAlDia({ precio, base = null, periodo = "MENSUAL", onContrata
   whatsapp?: string;   // app: el enlace de "Escríbenos por WhatsApp" (en vez de precio y contratar)
 }) {
   return (
-    <div className="rounded-2xl p-6 md:p-8 space-y-4"
-         style={{
-           background: "linear-gradient(135deg, color-mix(in srgb, var(--kipu-accent) 14%, var(--kipu-surface)), var(--kipu-surface))",
-           border: "1px solid color-mix(in srgb, var(--kipu-accent) 30%, transparent)",
-         }}>
-      <div className="flex items-center gap-2">
-        <CalendarCheck size={18} style={{ color: "var(--kipu-accent)" }} />
-        <span className="text-sm font-semibold" style={{ color: "var(--kipu-accent)" }}>
-          {ES_APP_NATIVA ? "Kipu Al Día · Tu contador" : "Kipu Al Día"}
-        </span>
-      </div>
+    <CajaHero icono={<CalendarCheck size={18} />} nombre={ES_APP_NATIVA ? "Kipu Al Día · Tu contador" : "Kipu Al Día"}>
       {/* En la app se vende como el servicio de un contador (Apple 3.1.3(e));
           la web conserva su texto */}
       {ES_APP_NATIVA ? (
@@ -162,7 +241,7 @@ export function HeroAlDia({ precio, base = null, periodo = "MENSUAL", onContrata
           ? "Servicio de contadores del equipo de Kipu · Te contamos todo por WhatsApp"
           : "Incluye todo Kipu Pro · Tu precio no sube mientras sigas suscrito · Cancelas cuando quieras"}
       </p>
-    </div>
+    </CajaHero>
   );
 }
 
@@ -265,38 +344,20 @@ export function DemoAlDia({ ruc, semestral, enProduccion }: {
 }
 
 // ── Cómo funciona ─────────────────────────────────────────────────────────────
-const PASOS: { icono: ReactNode; titulo: string; texto: string }[] = [
-  { icono: <KeyRound size={16} />,      titulo: "Contratas y guardas tu clave del SRI",
+const PASOS = [
+  { titulo: "Contratas y guardas tu clave del SRI",
     texto: "Queda cifrada y solo se usa para tus declaraciones. Ves cada vez que alguien la usa." },
-  { icono: <Receipt size={16} />,       titulo: "Tú facturas como siempre",
+  { titulo: "Tú facturas como siempre",
     // En la app sin "sin límite": sería prometer una función digital (reglas de las tiendas)
     texto: `Con Kipu, ${ES_APP_NATIVA ? "como siempre" : "sin límite"}. Tus compras las tomamos de los comprobantes que el SRI tiene a tu nombre.` },
-  { icono: <MessageCircle size={16} />, titulo: "Te mandamos el resumen por WhatsApp",
+  { titulo: "Te mandamos el resumen por WhatsApp",
     texto: "Lo que vendiste, lo que compraste y cuánto pagar. Tienes 48 horas para revisarlo." },
-  { icono: <FileCheck2 size={16} />,    titulo: "Presentamos y te llega el comprobante",
+  { titulo: "Presentamos y te llega el comprobante",
     texto: "Dentro del plazo del SRI. Tú solo pagas el valor que te indicamos, antes de la fecha límite." },
 ];
 
 export function ComoFunciona() {
-  return (
-    <section className="space-y-3">
-      <h2 className="text-lg font-bold" style={{ color: "var(--kipu-text)" }}>Cómo funciona</h2>
-      <ol className="grid sm:grid-cols-2 gap-3">
-        {PASOS.map((p, i) => (
-          <li key={p.titulo} className="rounded-xl p-4 flex gap-3" style={caja}>
-            <span className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-sm font-bold"
-                  style={{ color: "var(--kipu-accent)", background: "color-mix(in srgb, var(--kipu-accent) 12%, transparent)" }}>
-              {i + 1}
-            </span>
-            <div>
-              <p className="text-sm font-semibold" style={{ color: "var(--kipu-text)" }}>{p.titulo}</p>
-              <p className="text-xs mt-0.5" style={{ color: "var(--kipu-muted)" }}>{p.texto}</p>
-            </div>
-          </li>
-        ))}
-      </ol>
-    </section>
-  );
+  return <PasosNumerados pasos={PASOS} />;
 }
 
 // ── Qué incluye y qué no ─────────────────────────────────────────────────────
@@ -339,13 +400,7 @@ export function QueIncluye({ precioRenta = null }: { precioRenta?: number | null
         <h2 className="text-base font-bold" style={{ color: "var(--kipu-text)" }}>
           {ES_APP_NATIVA ? "Qué hace tu contador" : "Qué incluye"}
         </h2>
-        <ul className="space-y-2">
-          {INCLUYE.map((t) => (
-            <li key={t} className="flex gap-2 text-sm" style={{ color: "var(--kipu-text)" }}>
-              <CheckCircle2 size={15} className="shrink-0 mt-0.5" style={{ color: "var(--kipu-success)" }} /> {t}
-            </li>
-          ))}
-        </ul>
+        <ListaConMarca items={INCLUYE} incluido />
         {/* En la app Al Día se vende solo como el servicio del contador (Apple
             3.1.3(e)): sin la lista de funciones digitales que trae, que un
             revisor leería como una compra de funciones fuera de la tienda */}
@@ -393,26 +448,16 @@ export function QueIncluye({ precioRenta = null }: { precioRenta?: number | null
 export function Confianza() {
   return (
     <section className="grid md:grid-cols-2 gap-3">
-      <div className="rounded-xl p-5 space-y-2" style={caja}>
-        <p className="flex items-center gap-2 text-base font-bold" style={{ color: "var(--kipu-text)" }}>
-          <ShieldCheck size={18} style={{ color: "var(--kipu-accent)" }} /> Nuestra garantía
-        </p>
-        <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>
-          Si una declaración que presentamos necesita corregirse, la sustitutiva va por nuestra cuenta. Y si
-          por esa corrección el SRI te cobra multa o intereses, te los compensamos con meses gratis de
-          Kipu Al Día (hasta 3 al año).
-        </p>
-      </div>
-      <div className="rounded-xl p-5 space-y-2" style={caja}>
-        <p className="flex items-center gap-2 text-base font-bold" style={{ color: "var(--kipu-text)" }}>
-          <Users size={18} style={{ color: "var(--kipu-accent)" }} /> Quién lo hace
-        </p>
-        <p className="text-sm" style={{ color: "var(--kipu-muted)" }}>
-          El equipo de Kipu, con experiencia en declaraciones de emprendedores. Una persona revisa cada
-          declaración antes de presentarla, y siempre puedes escribirnos por WhatsApp de lunes a viernes,
-          de 8:00 a 17:00.
-        </p>
-      </div>
+      <TarjetaInfo icono={<ShieldCheck size={18} />} titulo="Nuestra garantía">
+        Si una declaración que presentamos necesita corregirse, la sustitutiva va por nuestra cuenta. Y si
+        por esa corrección el SRI te cobra multa o intereses, te los compensamos con meses gratis de
+        Kipu Al Día (hasta 3 al año).
+      </TarjetaInfo>
+      <TarjetaInfo icono={<Users size={18} />} titulo="Quién lo hace">
+        El equipo de Kipu, con experiencia en declaraciones de emprendedores. Una persona revisa cada
+        declaración antes de presentarla, y siempre puedes escribirnos por WhatsApp de lunes a viernes,
+        de 8:00 a 17:00.
+      </TarjetaInfo>
     </section>
   );
 }
@@ -449,21 +494,5 @@ export function Preguntas() {
   const preguntas = ES_APP_NATIVA
     ? PREGUNTAS.map(([p, r]) => [p, EN_LA_APP[p] ?? r] as [string, string])
     : PREGUNTAS;
-  return (
-    <section className="space-y-3">
-      <h2 className="text-lg font-bold" style={{ color: "var(--kipu-text)" }}>Preguntas frecuentes</h2>
-      <div className="rounded-xl overflow-hidden" style={caja}>
-        {preguntas.map(([p, r], i) => (
-          <details key={p} className="group px-4 py-3" style={{ borderTop: i ? "1px solid var(--kipu-border)" : "none" }}>
-            <summary className="text-sm font-medium list-none flex items-center justify-between gap-3"
-                     style={{ color: "var(--kipu-text)" }}>
-              {p}
-              <span className="text-lg leading-none transition-transform group-open:rotate-45" style={{ color: "var(--kipu-subtle)" }}>+</span>
-            </summary>
-            <p className="text-sm mt-2" style={{ color: "var(--kipu-muted)" }}>{r}</p>
-          </details>
-        ))}
-      </div>
-    </section>
-  );
+  return <ListaPreguntas preguntas={preguntas} />;
 }
