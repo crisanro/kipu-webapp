@@ -313,6 +313,14 @@ export default function DetalleRecibido({ id, enPanel = false }: { id: string; e
     ? ETIQUETA_CLASIFICACION[doc.fuente_clasificacion ?? "SIN"] : undefined;
   const estadoIa       = (doc.estado_ia ?? null) as EstadoIa | null;
   const ia             = (doc.clasificacion_ia ?? null) as ClasificacionIa | null;
+  const decision       = [
+    doc.deducible_renta ? "Deducible" : "No deducible",
+    doc.valor_iva_total > 0 ? (doc.credito_tributario_iva ? "Con crédito de IVA" : "Sin crédito de IVA") : null,
+    doc.datos?.activo_fijo ? "Activo fijo" : null,
+  ].filter(Boolean).join(" · ");
+  // Corregir lo que sugirió Kipu, o marcar la que la IA no supo
+  const botonCorregir  = ["IA", "REGLA"].includes(doc.fuente_clasificacion) ? "Corregir"
+                       : estadoIa === "REVISAR" ? "Marcar" : null;
 
   const cambiarActivoFijo = async (valor: boolean) => {
     setGuardandoAf(true);
@@ -408,6 +416,8 @@ export default function DetalleRecibido({ id, enPanel = false }: { id: string; e
                 ) : (
                   <>
                     <p className="text-xs font-semibold text-texto">{clasificacion}</p>
+                    {/* Qué se decidió, en palabras (el $0.00 de abajo no lo dice) */}
+                    {doc.fuente_clasificacion && <p className="mt-0.5 text-xs font-medium text-texto">{decision}</p>}
                     {(doc.motivo_clasificacion || !doc.fuente_clasificacion) && (
                       <p className="mt-0.5 text-xs text-sutil">
                         {doc.fuente_clasificacion
@@ -419,14 +429,25 @@ export default function DetalleRecibido({ id, enPanel = false }: { id: string; e
                 )}
               </div>
               {doc.fuente_clasificacion !== "USUARIO" && estadoIa !== "ANALIZANDO" && (
-                <button
-                  type="button"
-                  disabled={confirmando}
-                  onClick={() => void confirmarMarcas()}
-                  className="flex shrink-0 items-center gap-1.5 rounded-lg border border-exito/25 bg-exito-suave px-3 py-1.5 text-xs font-medium text-exito-texto transition-colors disabled:opacity-50"
-                >
-                  <CheckCircle2 size={12} aria-hidden /> Están bien así
-                </button>
+                <div className="flex shrink-0 flex-col items-stretch gap-1.5">
+                  <button
+                    type="button"
+                    disabled={confirmando}
+                    onClick={() => void confirmarMarcas()}
+                    className="flex items-center justify-center gap-1.5 rounded-lg border border-exito/25 bg-exito-suave px-3 py-1.5 text-xs font-medium text-exito-texto transition-colors disabled:opacity-50"
+                  >
+                    <CheckCircle2 size={12} aria-hidden /> Están bien así
+                  </button>
+                  {botonCorregir && (
+                    <button
+                      type="button"
+                      onClick={() => setEditando(true)}
+                      className="flex items-center justify-center gap-1.5 rounded-lg border border-borde bg-superficie px-3 py-1.5 text-xs font-medium text-texto transition-colors hover:bg-presionado"
+                    >
+                      <Pencil size={12} aria-hidden /> {botonCorregir}
+                    </button>
+                  )}
+                </div>
               )}
             </div>
           )}
