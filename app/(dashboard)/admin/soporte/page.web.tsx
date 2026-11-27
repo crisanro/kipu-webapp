@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { enlaceWhatsAppA } from "@/lib/soporte";
 import { useCopiar } from "@/lib/useCopiar";
+import { useModoSeguro } from "@/components/admin/ModoSeguro";
 
 // ── Estados del embudo ─────────────────────────────────────────────────────────
 const ESTADOS: Record<string, { label: string; desc: string; color: string }> = {
@@ -110,6 +111,8 @@ export default function AdminSoportePage() {
   const [accion,     setAccion]     = useState<string | null>(null);
   const [link,       setLink]       = useState<{ tipo: "verificacion" | "password"; url: string } | null>(null);
   const { copiar: copiarTexto, copiado: textoCopiado } = useCopiar();
+  // Enlaces, verificar y cambiar correo piden el PIN del correo (modo seguro, 15 min)
+  const { conModoSeguro, hojaModoSeguro } = useModoSeguro();
   const copiado = !!link && textoCopiado === link.url;
   const [verifOpen,  setVerifOpen]  = useState(false);
   const [motivo,     setMotivo]     = useState("");
@@ -195,10 +198,10 @@ export default function AdminSoportePage() {
     setMensaje(null);
     try {
       const path = tipo === "verificacion" ? "link-verificacion" : "link-password";
-      const res  = await api.post(`/api/v1/admin/panel/soporte/${path}`, {
+      const res  = await conModoSeguro(() => api.post(`/api/v1/admin/panel/soporte/${path}`, {
         email:  resultado.email,
         enviar: true,
-      });
+      }));
       setLink({ tipo, url: res.data.link });
       if (res.data.enviado) {
         setMensaje(`Correo enviado a ${resultado.email}.`);
@@ -221,10 +224,10 @@ export default function AdminSoportePage() {
     setAccion("verificar");
     setError(null);
     try {
-      const res = await api.post("/api/v1/admin/panel/soporte/verificar", {
+      const res = await conModoSeguro(() => api.post("/api/v1/admin/panel/soporte/verificar", {
         email:  resultado.email,
         motivo: motivo.trim(),
-      });
+      }));
       setMensaje(res.data.mensaje);
       await cargarDetalle(resultado.email, true);
     } catch (e: any) {
@@ -245,11 +248,11 @@ export default function AdminSoportePage() {
     setError(null);
     setMensaje(null);
     try {
-      const res = await api.post("/api/v1/admin/panel/soporte/cambiar-correo", {
+      const res = await conModoSeguro(() => api.post("/api/v1/admin/panel/soporte/cambiar-correo", {
         email_actual: resultado.email,
         email_nuevo:  nuevo,
         motivo:       emailMotivo.trim(),
-      });
+      }));
       setMensaje(res.data.mensaje || `Correo actualizado a ${nuevo}.`);
       // Recargar detalle con el nuevo correo
       setTermino(nuevo);
@@ -276,6 +279,7 @@ export default function AdminSoportePage() {
 
   return (
     <div className="p-4 md:p-6 space-y-4 max-w-3xl mx-auto">
+      {hojaModoSeguro}
 
       {/* Buscador */}
       <div className="rounded-xl p-4 space-y-3" style={cardStyle}>

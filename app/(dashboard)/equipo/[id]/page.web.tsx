@@ -10,6 +10,7 @@ import { caja, campo, Etiqueta, fecha, Vence, type Yo } from "../_comun";
 import { detalleError } from "@/lib/errores";
 import { enlaceWhatsAppA } from "@/lib/soporte";
 import { useCopiar } from "@/lib/useCopiar";
+import { useModoSeguro } from "@/components/admin/ModoSeguro";
 
 interface Gestion {
   id: number; tipo: string; nombre: string; estado: string; vencimiento: string; dias: number;
@@ -187,7 +188,10 @@ function FilaGestion({ g, emisorId, horas, alCambiar }: {
 }
 
 // ── Ver la clave del SRI (con motivo) ─────────────────────────────────────────
-function VerClave({ emisorId, alVer }: { emisorId: number; alVer: () => void }) {
+function VerClave({ emisorId, alVer, conModoSeguro }: {
+  emisorId: number; alVer: () => void;
+  conModoSeguro: ReturnType<typeof useModoSeguro>["conModoSeguro"];
+}) {
   const [motivo, setMotivo] = useState("");
   const [clave,  setClave]  = useState("");
   const [error,  setError]  = useState("");
@@ -204,7 +208,8 @@ function VerClave({ emisorId, alVer }: { emisorId: number; alVer: () => void }) 
   const ver = async () => {
     setError("");
     try {
-      const r = await api.post(`/api/v1/admin/al-dia/${emisorId}/clave-sri/ver`, { motivo });
+      // Pide el PIN del correo si el modo seguro no está activo (15 min)
+      const r = await conModoSeguro(() => api.post(`/api/v1/admin/al-dia/${emisorId}/clave-sri/ver`, { motivo }));
       setClave(r.data.clave);
       setMotivo("");
       alVer();
@@ -298,6 +303,7 @@ export default function ClienteAlDiaPage() {
   const [d,     setD]     = useState<Detalle | null>(null);
   const [yo,    setYo]    = useState<Yo | null>(null);
   const [error, setError] = useState("");
+  const { conModoSeguro, hojaModoSeguro } = useModoSeguro();
 
   const recargar = useCallback(async () => {
     try {
@@ -335,6 +341,7 @@ export default function ClienteAlDiaPage() {
 
   return (
     <div className="p-4 md:p-6 max-w-4xl mx-auto space-y-4">
+      {hojaModoSeguro}
       <Link href="/equipo" className="inline-flex items-center gap-1 text-sm text-tenue">
         <ArrowLeft size={14} /> Clientes
       </Link>
@@ -366,7 +373,7 @@ export default function ClienteAlDiaPage() {
               El servicio terminó: la clave ya no se usa y se borra el {fecha(d.clave_se_borra_el)}, salvo que vuelva a contratar.
             </p>
           : d.clave_guardada_at
-          ? <VerClave emisorId={emisorId} alVer={recargar} />
+          ? <VerClave emisorId={emisorId} alVer={recargar} conModoSeguro={conModoSeguro} />
           : <p className="text-sm text-alerta">El cliente todavía no la guarda (Kipu Al Día → Tu clave del SRI).</p>}
         {d.accesos_clave.length > 0 && (
           <ul className="text-xs space-y-0.5 pt-1 text-sutil">
