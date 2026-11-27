@@ -49,7 +49,8 @@ Actualizado al cierre del 2026-11-26. Lo de producción se prueba con el modo sa
 
 ## App de las tiendas
 
-- **Enlaces que abren la app en Android:** pegar en `public/.well-known/assetlinks.json` la huella SHA-256 de Play Console → Integridad de la app → Firma de apps ("Certificado de la clave de firma de apps"; si se instalan APKs firmados con `kipu-upload.jks`, también la de la clave de subida). Hoy tiene un marcador: los enlaces de app.kipu.ec abren el navegador. Después del deploy, revisar en Play Console → Enlaces directos que app.kipu.ec salga verificado.
+- **Enlaces que abren la app en Android:** `public/.well-known/assetlinks.json` ya tiene las dos SHA-256 (firma de apps de Play `DD:72:…:35:C6` y subida `93:DD:…:78:0A`). Después del deploy, revisar en Play Console → Enlaces directos que app.kipu.ec salga verificado.
+- **Firma de Android:** `android/key.properties` y `android/kipu-upload.jks` van en `android/` (no en `android/app/`), fuera de git. Huellas para la clave de API de Android (SHA-1: Play `7B:05:…:05:18`, subida `FB:A7:…:92:23`) y para Firebase → app Android (las dos SHA-256).
 - iOS: compilar en la Mac (`npm run cap:ios`) y confirmar que el App ID com.androga.kipu tenga "Associated Domains" (applinks:app.kipu.ec). Probar en teléfono: autocompletado del login, onboarding con barra fija y un enlace de correo abriendo la app.
 - Compilar con `npm run build:native` y probar en el teléfono contratar Kipu Al Día dentro de la app (Stripe en el navegador de la app y vuelta a /volver-a-la-app).
 - Frontend mobile-first: coordinarlo con la otra sesión que trabaja en main.

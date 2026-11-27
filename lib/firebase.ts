@@ -38,15 +38,20 @@ function crearAuth(): Auth {
 export const auth = crearAuth();
 
 // ── App Check ────────────────────────────────────────────────────────────────
-// Prueba ante el backend que la petición sale de esta página en un navegador
-// real. Sin NEXT_PUBLIC_RECAPTCHA_SITE_KEY queda apagado.
+// Prueba ante el backend que la petición sale de Kipu: en la web, esta página en
+// un navegador real (reCAPTCHA); en la app de las tiendas, la app original en un
+// teléfono real (Play Integrity en Android, App Attest en iOS, con el plugin
+// nativo: reCAPTCHA no funciona dentro de la app).
+// Web: sin NEXT_PUBLIC_RECAPTCHA_SITE_KEY queda apagado.
 //   NEXT_PUBLIC_APP_CHECK_PROVEEDOR: "enterprise" (por defecto) | "v3"
 //   NEXT_PUBLIC_APP_CHECK_DEBUG_TOKEN: solo en desarrollo (localhost), registrado
 //   en la consola de Firebase → App Check → Administrar tokens de depuración.
+//   En la app, cualquier valor activa el proveedor de depuración (emulador): el
+//   token sale en el log nativo y se registra igual en la consola.
 const SITE_KEY_APP_CHECK = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
 let appCheck: AppCheck | null = null;
 
-if (typeof window !== "undefined" && SITE_KEY_APP_CHECK) {
+if (typeof window !== "undefined" && SITE_KEY_APP_CHECK && !ES_APP_NATIVA) {
   const debug = process.env.NEXT_PUBLIC_APP_CHECK_DEBUG_TOKEN;
   if (debug) {
     (self as unknown as { FIREBASE_APPCHECK_DEBUG_TOKEN?: string | boolean })
@@ -64,8 +69,38 @@ if (typeof window !== "undefined" && SITE_KEY_APP_CHECK) {
   }
 }
 
+// App nativa: el plugin se inicia una sola vez, la primera vez que se pide un token.
+// Si el teléfono o la consola de Firebase todavía no están listos, no hay token
+// (null) y la petición sale sin él, como antes.
+let appCheckNativo: Promise<typeof import("@capacitor-firebase/app-check").FirebaseAppCheck | null> | null = null;
+
+function iniciarAppCheckNativo() {
+  appCheckNativo ??= import("@capacitor-firebase/app-check")
+    .then(async ({ FirebaseAppCheck }) => {
+      await FirebaseAppCheck.initialize({
+        isTokenAutoRefreshEnabled: true,
+        debugToken: !!process.env.NEXT_PUBLIC_APP_CHECK_DEBUG_TOKEN,
+      });
+      return FirebaseAppCheck;
+    })
+    .catch(e => {
+      console.warn("[AppCheck] no se pudo iniciar en la app", e);
+      return null;
+    });
+  return appCheckNativo;
+}
+
 /** Token de App Check para mandar al backend, o null si está apagado o falló. */
 export async function tokenAppCheck(): Promise<string | null> {
+  if (ES_APP_NATIVA && typeof window !== "undefined") {
+    // Se pide en cada petición: si la atestación se cuelga, no puede frenar la app
+    const limite = new Promise<null>(resolver => setTimeout(() => resolver(null), 4000));
+    const token = (async () => {
+      const plugin = await iniciarAppCheckNativo();
+      return plugin ? (await plugin.getToken({ forceRefresh: false })).token : null;
+    })().catch(() => null);
+    return Promise.race([token, limite]);
+  }
   if (!appCheck) return null;
   try {
     return (await getToken(appCheck, false)).token;

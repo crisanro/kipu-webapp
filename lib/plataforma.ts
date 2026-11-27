@@ -12,6 +12,16 @@
 
 export const ES_APP_NATIVA = process.env.NEXT_PUBLIC_PLATAFORMA === "native";
 
+/**
+ * Copia para la extensión de Chrome (kipu-ext-*: token de sesión, empresa activa).
+ * En la app no hay extensión: el token no se deja en el almacenamiento local, donde
+ * cualquier script de la página lo leería.
+ */
+export function guardarParaExtension(clave: "token" | "emisor" | "ruc" | "razon", valor: string): void {
+  if (ES_APP_NATIVA) return;
+  try { localStorage.setItem(`kipu-ext-${clave}`, valor); } catch {}
+}
+
 /** Pantallas que la app no tiene (sus páginas son `page.web.tsx`). */
 export const RUTAS_SOLO_WEB = ["/planes", "/renta", "/admin", "/equipo", "/api-keys", "/blog"];
 
