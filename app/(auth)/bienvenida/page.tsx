@@ -2,6 +2,9 @@
 // Después de registrarse: primero verificar el correo; luego unirse a la empresa
 // que lo invitó (?empresa=) o crear la suya (sin invitación va directo al
 // onboarding). Siempre con salida: ayuda, cerrar sesión y eliminar la cuenta.
+// También llega aquí quien YA tiene cuenta y empresas (el correo de invitación lo
+// trae: las invitaciones se aceptan, nadie entra a una empresa sin quererlo). A ese
+// no se le ofrece borrar la cuenta: puede volver a su panel.
 "use client";
 
 import { useConfirmar } from "@/components/ui/Confirmar";
@@ -9,7 +12,7 @@ import { useAvisos } from "@/components/ui/Avisos";
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { auth } from "@/lib/firebase";
-import { aEmpresa } from "@/lib/empresa";
+import { abrirEmpresa } from "@/lib/empresa";
 import LogoKipu from "@/components/auth/LogoKipu";
 import Link from "next/link";
 import { enlaceWhatsAppFalla } from "@/lib/soporte";
@@ -28,7 +31,8 @@ export default function BienvenidaPage() {
   const router       = useRouter();
   const searchParams = useSearchParams();
   const empresaParam = searchParams.get("empresa");
-  const { setEmpresa, setEmpresas, logout } = useAuthStore();
+  const { logout } = useAuthStore();
+  const tieneEmpresas = useAuthStore((s) => s.empresas.length > 0);
 
   const [loading,        setLoading]        = useState(false);
   const [loadingEmpresa, setLoadingEmpresa] = useState(!!empresaParam);
@@ -69,11 +73,10 @@ export default function BienvenidaPage() {
           // Token nuevo: ya pertenece a la empresa (el interceptor de lib/api lo envía)
           await auth.currentUser?.getIdToken(true);
           const res  = await api.get("/api/v1/app/usuarios/empresas");
-          const data = res.data.data ?? [];
-          if (data.length > 0) {
-            setEmpresas(data);
-            setEmpresa(aEmpresa(data[0]));
-          }
+          const data: { id: number; ruc: string; razon_social: string }[] = res.data.data ?? [];
+          // Abre la empresa a la que se unió (quien ya tenía otras no cae en la primera de su lista)
+          const unida = data.find((e) => e.id === Number(empresaParam)) ?? data[0];
+          if (unida) { abrirEmpresa(unida, "/dashboard", { reemplazar: true }); return; }
         } catch {}
         router.replace("/dashboard");
       }, 1500);
@@ -174,7 +177,20 @@ export default function BienvenidaPage() {
               <span className="h-px flex-1 bg-borde" />
             </div>
 
-            {/* Opción 2 — Crear su propia empresa */}
+            {/* Opción 2 — Ya tiene empresas: volver a su panel sin aceptar */}
+            {tieneEmpresas ? (
+            <Link
+              href="/dashboard"
+              className="flex min-h-16 w-full items-center gap-3 rounded-xl border border-borde bg-superficie px-4 py-3 transition-colors hover:bg-presionado active:bg-presionado"
+            >
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-medium text-texto">Ahora no</span>
+                <span className="block text-xs text-tenue">Volver a mi panel (la invitación sigue vigente)</span>
+              </span>
+              <ChevronRight size={18} className="shrink-0 text-sutil" aria-hidden />
+            </Link>
+            ) : (
+            /* Opción 2 — Crear su propia empresa */
             <Link
               href="/onboarding"
               className="flex min-h-16 w-full items-center gap-3 rounded-xl border border-borde bg-superficie px-4 py-3 transition-colors hover:bg-presionado active:bg-presionado"
@@ -188,6 +204,7 @@ export default function BienvenidaPage() {
               </span>
               <ChevronRight size={18} className="shrink-0 text-sutil" aria-hidden />
             </Link>
+            )}
           </div>
         )}
 
@@ -220,7 +237,9 @@ export default function BienvenidaPage() {
             Cerrar sesión
           </Boton>
 
-          {/* Mismo flujo que Configuración → Eliminar mi cuenta (lo hace el backend) */}
+          {/* Mismo flujo que Configuración → Eliminar mi cuenta (lo hace el backend).
+              No a quien ya tiene empresas y solo viene a aceptar una invitación */}
+          {!tieneEmpresas && (
           <div className="flex justify-center pt-1">
             {!confirmDelete ? (
               <button
@@ -236,6 +255,7 @@ export default function BienvenidaPage() {
               </div>
             )}
           </div>
+          )}
         </div>
       </div>
     </main>
