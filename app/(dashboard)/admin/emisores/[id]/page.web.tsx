@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { detalleError } from "@/lib/errores";
 import { dosDecimales } from "@/lib/dinero";
+import { useModoSeguro } from "@/components/admin/ModoSeguro";
 
 const fmtDate = (d: any) => d ? new Date(d).toLocaleDateString("es-EC", { day: "2-digit", month: "short", year: "numeric" }) : "—";
 
@@ -39,6 +40,8 @@ type Tab = "overview" | "suscripcion" | "documentos" | "usuarios" | "creditos" |
 export default function AdminEmisorDetallePage() {
   const confirmar = useConfirmar();
   const avisos    = useAvisos();
+  // Créditos y forzar suscripción piden el PIN del correo (modo seguro, 15 min)
+  const { conModoSeguro, hojaModoSeguro } = useModoSeguro();
   const { id } = useParams();
   const router = useRouter();
 
@@ -123,11 +126,11 @@ export default function AdminEmisorDetallePage() {
     setRecargando(true);
     setMsgRecarga("");
     try {
-      await api.post("/api/v1/admin/panel/topup", {
+      await conModoSeguro(() => api.post("/api/v1/admin/panel/topup", {
         emisor_id: parseInt(id as string),
         cantidad:  parseInt(montoRecarga),
         notas:     "Recarga manual desde panel admin",
-      });
+      }));
       setMsgRecarga(`✅ ${montoRecarga} créditos agregados.`);
       setMontoRecarga("");
       await cargar();
@@ -188,13 +191,13 @@ export default function AdminEmisorDetallePage() {
     }))) return;
     setForzandoEstado(true);
     try {
-      await api.post("/api/v1/admin/panel/suscripcion/forzar", {
+      await conModoSeguro(() => api.post("/api/v1/admin/panel/suscripcion/forzar", {
         emisor_id: parseInt(id as string),
         estado,
         // El plan y el período que ya tiene (antes siempre PRO ANUAL: pisaba Al Día)
         plan:      emisor?.sub_plan === "AL_DIA" ? "AL_DIA" : "PRO",
         periodo:   emisor?.sub_periodo === "MENSUAL" ? "MENSUAL" : "ANUAL",
-      });
+      }));
       await cargar();
     } catch (e: any) {
       avisos.error(detalleError(e, "No se pudo forzar la suscripción."));
@@ -243,6 +246,7 @@ export default function AdminEmisorDetallePage() {
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="p-4 md:p-6 max-w-4xl mx-auto space-y-5">
+      {hojaModoSeguro}
 
       {/* Header */}
       <div className="flex items-center gap-3">
