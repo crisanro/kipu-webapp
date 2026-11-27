@@ -60,6 +60,7 @@ export interface ClasificacionIa {
   sin_plan?:          boolean;   // la IA está encendida, pero la empresa no tiene Pro ni Al Día
   analizando?:        boolean;   // al instante, pedida o en curso
   falta_descripcion?: boolean;
+  descripcion?:       string;    // "¿A qué se dedica tu negocio?", tal como la escribió
   sin_contexto?:      boolean;   // sin descripción ni actividad del RUC: no se envía nada
 }
 /** Para el aviso y los enlaces: abre "¿A qué se dedica tu negocio?" en Configuración. */

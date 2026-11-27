@@ -34,6 +34,9 @@ import DetalleRecibido, {
   InsigniaIa, RUTA_DESCRIBIR_NEGOCIO, estadoIaVisible, type ClasificacionIa, type EstadoIa,
 } from "./ver/components/DetalleRecibido";
 import { dosDecimales } from "@/lib/dinero";
+import api from "@/lib/api";
+import { useAvisos } from "@/components/ui/Avisos";
+import { detalleError } from "@/lib/errores";
 
 // ── Tipos ──────────────────────────────────────────────────────────────────────
 interface DocRecibido {
@@ -140,6 +143,8 @@ function BadgeBancarizacion({ doc }: { doc: DocRecibido }) {
 // ── Box expandido ──────────────────────────────────────────────────────────────
 function DocExpandido({ doc, onVerDetalle }: { doc: DocRecibido; onVerDetalle: () => void }) {
   const requiereBanc = ["FAC", "NDB"].includes(doc.tipo_doc) && doc.importe_total > UMBRAL_BANCARIZACION;
+  // Esperando a la IA (o a que la revises): sin marcas todavía, no es que "no aplique"
+  const sinMarca = doc.estado_ia && doc.estado_ia !== "SUGERIDA" ? "Pendiente" : "No aplica";
 
   return (
     <div className="border-t border-borde bg-texto/2"
@@ -182,7 +187,7 @@ function DocExpandido({ doc, onVerDetalle }: { doc: DocRecibido; onVerDetalle: (
             className="text-xs font-bold"
             style={{ color: doc.deducible_renta ? "var(--kipu-success)" : "var(--kipu-subtle)" }}
           >
-            {doc.deducible_renta ? `$${dosDecimales(doc.subtotal_base)}` : "No aplica"}
+            {doc.deducible_renta ? `$${dosDecimales(doc.subtotal_base)}` : sinMarca}
           </p>
         </div>
         <div
@@ -201,7 +206,7 @@ function DocExpandido({ doc, onVerDetalle }: { doc: DocRecibido; onVerDetalle: (
             className="text-xs font-bold"
             style={{ color: doc.credito_tributario_iva ? "var(--kipu-info)" : "var(--kipu-subtle)" }}
           >
-            {doc.credito_tributario_iva ? `$${dosDecimales(doc.valor_iva_total)}` : "No aplica"}
+            {doc.credito_tributario_iva ? `$${dosDecimales(doc.valor_iva_total)}` : sinMarca}
           </p>
         </div>
       </div>
@@ -289,6 +294,23 @@ export default function FacturasRecibidasPage() {
     { refrescarMientras: (d) => !!d?.clasificacion_ia?.analizando });
   const ia         = lista.datos?.clasificacion_ia ?? null;
   const docs       = lista.datos?.data ?? [];
+
+  // "Clasificar con IA": manda ya las compras por clasificar (lo mismo que al registrar una)
+  const avisos = useAvisos();
+  const [clasificando, setClasificando] = useState(false);
+  const porClasificar = docs.filter(d => d.estado_ia === "POR_CLASIFICAR").length;
+  const verClasificar = !!ia?.activa && !ia.sin_contexto && !ia.analizando && porClasificar > 0;
+  const clasificarConIa = async () => {
+    setClasificando(true);
+    try {
+      await api.post("/api/v1/app/recibidos/clasificar-ia");
+      await lista.recargar();   // llega "analizando" y la lista se refresca sola hasta que termina
+    } catch (e) {
+      avisos.error(detalleError(e, "No pudimos clasificar tus compras. Intenta de nuevo."));
+    } finally {
+      setClasificando(false);
+    }
+  };
   const resumen    = lista.datos?.resumen ?? null;
   const pagination = lista.datos?.pagination ?? null;
   const loading    = lista.cargando;
@@ -345,6 +367,30 @@ export default function FacturasRecibidasPage() {
       />
 
       <AvisoRango valido={periodo.valido} />
+
+      {/* Con la IA y el negocio descrito: a la vista, y cómo cambiarlo */}
+      {ia?.activa && !ia.falta_descripcion && ia.descripcion && (
+        <p className="flex items-center gap-1.5 px-1 text-xs text-sutil">
+          <Sparkles size={13} className="shrink-0 text-info" aria-hidden />
+          <span className="min-w-0 truncate">La IA clasifica tus compras según tu negocio: «{ia.descripcion}»</span>
+          <span aria-hidden>·</span>
+          <Link href={RUTA_DESCRIBIR_NEGOCIO} className="shrink-0 font-medium text-acento underline">Cambiar</Link>
+        </p>
+      )}
+
+      {/* Compras esperando a la IA: clasificarlas ya */}
+      {verClasificar && (
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-info/20 bg-info-suave p-3 text-sm">
+          <Sparkles size={16} className="shrink-0 text-info" aria-hidden />
+          <p className="min-w-0 flex-1 text-texto">
+            {porClasificar === 1 ? "1 compra está" : `${porClasificar} compras están`} por clasificar.
+          </p>
+          <Boton tamano="sm" onClick={() => void clasificarConIa()} cargando={clasificando}
+                 icono={<Sparkles size={14} />}>
+            Clasificar con IA
+          </Boton>
+        </div>
+      )}
 
       {/* Con la IA: sin la descripción del negocio clasifica peor (o nada, sin la actividad del RUC) */}
       {ia?.activa && ia.falta_descripcion && (
