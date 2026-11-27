@@ -5,6 +5,7 @@
 //   - ImpuestosEmpresa:  régimen y leyendas del RIDE, retenciones (#retenciones)
 //                        y frecuencia de la declaración de IVA.
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { ChevronRight, ShieldCheck } from "lucide-react";
 import api from "@/lib/api";
 import Checklist, { HealthData } from "@/components/Checklist";
@@ -18,6 +19,7 @@ import { Campo, Entrada } from "@/components/ui/Campo";
 import { useAvisos } from "@/components/ui/Avisos";
 import { cn } from "@/components/ui/cn";
 import Interruptor from "@/components/ui/Interruptor";
+import { AYUDA_NEGOCIO } from "@/components/auth/FormularioEmpresa";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- forma de /emisor/config
 type Legal = Record<string, any>;
@@ -33,6 +35,11 @@ interface CampoFiscal {
   ayuda?:       string;   // texto chico debajo del valor y del campo al editar
 }
 
+// "¿A qué se dedica tu negocio?" (AYUDA_NEGOCIO, la misma del registro). Con la IA
+// clasificando sus compras (GET /emisor/config → clasificacion_ia) se explica para qué la usa.
+const AYUDA_NEGOCIO_IA = "La IA de Kipu lo usa para clasificar tus compras: si son gasto deducible de renta, "
+                       + "si te dan crédito de IVA o si son un activo fijo. Mientras más claro, mejor las clasifica.";
+
 const CAMPOS_FISCALES: CampoFiscal[] = [
   { key: "ruc",                    label: "RUC",                          editable: false },
   { key: "razon_social",           label: "Razón social",                 editable: true },
@@ -46,9 +53,9 @@ const CAMPOS_FISCALES: CampoFiscal[] = [
     render: (v) => v === 2 ? "Producción" : "Pruebas" },
   // Contexto para clasificar las compras (backend: clasificacion_ia_service)
   { key: "actividad_economica",    label: "Actividad económica (SRI)",    editable: false },
-  { key: "descripcion_negocio",    label: "Describe tu negocio en una línea", editable: true,
+  { key: "descripcion_negocio",    label: "¿A qué se dedica tu negocio?", editable: true,
     maxLength: 120, placeholder: "Ej.: consultorio odontológico, venta de repuestos de motos",
-    ayuda: "Opcional. Ayuda a Kipu a saber qué compras son de tu negocio." },
+    ayuda: AYUDA_NEGOCIO },
 ];
 
 const REGIMEN_OPCIONES = [
@@ -90,14 +97,21 @@ function Opcion({ activo, titulo, desc, onClick, deshabilitado }: {
 
 // ── Datos de la empresa ──────────────────────────────────────────────────────
 
-export function DatosEmpresa({ legal, health, onActualizar }: {
+export function DatosEmpresa({ legal, health, onActualizar, conIa = false }: {
   legal:        Legal | null;
   health:       HealthData | null;
   onActualizar: () => void;
+  conIa?:       boolean;   // la IA clasifica sus compras
 }) {
   const avisos = useAvisos();
-  const [editando,  setEditando]  = useState<CampoFiscal | null>(null);
-  const [valor,     setValor]     = useState("");
+  const campos = CAMPOS_FISCALES.map((c) =>
+    c.key === "descripcion_negocio" && conIa ? { ...c, ayuda: AYUDA_NEGOCIO_IA } : c);
+
+  // ?editar=descripcion_negocio (desde el aviso de Compras): llega con ese campo abierto
+  const pedido = useSearchParams().get("editar");
+  const [editando,  setEditando]  = useState<CampoFiscal | null>(
+    () => (legal && campos.find((c) => c.key === pedido && c.editable)) || null);
+  const [valor,     setValor]     = useState(() => (editando ? String(legal?.[editando.key] ?? "") : ""));
   const [guardando, setGuardando] = useState(false);
   const [error,     setError]     = useState("");
 
@@ -133,7 +147,7 @@ export function DatosEmpresa({ legal, health, onActualizar }: {
       <section>
         <p className="mb-2 px-1 text-xs text-sutil">Información registrada ante el SRI. Toca un dato para corregirlo.</p>
         <div className="divide-y divide-borde overflow-hidden rounded-xl border border-borde bg-superficie">
-          {CAMPOS_FISCALES.map((c) => {
+          {campos.map((c) => {
             const texto = c.render ? c.render(legal[c.key]) : (legal[c.key] || "—");
             const contenido = (
               <>

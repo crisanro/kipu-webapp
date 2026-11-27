@@ -14,7 +14,7 @@ import { ES_APP_NATIVA } from "@/lib/plataforma";
 import {
   Plus, FileText, Search,
   ChevronDown, ChevronUp, TrendingUp, ArrowUpRight,
-  Receipt, ExternalLink, AlertTriangle, CreditCard,
+  Receipt, ExternalLink, AlertTriangle, CreditCard, Sparkles,
 } from "lucide-react";
 import Paginacion, { type InfoPaginacion } from "@/components/ui/Paginacion";
 import { AvisoRango, AyudaAtajos, BotonActualizar, enPanel, useNavegacionLista, usePeriodo } from "../_comun";
@@ -30,7 +30,9 @@ import Boton from "@/components/ui/Boton";
 import { tipoComprobante } from "@/lib/estados";
 import PanelDetalle from "@/components/ui/PanelDetalle";
 import { cn } from "@/components/ui/cn";
-import DetalleRecibido from "./ver/components/DetalleRecibido";
+import DetalleRecibido, {
+  InsigniaIa, RUTA_DESCRIBIR_NEGOCIO, estadoIaVisible, type ClasificacionIa, type EstadoIa,
+} from "./ver/components/DetalleRecibido";
 import { dosDecimales } from "@/lib/dinero";
 
 // ── Tipos ──────────────────────────────────────────────────────────────────────
@@ -48,6 +50,14 @@ interface DocRecibido {
   estado_pago:            string | null;
   notas:                  string | null;
   fuente:                 string;
+  estado_ia?:             EstadoIa | null;   // solo con la IA clasificando las compras
+  fuente_clasificacion?:  string | null;     // IA o REGLA: el texto de "Sugerida por…"
+}
+
+/** La insignia de la IA de una fila (las de ejemplo no traen estado_ia). */
+function InsigniaIaDe({ doc, ia }: { doc: object; ia: ClasificacionIa | null }) {
+  const d = doc as Pick<DocRecibido, "estado_ia" | "fuente_clasificacion">;
+  return <InsigniaIa estado={estadoIaVisible(d.estado_ia, ia)} fuente={d.fuente_clasificacion} />;
 }
 
 interface Bloque { cantidad?: number; subtotal: number; iva: number; total: number }
@@ -272,8 +282,12 @@ export default function FacturasRecibidasPage() {
   if (queryActivo)    params.append("q",            queryActivo);
   params.append("page", String(page));
   params.append("limit", "25");
-  const lista = useLista<{ data?: DocRecibido[]; resumen?: Resumen | null; pagination?: InfoPaginacion | null }>(
-    periodo.valido ? `/api/v1/app/recibidos?${params}` : null);
+  // Mientras la IA clasifica al instante, se vuelve a pedir sola hasta que termina
+  const lista = useLista<{ data?: DocRecibido[]; resumen?: Resumen | null; pagination?: InfoPaginacion | null;
+                           clasificacion_ia?: ClasificacionIa | null }>(
+    periodo.valido ? `/api/v1/app/recibidos?${params}` : null,
+    { refrescarMientras: (d) => !!d?.clasificacion_ia?.analizando });
+  const ia         = lista.datos?.clasificacion_ia ?? null;
   const docs       = lista.datos?.data ?? [];
   const resumen    = lista.datos?.resumen ?? null;
   const pagination = lista.datos?.pagination ?? null;
@@ -331,6 +345,31 @@ export default function FacturasRecibidasPage() {
       />
 
       <AvisoRango valido={periodo.valido} />
+
+      {/* Con la IA: sin la descripción del negocio clasifica peor (o nada, sin la actividad del RUC) */}
+      {ia?.activa && ia.falta_descripcion && (
+        <div className="flex items-start gap-3 rounded-xl border border-info/20 bg-info-suave p-3 text-sm">
+          <Sparkles size={16} className="mt-0.5 shrink-0 text-info" aria-hidden />
+          <p className="min-w-0 flex-1 text-texto">
+            {ia.sin_contexto
+              ? "Cuéntanos a qué se dedica tu negocio para que Kipu clasifique tus compras con IA."
+              : "Cuéntanos a qué se dedica tu negocio: así Kipu clasifica mejor tus compras con IA."}
+          </p>
+          <Link href={RUTA_DESCRIBIR_NEGOCIO} className="shrink-0 font-medium text-acento underline">Completar</Link>
+        </div>
+      )}
+
+      {/* La IA está encendida pero la empresa no tiene Pro: solo en la web (la app no vende) */}
+      {ia?.sin_plan && !ES_APP_NATIVA && !esDemo && (
+        <div className="flex items-start gap-3 rounded-xl border border-borde bg-superficie p-3 text-sm">
+          <Sparkles size={16} className="mt-0.5 shrink-0 text-sutil" aria-hidden />
+          <p className="min-w-0 flex-1 text-tenue">
+            Tus compras no se clasifican solas. Con Kipu Pro, la IA de Kipu las clasifica apenas llegan:
+            deducibles, crédito de IVA y activos fijos.
+          </p>
+          <Link href="/planes" className="shrink-0 font-medium text-acento underline">Ver planes</Link>
+        </div>
+      )}
 
       {esDemo && (
         <BannerEjemplo
@@ -475,6 +514,7 @@ export default function FacturasRecibidasPage() {
                   fin={`$${dosDecimales(doc.importe_total)}`}
                   finAbajo={
                     <span className="flex flex-wrap justify-end gap-1">
+                      <InsigniaIaDe doc={doc} ia={ia} />
                       {doc.deducible_renta && <InsigniaEstado tono="exito">Deducible</InsigniaEstado>}
                       {doc.credito_tributario_iva && <InsigniaEstado tono="info">Crédito IVA</InsigniaEstado>}
                       {["FAC", "LIQ"].includes(doc.tipo_doc) && <InsigniaPago estado={doc.estado_pago} />}
@@ -527,6 +567,7 @@ export default function FacturasRecibidasPage() {
                         </p>
                         {esDemo && <EtiquetaEjemplo />}
                         <div className="flex gap-1 shrink-0 items-center">
+                          <InsigniaIaDe doc={doc} ia={ia} />
                           {doc.deducible_renta && (
                             <span
                               className="text-[10px] px-1.5 py-0.5 rounded"

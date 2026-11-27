@@ -50,7 +50,8 @@ const POR_ANCLA: Record<string, Sec> = {
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- forma de /emisor/config
-type Config = { data?: { legal?: any; firma?: any; logo?: { configurado?: boolean; url?: string | null } } };
+type Config = { data?: { legal?: any; firma?: any; logo?: { configurado?: boolean; url?: string | null };
+                         clasificacion_ia?: boolean } };
 type Dashboard = { data?: { health?: HealthData | null } };
 
 export default function ConfiguracionPage() {
@@ -171,7 +172,8 @@ export default function ConfiguracionPage() {
       ) : cfg.cargando ? (
         <div className="space-y-3"><Esqueleto className="h-14" /><Esqueleto className="h-14" /><Esqueleto className="h-14" /></div>
       ) : s === "empresa" ? (
-        <DatosEmpresa legal={legal} health={health} onActualizar={recargar} />
+        <DatosEmpresa legal={legal} health={health} onActualizar={recargar}
+                      conIa={!!cfg.datos?.data?.clasificacion_ia} />
       ) : s === "logo" ? (
         <TabLogo logo={logo} onActualizar={recargar} />
       ) : s === "impuestos" ? (

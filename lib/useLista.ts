@@ -25,16 +25,24 @@ type Clave = readonly [url: string, empresaId: number | null, sandbox: boolean];
 
 const pedir = ([url]: Clave) => api.get(url).then((r) => r.data);
 
-export function useLista<T>(url: string | null) {
+/** Cada cuánto se vuelve a pedir mientras `refrescarMientras` diga que sí. */
+const REFRESCO_MS = 3000;
+
+export function useLista<T>(url: string | null, opciones?: {
+  /** Mientras devuelva true (p. ej. "la IA está analizando"), se vuelve a pedir cada 3 s. */
+  refrescarMientras?: (datos: T | undefined) => boolean;
+}) {
   const empresaId = useAuthStore((s) => s.empresa?.id ?? null);
   const sandbox   = useSandboxStore((s) => s.activo);
   const clave: Clave | null = url ? [url, empresaId, sandbox] : null;
+  const refrescar = opciones?.refrescarMientras;
 
   const { data, error, isLoading, isValidating, mutate } = useSWR<T>(clave, pedir, {
     keepPreviousData:  true,   // cambia el filtro: se ve lo anterior hasta que llega lo nuevo
     revalidateIfStale: true,   // vuelve a la pantalla: lo guardado al instante y se actualiza detrás
     revalidateOnFocus: true,   // vuelve a la pestaña o a la app
-    dedupingInterval:  5000,
+    dedupingInterval:  refrescar ? 2000 : 5000,   // con refresco: menos que REFRESCO_MS, o lo junta con el anterior
+    refreshInterval:   refrescar ? (d) => (refrescar(d) ? REFRESCO_MS : 0) : 0,
   });
 
   return {

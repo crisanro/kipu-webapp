@@ -49,6 +49,10 @@ const validarRuc = (ruc: string): string | null => {
   return v.ok ? null : (v.error || "El RUC debe tener 13 dígitos.");
 };
 
+// Ayuda de "¿A qué se dedica tu negocio?" (también en Configuración, TabEmpresa)
+export const AYUDA_NEGOCIO = "Con esto Kipu sabe qué compras son de tu negocio: deducibles de renta, "
+                           + "con crédito de IVA o activos fijos.";
+
 export type DatosEmpresa = {
   ruc: string; razon_social: string; nombre_comercial: string; direccion_matriz: string;
   obligado_contabilidad: string; contribuyente_especial: string;
@@ -291,8 +295,7 @@ export default function FormularioEmpresa({ onCreada, pie }: {
               />
             </Campo>
 
-            <Campo etiqueta="Describe tu negocio en una línea" opcional
-                   ayuda="Ayuda a Kipu a saber qué compras son de tu negocio.">
+            <Campo etiqueta="¿A qué se dedica tu negocio?" opcional ayuda={AYUDA_NEGOCIO}>
               <Entrada
                 name="descripcion_negocio"
                 enterKeyHint="go"

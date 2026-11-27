@@ -5,8 +5,9 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft, FileText, Download, Pencil, Save, MoreVertical,
-  Link2, Shield, Receipt, Lock, Building2, ListChecks, CheckCircle2,
+  Link2, Shield, Receipt, Lock, Building2, ListChecks, CheckCircle2, Sparkles,
 } from "lucide-react";
+import Link from "next/link";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
 import { rutaFueraDelPlan } from "@/lib/plataforma";
@@ -46,8 +47,45 @@ const TIPOS_ACTIVO_FIJO   = ["FAC", "NDB", "NCR", "NVE"];
 const ETIQUETA_CLASIFICACION: Record<string, string> = {
   SIN:     "Sin clasificar",
   REGLA:   "Sugerida por Kipu",
-  IA:      "Sugerida por Kipu",
+  IA:      "Sugerida por la IA de Kipu",
   USUARIO: "Revisada por ti",
+};
+
+// ── Clasificación con IA (backend: clasificacion_ia_service.estado_compra) ──
+// estado_ia solo llega con la IA clasificando las compras de la empresa (Pro o Al Día).
+// SUGERIDA: la clasificó la IA (o una regla) y el usuario todavía no la confirmó.
+export type EstadoIa = "SUGERIDA" | "POR_CLASIFICAR" | "ANALIZANDO" | "REVISAR";
+export interface ClasificacionIa {
+  activa:             boolean;
+  sin_plan?:          boolean;   // la IA está encendida, pero la empresa no tiene Pro ni Al Día
+  analizando?:        boolean;   // al instante, pedida o en curso
+  falta_descripcion?: boolean;
+  sin_contexto?:      boolean;   // sin descripción ni actividad del RUC: no se envía nada
+}
+/** Para el aviso y los enlaces: abre "¿A qué se dedica tu negocio?" en Configuración. */
+export const RUTA_DESCRIBIR_NEGOCIO = "/configuracion?sec=empresa&editar=descripcion_negocio";
+
+/** Lo que muestra la lista: una "por clasificar" mientras la IA trabaja ya está "analizando". */
+export function estadoIaVisible(estado: EstadoIa | null | undefined, ia: ClasificacionIa | null | undefined) {
+  return estado === "POR_CLASIFICAR" && ia?.analizando ? "ANALIZANDO" : estado ?? null;
+}
+
+export function InsigniaIa({ estado, fuente }: { estado: EstadoIa | null; fuente?: string | null }) {
+  if (estado === "SUGERIDA")
+    return fuente === "IA"
+      ? <InsigniaEstado tono="info" icono={Sparkles}>Sugerida por IA</InsigniaEstado>
+      : <InsigniaEstado tono="info">Sugerida por Kipu</InsigniaEstado>;
+  if (estado === "ANALIZANDO")
+    return <InsigniaEstado tono="info" icono={Sparkles} className="animate-pulse">Analizando con IA…</InsigniaEstado>;
+  if (estado === "POR_CLASIFICAR") return <InsigniaEstado tono="neutro">Por clasificar</InsigniaEstado>;
+  if (estado === "REVISAR")        return <InsigniaEstado tono="alerta">Revisar</InsigniaEstado>;
+  return null;
+}
+
+const TEXTO_IA: Record<Exclude<EstadoIa, "SUGERIDA">, string> = {
+  ANALIZANDO:     "La IA de Kipu está revisando si esta compra es de tu negocio. Mientras tanto no se cuenta como deducible ni con crédito.",
+  POR_CLASIFICAR: "Kipu la clasificará con IA. Mientras tanto no se cuenta como deducible ni con crédito.",
+  REVISAR:        "Kipu no pudo saber si esta compra es de tu negocio: revísala y marca si es deducible o da crédito de IVA.",
 };
 
 /** Fila etiqueta → valor de las secciones. */
@@ -240,8 +278,11 @@ export default function DetalleRecibido({ id, enPanel = false }: { id: string; e
   const verRet  = aplicaALaEmpresa(RET, empresa) && !rutaFueraDelPlan(RET.href, empresa);
   const retSinPlan = bloqueadoPorPlan(RET, empresa);
 
-  // Con caché: al volver de la retención el documento aparece al instante (lib/useLista.ts)
-  const res = useLista<{ data?: any }>(`/api/v1/app/recibidos/${id}`);
+  // Con caché: al volver de la retención el documento aparece al instante (lib/useLista.ts).
+  // Mientras la IA la analiza al instante, se vuelve a pedir sola.
+  const res = useLista<{ data?: any }>(`/api/v1/app/recibidos/${id}`, {
+    refrescarMientras: (d) => d?.data?.estado_ia === "ANALIZANDO" && !!d?.data?.clasificacion_ia?.analizando,
+  });
   const doc = res.datos?.data;
   const cargar = res.recargar;
 
@@ -269,6 +310,8 @@ export default function DetalleRecibido({ id, enPanel = false }: { id: string; e
   const vinculos       = (doc.doc_origen_recibido_id ? 1 : 0) + (doc.doc_origen_emitido_id ? 1 : 0) + (doc.retencion_emitida ? 1 : 0);
   const clasificacion  = TIPOS_CLASIFICABLES.includes(doc.tipo_doc)
     ? ETIQUETA_CLASIFICACION[doc.fuente_clasificacion ?? "SIN"] : undefined;
+  const estadoIa       = (doc.estado_ia ?? null) as EstadoIa | null;
+  const ia             = (doc.clasificacion_ia ?? null) as ClasificacionIa | null;
 
   const cambiarActivoFijo = async (valor: boolean) => {
     setGuardandoAf(true);
@@ -346,16 +389,35 @@ export default function DetalleRecibido({ id, enPanel = false }: { id: string; e
           {clasificacion && (
             <div className="mb-3 flex items-start justify-between gap-3 rounded-lg bg-presionado p-3">
               <div className="min-w-0">
-                <p className="text-xs font-semibold text-texto">{clasificacion}</p>
-                {(doc.motivo_clasificacion || !doc.fuente_clasificacion) && (
-                  <p className="mt-0.5 text-xs text-sutil">
-                    {doc.fuente_clasificacion
-                      ? doc.motivo_clasificacion
-                      : "Se cuenta como deducible y con crédito si tiene IVA. Revisa las marcas: si están bien, confírmalas."}
-                  </p>
+                {estadoIa && estadoIa !== "SUGERIDA" ? (
+                  // Con la IA: por clasificar, analizando o para revisar
+                  <>
+                    <InsigniaIa estado={estadoIa} />
+                    <p className="mt-1 text-xs text-sutil">
+                      {estadoIa === "POR_CLASIFICAR" && ia?.sin_contexto
+                        ? "Para clasificarla con IA, Kipu necesita saber a qué se dedica tu negocio."
+                        : TEXTO_IA[estadoIa]}
+                    </p>
+                    {(ia?.sin_contexto || (estadoIa === "REVISAR" && ia?.falta_descripcion)) && (
+                      <Link href={RUTA_DESCRIBIR_NEGOCIO} className="mt-1 inline-block text-xs font-medium text-acento underline">
+                        Cuéntanos a qué se dedica tu negocio
+                      </Link>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <p className="text-xs font-semibold text-texto">{clasificacion}</p>
+                    {(doc.motivo_clasificacion || !doc.fuente_clasificacion) && (
+                      <p className="mt-0.5 text-xs text-sutil">
+                        {doc.fuente_clasificacion
+                          ? doc.motivo_clasificacion
+                          : "Se cuenta como deducible y con crédito si tiene IVA. Revisa las marcas: si están bien, confírmalas."}
+                      </p>
+                    )}
+                  </>
                 )}
               </div>
-              {doc.fuente_clasificacion !== "USUARIO" && (
+              {doc.fuente_clasificacion !== "USUARIO" && estadoIa !== "ANALIZANDO" && (
                 <button
                   type="button"
                   disabled={confirmando}
