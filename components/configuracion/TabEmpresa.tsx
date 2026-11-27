@@ -38,7 +38,8 @@ interface CampoFiscal {
 // "¿A qué se dedica tu negocio?" (AYUDA_NEGOCIO, la misma del registro). Con la IA
 // clasificando sus compras (GET /emisor/config → clasificacion_ia) se explica para qué la usa.
 const AYUDA_NEGOCIO_IA = "La IA de Kipu lo usa para clasificar tus compras: si son gasto deducible de renta, "
-                       + "si te dan crédito de IVA o si son un activo fijo. Mientras más claro, mejor las clasifica.";
+                       + "si te dan crédito de IVA o si son un activo fijo. Si usas tu vehículo, celular o internet "
+                       + "de casa para trabajar, dilo: así también los clasifica.";
 
 const CAMPOS_FISCALES: CampoFiscal[] = [
   { key: "ruc",                    label: "RUC",                          editable: false },
