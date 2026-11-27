@@ -65,6 +65,8 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
   const [razonSocial,           setRazonSocial]           = useState("");
   const [numeroDoc,             setNumeroDoc]             = useState("");
   const [fechaEmision,          setFechaEmision]          = useState(hoyEC());
+  // Autorización impresa en el comprobante (10 dígitos): va al ATS
+  const [autorizacion,          setAutorizacion]          = useState("");
   const [notas,                 setNotas]                 = useState("");
   const [deducibleRenta,        setDeducibleRenta]        = useState(true);
   const [creditoTributarioIva, setCreditoTributarioIva]  = useState(false);
@@ -149,7 +151,7 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
 
   const resetForm = () => {
     setTipoDoc("FAC"); setRucProveedor(""); setRazonSocial("");
-    setNumeroDoc(""); setFechaEmision(hoyEC());
+    setNumeroDoc(""); setFechaEmision(hoyEC()); setAutorizacion("");
     setNotas(""); setDeducibleRenta(true); setCreditoTributarioIva(false);
     setSubtotal0(""); setSubtotalIva(""); setTarifaIva("15");
     setValorIva(""); setImporteTotal("");
@@ -164,6 +166,9 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
     if (!numeroDoc.trim())     { setError("El número de documento es obligatorio."); return; }
 
     const esRet = tipoDoc === "RET";
+    if (!esRet && autorizacion && ![10, 37, 49].includes(autorizacion.length)) {
+      setError("La autorización debe tener 10 dígitos (o 37 o 49 si es electrónica)."); return;
+    }
     const total = esRet ? totalRetenido : parseFloat(importeTotal) || 0;
     if (total <= 0) { setError("El total debe ser mayor a 0."); return; }
 
@@ -182,6 +187,7 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
       formData.append("deducible_renta",        String(esRet ? false : deducibleRenta));
       formData.append("credito_tributario_iva", String(esRet ? lineasRet.some(l => l.tipo === "2") : tipoDoc === "NVE" ? false : creditoTributarioIva));
       if (notas) formData.append("notas", notas);
+      if (autorizacion && !esRet) formData.append("autorizacion", autorizacion);
       if (activoFijo && admiteActivoFijo) formData.append("activo_fijo", "true");
       if (marcasTocadas && !esRet) formData.append("marcas_del_usuario", "true");
 
@@ -304,6 +310,20 @@ export default function TabFisico({ suscripcionActiva, onDone }: Props) {
             />
           </div>
         </div>
+        {tipoDoc !== "RET" && (
+          <div>
+            <label className="block text-xs mb-1 text-sutil">Autorización (opcional)</label>
+            <input
+              value={autorizacion}
+              inputMode="numeric"
+              maxLength={49}
+              onChange={e => setAutorizacion(e.target.value.replace(/\D/g, ""))}
+              placeholder="1234567890"
+              className="w-full px-3 py-2.5 rounded-lg text-sm font-mono transition-colors focus:outline-none bg-superficie border border-borde text-texto focus:border-acento"
+            />
+            <p className="text-xs mt-1 text-sutil">Los 10 dígitos impresos en el comprobante. Van en el ATS.</p>
+          </div>
+        )}
       </div>
 
       {/* ── Totales FAC / NCR / NDB ───────────────────────────────────────── */}
