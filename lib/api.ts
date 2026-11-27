@@ -46,6 +46,10 @@ api.interceptors.request.use(async (config) => {
 
 // Mismo texto que SIN_ACCESO_EMPRESA en el backend (app/core/security.py)
 const SIN_ACCESO_EMPRESA = "Ya no tienes acceso a esta empresa.";
+// Mismo texto que el 403 de App Check en el backend (app/core/app_check.py):
+// no es una sesión inválida, no se cierra la sesión por él
+export const APP_CHECK_FALLIDO =
+  "No pudimos confirmar que esta solicitud viene de la app de Kipu. Recarga la página e intenta de nuevo.";
 let redirigiendo = false;   // varias peticiones pueden fallar a la vez: un solo aviso
 
 // Interceptor — manejo global de errores

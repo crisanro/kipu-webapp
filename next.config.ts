@@ -104,7 +104,26 @@ const configNativa: NextConfig = {
   images:         { unoptimized: true },
 };
 
-const nextConfig = process.env.NEXT_PUBLIC_PLATAFORMA === "native" ? configNativa : configWeb;
+const ES_NATIVA = process.env.NEXT_PUBLIC_PLATAFORMA === "native";
+
+// Build de la app para las tiendas: nunca con el backend de desarrollo. Con el .env
+// local (NEXT_PUBLIC_API_URL=http://127.0.0.1:8000) la app publicada llamaría a su
+// propio teléfono por http. Para probar en un emulador contra la PC: KIPU_NATIVO_HTTP=1.
+if (ES_NATIVA && process.env.NODE_ENV === "production") {
+  const url = process.env.NEXT_PUBLIC_API_URL;
+  if (url && !url.startsWith("https://") && process.env.KIPU_NATIVO_HTTP !== "1") {
+    throw new Error(
+      `build:native con NEXT_PUBLIC_API_URL=${url}: la app de las tiendas solo puede usar https ` +
+      "(quita la variable para usar https://core.kipu.ec, o KIPU_NATIVO_HTTP=1 para un emulador).",
+    );
+  }
+  if (process.env.NEXT_PUBLIC_APP_CHECK_DEBUG_TOKEN) {
+    console.warn("⚠️  build:native con NEXT_PUBLIC_APP_CHECK_DEBUG_TOKEN: App Check en modo depuración. " +
+                 "No publiques este build en las tiendas.");
+  }
+}
+
+const nextConfig = ES_NATIVA ? configNativa : configWeb;
 
 // Artículos del Centro de Ayuda en MDX (content/ayuda/*.mdx). Se importan desde
 // las páginas, no son rutas: por eso no hace falta "mdx" en pageExtensions.

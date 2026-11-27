@@ -6,6 +6,7 @@
 import api from "@/lib/api";
 import { useAuthStore, type Empresa } from "@/store/auth.store";
 import { SESSION_EMPRESA_KEY } from "@/lib/cuenta";
+import { guardarParaExtension } from "@/lib/plataforma";
 
 /** Fila de /usuarios/empresas → empresa del store. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -52,9 +53,9 @@ export async function refrescarEmpresaActual(): Promise<void> {
 export function abrirEmpresa(e: { id: number; ruc: string; razon_social: string }, ruta: string,
                              { reemplazar = false }: { reemplazar?: boolean } = {}): void {
   try {
-    localStorage.setItem("kipu-ext-emisor", String(e.id));
-    localStorage.setItem("kipu-ext-ruc", e.ruc);
-    localStorage.setItem("kipu-ext-razon", e.razon_social);
+    guardarParaExtension("emisor", String(e.id));
+    guardarParaExtension("ruc", e.ruc);
+    guardarParaExtension("razon", e.razon_social);
     sessionStorage.clear();
     sessionStorage.setItem(SESSION_EMPRESA_KEY, String(e.id));   // después del clear
   } catch {}

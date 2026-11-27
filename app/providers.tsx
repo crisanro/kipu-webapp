@@ -7,7 +7,7 @@ import { auth } from "@/lib/firebase";
 import { onAuthStateChanged, signOut, type User } from "firebase/auth";
 import { useAuthStore } from "@/store/auth.store";
 import { SWRProvider } from "@/lib/swrConfig";
-import api from "@/lib/api";
+import api, { APP_CHECK_FALLIDO } from "@/lib/api";
 import { aEmpresa } from "@/lib/empresa";
 import { SESSION_EMPRESA_KEY } from "@/lib/cuenta";
 import { olvidarDispositivoLocal } from "@/lib/notifications";
@@ -15,7 +15,7 @@ import { guardarVolver } from "@/lib/volver";
 import { ProveedorAvisos } from "@/components/ui/Avisos";
 import { ProveedorConfirmar } from "@/components/ui/Confirmar";
 import PuenteNativo from "@/components/shell/PuenteNativo";
-import { ES_APP_NATIVA } from "@/lib/plataforma";
+import { ES_APP_NATIVA, guardarParaExtension } from "@/lib/plataforma";
 
 // Todo lo demás requiere sesión. Lista de públicas (y no de protegidas) para
 // que una pantalla nueva quede protegida por defecto.
@@ -104,15 +104,17 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
 
     // ── Con sesión: token y empresas ─────────────────────────────
     const cargar = async (user: User) => {
+      // Versiones anteriores de la app dejaban aquí el token (solo lo usa la extensión de la web)
+      if (ES_APP_NATIVA) LS_KEYS.forEach((k) => localStorage.removeItem(k));
       try {
         const token = await user.getIdToken();
-        localStorage.setItem("kipu-ext-token", token);
+        guardarParaExtension("token", token);
 
         if (!refreshInterval) {
           refreshInterval = setInterval(async () => {
             try {
               const t = await user.getIdToken(true);
-              localStorage.setItem("kipu-ext-token", t);
+              guardarParaExtension("token", t);
             } catch {}
           }, 50 * 60 * 1000);
         }
@@ -148,9 +150,9 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
 
         setEmpresa(aEmpresa(empresaActual));
 
-        localStorage.setItem("kipu-ext-emisor", String(empresaActual.id));
-        localStorage.setItem("kipu-ext-ruc",    empresaActual.ruc);
-        localStorage.setItem("kipu-ext-razon",  empresaActual.razon_social);
+        guardarParaExtension("emisor", String(empresaActual.id));
+        guardarParaExtension("ruc",    empresaActual.ruc);
+        guardarParaExtension("razon",  empresaActual.razon_social);
 
         // Solo se marca como cargado cuando TODO salió bien
         cargadoPara.current = user.uid;
@@ -159,7 +161,15 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
         console.error("[Auth] Error:", error);
         cargadoPara.current = null;
         const status = error?.response?.status;
-        if (status === 401 || status === 403) {
+        if (status === 403 && error?.response?.data?.detail === APP_CHECK_FALLIDO) {
+          // App Check no confirmó la app o el navegador (bloqueador, app sin
+          // actualizar): la sesión es válida, cerrarla solo lo volvería un bucle
+          setErrorCarga(
+            ES_APP_NATIVA
+              ? "No pudimos confirmar que usas la app oficial de Kipu. Vuelve a intentar; si sigue pasando, actualiza la app."
+              : "No pudimos confirmar tu navegador. Desactiva los bloqueadores de esta página y vuelve a intentar."
+          );
+        } else if (status === 401 || status === 403) {
           // Sesión inválida: cerrar para no quedar con Firebase logueado y el store vacío
           limpiarStorage();
           await olvidarDispositivoLocal();   // que el navegador deje de recibir avisos

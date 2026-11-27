@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { auth } from "@/lib/firebase";
 import api from "@/lib/api";
+import { guardarParaExtension } from "@/lib/plataforma";
 
 // Igual que ESPERA_REENVIO_SEG en el backend (app/api/v1/app/auth.py)
 export const ESPERA_REENVIO = 60;
@@ -65,7 +66,7 @@ export function useVerificacionCorreo(alVerificar?: () => void) {
     // Token nuevo: el anterior todavía dice email_verified = false
     try {
       const token = await auth.currentUser?.getIdToken(true);
-      if (token) localStorage.setItem("kipu-ext-token", token);
+      if (token) guardarParaExtension("token", token);
     } catch {}
     setVerificado(true);
     setAviso("");

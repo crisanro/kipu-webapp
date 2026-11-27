@@ -11,5 +11,10 @@
 	<array>
 		<string>applinks:app.kipu.ec</string>
 	</array>
+	<!-- App Attest: prueba ante Firebase App Check que es la app original en un iPhone
+	     real (lo pide el backend en X-Firebase-AppCheck). "production" como pide Firebase;
+	     con firma automática, Xcode activa la capacidad en el App ID al compilar. -->
+	<key>com.apple.developer.devicecheck.appattest-environment</key>
+	<string>production</string>
 </dict>
 </plist>
